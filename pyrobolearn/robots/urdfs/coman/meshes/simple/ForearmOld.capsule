@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="/home/enrico/walkman/drc/IITComanRosPkg/coman_urdf/meshes/simple/ForearmOld.STL">
+  <link name="0.03937_0.03937_0.03937">
+    <collision>
+      <origin xyz="-0.000205485000032 1.45000000011e-05 -0.070934" rpy="-0.000264584310412 -0.00017627035427 -3.14159263027"/>
+      <geometry>
+        <cylinder radius="0.0343464" length="0.139842007067"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

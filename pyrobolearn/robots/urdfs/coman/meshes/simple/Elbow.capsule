@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="/home/enrico/walkman/drc/IITComanRosPkg/coman_urdf/meshes/simple/Elbow.STL">
+  <link name="1.00000_1.00000_1.00000">
+    <collision>
+      <origin xyz="-0.00636137 -0.000122973500001 -0.01132083" rpy="2.7016162375 0.222994565931 -1.1308199107"/>
+      <geometry>
+        <cylinder radius="0.0431983" length="0.0339393894282"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

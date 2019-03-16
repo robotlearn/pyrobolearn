@@ -1,0 +1,983 @@
+<?xml version="1.0" ?>
+<robot name="morphex" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!--link name="base"/>
+  <joint name="base_to_body" type="fixed">
+    <parent link="base"/>
+    <child link="body"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint-->
+  <link name="body">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.16 0.16 0.08"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0.16 0.16 0.08"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <link name="shell_top_left_front">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="body_to_shell_top_left_front" type="fixed">
+    <parent link="body"/>
+    <child link="shell_top_left_front"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+  <link name="shell_top_left_middle">
+    <visual>
+      <origin rpy="0 0 1.047" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 1.047" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 1.047" xyz="0 0 0"/>
+      <mass value="5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="body_to_shell_top_left_middle" type="fixed">
+    <parent link="body"/>
+    <child link="shell_top_left_middle"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+  <link name="shell_top_left_rear">
+    <visual>
+      <origin rpy="0 0 2.094" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 2.094" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 2.094" xyz="0 0 0"/>
+      <mass value="5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="body_to_shell_top_left_rear" type="fixed">
+    <parent link="body"/>
+    <child link="shell_top_left_rear"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+  <link name="shell_top_right_rear">
+    <visual>
+      <origin rpy="0 0 3.142" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 3.142" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 3.142" xyz="0 0 0"/>
+      <mass value="5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="body_to_shell_top_right_rear" type="fixed">
+    <parent link="body"/>
+    <child link="shell_top_right_rear"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+  <link name="shell_top_right_middle">
+    <visual>
+      <origin rpy="0 0 4.189" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 4.189" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 4.189" xyz="0 0 0"/>
+      <mass value="5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="body_to_shell_top_right_middle" type="fixed">
+    <parent link="body"/>
+    <child link="shell_top_right_middle"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+  <link name="shell_top_right_front">
+    <visual>
+      <origin rpy="0 0 5.236" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 5.236" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 5.236" xyz="0 0 0"/>
+      <mass value="5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="body_to_shell_top_right_front" type="fixed">
+    <parent link="body"/>
+    <child link="shell_top_right_front"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+  <joint name="body_to_left_front_femur" type="revolute">
+    <parent link="body"/>
+    <child link="left_front_femur"/>
+    <origin rpy="0 0 -1.047" xyz="0.069 0.04 -0.04"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="left_front_femur">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0.02 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.02 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0.02 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="left_front_femur_to_tibia" type="revolute">
+    <parent link="left_front_femur"/>
+    <child link="left_front_tibia"/>
+    <origin rpy="-2.159 0 0" xyz="0 0.04 0"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="left_front_tibia">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0.036 0"/>
+      <geometry>
+        <box size="0.04 0.072 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.036 0"/>
+      <geometry>
+        <box size="0.04 0.072 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0.036 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="left_front_tibia_to_tarsus" type="revolute">
+    <parent link="left_front_tibia"/>
+    <child link="left_front_tarsus"/>
+    <origin rpy="-0.519 0 0" xyz="0 0.072 0"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="left_front_tarsus">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0.0335 0"/>
+      <geometry>
+        <box size="0.04 0.067 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.0335 0"/>
+      <geometry>
+        <box size="0.04 0.067 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0.0335 0"/>
+      <mass value="3"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="left_front_tarsus_to_shell" type="fixed">
+    <parent link="left_front_tarsus"/>
+    <child link="shell_bottom_left_front"/>
+    <origin rpy="2.678 0 0" xyz="0 0.067 0"/>
+  </joint>
+  <transmission name="trans_body_to_left_front_femur">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="body_to_left_front_femur">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_body_to_left_front_femur">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <transmission name="trans_left_front_femur_to_tibia">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="left_front_femur_to_tibia">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_left_front_femur_to_tibia">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <transmission name="trans_left_front_tibia_to_tarsus">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="left_front_tibia_to_tarsus">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_left_front_tibia_to_tarsus">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <joint name="body_to_left_middle_femur" type="revolute">
+    <parent link="body"/>
+    <child link="left_middle_femur"/>
+    <origin rpy="0 0 0" xyz="0 0.08 -0.04"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="left_middle_femur">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0.02 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.02 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0.02 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="left_middle_femur_to_tibia" type="revolute">
+    <parent link="left_middle_femur"/>
+    <child link="left_middle_tibia"/>
+    <origin rpy="-2.159 0 0" xyz="0 0.04 0"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="left_middle_tibia">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0.036 0"/>
+      <geometry>
+        <box size="0.04 0.072 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.036 0"/>
+      <geometry>
+        <box size="0.04 0.072 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0.036 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="left_middle_tibia_to_tarsus" type="revolute">
+    <parent link="left_middle_tibia"/>
+    <child link="left_middle_tarsus"/>
+    <origin rpy="-0.519 0 0" xyz="0 0.072 0"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="left_middle_tarsus">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0.0335 0"/>
+      <geometry>
+        <box size="0.04 0.067 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.0335 0"/>
+      <geometry>
+        <box size="0.04 0.067 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0.0335 0"/>
+      <mass value="3"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="left_middle_tarsus_to_shell" type="fixed">
+    <parent link="left_middle_tarsus"/>
+    <child link="shell_bottom_left_middle"/>
+    <origin rpy="2.678 0 0" xyz="0 0.067 0"/>
+  </joint>
+  <transmission name="trans_body_to_left_middle_femur">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="body_to_left_middle_femur">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_body_to_left_middle_femur">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <transmission name="trans_left_middle_femur_to_tibia">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="left_middle_femur_to_tibia">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_left_middle_femur_to_tibia">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <transmission name="trans_left_middle_tibia_to_tarsus">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="left_middle_tibia_to_tarsus">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_left_middle_tibia_to_tarsus">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <joint name="body_to_left_rear_femur" type="revolute">
+    <parent link="body"/>
+    <child link="left_rear_femur"/>
+    <origin rpy="0 0 1.047" xyz="-0.069 0.04 -0.04"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="left_rear_femur">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0.02 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.02 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0.02 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="left_rear_femur_to_tibia" type="revolute">
+    <parent link="left_rear_femur"/>
+    <child link="left_rear_tibia"/>
+    <origin rpy="-2.159 0 0" xyz="0 0.04 0"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="left_rear_tibia">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0.036 0"/>
+      <geometry>
+        <box size="0.04 0.072 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.036 0"/>
+      <geometry>
+        <box size="0.04 0.072 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0.036 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="left_rear_tibia_to_tarsus" type="revolute">
+    <parent link="left_rear_tibia"/>
+    <child link="left_rear_tarsus"/>
+    <origin rpy="-0.519 0 0" xyz="0 0.072 0"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="left_rear_tarsus">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0.0335 0"/>
+      <geometry>
+        <box size="0.04 0.067 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.0335 0"/>
+      <geometry>
+        <box size="0.04 0.067 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0.0335 0"/>
+      <mass value="3"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="left_rear_tarsus_to_shell" type="fixed">
+    <parent link="left_rear_tarsus"/>
+    <child link="shell_bottom_left_rear"/>
+    <origin rpy="2.678 0 0" xyz="0 0.067 0"/>
+  </joint>
+  <transmission name="trans_body_to_left_rear_femur">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="body_to_left_rear_femur">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_body_to_left_rear_femur">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <transmission name="trans_left_rear_femur_to_tibia">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="left_rear_femur_to_tibia">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_left_rear_femur_to_tibia">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <transmission name="trans_left_rear_tibia_to_tarsus">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="left_rear_tibia_to_tarsus">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_left_rear_tibia_to_tarsus">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <joint name="body_to_right_front_femur" type="revolute">
+    <parent link="body"/>
+    <child link="right_front_femur"/>
+    <origin rpy="0 0 1.047" xyz="0.069 -0.04 -0.04"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="right_front_femur">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="right_front_femur_to_tibia" type="revolute">
+    <parent link="right_front_femur"/>
+    <child link="right_front_tibia"/>
+    <origin rpy="2.159 0 0" xyz="0 -0.04 0"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="right_front_tibia">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 -0.036 0"/>
+      <geometry>
+        <box size="0.04 0.072 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.036 0"/>
+      <geometry>
+        <box size="0.04 0.072 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 -0.036 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="right_front_tibia_to_tarsus" type="revolute">
+    <parent link="right_front_tibia"/>
+    <child link="right_front_tarsus"/>
+    <origin rpy="0.519 0 0" xyz="0 -0.072 0"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="right_front_tarsus">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 -0.0335 0"/>
+      <geometry>
+        <box size="0.04 0.067 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.0335 0"/>
+      <geometry>
+        <box size="0.04 0.067 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 -0.0335 0"/>
+      <mass value="3"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="right_front_tarsus_to_shell" type="fixed">
+    <parent link="right_front_tarsus"/>
+    <child link="shell_bottom_right_front"/>
+    <origin rpy="-2.678 0 0" xyz="0 -0.067 0"/>
+  </joint>
+  <transmission name="trans_body_to_right_front_femur">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="body_to_right_front_femur">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_body_to_right_front_femur">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <transmission name="trans_right_front_femur_to_tibia">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="right_front_femur_to_tibia">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_right_front_femur_to_tibia">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <transmission name="trans_right_front_tibia_to_tarsus">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="right_front_tibia_to_tarsus">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_right_front_tibia_to_tarsus">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <joint name="body_to_right_middle_femur" type="revolute">
+    <parent link="body"/>
+    <child link="right_middle_femur"/>
+    <origin rpy="0 0 0" xyz="0 -0.08 -0.04"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="right_middle_femur">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="right_middle_femur_to_tibia" type="revolute">
+    <parent link="right_middle_femur"/>
+    <child link="right_middle_tibia"/>
+    <origin rpy="2.159 0 0" xyz="0 -0.04 0"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="right_middle_tibia">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 -0.036 0"/>
+      <geometry>
+        <box size="0.04 0.072 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.036 0"/>
+      <geometry>
+        <box size="0.04 0.072 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 -0.036 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="right_middle_tibia_to_tarsus" type="revolute">
+    <parent link="right_middle_tibia"/>
+    <child link="right_middle_tarsus"/>
+    <origin rpy="0.519 0 0" xyz="0 -0.072 0"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="right_middle_tarsus">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 -0.0335 0"/>
+      <geometry>
+        <box size="0.04 0.067 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.0335 0"/>
+      <geometry>
+        <box size="0.04 0.067 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 -0.0335 0"/>
+      <mass value="3"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="right_middle_tarsus_to_shell" type="fixed">
+    <parent link="right_middle_tarsus"/>
+    <child link="shell_bottom_right_middle"/>
+    <origin rpy="-2.678 0 0" xyz="0 -0.067 0"/>
+  </joint>
+  <transmission name="trans_body_to_right_middle_femur">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="body_to_right_middle_femur">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_body_to_right_middle_femur">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <transmission name="trans_right_middle_femur_to_tibia">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="right_middle_femur_to_tibia">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_right_middle_femur_to_tibia">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <transmission name="trans_right_middle_tibia_to_tarsus">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="right_middle_tibia_to_tarsus">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_right_middle_tibia_to_tarsus">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <joint name="body_to_right_rear_femur" type="revolute">
+    <parent link="body"/>
+    <child link="right_rear_femur"/>
+    <origin rpy="0 0 -1.047" xyz="-0.069 -0.04 -0.04"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="right_rear_femur">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="right_rear_femur_to_tibia" type="revolute">
+    <parent link="right_rear_femur"/>
+    <child link="right_rear_tibia"/>
+    <origin rpy="2.159 0 0" xyz="0 -0.04 0"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="right_rear_tibia">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 -0.036 0"/>
+      <geometry>
+        <box size="0.04 0.072 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.036 0"/>
+      <geometry>
+        <box size="0.04 0.072 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 -0.036 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="right_rear_tibia_to_tarsus" type="revolute">
+    <parent link="right_rear_tibia"/>
+    <child link="right_rear_tarsus"/>
+    <origin rpy="0.519 0 0" xyz="0 -0.072 0"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="2.8" lower="-2.6" upper="2.6" velocity="5.6"/>
+  </joint>
+  <link name="right_rear_tarsus">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 -0.0335 0"/>
+      <geometry>
+        <box size="0.04 0.067 0.02"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.0335 0"/>
+      <geometry>
+        <box size="0.04 0.067 0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 -0.0335 0"/>
+      <mass value="3"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <joint name="right_rear_tarsus_to_shell" type="fixed">
+    <parent link="right_rear_tarsus"/>
+    <child link="shell_bottom_right_rear"/>
+    <origin rpy="-2.678 0 0" xyz="0 -0.067 0"/>
+  </joint>
+  <transmission name="trans_body_to_right_rear_femur">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="body_to_right_rear_femur">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_body_to_right_rear_femur">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <transmission name="trans_right_rear_femur_to_tibia">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="right_rear_femur_to_tibia">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_right_rear_femur_to_tibia">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <transmission name="trans_right_rear_tibia_to_tarsus">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="right_rear_tibia_to_tarsus">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor_right_rear_tibia_to_tarsus">
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <link name="shell_bottom_left_front">
+    <visual>
+      <origin rpy="3.142 0 2.094" xyz="0 -.02 .13"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin rpy="3.142 0 2.094" xyz="0 -.02 .13"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="3.142 0 2.094" xyz="0 -.02 .13"/>
+      <mass value="5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <link name="shell_bottom_left_middle">
+    <visual>
+      <origin rpy="3.142 0 2.094" xyz="0 -.02 .13"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin rpy="3.142 0 2.094" xyz="0 -.02 .13"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="3.142 0 2.094" xyz="0 -.02 .13"/>
+      <mass value="5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <link name="shell_bottom_left_rear">
+    <visual>
+      <origin rpy="3.142 0 2.094" xyz="0 -.02 .13"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin rpy="3.142 0 2.094" xyz="0 -.02 .13"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="3.142 0 2.094" xyz="0 -.02 .13"/>
+      <mass value="5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <link name="shell_bottom_right_front">
+    <visual>
+      <origin rpy="3.142 0 5.236" xyz="0 .02 .13"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin rpy="3.142 0 5.236" xyz="0 .02 .13"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="3.142 0 5.236" xyz="0 .02 .13"/>
+      <mass value="5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <link name="shell_bottom_right_middle">
+    <visual>
+      <origin rpy="3.142 0 5.236" xyz="0 .02 .13"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin rpy="3.142 0 5.236" xyz="0 .02 .13"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="3.142 0 5.236" xyz="0 .02 .13"/>
+      <mass value="5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <link name="shell_bottom_right_rear">
+    <visual>
+      <origin rpy="3.142 0 5.236" xyz="0 .02 .13"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin rpy="3.142 0 5.236" xyz="0 .02 .13"/>
+      <geometry>
+        <mesh filename="meshes/shell.stl" scale="1 1 1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="3.142 0 5.236" xyz="0 .02 .13"/>
+      <mass value="5"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+  <material name="black">
+    <color rgba="0.0392156862745 0.0392156862745 0.0392156862745 1.0"/>
+  </material>
+  <material name="white">
+    <color rgba="0.99 0.99 0.99 0.5"/>
+  </material>
+</robot>

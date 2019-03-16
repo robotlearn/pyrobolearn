@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot name="/home/enrico/walkman/drc/IITComanRosPkg/coman_urdf/meshes/simple/SoftHandOpen.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="0.01249006 0.00211918 -0.0254188" rpy="-3.05665771363 0.676555643872 0.240409954571"/>
+      <geometry>
+        <cylinder radius="0.0843427" length="0.0586977011354"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="-0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="0.01995553 -0.00244339 -0.025148475" rpy="0.105324525738 0.652450665716 0.0356618288453"/>
+      <geometry>
+        <cylinder radius="0.0841797" length="0.0598876835521"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot name="/home/enrico/walkman/drc/IITComanRosPkg/coman_urdf/meshes/simple/Leg0.STL">
+  <link name="0.03937_0.03937_0.03937">
+    <collision>
+      <origin xyz="-0.00910030499999 -0.0462221 0.023993" rpy="1.0968387311 1.54795703172 -2.06497043563"/>
+      <geometry>
+        <cylinder radius="0.0501148" length="0.037608398472"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="0.03937_-0.03937_0.03937">
+    <collision>
+      <origin xyz="-0.00910030500001 0.0462221 0.023993" rpy="-1.0968387311 1.54795703172 2.06497043563"/>
+      <geometry>
+        <cylinder radius="0.0501148" length="0.037608398472"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

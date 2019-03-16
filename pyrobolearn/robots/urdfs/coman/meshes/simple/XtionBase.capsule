@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="/home/enrico/walkman/drc/IITComanRosPkg/coman_urdf/meshes/simple/XtionBase.STL">
+  <link name="0.03937_0.03937_0.03937">
+    <collision>
+      <origin xyz="0.046035396 1.63655600137e-05 0.37605947" rpy="-3.14148651769 0.0528346053494 0.00401672585977"/>
+      <geometry>
+        <cylinder radius="0.080024" length="0.364608785575"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

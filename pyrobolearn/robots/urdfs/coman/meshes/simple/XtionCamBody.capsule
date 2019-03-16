@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="/home/enrico/walkman/drc/IITComanRosPkg/coman_urdf/meshes/simple/XtionCamBody.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="-0.0025875 0.000179100000018 0.01613" rpy="1.57131237921 0.00179069987239 -3.13980102938"/>
+      <geometry>
+        <cylinder radius="0.0244478" length="0.155023269191"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

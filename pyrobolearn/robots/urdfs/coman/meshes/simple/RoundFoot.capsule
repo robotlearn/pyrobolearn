@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot name="/home/enrico/walkman/drc/IITComanRosPkg/coman_urdf/meshes/simple/RoundFoot.STL">
+  <link name="0.03937_0.03937_0.03937">
+    <collision>
+      <origin xyz="0.02577663 -0.00402060000001 -0.0418466" rpy="-0.244627861954 1.17174387841 2.97880524468"/>
+      <geometry>
+        <cylinder radius="0.0820345" length="0.0651259105033"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="0.03937_-0.03937_0.03937">
+    <collision>
+      <origin xyz="0.02577663 0.00402059999999 -0.0418466" rpy="0.244627861954 1.17174387841 -2.97880524468"/>
+      <geometry>
+        <cylinder radius="0.0820345" length="0.0651259105033"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>
