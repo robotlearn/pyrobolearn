@@ -1,0 +1,754 @@
+<?xml version="1.0"?>
+<robot name="Aibo">
+
+  <!-- WARNING: MASS and INERTIA are not corrects (they are too big!) -->
+  <!-- check Aibo.urdf on rds.theconstructism.com -->
+  <!-- Weights: 2.2kg (ERS-1000), 1.5kg (ERS-220), 1.65kg () -->
+
+  <link name="base_link" >
+    <inertial>
+      <!--origin xyz="0.002775 -0.000984 1.226576"/-->
+      <mass value="0.613"/> <!-- volume = 0.811633 -->
+      <inertia ixx='0.002475011189860075' ixy='0' ixz='0' iyy='0.007506640782378954' iyz='0' izz='0.007113701431115992'/>
+      <!--inertia ixx="0.063663" ixy="0.000007" ixz="0.006725" iyy="0.241987" iyz="0.0" izz="0.231997"/--> <!-- volume inertia -->
+      <!--inertia ixx="0.00081259581" ixy="8.93481413e-8" ixz="0.00008583803" iyy="0.00308872695" iyz="0.0" izz="0.00296121439"/--> <!-- previous inertia (the one above) divided by volume times mass times scale**2 -->
+    </inertial>
+    <collision name="geom">
+      <!--origin xyz="0 0 0" rpy="0 0 -1.5707"/>
+      <geometry>
+        <cylinder radius="0.055" length="0.240"/>
+      </geometry-->
+      <origin xyz="0 0 0" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/body1.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0 0 0" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/body1.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="white">
+        <color rgba="1 1 1 1"/>
+      </material>
+      <origin xyz="0.0 0 0" rpy="0 1.5707 1.5707"/>
+    </visual>
+  </link>
+
+  <link name="RF_up_leg_rot_y" > <!-- shoulder -->
+    <collision name="geom">
+      <origin xyz="0 0 0" rpy="0 0 -1.5707"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0 0 0" rpy="0 0 -1.5707"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+      <material name="grey">
+        <color rgba="0.4 0.4 0.4 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <origin xyz="-0.001888 -0.002933 0.008598" rpy="0 0 0"/>
+      <mass value="0.05"/>
+      <inertia ixx="4.442444469634999e-05" ixy="0.0" ixz="0.0" iyy="8.199685180759998e-05" iyz="0.0" izz="3.9338485833950003e-05" />
+    </inertial>
+  </link>
+
+  <link name="RF_up_leg_rot_x" > <!-- RF_leg1 -->
+    <collision name="geom">
+      <!--origin xyz="0 0 0" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/RFup.stl" scale="0.13 0.13 0.13" />
+      </geometry-->
+      <origin xyz="-0.05 -0.061 -0.162" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/RFup.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="-0.05 -0.061 -0.162" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/RFup.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="grey"/>
+    </visual>
+    <inertial>
+      <origin xyz="0.000343 -0.001992 -0.011436" rpy="0 0 0"/>
+      <mass value="0.073"/>
+      <inertia ixx="0.00011969654852187499" ixy="0.0" ixz="0.0" iyy="0.00011794468285297098" iyz="0.0" izz="2.9366620594846e-05" />
+    </inertial>
+  </link>
+
+  <link name="RF_down_leg" > <!-- RF_leg2 -->
+    <collision name="geom">
+      <!--origin xyz="0 0 -0.0275" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.020" length="0.080"/>
+      </geometry-->
+      <origin xyz="-0.072 -0.061 -0.085" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/RFdown.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="-0.072 -0.061 -0.085" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/RFdown.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <inertial>
+      <origin xyz="-0.004809 0.000013 0.008158" rpy="0 0 0"/>
+      <mass value="0.073"/>
+      <inertia ixx="0.00011969654852187499" ixy="0.0" ixz="0.0" iyy="0.00011794468285297098" iyz="0.0" izz="2.9366620594846e-05" />
+    </inertial>
+  </link>
+
+  <joint type="revolute" name="legRF1">
+    <origin xyz="0.05 0.061 0.162" rpy="0 0 0"/>
+    <limit effort="1000.0" lower="-2.09" upper="2.36" velocity="0.5"/> 
+    <axis xyz="1 0 0"/>
+    <parent link="base_link"/>
+    <child link="RF_up_leg_rot_y"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <joint type="revolute" name="legRF2">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <limit effort="1000.0" lower="-1.58825" upper="0.15708" velocity="0.5"/> 
+    <axis xyz="0 -1 0"/>
+    <parent link="RF_up_leg_rot_y"/>
+    <child link="RF_up_leg_rot_x"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <joint type="revolute" name="legRF3">
+    <origin xyz="0.022 0 -0.077" rpy="-0.51 0 0"/>
+    <limit effort="1000.0" lower="-0.506" upper="2.0768" velocity="0.5"/>
+    <axis xyz="1 0 0"/>
+    <parent link="RF_up_leg_rot_x"/>
+    <child link="RF_down_leg"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <link name="LF_up_leg_rot_y" >
+    <collision name="geom">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+      <material name="grey"></material>
+    </visual>
+    <inertial>
+      <origin xyz="-0.001888 0.002933 0.008598" rpy="0 0 0"/>
+      <mass value="0.05"/>
+      <inertia ixx="4.07077236743e-05" ixy="0.0" ixz="0.0" iyy="8.407799796175e-05" iyz="0.0" izz="4.5252994171749996e-05" />
+    </inertial>
+  </link>
+
+  <link name="LF_up_leg_rot_x" >
+    <collision name="geom">
+      <!--origin xyz="0 0 -0.0275" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.020" length="0.075"/>
+      </geometry-->
+      <origin xyz="0.05 -0.061 -0.162" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/LFup.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0.05 -0.061 -0.162" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/LFup.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="grey"/>
+    </visual>
+    <inertial>
+      <origin xyz="0.000343 0.001992 -0.011436" rpy="0 0 0"/>
+      <mass value="0.073"/>
+      <inertia ixx="0.00011566170518423601" ixy="0.0" ixz="0.0" iyy="0.00011431816699501901" iyz="0.0" izz="2.8949038259255004e-05" />
+    </inertial>
+  </link>
+
+  <link name="LF_down_leg" >
+    <collision name="geom">
+      <!--origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.020" length="0.080"/>
+      </geometry-->
+      <origin xyz="0.072 -0.061 -0.085" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/LFdown.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0.072 -0.061 -0.085" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/LFdown.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <inertial>
+      <origin xyz="-0.004809 -0.000013 0.008158" rpy="0 0 0"/>
+      <mass value="0.073"/>
+      <inertia ixx="0.00011969654852187499" ixy="0.0" ixz="0.0" iyy="0.00011794468285297098" iyz="0.0" izz="2.9366620594846e-05" />
+    </inertial>
+  </link>
+
+  <joint type="revolute" name="legLF1">
+    <origin xyz="-0.05 0.061 0.162" rpy="0 0 0"/>
+    <limit effort="1000.0" lower="-2.094" upper="2.36" velocity="0.5"/> 
+    <axis xyz="1 0 0"/>
+    <parent link="base_link"/>
+    <child link="LF_up_leg_rot_y"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <joint type="revolute" name="legLF2">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <limit effort="1000.0" lower="-0.15708" upper="1.58825" velocity="0.5"/> 
+    <axis xyz="0 1 0"/>
+    <parent link="LF_up_leg_rot_y"/>
+    <child link="LF_up_leg_rot_x"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <joint type="revolute" name="legLF3">
+    <origin xyz="-0.022 0 -0.077" rpy="-0.51 0 0"/>
+    <limit effort="1000.0" lower="-0.506" upper="2.0768" velocity="0.5"/>
+    <axis xyz="1 0 0"/>
+    <parent link="LF_up_leg_rot_x"/>
+    <child link="LF_down_leg"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <link name="RB_up_leg_rot_y" >
+    <collision name="geom">
+      <origin xyz="0 0 0" rpy="0 0 -1.5707"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0 0 0" rpy="0 0 -1.5707"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+      <material name="grey"></material>
+    </visual>
+    <inertial>
+      <origin xyz="0.003468 -0.001798 -0.009007" rpy="0 0 0"/>
+      <mass value="0.05"/>
+      <inertia ixx="2.1327820805349996e-05" ixy="0.0" ixz="0.0" iyy="4.6883250337400005e-05" iyz="0.0" izz="2.6158354222750005e-05" />
+    </inertial>
+  </link>
+
+  <link name="RB_up_leg_rot_x" >
+    <collision name="geom">
+      <!--origin xyz="0 0 -0.0275" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.020" length="0.075"/>
+      </geometry-->
+      <origin xyz="-0.05 0.068 -0.162" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/RBup.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="-0.05 0.068 -0.162" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/RBup.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="grey"/>
+    </visual>
+    <inertial>
+      <origin xyz="0.000009 -0.002377 -0.010723" rpy="0 0 0"/>
+      <mass value="0.073"/>
+      <inertia ixx="0.00011794330961697501" ixy="0.0" ixz="0.0" iyy="0.00011759574351004403" iyz="0.0" izz="2.9943798602131e-05" />
+    </inertial>
+  </link>
+
+  <link name="RB_down_leg" >
+    <collision name="geom">
+      <!--origin xyz="0 0 -0.0275" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.020" length="0.080"/>
+      </geometry-->
+      <origin xyz="-0.072 0.0655 -0.081" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/RBdown.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="-0.072 0.0655 -0.081" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/RBdown.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <inertial>
+      <origin xyz="-0.003284 0 -0.006815" rpy="0 0 0"/>
+      <mass value="0.073"/>
+      <inertia ixx="0.00010389273401253401" ixy="0.0" ixz="0.0" iyy="0.000118542636504766" iyz="0.0" izz="6.864402663235e-05" />
+    </inertial>
+  </link>
+
+  <joint type="revolute" name="legRB1">
+    <origin xyz="0.05 -0.068 0.162" rpy="0 0 0"/>
+    <limit effort="1000.0" lower="-2.3387" upper="2.094" velocity="0.5"/>
+    <axis xyz="-1 0 0"/>
+    <parent link="base_link"/>
+    <child link="RB_up_leg_rot_y"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <joint type="revolute" name="legRB2">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <limit effort="1000.0" lower="-0.15708" upper="1.58825" velocity="0.5"/> 
+    <axis xyz="0 -1 0"/>
+    <parent link="RB_up_leg_rot_y"/>
+    <child link="RB_up_leg_rot_x"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <joint type="revolute" name="legRB3">
+    <limit effort="1000.0" lower="-0.506" upper="2.0768" velocity="0.5"/>
+    <axis xyz="-1 0 0"/>
+    <origin xyz="0.022 0 -0.079" rpy="0.51 0 0"/>
+    <parent link="RB_up_leg_rot_x"/>
+    <child link="RB_down_leg"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <link name="LB_up_leg_rot_y" >
+    <collision name="geom">
+      <!--geometry>
+        <sphere radius="0.005"/>
+      </geometry-->
+      <origin xyz="0 0 0" rpy="0 0 -1.5707"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0 0 0" rpy="0 0 -1.5707"/>
+      <geometry>
+        <sphere radius="0.005"/>
+      </geometry>
+      <material name="grey"></material>
+    </visual>
+    <inertial>
+      <origin xyz="0.003468 0.001798 -0.009007" rpy="0 0 0"/>
+      <mass value="0.05"/>
+      <inertia ixx="2.2119548359949997e-05" ixy="0.0" ixz="0.0" iyy="4.706856616795e-05" iyz="0.0" izz="2.55455926252e-05" />
+    </inertial>
+  </link>
+
+  <link name="LB_up_leg_rot_x" >
+    <collision name="geom">
+      <!--origin xyz="0 0 -0.0275" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.020" length="0.075"/>
+      </geometry-->
+      <origin xyz="0.05 0.068 -0.162" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/LBup.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+    </collision> 
+    <visual name="visual">
+      <origin xyz="0.05 0.068 -0.162" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/LBup.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="grey"/>
+    </visual>
+    <inertial>
+      <origin xyz="0.000009 0.002377 -0.010723" rpy="0 0 0"/>
+      <mass value="0.073"/>
+      <inertia  ixx="0.00011560491842459497" ixy="0.0" ixz="0.0" iyy="0.00011546106608284297" iyz="0.0" izz="3.0147512367309998e-05" />
+    </inertial>
+  </link>
+
+  <link name="LB_down_leg" >
+    <collision name="geom">
+      <!--origin xyz="0 0 -0.0275" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.020" length="0.080"/>
+      </geometry-->
+      <origin xyz="0.072 0.0655 -0.081" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/LBdown.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0.072 0.0655 -0.081" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/LBdown.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <inertial>
+      <origin xyz="-0.003284 0 -0.006815" rpy="0 0 0"/>
+      <mass value="0.073"/>
+      <inertia ixx="0.00010389273401253401" ixy="0.0" ixz="0.0" iyy="0.000118542636504766" iyz="0.0" izz="6.864402663235e-05" />
+    </inertial>
+  </link>
+
+  <joint type="revolute" name="legLB1">
+    <origin xyz="-0.05 -0.068 0.162" rpy="0 0 0"/>
+    <limit effort="1000.0" lower="-2.094" upper="2.3387" velocity="0.5"/> 
+    <axis xyz="-1 0 0"/>
+    <parent link="base_link"/>
+    <child link="LB_up_leg_rot_y"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint> 
+
+  <joint type="revolute" name="legLB2">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <limit effort="1000.0" lower="-0.15708" upper="1.58825" velocity="0.5"/>
+    <axis xyz="0 1 0"/>
+    <parent link="LB_up_leg_rot_y"/>
+    <child link="LB_up_leg_rot_x"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <joint type="revolute" name="legLB3">
+    <limit effort="1000.0" lower="-0.506" upper="2.0768" velocity="0.5"/>
+    <axis xyz="-1 0 0"/>
+    <origin xyz="-0.022 0 -0.079" rpy="0.51 0 0"/>
+    <parent link="LB_up_leg_rot_x"/>
+    <child link="LB_down_leg"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <link name="neck_link" >
+    <collision name="geom">
+      <origin xyz="0 0 0.04" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.013" length="0.080"/>
+      </geometry>
+      <surface>
+        <friction>
+          <ode mu='1.000000' mu2='1.000000'/>
+        </friction>
+      </surface>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0 0 0.04" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.013" length="0.090"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0.2 0.2 0.2 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <origin xyz="-0.000341 -0.000000 -0.008011" rpy="0 0 0"/>
+      <mass value="0.015"/>
+      <inertia ixx="1.97e-06" ixy="0" ixz="0" iyy="1.97e-06" iyz="0" izz="1.688e-06"/>
+    </inertial>
+  </link>
+
+  <joint type="revolute" name="neck">
+    <origin xyz="0 0.065 0.164" rpy="0 0 0"/>
+    <limit effort="1000.0" lower="-1.3788" upper="0.0349" velocity="0.5"/> 
+    <axis xyz="1 0 0"/>
+    <parent link="base_link"/>
+    <child link="neck_link"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <link name="pan" >
+    <collision name="geom">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.025"/>
+      </geometry>
+      <surface>
+        <friction>
+          <ode mu='1.000000' mu2='1.000000'/>
+        </friction>
+      </surface>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.025"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <inertial>
+      <mass value="0.01"/>
+      <inertia ixx="8.72e-06" ixy="0" ixz="0" iyy="8.72e-06" iyz="0" izz="8.72e-06"/>
+    </inertial>
+  </link>
+
+  <joint type="revolute" name="headPan">
+    <origin xyz="0 0 0.09" rpy="0 0 0"/>
+    <limit effort="1000.0" lower="1.5882" upper="-1.5882" velocity="0.5"/> 
+    <axis xyz="0 0 1"/>
+    <parent link="neck_link"/>
+    <child link="pan"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <link name="head" >
+    <collision name="geom">
+      <!--origin xyz="0 0.025 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/head.stl" scale="0.13 0.13 0.13" />
+      </geometry-->
+      <origin xyz="0 -0.094 -0.235" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/head.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <surface>
+        <friction>
+          <ode mu='1.000000' mu2='1.000000'/>
+        </friction>
+      </surface>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0 -0.094 -0.235" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/head.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <inertial>
+      <origin xyz="0.01 -0.000001 0" rpy="0 -0.44506 0"/>
+      <mass value="0.19"/>
+      <inertia  ixx="0.00035622463752244" ixy="0.0" ixz="0.0" iyy="0.0006802505025500499" iyz="0.0" izz="0.0006800426839130501" />
+    </inertial>
+  </link>
+
+  <joint type="revolute" name="headTilt">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <limit effort="1000.0" lower="-0.28" upper="0.77" velocity="0.5"/> 
+    <axis xyz="1 0 0"/>
+    <parent link="pan"/>
+    <child link="head"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <link name="RF_paw" >
+    <collision name="geom">
+      <!--geometry>
+        <sphere radius="0.015"/>
+      </geometry-->
+      <origin xyz="-0.071 -0.062 -0.083" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/RFpaw.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="-0.071 -0.062 -0.083" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/RFpaw.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="black"></material>
+    </visual>
+    <inertial>
+      <origin xyz="-0.000193 0 -0.001688" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="4.888e-05" ixy="0" ixz="0" iyy="4.888e-05" iyz="0" izz="4.888e-05"/>
+    </inertial>
+  </link>
+
+  <joint type="fixed" name="RF_paw_joint">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="RF_down_leg"/>
+    <child link="RF_paw"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <link name="LF_paw" >
+    <collision name="geom">
+      <!--geometry>
+        <sphere radius="0.015"/>
+      </geometry-->
+      <origin xyz="0.071 -0.062 -0.083" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/LFpaw.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0.071 -0.062 -0.083" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/LFpaw.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="black"></material>
+    </visual>
+    <inertial>
+      <origin xyz="-0.000193 0 -0.001688" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="4.888e-05" ixy="0" ixz="0" iyy="4.888e-05" iyz="0" izz="4.888e-05"/>
+    </inertial>
+  </link>
+
+  <joint type="fixed" name="LF_paw_joint">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="LF_down_leg"/>
+    <child link="LF_paw"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <link name="RB_paw" >
+    <collision name="geom">
+      <!--geometry>
+        <sphere radius="0.015"/>
+      </geometry-->
+      <origin xyz="-0.071 0.066 -0.083" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/RBpaw.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="-0.071 0.066 -0.083" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/RBpaw.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="black"></material>
+    </visual>
+    <inertial>
+      <origin xyz="-0.000193 0 -0.001688" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="4.888e-05" ixy="0" ixz="0" iyy="4.888e-05" iyz="0" izz="4.888e-05"/>
+    </inertial>
+  </link>
+
+  <joint type="fixed" name="RB_paw_joint">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="RB_down_leg"/>
+    <child link="RB_paw"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+  <link name="LB_paw" >
+    <collision name="geom">
+      <!--geometry>
+        <sphere radius="0.015"/>
+      </geometry-->
+      <origin xyz="0.071 0.066 -0.083" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/LBpaw.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0.071 0.066 -0.083" rpy="0 0 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/LBpaw.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="black"></material>
+    </visual>
+    <inertial>
+      <origin xyz="-0.000193 0 -0.001688" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="4.888e-05" ixy="0" ixz="0" iyy="4.888e-05" iyz="0" izz="4.888e-05"/>
+    </inertial>
+  </link>
+
+  <joint type="fixed" name="LB_paw_joint">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="LB_down_leg"/>
+    <child link="LB_paw"/>
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <link name="tail1" >
+    <collision name="geom">
+      <!--geometry>
+        <sphere radius="0.015"/>
+      </geometry-->
+      <origin xyz="0 0 0.01" rpy="0 0 -1.5707"/>
+      <geometry>
+        <cylinder radius="0.006" length="0.020"/>
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0 0 0.01" rpy="0 0 -1.5707"/>
+      <geometry>
+        <cylinder radius="0.006" length="0.020"/>
+      </geometry>
+      <material name="black"></material>
+    </visual>
+    <inertial>
+      <mass value="0.0001"/>
+      <inertia ixx="6.126e-10" ixy="0" ixz="0" iyy="3.64e-09" iyz="0" izz="3.64e-09"/>
+    </inertial>
+  </link>
+
+  <joint type="revolute" name="tailTilt">
+    <origin xyz="0 -0.11 0.185" rpy="1.5707 0 0"/>
+    <parent link="base_link"/>
+    <child link="tail1"/>
+    <axis xyz="-1 0 0"/>
+    <limit effort="1000.0" lower="0.03" upper="1.1" velocity="0.5"/> 
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+  <link name="tail2" >
+    <collision name="geom">
+      <!--geometry>
+        <sphere radius="0.015"/>
+      </geometry-->
+      <origin xyz="0 -0.155 -0.12" rpy="0 -1.5707 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/tail.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <origin xyz="0 -0.155 -0.12" rpy="0 -1.5707 -1.5707"/>
+      <geometry>
+        <mesh filename="meshes/tail.stl" scale="0.13 0.13 0.13" />
+      </geometry>
+      <material name="black"></material>
+    </visual>
+    <inertial>
+      <origin xyz="-0.008924 0.000002 0.006188" rpy="0 0 0"/>
+      <mass value="0.001"/>
+      <inertia  ixx="1.323786971875e-07" ixy="0.0" ixz="0.0" iyy="1.454691640315e-07" iyz="0.0" izz="3.9588087513400005e-08" />
+    </inertial>
+  </link>
+
+  <joint type="revolute" name="tailPan">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="tail1"/>
+    <child link="tail2"/>
+    <axis xyz="0 0 -1"/>
+    <limit effort="1000.0" lower="-1.03" upper="1.03" velocity="0.5"/> 
+    <!--dynamics damping="10000.0" friction="10000.0"/--> <!-- this causes problems in pybullet -->
+    <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" />
+  </joint>
+
+</robot>
