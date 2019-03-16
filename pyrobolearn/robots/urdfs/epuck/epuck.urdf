@@ -1,0 +1,118 @@
+<?xml version="1.0"?>
+<!-- Modify by Brian: added inertia and collision tags -->
+<!-- weight information (m_tot = 150 g) can be found here: http://www.gctronic.com/e-puck_spec.php -->
+<!-- solid cylinder: i_xx = i_yy = i_zz = 1/12 * m * (3*r^2 + h^2) -->
+
+<robot name="epuck">
+
+    <link name="base_link">
+        <inertial>
+          <origin xyz="0. 0. 0.02" />
+          <mass value="0.08"/>
+          <inertia ixx="3.220667e-05"  ixy="0.0"  ixz="0.0" iyy="3.220667e-05" iyz="0.0" izz="3.220667e-05" />
+        </inertial>
+        <visual>
+            <geometry>
+                <cylinder length="0.034" radius="0.035"/>
+            </geometry>
+            <origin xyz="0.0 0.0 0.02"/>
+            <material name="light_grey">
+                <!-- <color rgba="0.8 0.8 0.8 0.5"/> -->
+                <color rgba="0.8 0.8 0.8 1"/>
+            </material>
+        </visual>
+        <collision>
+          <geometry>
+            <cylinder length="0.034" radius="0.035"/>
+          </geometry>
+          <origin xyz="0.0 0.0 0.02"/>
+        </collision>
+    </link>
+
+    <link name="right_wheel">
+        <inertial>
+          <origin rpy="0 1.57075 0"/>
+          <mass value="0.02"/>
+          <inertia ixx="2.006667e-06"  ixy="0.0"  ixz="0.0" iyy="2.006667e-06" iyz="0.0" izz="2.006667e-06" />
+        </inertial>
+        <visual>
+            <geometry>
+                <cylinder length="0.002" radius="0.02"/>
+            </geometry>
+            <origin rpy="0 1.57075 0"/>
+            <material name="black">
+                <color rgba="0.0 0.0 0.0 1"/>
+            </material>
+        </visual>
+        <collision>
+          <geometry>
+            <cylinder length="0.002" radius="0.02"/>
+          </geometry>
+          <origin rpy="0 1.57075 0"/>
+        </collision>
+    </link>
+
+    <joint name="base_to_right_wheel" type="continuous">
+        <parent link="base_link"/>
+        <child link="right_wheel"/>
+        <origin rpy="0 0 1.57075" xyz="0.0 -0.035 0.02"/>
+        <axis xyz="1 0 0"/>
+    </joint>
+
+    <link name="left_wheel">
+        <inertial>
+          <origin rpy="0 1.57075 0"/>
+          <mass value="0.02"/>
+          <inertia ixx="2.006667e-06"  ixy="0.0"  ixz="0.0" iyy="2.006667e-06" iyz="0.0" izz="2.006667e-06" />
+        </inertial>
+        <visual>
+            <geometry>
+                <cylinder length="0.002" radius="0.02"/>
+            </geometry>
+            <origin rpy="0 1.57075 0"/>
+            <material name="black">
+                <color rgba="0.0 0.0 0.0 1"/>
+            </material>
+        </visual>
+        <collision>
+          <geometry>
+            <cylinder length="0.002" radius="0.02"/>
+          </geometry>
+          <origin rpy="0 1.57075 0"/>
+        </collision>
+    </link>
+
+    <joint name="base_to_left_wheel" type="continuous">
+        <parent link="base_link"/>
+        <child link="left_wheel"/>
+        <origin rpy="0 0 1.57075" xyz="0.0 0.035 0.02"/>
+        <axis xyz="1 0 0"/>
+    </joint>
+
+    <link name="body_top">
+        <inertial>
+          <mass value="0.03"/>
+          <inertia ixx="1.02775e-5"  ixy="0.0"  ixz="0.0" iyy="1.02775e-5" iyz="0.0" izz="1.02775e-5" />
+        </inertial>
+        <visual>
+            <geometry>
+                <cylinder length="0.002" radius="0.037"/>
+            </geometry>
+            <material name="green_pcb">
+                <color rgba="0.23 0.4 0.16 1.0"/>
+            </material>
+        </visual>
+        <collision>
+          <geometry>
+            <cylinder length="0.002" radius="0.037"/>
+          </geometry>
+        </collision>
+    </link>
+
+    <joint name="base_to_body_top" type="fixed">
+        <parent link="base_link"/>
+        <child link="body_top"/>
+        <origin xyz="0.0 0.0 0.037"/>
+    </joint>
+
+</robot>

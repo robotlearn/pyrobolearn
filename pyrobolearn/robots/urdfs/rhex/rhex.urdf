@@ -1,0 +1,268 @@
+<?xml version="1.0" ?>
+<!-- URDF found in "https://github.com/grafoteka/rhex" and updated by Brian to have collision tags, inertial tags, and to translate spanish words to english -->
+<robot name="hexa">
+  <link name="base_link">
+    <!-- <inertial>
+      <mass value=""/>
+      <inertia ixx="" ixy="" ixz="" iyy="" iyz="" izz=""/>
+      <origin xyz="0 0 0"/>
+    </inertial> -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+          <mesh filename="meshes/chassis.dae" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+          <mesh filename="meshes/chassis.dae" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- axis 1 -->
+  <link name="axis1">
+    <!-- <inertial>
+      <mass value=""/>
+      <inertia ixx="" ixy="" ixz="" iyy="" iyz="" izz=""/>
+      <origin xyz="0 0 0"/>
+    </inertial> -->
+    <visual>
+      <origin xyz="0.07 0.02 0.03" rpy="0 1.5708 1.5708" />
+      <geometry>
+          <cylinder radius="0.02" length="0.02"/>
+      </geometry>
+      <material name="Blue"/>
+    </visual>
+  </link>
+  <joint name="joint_axis1" type="fixed">
+    <parent link="base_link"/>
+    <child link="axis1"/>
+    <origin xyz="0 0 0" rpy="0 0 0" /> 
+    <axis xyz="0 1 0" rpy="0 0 0" />
+  </joint>  
+
+  <!-- leg 1 -->
+  <link name="leg1">
+    <!-- <inertial>
+      <mass value=""/>
+      <inertia ixx="" ixy="" ixz="" iyy="" iyz="" izz=""/>
+      <origin xyz="0 0 0"/>
+    </inertial> -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- 0.07 0.02 0.03 -->
+      <geometry>
+          <mesh filename="meshes/leg.dae" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- 0.07 0.02 0.03 -->
+      <geometry>
+          <mesh filename="meshes/leg.dae" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_leg1" type="continuous">
+    <parent link="axis1"/>
+    <child link="leg1"/>
+    <origin xyz="0.07 0.02 0.03" rpy="0 0 0" /> 
+    <axis xyz="0 1 0" rpy="0 0 0" />
+  </joint>
+
+  <!-- axis 2 -->
+  <link name="axis2">
+    <visual>
+      <origin xyz="0.07 0.33 0.03" rpy="0 1.5708 1.5708" />
+      <geometry>
+          <cylinder radius="0.02" length="0.02"/>
+      </geometry>
+      <material name="Blue"/>
+    </visual>
+  </link>
+  <joint name="joint_axis2" type="fixed">
+    <parent link="base_link"/>
+    <child link="axis2"/>
+    <origin xyz="0 0 0" rpy="0 0 0" /> 
+    <axis xyz="0 1 0" rpy="0 0 0" />
+  </joint>  
+
+  <!-- leg 2 -->
+  <link name="leg2">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- 0.07 0.02 0.03 -->
+      <geometry>
+          <mesh filename="meshes/leg.dae" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- 0.07 0.02 0.03 -->
+      <geometry>
+          <mesh filename="meshes/leg.dae" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_leg2" type="continuous">
+    <parent link="axis2"/>
+    <child link="leg2"/>
+    <origin xyz="0.07 0.33 0.03" rpy="0 0 0" /> 
+    <axis xyz="0 1 0" rpy="0 0 0" />
+  </joint>
+
+  <!-- axis 3 -->
+  <link name="axis3">
+    <visual>
+      <origin xyz="0.24 -0.03 0.03" rpy="0 1.5708 1.5708" />
+      <geometry>
+          <cylinder radius="0.02" length="0.02"/>
+      </geometry>
+      <material name="Blue"/>
+    </visual>
+  </link>
+  <joint name="joint_axis3" type="fixed">
+    <parent link="base_link"/>
+    <child link="axis3"/>
+    <origin xyz="0 0 0" rpy="0 0 0" /> 
+    <axis xyz="0 1 0" rpy="0 0 0" />
+  </joint>  
+
+  <!-- leg 3 -->
+  <link name="leg3">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- 0.07 0.02 0.03 -->
+      <geometry>
+          <mesh filename="meshes/leg.dae" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- 0.07 0.02 0.03 -->
+      <geometry>
+          <mesh filename="meshes/leg.dae" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_leg3" type="continuous">
+    <parent link="axis3"/>
+    <child link="leg3"/>
+    <origin xyz="0.24 -0.03 0.03" rpy="0 0 0" /> 
+    <axis xyz="0 1 0" rpy="0 0 0" />
+  </joint>
+
+  <!-- axis 4 -->
+  <link name="axis4">
+    <visual>
+      <origin xyz="0.24 0.38 0.03" rpy="0 1.5708 1.5708" />
+      <geometry>
+          <cylinder radius="0.02" length="0.02"/>
+      </geometry>
+      <material name="Blue"/>
+    </visual>
+  </link>
+  <joint name="joint_axis4" type="fixed">
+    <parent link="base_link"/>
+    <child link="axis4"/>
+    <origin xyz="0 0 0" rpy="0 0 0" /> 
+    <axis xyz="0 1 0" rpy="0 0 0" />
+  </joint>  
+
+  <!-- leg 4 -->
+  <link name="leg4">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- 0.07 0.02 0.03 -->
+      <geometry>
+          <mesh filename="meshes/leg.dae" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- 0.07 0.02 0.03 -->
+      <geometry>
+          <mesh filename="meshes/leg.dae" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_leg4" type="continuous">
+    <parent link="axis4"/>
+    <child link="leg4"/>
+    <origin xyz="0.24 0.38 0.03" rpy="0 0 0" /> 
+    <axis xyz="0 1 0" rpy="0 0 0" />
+  </joint>
+
+  <!-- axis 5 -->
+  <link name="axis5">
+    <visual>
+      <origin xyz="0.41 0.02 0.03" rpy="0 1.5708 1.5708" />
+      <geometry>
+          <cylinder radius="0.02" length="0.02"/>
+      </geometry>
+      <material name="Blue"/>
+    </visual>
+  </link>
+  <joint name="joint_axis5" type="fixed">
+    <parent link="base_link"/>
+    <child link="axis5"/>
+    <origin xyz="0 0 0" rpy="0 0 0" /> 
+    <axis xyz="0 1 0" rpy="0 0 0" />
+  </joint>  
+
+  <!-- leg 5 -->
+  <link name="leg5">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- 0.07 0.02 0.03 -->
+      <geometry>
+          <mesh filename="meshes/leg.dae" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- 0.07 0.02 0.03 -->
+      <geometry>
+          <mesh filename="meshes/leg.dae" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_leg5" type="continuous">
+    <parent link="axis5"/>
+    <child link="leg5"/>
+    <origin xyz="0.41 0.02 0.03" rpy="0 0 0" /> 
+    <axis xyz="0 1 0" rpy="0 0 0" />
+  </joint>
+
+  <!-- axis 6 -->
+  <link name="axis6">
+    <visual>
+      <origin xyz="0.41 0.31 0.03" rpy="0 1.5708 1.5708" />
+      <geometry>
+          <cylinder radius="0.02" length="0.02"/>
+      </geometry>
+      <material name="Blue"/>
+    </visual>
+  </link>
+  <joint name="joint_axis6" type="fixed">
+    <parent link="base_link"/>
+    <child link="axis6"/>
+    <origin xyz="0 0 0" rpy="0 0 0" /> 
+    <axis xyz="0 1 0" rpy="0 0 0" />
+  </joint>  
+
+  <!-- leg 6 -->
+  <link name="leg6">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- 0.07 0.02 0.03 -->
+      <geometry>
+          <mesh filename="meshes/leg.dae" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- 0.07 0.02 0.03 -->
+      <geometry>
+          <mesh filename="meshes/leg.dae" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint_leg6" type="continuous">
+    <parent link="axis6"/>
+    <child link="leg6"/>
+    <origin xyz="0.41 0.31 0.03" rpy="0 0 0" /> 
+    <axis xyz="0 1 0" rpy="0 0 0" />
+  </joint>
+
+</robot>
