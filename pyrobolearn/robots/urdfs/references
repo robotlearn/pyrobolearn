@@ -1,0 +1,67 @@
+# References
+
+Here is the list of repos where you can find the original URDF/meshes of each robot.
+
+* Wheeled
+    * Pepper: https://github.com/ros-naoqi/pepper_robot
+    * PR2: https://github.com/pr2/pr2_common
+    * Fetch: https://github.com/fetchrobotics/fetch_ros
+
+* Quadruped
+    * Aibo: https://github.com/dkotfis/aibo_ros
+    * LittleDog: https://github.com/RobotLocomotion/LittleDog
+    * HyQ: https://github.com/iit-DLSLab/hyq-description
+    * HyQ2Max: https://github.com/iit-DLSLab/hyq2max-description
+    * Centauro: https://github.com/ADVRHumanoids/centauro-simulator
+
+* Biped
+    * Nao: https://github.com/ros-naoqi/nao_robot  and  https://github.com/ros-naoqi/nao_meshes
+    * iCub: https://github.com/robotology-playground/icub-models  and  https://github.com/robotology-playground/icub-model-generator
+    * Coman: https://github.com/ADVRHumanoids/iit-coman-ros-pkg
+    * Walk-man: https://github.com/ADVRHumanoids/iit-walkman-ros-pkg
+    * Cogimon: https://github.com/ADVRHumanoids/iit-cogimon-ros-pkg
+    * Atlas: https://github.com/openai/roboschool
+    * Valkyrie: https://github.com/openhumanoids/val_description
+    * Cassie: https://github.com/UMich-BipedLab/Cassie_Model   and    https://github.com/agilityrobotics/cassie-gazebo-sim
+
+* Manipulator
+    * rrbot: https://github.com/ros-simulation/gazebo_ros_demos
+    * kuka-lwr: https://github.com/CentroEPiaggio/kuka-lwr   and   https://github.com/bulletphysics/bullet3/tree/master/data/kuka_lwr
+    * kuka-iiwa: https://github.com/IFL-CAMP/iiwa_stack   and    https://github.com/bulletphysics/bullet3/tree/master/data/kuka_iiwa
+    * franka-emika: https://github.com/frankaemika/franka_ros
+    * Baxter: https://github.com/RethinkRobotics/baxter_common
+    * Jaco: https://github.com/JenniferBuehler/jaco-arm-pkgs
+
+* Hexapod
+    * phantomx: https://github.com/HumaRobotics/phantomx_description
+    * crab: https://github.com/tuuzdu/crab_project
+    * SEA (Series Elastic Actuators) hexapod (CMU): https://github.com/alexansari101/snake_ws
+
+* UVA
+    * quadcopter: https://github.com/wilselby/ROS_quadrotor_simulator
+    * rotors-simulator: https://github.com/ethz-asl/rotors_simulator
+
+* UUV
+    * uuv-simulator: https://github.com/uuvsimulator/uuv_simulator   and   https://uuvsimulator.github.io/
+
+* USV
+    * usv-simulator: https://github.com/OUXT-Polaris/ros_ship_packages
+
+* Amphibious
+    * Pleurobot: https://github.com/KM-RoBoTa/pleurobot_ros_pkg
+    * SEA (Series Elastic Actuators) snake (CMU): https://github.com/alexansari101/snake_ws
+
+* Others
+    * cubli: modeled by Songyan Xin 
+
+
+**Notes**:
+    * the URDFs present in this directory were taken from their corresponding repo on April 25, 2018.
+    * To convert a xacro file to URDF file, type `rosrun xacro xacro --inorder path/to/<robot>.urdf.xacro > <robot>.urdf` or `rosrun xacro xacro.py --inorder path/to/<robot>.urdf.xacro > <robot>.urdf`
+    * Some original meshes are in the format `.dae`. Because bullet has some issues to import them, I used `MeshLab` to convert them into the `.obj`/`.stl` formats. Check the following link to see the differences between `.obj` and `.stl` formats: https://3dprintingforbeginners.com/stl-and-obj-files-101/
+    * Currently (Apr.25, 2018), pybullet sets a mass of 1 and an identity inertia to links which don't have an inertia tag defined in the urdf (see bullet3/examples/Importers/ImportURDFDemo/UrdfParser.cpp, line 991-997). This is not desirable, and as such, you should set a mass/inertia of zero to fake/dummy links which are connected by a **fixed** joint. For other links connected by other type of joints, sets a reasonable inertia matrix; an identity matrix is often unreasonable (see ["Adding Physical and Collision Properties to a URDF Model"](http://wiki.ros.org/urdf/Tutorials/Adding%20Physical%20and%20Collision%20Properties%20to%20a%20URDF%20Model)).
+    * The first link (often called base_link/world_link) shouldn't have a mass/inertia of zero, this causes the robot to float in the air. Remove the corresponding tag from the urdf.
+    * I do not own the rights to the URDFs (see the corresponding repo and their associated license). They are just regrouped here for convenience, and slightly updated to be used with pybullet. Each URDF has a pybullet robot class associated with it.
+
+---> TODO: ADD IN EACH FOLDER THEIR CORRESPONDING LICENSE.
+

@@ -1,0 +1,3517 @@
+<robot name="iCub">
+  <link name="root_link">
+    <inertial>
+      <origin xyz="0.0256127 0.000177073 -0.0445339" rpy="1.57079632679 0 -1.57079632679"/>
+      <mass value="5.12739"/>
+      <inertia ixx="0.0145428" ixy="-3.37917e-05" ixz="-3.74897e-05" iyy="0.0206942" iyz="-0.00196027" izz="0.0252204"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.0364 0 0.032" rpy="1.57079632679 0 -1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_root_link_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="green">
+        <color rgba="0 1 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0364 0 0.032" rpy="1.57079632679 0 -1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_root_link_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="root_link_imu_frame">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="root_link_imu_frame_fixed_joint" type="fixed">
+    <origin xyz="0.085155 -0.011 -0.112309" rpy="-2.09439521059 0 -1.57079632679"/>
+    <parent link="root_link"/>
+    <child link="root_link_imu_frame"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_hip_1">
+    <inertial>
+      <origin xyz="-0.0005145 -0.0380753 -7.1e-05" rpy="1.57079632679 0 1.57079632679"/>
+      <mass value="0.919978"/>
+      <inertia ixx="0.000404268" ixy="-1.26852e-06" ixz="1.11055e-06" iyy="0.000574741" iyz="-7.69474e-07" izz="0.000580025"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0428515000001 0.026 0.151913" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_hip_1_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0 0 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0428515000001 0.026 0.151913" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_hip_1_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_hip_pitch" type="revolute">
+    <origin xyz="0.0064515 0.026 -0.119913" rpy="0 0 -3.14159265359"/>
+    <axis xyz="-2.22044604925e-16 -1.0 0.0"/>
+    <parent link="root_link"/>
+    <child link="r_hip_1"/>
+    <limit effort="55.5" lower="-0.785398163397" upper="2.33874119767" velocity="5.1"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="r_hip_2">
+    <inertial>
+      <origin xyz="-0.0013754 3.49999999998e-06 -0.044282" rpy="1.57079632679 0 1.57079632679"/>
+      <mass value="0.418361"/>
+      <inertia ixx="0.000487866" ixy="-2.70231e-07" ixz="1.85338e-07" iyy="0.000286099" iyz="1.22793e-05" izz="0.000315174"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0428514998094 0.0701 0.151913" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_hip_2_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0428514998094 0.0701 0.151913" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_hip_2_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_hip_roll" type="revolute">
+    <origin xyz="0 -0.0441 0" rpy="0 0 0"/>
+    <axis xyz="-1.0 0.0 -2.22044604925e-16"/>
+    <parent link="r_hip_1"/>
+    <child link="r_hip_2"/>
+    <limit effort="37.0" lower="-0.349065850399" upper="2.09439510239" velocity="7.64"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="r_hip_3">
+    <inertial>
+      <origin xyz="-0.000123 -0.0002823 0.008718" rpy="-1.57079632679 0 -1.57079632679"/>
+      <mass value="0.126212"/>
+      <inertia ixx="0.01" ixy="2.67901e-07" ixz="-4.41463e-09" iyy="0.01" iyz="3.32338e-08" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0437089998094 -0.0701 -0.226213" rpy="-1.57079632679 0 -1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_upper_thigh_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0437089998094 -0.0701 -0.226213" rpy="-1.57079632679 0 -1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_upper_thigh_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_leg_ft_sensor" type="fixed">
+    <origin xyz="-0.0008575 0 -0.0743" rpy="3.14159265359 0 0"/>
+    <parent link="r_hip_2"/>
+    <child link="r_hip_3"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_upper_leg">
+    <inertial>
+      <origin xyz="0.0033999 -2.91e-05 -0.078954" rpy="1.57079632679 0 1.57079632679"/>
+      <mass value="1.8035"/>
+      <inertia ixx="0.00647751422999" ixy="0.000129579429588" ixz="5.48205094739e-06" iyy="0.0014593786411" iyz="-0.000136613086875" izz="0.00646720823813"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0437089998094 0.0701 0.240813" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_thigh_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="yellow">
+        <color rgba="1 1 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0437089998094 0.0701 0.240813" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_thigh_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_hip_yaw" type="revolute">
+    <origin xyz="0 0 0.0144" rpy="-3.14159265359 0 0"/>
+    <axis xyz="0.0 -2.22044604925e-16 -1.0"/>
+    <parent link="r_hip_3"/>
+    <child link="r_upper_leg"/>
+    <limit effort="37.0" lower="-1.3962634016" upper="1.3962634016" velocity="7.64"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="r_upper_leg_back_contact">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_upper_leg_back_contact_fixed_joint" type="fixed">
+    <origin xyz="-0.0511999 0 0.0146" rpy="0 1.57079632679 0"/>
+    <parent link="r_upper_leg"/>
+    <child link="r_upper_leg_back_contact"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_upper_leg_dh_frame">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_upper_leg_dh_frame_fixed_joint" type="fixed">
+    <origin xyz="0 0 -0.145825" rpy="1.57079632679 0 0"/>
+    <parent link="r_upper_leg"/>
+    <child link="r_upper_leg_dh_frame"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg">
+    <inertial>
+      <origin xyz="0.0012363 -0.0035131 -0.088794" rpy="1.57079632679 0 1.57079632679"/>
+      <mass value="1.472"/>
+      <inertia ixx="0.00423993167478" ixy="0.000228814548854" ixz="-5.55646459453e-05" iyy="0.00152095043447" iyz="-0.000264132979243" izz="0.00457358584206"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0437089998094 0.0701000001907 0.386638" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_shank_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="pink">
+        <color rgba="1 0 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0437089998094 0.0701000001907 0.386638" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_shank_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_knee" type="revolute">
+    <origin xyz="0 0 -0.145825" rpy="0 0 0"/>
+    <axis xyz="-2.22044604925e-16 -1.0 0.0"/>
+    <parent link="r_upper_leg"/>
+    <child link="r_lower_leg"/>
+    <limit effort="37.0" lower="-2.16420827247" upper="0.0698131700798" velocity="7.64"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="r_lower_leg_skin_0">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_0_fixed_joint" type="fixed">
+    <origin xyz="0.0544117 -0.031214 -0.002634" rpy="2.09173809157e-06 -1.41530676247 2.48648458622"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_0"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_3">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_3_fixed_joint" type="fixed">
+    <origin xyz="0.05157878 0.0304205 -0.002843" rpy="0 -1.42951054083 -2.30391484186"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_3"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_4">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_4_fixed_joint" type="fixed">
+    <origin xyz="0.0583103 0.0167836 0.007272" rpy="-2.98636361519e-07 -1.25636748876 -2.75892380087"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_4"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_5">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_5_fixed_joint" type="fixed">
+    <origin xyz="0.0636503 0.0003094 -0.001972" rpy="0 -1.38652215068 -3.14147169807"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_5"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_6">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_6_fixed_joint" type="fixed">
+    <origin xyz="0.05208552 0.0304434 -0.022149" rpy="-3.14158927953 -1.46785123411 0.837492889077"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_6"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_9">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_9_fixed_joint" type="fixed">
+    <origin xyz="0.0598214 0.0167973 -0.030962" rpy="-3.14159202356 -1.34224755325 0.379294477718"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_9"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_10">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_10_fixed_joint" type="fixed">
+    <origin xyz="0.0644607 0.0003424 -0.021205" rpy="3.14159265355 -1.47095803541 0.000430021675261"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_10"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_11">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_11_fixed_joint" type="fixed">
+    <origin xyz="0.0607108 -0.0160916 -0.030885" rpy="-3.14159218252 -1.3281180406 -0.27213836788"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_11"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_14">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_14_fixed_joint" type="fixed">
+    <origin xyz="0.0550477 -0.031176 -0.0219" rpy="-3.14159181885 -1.46502735635 -0.654033407167"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_14"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_15">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_15_fixed_joint" type="fixed">
+    <origin xyz="0.0591708 -0.0161788 0.007243" rpy="4.27484256729e-07 -1.25203633076 2.86798859471"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_15"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_16">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_16_fixed_joint" type="fixed">
+    <origin xyz="0.0272875 -0.050287 -0.004549" rpy="1.33075915123e-05 -1.53260853515 1.96280242835"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_16"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_17">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_17_fixed_joint" type="fixed">
+    <origin xyz="0.027875 -0.050312 -0.023882" rpy="-3.1415645262 -1.56366240237 -1.18022508756"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_17"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_19">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_19_fixed_joint" type="fixed">
+    <origin xyz="0.0357534 0.0410628 0.006065" rpy="-8.90877717426e-07 -1.43498696978 -2.15863618017"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_19"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_20">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_20_fixed_joint" type="fixed">
+    <origin xyz="0.0234419 0.0479908 -0.004952" rpy="-3.20556549428e-06 -1.50015513031 -1.86755092413"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_20"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_21">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_21_fixed_joint" type="fixed">
+    <origin xyz="0.0242704 0.0485378 -0.024277" rpy="2.29671149558e-05 -1.55545513881 -1.87411972316"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_21"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_28">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_28_fixed_joint" type="fixed">
+    <origin xyz="0.04087215 -0.04244 -0.032756" rpy="3.14158088865 -1.52252462169 -0.929681029763"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_28"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_29">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_29_fixed_joint" type="fixed">
+    <origin xyz="0.03846637 -0.043516 -0.05242" rpy="3.14158017044 -1.53429841563 -0.915436346631"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_29"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_31">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_31_fixed_joint" type="fixed">
+    <origin xyz="0.03914638 -0.042271 0.006327" rpy="-6.58381747139e-07 -1.4186494462 2.20853032986"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_31"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_32">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_32_fixed_joint" type="fixed">
+    <origin xyz="0.04598301 0.0325847 -0.080733" rpy="-3.14159014988 -1.52238289798 0.645940380887"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_32"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_35">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_35_fixed_joint" type="fixed">
+    <origin xyz="0.04774866 -0.031232 -0.080113" rpy="-3.14158668275 -1.51758467332 -0.541532486468"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_35"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_36">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_36_fixed_joint" type="fixed">
+    <origin xyz="0.05322409 -0.0156018 -0.088362" rpy="-3.14159034144 -1.51587265281 -0.20740733566"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_36"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_37">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_37_fixed_joint" type="fixed">
+    <origin xyz="0.0552572 0.0009644 -0.078318" rpy="-3.14158180452 -1.52318336898 0.00752450583063"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_37"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_38">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_38_fixed_joint" type="fixed">
+    <origin xyz="0.04880467 -0.031263 -0.060757" rpy="3.14158665199 -1.5157299554 -0.54215359959"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_38"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_41">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_41_fixed_joint" type="fixed">
+    <origin xyz="0.0566009 -0.0159129 -0.049854" rpy="-3.14159198825 -1.40681343597 -0.248233089413"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_41"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_42">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_42_fixed_joint" type="fixed">
+    <origin xyz="0.0570106 0.0007962 -0.05908" rpy="3.14158970239 -1.43524750416 0.00687943651504"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_42"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_43">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_43_fixed_joint" type="fixed">
+    <origin xyz="0.04712542 0.0323653 -0.061362" rpy="-3.14159136621 -1.53843038237 0.624217523667"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_43"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_46">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_46_fixed_joint" type="fixed">
+    <origin xyz="0.0558156 0.0172164 -0.05018" rpy="-3.14158987809 -1.42759881603 0.325607710876"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_46"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_47">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_47_fixed_joint" type="fixed">
+    <origin xyz="0.05264163 0.0176389 -0.08886" rpy="3.14158963519 -1.51690559406 0.262640425058"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_47"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_49">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_49_fixed_joint" type="fixed">
+    <origin xyz="0.04113137 0.0324385 -0.138859" rpy="-3.14158934751 -1.48996135695 0.729763592113"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_49"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_50">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_50_fixed_joint" type="fixed">
+    <origin xyz="0.043016947 0.0325273 -0.119469" rpy="3.14159069596 -1.49900732636 0.695784020081"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_50"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_51">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_51_fixed_joint" type="fixed">
+    <origin xyz="0.05141583 0.017759 -0.108206" rpy="-3.14158890179 -1.50628475717 0.272079935713"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_51"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_52">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_52_fixed_joint" type="fixed">
+    <origin xyz="0.05299832 0.0012664 -0.116895" rpy="-3.14159164042 -1.50318674421 0.0108717260994"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_52"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_53">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_53_fixed_joint" type="fixed">
+    <origin xyz="0.05207312 -0.0154339 -0.107654" rpy="3.14159063987 -1.50595307447 -0.211407322892"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_53"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_54">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_54_fixed_joint" type="fixed">
+    <origin xyz="0.04512708 -0.030749 -0.118787" rpy="3.14158825193 -1.49745145571 -0.575115374473"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_54"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_55">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_55_fixed_joint" type="fixed">
+    <origin xyz="0.043502663 -0.030489 -0.138143" rpy="3.14158906486 -1.48995787038 -0.597219943789"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_55"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_56">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_56_fixed_joint" type="fixed">
+    <origin xyz="0.04926839 -0.015121 -0.146218" rpy="-3.14158920404 -1.49124819828 -0.2234844764"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_56"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_60">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_60_fixed_joint" type="fixed">
+    <origin xyz="0.04836967 0.018056 -0.146938" rpy="-3.14159173337 -1.48985968527 0.302951871954"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_60"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_lower_leg_skin_61">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_lower_leg_skin_61_fixed_joint" type="fixed">
+    <origin xyz="0.05161952 0.0014266 -0.136169" rpy="-3.14159100925 -1.49602097086 0.0132014275205"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_lower_leg_skin_61"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_ankle_1">
+    <inertial>
+      <origin xyz="0.015143405474 -0.0008685 4.28590827205e-05" rpy="1.30899714732 0 1.57079632679"/>
+      <mass value="0.6803"/>
+      <inertia ixx="0.000404620739232" ixy="8.52348884459e-06" ixz="-2.89135903191e-05" iyy="0.000437939678154" iyz="3.73303951794e-05" izz="0.000318928194184"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.109742724245 0.0701000001907 0.57844450225" rpy="1.30899714732 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_ankle_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="cyan">
+        <color rgba="0 1 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.109742724245 0.0701000001907 0.57844450225" rpy="1.30899714732 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_ankle_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_ankle_pitch" type="revolute">
+    <origin xyz="0 0 -0.2005" rpy="0 0.26179917948 0"/>
+    <axis xyz="-6.66133814775e-16 1.0 4.4408920985e-16"/>
+    <parent link="r_lower_leg"/>
+    <child link="r_ankle_1"/>
+    <limit effort="37.0" lower="-0.872664625997" upper="0.349065850399" velocity="7.64"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="r_ankle_2">
+    <inertial>
+      <origin xyz="0.00114521577532 -8.29999999999e-06 -0.0385118541074" rpy="1.30899714732 0 1.57079632679"/>
+      <mass value="0.265337"/>
+      <inertia ixx="0.01" ixy="-7.94989e-08" ixz="8.24551e-09" iyy="0.01" iyz="2.0701e-05" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.109742724423 0.0701000001907 0.578444502203" rpy="1.30899714732 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_foot_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.109742724423 0.0701000001907 0.578444502203" rpy="1.30899714732 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_foot_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_ankle_roll" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="-1.00000015612 -6.0136540192e-16 1.19793949732e-07"/>
+    <parent link="r_ankle_1"/>
+    <child link="r_ankle_2"/>
+    <limit effort="37.0" lower="-0.436332312999" upper="0.436332312999" velocity="7.64"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="r_foot">
+    <inertial>
+      <origin xyz="0.0397797426436 0.00455369999491 -0.00631181659" rpy="-1.83259550782 0 -1.57079632679"/>
+      <mass value="0.357881"/>
+      <inertia ixx="0.00109611" ixy="-2.9193e-07" ixz="-3.70109e-05" iyy="0.00125706" iyz="5.10952e-06" izz="0.000215359"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.106242797474 -0.0701000001884 -0.638744845568" rpy="-1.83259550782 0 -1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_sole_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="white">
+        <color rgba="1 1 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0417858 0.0049978 0.000725075" rpy="3.14159264324 0.261799192098 0.0"/>
+      <geometry>
+        <box size="0.16 0.072 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_foot_ft_sensor" type="fixed">
+    <origin xyz="-0.00349992806597 0 -0.0605003432802" rpy="3.14159265242 0 0"/>
+    <parent link="r_ankle_2"/>
+    <child link="r_foot"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_sole">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_sole_fixed_joint" type="fixed">
+    <origin xyz="0.0214502260596 0 0.00669127665248" rpy="-3.14159265359 0.261799181028 0"/>
+    <parent link="r_foot"/>
+    <child link="r_sole"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_hip_1">
+    <inertial>
+      <origin xyz="-0.0005108 0.0380923 -8.3e-05" rpy="1.57079632679 0 1.57079632679"/>
+      <mass value="0.919725"/>
+      <inertia ixx="0.000404539" ixy="1.18502e-06" ixz="-9.64514e-07" iyy="0.000573315" iyz="-1.06028e-06" izz="0.000578982"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0428515000001 -0.026 0.151913" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_hip_1_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="dblue">
+        <color rgba="0 0 0.8 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0428515000001 -0.026 0.151913" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_hip_1_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_hip_pitch" type="revolute">
+    <origin xyz="0.0064515 -0.026 -0.119913" rpy="0 0 -3.14159265359"/>
+    <axis xyz="-2.22044604925e-16 -1.0 -0.0"/>
+    <parent link="root_link"/>
+    <child link="l_hip_1"/>
+    <limit effort="55.5" lower="-0.785398163397" upper="2.33874119767" velocity="5.1"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="l_hip_2">
+    <inertial>
+      <origin xyz="-0.0015762 -1.94e-05 -0.044053" rpy="1.57079632679 0 1.57079632679"/>
+      <mass value="0.421106"/>
+      <inertia ixx="0.000494284" ixy="1.5483e-07" ixz="-1.86308e-07" iyy="0.000288736" iyz="1.52962e-05" izz="0.000319008"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0428514998093 -0.0701 0.151913" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_hip_2_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="dgreen">
+        <color rgba="0.1 0.8 0.1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0428514998093 -0.0701 0.151913" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_hip_2_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_hip_roll" type="revolute">
+    <origin xyz="0 0.0441 0" rpy="0 0 0"/>
+    <axis xyz="1.0 0.0 2.22044604925e-16"/>
+    <parent link="l_hip_1"/>
+    <child link="l_hip_2"/>
+    <limit effort="37.0" lower="-0.349065850399" upper="2.09439510239" velocity="7.64"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="l_hip_3">
+    <inertial>
+      <origin xyz="-0.0001229 -0.0002823 0.008718" rpy="-1.57079632679 0 -1.57079632679"/>
+      <mass value="0.126212"/>
+      <inertia ixx="0.01" ixy="2.67901e-07" ixz="-4.41463e-09" iyy="0.01" iyz="3.32338e-08" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.043709 0.0701 -0.226213" rpy="-1.57079632679 0 -1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_upper_thigh_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.043709 0.0701 -0.226213" rpy="-1.57079632679 0 -1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_upper_thigh_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_leg_ft_sensor" type="fixed">
+    <origin xyz="-0.0008575 0 -0.0743" rpy="-3.14159265359 0 -1.57079632679"/>
+    <parent link="l_hip_2"/>
+    <child link="l_hip_3"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_upper_leg">
+    <inertial>
+      <origin xyz="0.0033868 0.0001018 -0.078916" rpy="1.57079632679 0 1.57079632679"/>
+      <mass value="1.8084"/>
+      <inertia ixx="0.00648512673084" ixy="-0.00012421121424" ixz="-3.97399421479e-06" iyy="0.00146250529833" iyz="-0.00013681806888" izz="0.00647619242046"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0437089998093 -0.0701 0.240813" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_thigh_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <collision>
+      <origin xyz="0.0437089998093 -0.0701 0.240813" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_thigh_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_hip_yaw" type="revolute">
+    <origin xyz="0 0 0.0144" rpy="-3.14159265359 0 -1.57079632679"/>
+    <axis xyz="0.0 2.22044604925e-16 1.0"/>
+    <parent link="l_hip_3"/>
+    <child link="l_upper_leg"/>
+    <limit effort="37.0" lower="-1.3962634016" upper="1.3962634016" velocity="7.64"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="l_upper_leg_back_contact">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_upper_leg_back_contact_fixed_joint" type="fixed">
+    <origin xyz="-0.0512567 0 0.0146" rpy="0 1.57079632679 0"/>
+    <parent link="l_upper_leg"/>
+    <child link="l_upper_leg_back_contact"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_upper_leg_dh_frame">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_upper_leg_dh_frame_fixed_joint" type="fixed">
+    <origin xyz="0 0 -0.145825" rpy="1.57079632679 0 0"/>
+    <parent link="l_upper_leg"/>
+    <child link="l_upper_leg_dh_frame"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_lower_leg">
+    <inertial>
+      <origin xyz="0.0009997 0.0034969 -0.088567" rpy="1.57079632679 0 1.57079632679"/>
+      <mass value="1.4724"/>
+      <inertia ixx="0.00423698606499" ixy="-0.000239615181423" ixz="6.76166218238e-05" iyy="0.00152221313636" iyz="-0.00023314283575" izz="0.00457007183207"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0437089998093 -0.0701000001907 0.386638" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_shank_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin xyz="0.0437089998093 -0.0701000001907 0.386638" rpy="1.57079632679 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_shank_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_knee" type="revolute">
+    <origin xyz="0 0 -0.145825" rpy="0 0 0"/>
+    <axis xyz="-2.22044604925e-16 -1.0 -0.0"/>
+    <parent link="l_upper_leg"/>
+    <child link="l_lower_leg"/>
+    <limit effort="37.0" lower="-2.16420827247" upper="0.0698131700798" velocity="7.64"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="l_ankle_1">
+    <inertial>
+      <origin xyz="0.015152971856 0.0009021 4.23165565592e-05" rpy="1.30899714732 0 1.57079632679"/>
+      <mass value="0.6798"/>
+      <inertia ixx="0.000404476185531" ixy="-8.97867775832e-06" ixz="2.91348460473e-05" iyy="0.000437201502871" iyz="3.73020626807e-05" izz="0.000318287954629"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.109742724245 -0.0701000001908 0.57844450225" rpy="1.30899714732 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_ankle_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.109742724245 -0.0701000001908 0.57844450225" rpy="1.30899714732 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_ankle_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_ankle_pitch" type="revolute">
+    <origin xyz="0 0 -0.2005" rpy="0 0.26179917948 0"/>
+    <axis xyz="-6.66133814775e-16 1.0 4.4408920985e-16"/>
+    <parent link="l_lower_leg"/>
+    <child link="l_ankle_1"/>
+    <limit effort="37.0" lower="-0.872664625997" upper="0.349065850399" velocity="7.64"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="l_ankle_2">
+    <inertial>
+      <origin xyz="0.00114521577532 -8.29999999997e-06 -0.0385118541074" rpy="1.30899714732 0 1.57079632679"/>
+      <mass value="0.265337"/>
+      <inertia ixx="0.01" ixy="-7.94989e-08" ixz="8.24551e-09" iyy="0.01" iyz="2.0701e-05" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.109742724423 -0.0701000001902 0.578444502203" rpy="1.30899714732 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_foot_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.109742724423 -0.0701000001902 0.578444502203" rpy="1.30899714732 0 1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_foot_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_ankle_roll" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="1.00000015612 6.0136540192e-16 -1.19793949732e-07"/>
+    <parent link="l_ankle_1"/>
+    <child link="l_ankle_2"/>
+    <limit effort="37.0" lower="-0.436332312999" upper="0.436332312999" velocity="7.64"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="l_foot">
+    <inertial>
+      <origin xyz="0.0397509320401 -0.00455370006547 -0.00632583757567" rpy="-1.83259551889 0 -1.57079632679"/>
+      <mass value="0.357881"/>
+      <inertia ixx="0.00109523" ixy="2.85562e-07" ixz="3.69444e-05" iyy="0.00125599" iyz="5.08349e-06" izz="0.000215553"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.106242804521 0.0701000001701 -0.638744844389" rpy="-1.83259551889 0 -1.57079632679"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_sole_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="yellow"/>
+    </visual>
+    <collision>
+      <origin xyz="0.0417858 -0.0049978 0.000725075" rpy="3.14159264324 0.261799192098 0.0"/>
+      <geometry>
+        <box size="0.16 0.072 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_foot_ft_sensor" type="fixed">
+    <origin xyz="-0.00349992806597 0 -0.0605003432802" rpy="-3.14159264324 0 0"/>
+    <parent link="l_ankle_2"/>
+    <child link="l_foot"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_sole">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_sole_fixed_joint" type="fixed">
+    <origin xyz="0.0214502260596 0 0.00669127665248" rpy="-3.14159265359 0.261799192098 0"/>
+    <parent link="l_foot"/>
+    <child link="l_sole"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="torso_1">
+    <inertial>
+      <origin xyz="0.0269806359 0.02914798 -0.0004398" rpy="0 0 0"/>
+      <mass value="0.67144"/>
+      <inertia ixx="0.00040911" ixy="-1.04522e-06" ixz="-1.02516e-06" iyy="0.000384141" iyz="6.50708e-06" izz="0.000299445"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0269347998093 0.032 0.0364" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_lap_belt_1_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="pink"/>
+    </visual>
+    <collision>
+      <origin xyz="0.0269347998093 0.032 0.0364" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_lap_belt_1_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="torso_pitch" type="revolute">
+    <origin xyz="0 0.0269348 0" rpy="1.57079632679 0 -1.57079632679"/>
+    <axis xyz="1.0 0.0 0.0"/>
+    <parent link="root_link"/>
+    <child link="torso_1"/>
+    <limit effort="50000" lower="-0.349065850399" upper="1.2217304764" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="torso_2">
+    <inertial>
+      <origin xyz="-0.000113507809265 0.0361525 0.0570963" rpy="0 0 0"/>
+      <mass value="0.425685"/>
+      <inertia ixx="0.000829234" ixy="2.37006e-08" ixz="9.25231e-08" iyy="0.000436517" iyz="-1.74814e-07" izz="0.000604802"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0.1433 0.0386531" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_lap_belt_2_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="cyan"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0.1433 0.0386531" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_lap_belt_2_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="torso_roll" type="revolute">
+    <origin xyz="0.0269347998093 0.032 -0.0573446" rpy="0 0 0"/>
+    <axis xyz="0.0 0.0 -1.0"/>
+    <parent link="torso_1"/>
+    <child link="torso_2"/>
+    <limit effort="50000" lower="-0.523598775598" upper="0.523598775598" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="chest">
+    <inertial>
+      <origin xyz="0.000188619190735 0.073091 -0.0472381" rpy="0 0 0"/>
+      <mass value="7.638"/>
+      <inertia ixx="0.0430324878618" ixy="2.91075388804e-05" ixz="0.000181985229949" iyy="0.0440835725548" iyz="-0.000429106409108" izz="0.0260563249911"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0.0928 -0.024189" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_chest_bb_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0.0928 -0.024189" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_chest_bb_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="torso_yaw" type="revolute">
+    <origin xyz="0 0.05 0.0628421" rpy="0 0 0"/>
+    <axis xyz="0.0 -1.0 0.0"/>
+    <parent link="torso_2"/>
+    <child link="chest"/>
+    <limit effort="50000" lower="-0.872664625997" upper="0.872664625997" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="r_shoulder_1">
+    <inertial>
+      <origin xyz="-0.0122656014133 3.2e-05 -0.00321064290449" rpy="0 0 0"/>
+      <mass value="0.114862"/>
+      <inertia ixx="0.01" ixy="-1.65173e-08" ixz="-3.55626e-06" iyy="0.01" iyz="-6.13337e-08" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0990079253076 0 -0.0265292487558" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_shoulder_1_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin xyz="0.0990079253076 0 -0.0265292487558" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_shoulder_1_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_shoulder_pitch" type="revolute">
+    <origin xyz="-0.120015999809 0.0928 0.0079693" rpy="0 -0.523598883792 3.14159265359"/>
+    <axis xyz="-0.965925926173 0.0 0.258819275525"/>
+    <parent link="chest"/>
+    <child link="r_shoulder_1"/>
+    <limit effort="50000" lower="-1.66678943565" upper="0.174532925199" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="r_shoulder_2">
+    <inertial>
+      <origin xyz="-0.0214141709438 0.000271725272551 -0.0194402344535" rpy="0 0 0"/>
+      <mass value="0.238162"/>
+      <inertia ixx="0.01" ixy="-1.12091e-07" ixz="1.02574e-05" iyy="0.01" iyz="1.19785e-06" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.106587808568 2.31914715418e-07 -0.0407392121175" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_shoulder_2_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="dblue"/>
+    </visual>
+    <collision>
+      <origin xyz="0.106587808568 2.31914715418e-07 -0.0407392121175" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_shoulder_2_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_shoulder_roll" type="revolute">
+    <origin xyz="-0.00758046573227 0 0.0142102463639" rpy="-0.270597611583 -0.252680154648 -1.50155680035"/>
+    <axis xyz="-0.258819 -2.77555756156e-17 -0.965926"/>
+    <parent link="r_shoulder_1"/>
+    <child link="r_shoulder_2"/>
+    <limit effort="50000" lower="0.0" upper="2.80648943721" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="r_shoulder_3">
+    <inertial>
+      <origin xyz="-0.0267620766871 -6.99999999998e-06 0.0146999207713" rpy="0 0 0"/>
+      <mass value="0.35913"/>
+      <inertia ixx="0.01" ixy="3.60361e-07" ixz="4.94445e-05" iyy="0.01" iyz="2.65919e-07" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.131933879164 0 -0.0353515667647" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_upper_arm_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="dgreen"/>
+    </visual>
+    <collision>
+      <origin xyz="0.131933879164 0 -0.0353515667647" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_upper_arm_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_shoulder_yaw" type="revolute">
+    <origin xyz="-0.0253460713232 2.32750427306e-07 -0.00538764806457" rpy="-0.252689546175 0.0085186183214 0.067039889142"/>
+    <axis xyz="0.965925843882 -2.22044604925e-16 -0.258818979447"/>
+    <parent link="r_shoulder_2"/>
+    <child link="r_shoulder_3"/>
+    <limit effort="50000" lower="-0.645771823238" upper="1.3962634016" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="r_upper_arm">
+    <inertial>
+      <origin xyz="-0.006087 0.000126 0.0293121" rpy="0 1.30899700697 0"/>
+      <mass value="0.745104"/>
+      <inertia ixx="0.000509527" ixy="1.19292e-06" ixz="-1.17426e-05" iyy="0.000668487" iyz="1.13363e-06" izz="0.000599254"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.015 0 -0.1933" rpy="0 1.30899700697 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_elbow_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="gray"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.015 0 -0.1933" rpy="0 1.30899700697 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_elbow_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_arm_ft_sensor" type="fixed">
+    <origin xyz="-0.0508973017665 0 0.0291670296206" rpy="0 -1.30899700697 0"/>
+    <parent link="r_shoulder_3"/>
+    <child link="r_upper_arm"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_elbow_1">
+    <inertial>
+      <origin xyz="-0.00673912932843 0.0188019 -0.00465769236154" rpy="0 0 0"/>
+      <mass value="0.267903"/>
+      <inertia ixx="0.01" ixy="7.36974e-06" ixz="-1.04536e-05" iyy="0.01" iyz="3.92498e-06" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.259390463317 0.0224999 -0.0850325886962" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_elbow_prosup_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <collision>
+      <origin xyz="0.259390463317 0.0224999 -0.0850325886962" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_elbow_prosup_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_elbow" type="revolute">
+    <origin xyz="0 -0.0224999 0.07926" rpy="0 1.30899700697 0"/>
+    <axis xyz="2.22044604925e-16 1.0 0.0"/>
+    <parent link="r_upper_arm"/>
+    <child link="r_elbow_1"/>
+    <limit effort="50000" lower="0.261799387799" upper="1.85004900711" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="r_forearm">
+    <inertial>
+      <origin xyz="-0.0404391133886 -0.000328 0.00532733448387" rpy="0 0 0"/>
+      <mass value="0.6347"/>
+      <inertia ixx="0.000370044" ixy="-1.65419e-06" ixz="0.00010538" iyy="0.000672279" iyz="1.1456e-06" izz="0.000553637"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.296886967375 0 -0.0795506015227" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_forearm_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin xyz="0.296886967375 0 -0.0795506015227" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_forearm_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_wrist_prosup" type="revolute">
+    <origin xyz="-0.0384624299027 0.0224999 -0.00522316819403" rpy="0 0 0"/>
+    <axis xyz="0.965925843882 -2.22044604925e-16 -0.258818979447"/>
+    <parent link="r_elbow_1"/>
+    <child link="r_forearm"/>
+    <limit effort="50000" lower="-1.0471975512" upper="1.0471975512" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="r_forearm_skin_0">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_0_fixed_joint" type="fixed">
+    <origin xyz="-0.0454493286618 0.030077 -0.00628656037901" rpy="1.69181522292 -0.271026744341 -3.06880438227"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_0"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_1">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_1_fixed_joint" type="fixed">
+    <origin xyz="-0.0333728935826 0.028826 -0.0198456867711" rpy="1.86694023278 -0.274442533764 -3.09946977984"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_1"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_2">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_2_fixed_joint" type="fixed">
+    <origin xyz="-0.0146988929852 0.031279 -0.0160117338371" rpy="1.72847287019 -0.264015219116 -3.12733260687"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_2"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_3">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_3_fixed_joint" type="fixed">
+    <origin xyz="-0.045567293622 -0.030891 -0.00633000929351" rpy="-1.69487280859 -0.269757727104 3.07959743574"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_3"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_4">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_4_fixed_joint" type="fixed">
+    <origin xyz="-0.0635326332996 -0.0281163 -0.00899784258066" rpy="-1.80734960194 -0.0393131796327 2.97997643632"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_4"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_5">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_5_fixed_joint" type="fixed">
+    <origin xyz="-0.0688211941968 -0.0179483 -0.0231133361791" rpy="-2.5410475806 -0.385627260642 3.05486989667"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_5"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_6">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_6_fixed_joint" type="fixed">
+    <origin xyz="-0.0333948436255 -0.0295479 -0.0198325583433" rpy="-1.86628164653 -0.272886336181 3.10448585021"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_6"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_7">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_7_fixed_joint" type="fixed">
+    <origin xyz="-0.0147224260074 -0.0319422 -0.0159326482703" rpy="-1.72564640857 -0.263992900722 3.12721254266"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_7"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_8">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_8_fixed_joint" type="fixed">
+    <origin xyz="-0.0228528628554 -0.0097862 -0.041885146375" rpy="-2.94801979137 -0.270605090512 3.13980557285"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_8"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_9">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_9_fixed_joint" type="fixed">
+    <origin xyz="-0.0376032734683 -0.018955 -0.0340163371186" rpy="-2.58406517708 -0.2933217196 3.12128407396"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_9"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_10">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_10_fixed_joint" type="fixed">
+    <origin xyz="-0.0542285210888 -0.0097861 -0.0321469082866" rpy="-2.94123313406 -0.328304471922 3.1276263754"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_10"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_11">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_11_fixed_joint" type="fixed">
+    <origin xyz="-0.0542240912024 0.009043 -0.0321431259452" rpy="2.93929835957 -0.329101389745 -3.12731916446"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_11"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_12">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_12_fixed_joint" type="fixed">
+    <origin xyz="-0.0375994633868 0.018216 -0.0340191179961" rpy="2.58303505964 -0.29483050207 -3.12026580314"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_12"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_13">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_13_fixed_joint" type="fixed">
+    <origin xyz="-0.0228550868405 0.009048 -0.0418919009209" rpy="2.94896679198 -0.270583947189 -3.13981880352"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_13"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_14">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_14_fixed_joint" type="fixed">
+    <origin xyz="-0.0687703276364 0.01716 -0.0230239558511" rpy="2.48044991868 -0.295542566281 -2.91877349139"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_14"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_15">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_15_fixed_joint" type="fixed">
+    <origin xyz="-0.0633786419662 0.027145 -0.00879405455544" rpy="1.80492769741 -0.289783281916 -3.02765891428"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_15"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_16">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_16_fixed_joint" type="fixed">
+    <origin xyz="-0.03792482187 0.030487 0.0206369503605" rpy="1.41280007026 -0.25082462139 -3.06572742343"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_16"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_17">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_17_fixed_joint" type="fixed">
+    <origin xyz="-0.0543170548821 0.027725 0.0303291240179" rpy="1.27223716205 -0.23059304703 -3.03195542837"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_17"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_19">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_19_fixed_joint" type="fixed">
+    <origin xyz="-0.0381266107138 -0.0312941 0.020690605393" rpy="-1.41560888703 -0.252569290226 3.07715217889"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_19"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_22">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_22_fixed_joint" type="fixed">
+    <origin xyz="-0.0544173950421 -0.0287223 0.0306037516609" rpy="-1.2658242728 -0.234328151379 3.04788317971"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_22"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_24">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_24_fixed_joint" type="fixed">
+    <origin xyz="-0.0700345319564 -0.0097164 0.050069108714" rpy="-0.23489327644 -0.0388172993982 3.08676345459"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_24"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_25">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_25_fixed_joint" type="fixed">
+    <origin xyz="-0.0535999216295 -0.0182238 0.0454698125045" rpy="-0.564295527715 -0.136980272197 3.05963182792"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_25"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_28">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_28_fixed_joint" type="fixed">
+    <origin xyz="-0.0535859272148 0.017412 0.045352037397" rpy="0.59077064408 -0.0531607226063 3.10597081167"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_28"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_skin_29">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_skin_29_fixed_joint" type="fixed">
+    <origin xyz="-0.0700355805031 0.008954 0.0500111036233" rpy="0.248630982209 -0.0383136556786 -3.08328999116"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_skin_29"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_forearm_dh_frame">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_forearm_dh_frame_fixed_joint" type="fixed">
+    <origin xyz="-0.102871102373 7.00000000002e-06 0.0275642213111" rpy="-0.261799319827 0 -1.57079632679"/>
+    <parent link="r_forearm"/>
+    <child link="r_forearm_dh_frame"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="r_wrist_1">
+    <inertial>
+      <origin xyz="0.000986101955547 -0.001176 0.00410132736724" rpy="0 0 0"/>
+      <mass value="0.0362615"/>
+      <inertia ixx="0.01" ixy="-3.10462e-08" ixz="-9.44554e-07" iyy="0.01" iyz="-1.59685e-07" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.400392176248 -7.00000000009e-06 -0.104748304516" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_wrist_pitch_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <origin xyz="0.400392176248 -7.00000000009e-06 -0.104748304516" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_wrist_pitch_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_wrist_pitch" type="revolute">
+    <origin xyz="-0.103505208873 7.00000000002e-06 0.0251977029936" rpy="0 0 0"/>
+    <axis xyz="0.258818979447 0.0 0.965925843882"/>
+    <parent link="r_forearm"/>
+    <child link="r_wrist_1"/>
+    <limit effort="50000" lower="-1.3962634016" upper="0.436332312999" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="r_hand">
+    <inertial>
+      <origin xyz="-0.064668163717 0.0056002 0.0226812940918" rpy="0 0 0"/>
+      <mass value="0.248289"/>
+      <inertia ixx="0.01" ixy="-2.3536e-06" ixz="3.61526e-05" iyy="0.01" iyz="2.07146e-05" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.399758069749 0.0194929 -0.107114822834" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_hand_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <origin xyz="0.399758069749 0.0194929 -0.107114822834" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_r_hand_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="r_wrist_yaw" type="revolute">
+    <origin xyz="0.000634106499644 -0.0194999 0.00236651831751" rpy="0 0 0"/>
+    <axis xyz="2.22044604925e-16 1.0 0.0"/>
+    <parent link="r_wrist_1"/>
+    <child link="r_hand"/>
+    <limit effort="50000" lower="-0.349065850399" upper="0.436332312999" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="r_hand_dh_frame">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_hand_dh_frame_fixed_joint" type="fixed">
+    <origin xyz="-0.0576542978428 -0.0055568 0.0136938323083" rpy="-1.57079632679 -0.261799319827 3.14159265359"/>
+    <parent link="r_hand"/>
+    <child link="r_hand_dh_frame"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_shoulder_1">
+    <inertial>
+      <origin xyz="-0.008985 -3.3e-05 -0.0088998" rpy="0 0 0"/>
+      <mass value="0.114882"/>
+      <inertia ixx="0.01" ixy="-1.77064e-08" ixz="3.55951e-06" iyy="0.01" iyz="6.57597e-08" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.120257482 0 -0.032223" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_shoulder_1_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="yellow"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.120257482 0 -0.032223" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_shoulder_1_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_shoulder_pitch" type="revolute">
+    <origin xyz="0.120016000191 0.0928 0.0079693" rpy="0 0 0"/>
+    <axis xyz="0.965926 0.0 0.258819"/>
+    <parent link="chest"/>
+    <child link="l_shoulder_1"/>
+    <limit effort="50000" lower="-1.66678943565" upper="0.174532925199" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="l_shoulder_2">
+    <inertial>
+      <origin xyz="0.0214745951272 0.000268957899687 -0.0194107361535" rpy="0 0 0"/>
+      <mass value="0.238162"/>
+      <inertia ixx="0.01" ixy="1.19701e-07" ixz="-1.29687e-05" iyy="0.01" iyz="1.20112e-06" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.106586691581 1.10800934344e-07 -0.040743380771" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_shoulder_2_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="pink"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.106586691581 1.10800934344e-07 -0.040743380771" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_shoulder_2_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_shoulder_roll" type="revolute">
+    <origin xyz="-0.013671 0 0.0085204" rpy="0.270597317916 0.252680177542 -1.50155688559"/>
+    <axis xyz="-0.258819 2.77555756156e-17 0.965926"/>
+    <parent link="l_shoulder_1"/>
+    <child link="l_shoulder_2"/>
+    <limit effort="50000" lower="0.0" upper="2.80648943721" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="l_shoulder_3">
+    <inertial>
+      <origin xyz="0.026798412222 -1.6e-05 0.0146956806177" rpy="0 0 0"/>
+      <mass value="0.35913"/>
+      <inertia ixx="0.01" ixy="-2.22441e-07" ixz="-4.95846e-05" iyy="0.01" iyz="1.07538e-07" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.131901037685 0 -0.0353427669194" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_upper_arm_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="cyan"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.131901037685 0 -0.0353427669194" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_upper_arm_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_shoulder_yaw" type="revolute">
+    <origin xyz="0.0253143468312 1.11636438205e-07 -0.00540061656265" rpy="-0.252689546175 -0.0085186183214 -0.067039889142"/>
+    <axis xyz="0.965925843882 2.22044604925e-16 0.258818979447"/>
+    <parent link="l_shoulder_2"/>
+    <child link="l_shoulder_3"/>
+    <limit effort="50000" lower="-0.645771823238" upper="1.3962634016" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="l_upper_arm">
+    <inertial>
+      <origin xyz="-0.006121 -0.000189 0.0293684" rpy="0 -1.30899700697 -3.14159265359"/>
+      <mass value="0.746799"/>
+      <inertia ixx="0.000509731" ixy="-6.90767e-07" ixz="1.20048e-05" iyy="0.00067086" iyz="3.11833e-06" izz="0.000601202"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.015 0 -0.1933" rpy="0 -1.30899700697 -3.14159265359"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_elbow_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.015 0 -0.1933" rpy="0 -1.30899700697 -3.14159265359"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_elbow_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_arm_ft_sensor" type="fixed">
+    <origin xyz="0.0509301432452 0 0.0291758294659" rpy="0 -1.30899700697 3.14159265359"/>
+    <parent link="l_shoulder_3"/>
+    <child link="l_upper_arm"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_elbow_1">
+    <inertial>
+      <origin xyz="0.00673912932843 0.0303019 -0.00465769236154" rpy="0 0 0"/>
+      <mass value="0.267903"/>
+      <inertia ixx="0.01" ixy="-7.37159e-06" ixz="1.04505e-05" iyy="0.01" iyz="3.9319e-06" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.259390463317 0.0339999 -0.0850325886962" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_elbow_prosup_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.259390463317 0.0339999 -0.0850325886962" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_elbow_prosup_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_elbow" type="revolute">
+    <origin xyz="0 0.0339999 0.07926" rpy="0 -1.30899700697 -3.14159265359"/>
+    <axis xyz="2.22044604925e-16 -1.0 0.0"/>
+    <parent link="l_upper_arm"/>
+    <child link="l_elbow_1"/>
+    <limit effort="50000" lower="0.261799387799" upper="1.85004900711" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="l_forearm">
+    <inertial>
+      <origin xyz="0.0404511828823 -0.000686 0.00532363214379" rpy="0 0 0"/>
+      <mass value="0.636185"/>
+      <inertia ixx="0.000371447" ixy="4.34562e-06" ixz="-0.000105871" iyy="0.000674229" iyz="4.05222e-06" izz="0.000557115"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.296886967375 0 -0.0795506015227" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_forearm_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="dblue"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.296886967375 0 -0.0795506015227" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_forearm_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_wrist_prosup" type="revolute">
+    <origin xyz="0.0384624299027 0.0339999 -0.00522316819403" rpy="0 0 0"/>
+    <axis xyz="0.965925843882 2.22044604925e-16 0.258818979447"/>
+    <parent link="l_elbow_1"/>
+    <child link="l_forearm"/>
+    <limit effort="50000" lower="-1.0471975512" upper="1.0471975512" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="l_forearm_skin_0">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_0_fixed_joint" type="fixed">
+    <origin xyz="0.0454493286618 -0.0323169 -0.00628656037901" rpy="1.69181522292 -0.271026744341 0.0727882713185"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_0"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_1">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_1_fixed_joint" type="fixed">
+    <origin xyz="0.0333728935826 -0.0310662 -0.0198456867711" rpy="1.86694023278 -0.274442533764 0.0421228737473"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_1"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_2">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_2_fixed_joint" type="fixed">
+    <origin xyz="0.0146988929852 -0.0335184 -0.0160117338371" rpy="1.72847287019 -0.264015219116 0.0142600467197"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_2"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_3">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_3_fixed_joint" type="fixed">
+    <origin xyz="0.045567293622 0.028651 -0.00633000929351" rpy="-1.69487280859 -0.269757727104 -0.061995217851"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_3"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_4">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_4_fixed_joint" type="fixed">
+    <origin xyz="0.0635326332996 0.025877 -0.00899784258066" rpy="-1.81747870108 -0.287406884885 -0.0998316152826"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_4"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_5">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_5_fixed_joint" type="fixed">
+    <origin xyz="0.0688211941968 0.015709 -0.0231133361791" rpy="-2.5410475806 -0.385627260642 -0.0867227569203"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_5"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_6">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_6_fixed_joint" type="fixed">
+    <origin xyz="0.0333948436255 0.027308 -0.0198325583433" rpy="-1.86628164653 -0.272886336181 -0.0371068033783"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_6"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_7">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_7_fixed_joint" type="fixed">
+    <origin xyz="0.0147224260074 0.029702 -0.0159326482703" rpy="-1.72564640857 -0.263992900722 -0.0143801109253"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_7"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_8">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_8_fixed_joint" type="fixed">
+    <origin xyz="0.0228528628554 0.007546 -0.041885146375" rpy="-2.94801979137 -0.270605090512 -0.00178708074348"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_8"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_9">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_9_fixed_joint" type="fixed">
+    <origin xyz="0.0376032734683 0.016715 -0.0340163371186" rpy="-2.58406517708 -0.2933217196 -0.0203085796276"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_9"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_10">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_10_fixed_joint" type="fixed">
+    <origin xyz="0.0542285210888 0.007546 -0.0321469082866" rpy="-2.94123313406 -0.328304471922 -0.0139662781936"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_10"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_11">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_11_fixed_joint" type="fixed">
+    <origin xyz="0.0542240912024 -0.0112832 -0.0321431259452" rpy="2.93929835957 -0.329101389745 0.0142734891292"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_11"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_12">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_12_fixed_joint" type="fixed">
+    <origin xyz="0.0375994633868 -0.0204556 -0.0340191179961" rpy="2.58303505964 -0.29483050207 0.021326850448"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_12"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_13">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_13_fixed_joint" type="fixed">
+    <origin xyz="0.0228550868405 -0.0112878 -0.0418919009209" rpy="2.94896679198 -0.270583947189 0.00177385006765"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_13"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_14">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_14_fixed_joint" type="fixed">
+    <origin xyz="0.0687703276364 -0.0193999 -0.0230239558511" rpy="2.52462250363 -0.387794511771 0.0912924111683"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_14"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_15">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_15_fixed_joint" type="fixed">
+    <origin xyz="0.0633786419662 -0.0293843 -0.00879405455544" rpy="1.80492769741 -0.289783281916 0.113933739306"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_15"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_16">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_16_fixed_joint" type="fixed">
+    <origin xyz="0.03792482187 -0.0327268 0.0206369503605" rpy="1.41280007026 -0.25082462139 0.0758652301584"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_16"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_17">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_17_fixed_joint" type="fixed">
+    <origin xyz="0.0543170548821 -0.0299646 0.0303291240179" rpy="1.27223716205 -0.23059304703 0.109637225219"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_17"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_19">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_19_fixed_joint" type="fixed">
+    <origin xyz="0.0381266107138 0.029054 0.020690605393" rpy="-1.41560888703 -0.252569290226 -0.0644404747027"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_19"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_22">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_22_fixed_joint" type="fixed">
+    <origin xyz="0.0544173950421 0.026483 0.0306037516609" rpy="-1.2658242728 -0.234328151379 -0.0937094738802"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_22"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_24">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_24_fixed_joint" type="fixed">
+    <origin xyz="0.0700345319564 0.007477 0.050069108714" rpy="-0.23489327644 -0.0388172993982 -0.0548291989999"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_24"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_25">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_25_fixed_joint" type="fixed">
+    <origin xyz="0.0535999216295 0.015984 0.0454698125045" rpy="-0.564295527715 -0.136980272197 -0.0819608256656"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_25"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_28">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_28_fixed_joint" type="fixed">
+    <origin xyz="0.0535859272148 -0.0196522 0.045352037397" rpy="0.579311106949 -0.133994306778 0.0867597858312"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_28"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_skin_29">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_skin_29_fixed_joint" type="fixed">
+    <origin xyz="0.0700355805031 -0.0111936 0.0500111036233" rpy="0.248630982209 -0.0383136556786 0.0583026624266"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_skin_29"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_forearm_dh_frame">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_forearm_dh_frame_fixed_joint" type="fixed">
+    <origin xyz="0.102871102373 7.00000000002e-06 0.0275642213111" rpy="2.87979333376 0 1.57079632679"/>
+    <parent link="l_forearm"/>
+    <child link="l_forearm_dh_frame"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="l_wrist_1">
+    <inertial>
+      <origin xyz="-0.000981313804428 -0.001178 0.00408345773913" rpy="0 0 0"/>
+      <mass value="0.0362152"/>
+      <inertia ixx="0.01" ixy="3.08362e-08" ixz="9.42153e-07" iyy="0.01" iyz="-1.58924e-07" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.400314530555 -7.00000000009e-06 -0.105038082269" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_wrist_pitch_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="dgreen"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.400314530555 -7.00000000009e-06 -0.105038082269" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_wrist_pitch_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_wrist_pitch" type="revolute">
+    <origin xyz="0.103427563179 7.00000000002e-06 0.0254874807467" rpy="0 0 0"/>
+    <axis xyz="0.258818979447 0.0 -0.965925843882"/>
+    <parent link="l_forearm"/>
+    <child link="l_wrist_1"/>
+    <limit effort="50000" lower="-1.3962634016" upper="0.436332312999" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="l_hand">
+    <inertial>
+      <origin xyz="0.0647680204057 0.0056304 0.0226602208449" rpy="0 0 0"/>
+      <mass value="0.247806"/>
+      <inertia ixx="0.01" ixy="2.96453e-06" ixz="-3.68906e-05" iyy="0.01" iyz="2.06885e-05" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.399680424055 0.0194929 -0.107404600587" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_hand_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="gray"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.399680424055 0.0194929 -0.107404600587" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_l_hand_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="l_wrist_yaw" type="revolute">
+    <origin xyz="-0.000634106499644 -0.0194999 0.00236651831751" rpy="0 0 0"/>
+    <axis xyz="-2.22044604925e-16 1.0 0.0"/>
+    <parent link="l_wrist_1"/>
+    <child link="l_hand"/>
+    <limit effort="50000" lower="-0.349065850399" upper="0.436332312999" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="l_hand_dh_frame">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_hand_dh_frame_fixed_joint" type="fixed">
+    <origin xyz="0.0576542978428 -0.0055568 0.0136938323083" rpy="-1.57079632679 -0.261799319827 0"/>
+    <parent link="l_hand"/>
+    <child link="l_hand_dh_frame"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <link name="neck_1">
+    <inertial>
+      <origin xyz="0.0143705608 0.006567 -0.0063842" rpy="0 0 0"/>
+      <mass value="0.125793"/>
+      <inertia ixx="0.01" ixy="8.09156e-08" ixz="-3.74998e-08" iyy="0.01" iyz="9.39717e-06" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0142999998093 -0.079997 -0.0295008" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_neck_1_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <collision>
+      <origin xyz="0.0142999998093 -0.079997 -0.0295008" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_neck_1_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="neck_pitch" type="revolute">
+    <origin xyz="-0.0142999998093 0.172797 0.0053118" rpy="0 0 0"/>
+    <axis xyz="-1.0 0.0 0.0"/>
+    <parent link="chest"/>
+    <child link="neck_1"/>
+    <limit effort="50000" lower="-0.698131700798" upper="0.383972435439" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="neck_2">
+    <inertial>
+      <origin xyz="-8.8573009265e-05 0.035225 -0.01954527" rpy="0 0 0"/>
+      <mass value="0.177087"/>
+      <inertia ixx="0.01" ixy="-5.25591e-07" ixz="4.68307e-07" iyy="0.01" iyz="9.81476e-06" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.089497 -0.05030077" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_neck_2_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin xyz="0 -0.089497 -0.05030077" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_neck_2_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="neck_roll" type="revolute">
+    <origin xyz="0.0142999998093 0.0095 0.02079997" rpy="0 0 0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <parent link="neck_1"/>
+    <child link="neck_2"/>
+    <limit effort="50000" lower="-0.349065850399" upper="0.349065850399" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="head">
+    <inertial>
+      <origin xyz="-0.000574157809265 0.113511 -0.0075392" rpy="0 0 0"/>
+      <mass value="1.50691"/>
+      <inertia ixx="0.00680478" ixy="-1.60267e-05" ixz="7.28166e-05" iyy="0.00634736" iyz="0.000292091" izz="0.00478116"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.067153 -0.0295008" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_head_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <origin xyz="0 -0.067153 -0.0295008" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/simmechanics/2-5_plus/sim_sea_2-5_head_prt-binary.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="neck_yaw" type="revolute">
+    <origin xyz="0 -0.022344 -0.02079997" rpy="0 0 0"/>
+    <axis xyz="0.0 1.0 0.0"/>
+    <parent link="neck_2"/>
+    <child link="head"/>
+    <limit effort="50000" lower="-0.872664625997" upper="0.872664625997" velocity="50000"/>
+    <dynamics damping="1.0" friction="0.0"/>
+  </joint>
+  <link name="imu_frame">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="imu_frame_fixed_joint" type="fixed">
+    <origin xyz="0.00950000019074 0.133444 0.0093" rpy="-1.57079632679 1.57079632679 0"/>
+    <parent link="head"/>
+    <child link="imu_frame"/>
+    <dynamics damping="0.1"/>
+  </joint>
+  <!--link name="base_link"/>
+  <joint name="base_fixed_joint" type="fixed">
+  <origin xyz="0 0 0" rpy="0 -0 0"/>
+  <axis xyz="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="root_link"/>
+</joint-->
+  <link name="l_foot_dh_frame">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="l_foot_dh_frame_fixed_joint" type="fixed">
+  <origin xyz="0.0 0 0.004" rpy="0 1.5708 0"/>
+  <axis xyz="0 0 0"/>
+  <parent link="l_foot"/>
+  <child link="l_foot_dh_frame"/>
+</joint>
+  <link name="r_foot_dh_frame">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial>
+  </link> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default -->
+  <joint name="r_foot_dh_frame_fixed_joint" type="fixed">
+  <origin xyz="0.0 0 0.004" rpy="0 1.5708 0"/>
+  <axis xyz="0 0 0"/>
+  <parent link="r_foot"/>
+  <child link="r_foot_dh_frame"/>
+</joint>
+  <gazebo reference="r_arm_ft_sensor">
+  <disableFixedJointLumping>true</disableFixedJointLumping>
+</gazebo>
+  <gazebo reference="l_arm_ft_sensor">
+  <disableFixedJointLumping>true</disableFixedJointLumping>
+</gazebo>
+  <gazebo reference="r_leg_ft_sensor">
+  <disableFixedJointLumping>true</disableFixedJointLumping>
+</gazebo>
+  <gazebo reference="l_leg_ft_sensor">
+  <disableFixedJointLumping>true</disableFixedJointLumping>
+</gazebo>
+  <gazebo reference="r_foot_ft_sensor">
+  <disableFixedJointLumping>true</disableFixedJointLumping>
+</gazebo>
+  <gazebo reference="l_foot_ft_sensor">
+  <disableFixedJointLumping>true</disableFixedJointLumping>
+</gazebo>
+  <gazebo reference="l_foot">
+  <collision> <surface> <bounce>
+    <restitution_coefficient>0</restitution_coefficient>
+    <threshold>100000</threshold>
+  </bounce> </surface> </collision>
+  <maxContacts>4</maxContacts>
+  <kp>18000000</kp>
+  <kd>100</kd>
+  <maxVel>100</maxVel>
+  <minDepth>0.0001</minDepth>
+  <mu1>1</mu1>
+  <mu2>1</mu2>
+  <fdir1>0 0 0</fdir1>
+</gazebo>
+  <gazebo reference="r_foot">
+  <collision> <surface> <bounce>
+    <restitution_coefficient>0</restitution_coefficient>
+    <threshold>100000</threshold>
+  </bounce> </surface> </collision>
+  <maxContacts>4</maxContacts>
+  <kp>18000000</kp>
+  <kd>100</kd>
+  <maxVel>100</maxVel>
+  <minDepth>0.0001</minDepth>
+  <mu1>1</mu1>
+  <mu2>1</mu2>
+  <fdir1>0 0 0</fdir1>
+</gazebo>
+  <gazebo>
+<plugin name="iCub_yarp_gazebo_plugin_ACCpart" filename="libgazebo_yarp_distributedinertials.so">
+  <yarpConfigurationFile>model://iCub/conf/MTB/gazebo_icub_left_leg_mtb.ini</yarpConfigurationFile>
+</plugin>
+<plugin name="iCub_yarp_gazebo_plugin_ACCpart" filename="libgazebo_yarp_distributedinertials.so">
+  <yarpConfigurationFile>model://iCub/conf/MTB/gazebo_icub_right_leg_mtb.ini</yarpConfigurationFile>
+</plugin>
+<plugin name="iCub_yarp_gazebo_plugin_ACCpart" filename="libgazebo_yarp_distributedinertials.so">
+  <yarpConfigurationFile>model://iCub/conf/MTB/gazebo_icub_left_arm_mtb.ini</yarpConfigurationFile>
+</plugin>
+<plugin name="iCub_yarp_gazebo_plugin_ACCpart" filename="libgazebo_yarp_distributedinertials.so">
+  <yarpConfigurationFile>model://iCub/conf/MTB/gazebo_icub_right_arm_mtb.ini</yarpConfigurationFile>
+</plugin>
+<plugin name="iCub_yarp_gazebo_plugin_ACCpart" filename="libgazebo_yarp_distributedinertials.so">
+  <yarpConfigurationFile>model://iCub/conf/MTB/gazebo_icub_torso_mtb.ini</yarpConfigurationFile>
+</plugin>
+<plugin name="controlboard_torso" filename="libgazebo_yarp_controlboard.so">
+  <yarpConfigurationFile>model://iCub/conf/gazebo_icub_torso.ini</yarpConfigurationFile>
+</plugin>
+<plugin name="controlboard_head_without_eyes" filename="libgazebo_yarp_controlboard.so">
+  <yarpConfigurationFile>model://iCub/conf/gazebo_icub_head_without_eyes.ini</yarpConfigurationFile>
+</plugin>
+<plugin name="controlboard_left_arm_no_hand" filename="libgazebo_yarp_controlboard.so">
+  <yarpConfigurationFile>model://iCub/conf/gazebo_icub_left_arm_no_hand_for_no_hand_model.ini</yarpConfigurationFile>
+  <initialConfiguration>-0.52 0.52 0 0.785 0 0 0.0</initialConfiguration>
+</plugin>
+<plugin name="controlboard_right_arm_no_hand" filename="libgazebo_yarp_controlboard.so">
+  <yarpConfigurationFile>model://iCub/conf/gazebo_icub_right_arm_no_hand_for_no_hand_model.ini</yarpConfigurationFile>
+  <initialConfiguration>-0.52 0.52 0 0.785 0 0 0.0</initialConfiguration>
+</plugin>
+<plugin name="controlboard_right_leg" filename="libgazebo_yarp_controlboard.so">
+  <yarpConfigurationFile>model://iCub/conf/gazebo_icub_right_leg.ini</yarpConfigurationFile>
+</plugin>
+<plugin name="controlboard_left_leg" filename="libgazebo_yarp_controlboard.so">
+  <yarpConfigurationFile>model://iCub/conf/gazebo_icub_left_leg.ini</yarpConfigurationFile>
+</plugin>
+<plugin name="apply_external_wrench" filename="libgazebo_yarp_externalwrench.so">
+  <robotNamefromConfigFile>model://iCub/conf/gazebo_icub_robotname.ini</robotNamefromConfigFile>
+</plugin>
+</gazebo>
+  <gazebo reference="r_hip_pitch">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="r_hip_roll">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="r_hip_yaw">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="r_knee">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="r_ankle_pitch">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="r_ankle_roll">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="l_hip_pitch">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="l_hip_roll">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="l_hip_yaw">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="l_knee">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="l_ankle_pitch">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="l_ankle_roll">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="torso_pitch">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="torso_roll">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="torso_yaw">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="r_shoulder_pitch">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="r_shoulder_roll">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="r_shoulder_yaw">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="r_elbow">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="r_wrist_prosup">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="r_wrist_pitch">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="r_wrist_yaw">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="l_shoulder_pitch">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="l_shoulder_roll">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="l_shoulder_yaw">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="l_elbow">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="l_wrist_prosup">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="l_wrist_pitch">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="l_wrist_yaw">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="neck_pitch">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="neck_roll">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="neck_yaw">
+   <implicitSpringDamper>1</implicitSpringDamper>
+</gazebo>
+  <gazebo reference="l_leg_ft_sensor">
+    <sensor name="l_leg_ft_sensor" type="force_torque">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <force_torque>
+        <frame>child</frame>
+        <measure_direction>child_to_parent</measure_direction>
+      </force_torque>
+      <plugin name="left_leg_ft_plugin" filename="libgazebo_yarp_forcetorque.so">
+  <yarpConfigurationFile>model://iCub/conf/FT/gazebo_icub_left_leg_ft.ini</yarpConfigurationFile>
+</plugin>
+    </sensor>
+  </gazebo>
+  <sensor name="l_leg_ft_sensor" type="force_torque">
+    <parent joint="l_leg_ft_sensor"/>
+    <force_torque>
+      <frame>child</frame>
+      <measure_direction>child_to_parent</measure_direction>
+    </force_torque>
+  </sensor>
+  <gazebo reference="r_leg_ft_sensor">
+    <sensor name="r_leg_ft_sensor" type="force_torque">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <force_torque>
+        <frame>child</frame>
+        <measure_direction>child_to_parent</measure_direction>
+      </force_torque>
+      <plugin name="right_leg_ft_plugin" filename="libgazebo_yarp_forcetorque.so">
+  <yarpConfigurationFile>model://iCub/conf/FT/gazebo_icub_right_leg_ft.ini</yarpConfigurationFile>
+</plugin>
+    </sensor>
+  </gazebo>
+  <sensor name="r_leg_ft_sensor" type="force_torque">
+    <parent joint="r_leg_ft_sensor"/>
+    <force_torque>
+      <frame>child</frame>
+      <measure_direction>child_to_parent</measure_direction>
+    </force_torque>
+  </sensor>
+  <gazebo reference="l_foot_ft_sensor">
+    <sensor name="l_foot_ft_sensor" type="force_torque">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <force_torque>
+        <frame>child</frame>
+        <measure_direction>child_to_parent</measure_direction>
+      </force_torque>
+      <plugin name="left_foot_ft_plugin" filename="libgazebo_yarp_forcetorque.so">
+  <yarpConfigurationFile>model://iCub/conf/FT/gazebo_icub_left_foot_ft.ini</yarpConfigurationFile>
+</plugin>
+    </sensor>
+  </gazebo>
+  <sensor name="l_foot_ft_sensor" type="force_torque">
+    <parent joint="l_foot_ft_sensor"/>
+    <force_torque>
+      <frame>child</frame>
+      <measure_direction>child_to_parent</measure_direction>
+    </force_torque>
+  </sensor>
+  <gazebo reference="r_foot_ft_sensor">
+    <sensor name="r_foot_ft_sensor" type="force_torque">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <force_torque>
+        <frame>child</frame>
+        <measure_direction>child_to_parent</measure_direction>
+      </force_torque>
+      <plugin name="right_foot_ft_plugin" filename="libgazebo_yarp_forcetorque.so">
+  <yarpConfigurationFile>model://iCub/conf/FT/gazebo_icub_right_foot_ft.ini</yarpConfigurationFile>
+</plugin>
+    </sensor>
+  </gazebo>
+  <sensor name="r_foot_ft_sensor" type="force_torque">
+    <parent joint="r_foot_ft_sensor"/>
+    <force_torque>
+      <frame>child</frame>
+      <measure_direction>child_to_parent</measure_direction>
+    </force_torque>
+  </sensor>
+  <gazebo reference="l_arm_ft_sensor">
+    <sensor name="l_arm_ft_sensor" type="force_torque">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <force_torque>
+        <frame>child</frame>
+        <measure_direction>child_to_parent</measure_direction>
+      </force_torque>
+      <plugin name="left_arm_ft_plugin" filename="libgazebo_yarp_forcetorque.so">
+  <yarpConfigurationFile>model://iCub/conf/FT/gazebo_icub_left_arm_ft.ini</yarpConfigurationFile>
+</plugin>
+    </sensor>
+  </gazebo>
+  <sensor name="l_arm_ft_sensor" type="force_torque">
+    <parent joint="l_arm_ft_sensor"/>
+    <force_torque>
+      <frame>child</frame>
+      <measure_direction>child_to_parent</measure_direction>
+    </force_torque>
+  </sensor>
+  <gazebo reference="r_arm_ft_sensor">
+    <sensor name="r_arm_ft_sensor" type="force_torque">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <force_torque>
+        <frame>child</frame>
+        <measure_direction>child_to_parent</measure_direction>
+      </force_torque>
+      <plugin name="right_arm_ft_plugin" filename="libgazebo_yarp_forcetorque.so">
+  <yarpConfigurationFile>model://iCub/conf/FT/gazebo_icub_right_arm_ft.ini</yarpConfigurationFile>
+</plugin>
+    </sensor>
+  </gazebo>
+  <sensor name="r_arm_ft_sensor" type="force_torque">
+    <parent joint="r_arm_ft_sensor"/>
+    <force_torque>
+      <frame>child</frame>
+      <measure_direction>child_to_parent</measure_direction>
+    </force_torque>
+  </sensor>
+  <gazebo reference="head">
+    <sensor name="head_imu_acc_1x1" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.00950000019074 0.133444 0.0093 -1.57079632679 1.57079632679 0.0</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_IMU" filename="libgazebo_yarp_imu.so">
+    <yarpConfigurationFile>model://iCub/conf/gazebo_icub_inertial.ini</yarpConfigurationFile>
+</plugin>
+    </sensor>
+  </gazebo>
+  <sensor name="head_imu_acc_1x1" type="accelerometer">
+    <parent link="head"/>
+    <origin rpy="-1.57079632679 1.57079632679 0.0" xyz="0.00950000019074 0.133444 0.0093"/>
+  </sensor>
+  <gazebo reference="root_link">
+    <sensor name="root_link_ems_acc_eb5" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0493308 -0.0125771 -0.115691 -3.14159265359 1.29154404503 3.14159265359</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="root_link_ems_acc_eb5" type="accelerometer">
+    <parent link="root_link"/>
+    <origin rpy="-3.14159265359 1.29154404503 3.14159265359" xyz="0.0493308 -0.0125771 -0.115691"/>
+  </sensor>
+  <gazebo reference="root_link">
+    <sensor name="root_link_ems_gyro_eb5" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0493308 -0.0125771 -0.115691 -3.14159265359 1.29154404503 3.14159265359</pose>
+    </sensor>
+  </gazebo>
+  <sensor name="root_link_ems_gyro_eb5" type="gyroscope">
+    <parent link="root_link"/>
+    <origin rpy="-3.14159265359 1.29154404503 3.14159265359" xyz="0.0493308 -0.0125771 -0.115691"/>
+  </sensor>
+  <gazebo reference="chest">
+    <sensor name="chest_ems_acc_eb1" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0647855001907 0.064043 -0.0647091 3.1415169123 -0.261799309122 0.000292641880255</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="chest_ems_acc_eb1" type="accelerometer">
+    <parent link="chest"/>
+    <origin rpy="3.1415169123 -0.261799309122 0.000292641880255" xyz="0.0647855001907 0.064043 -0.0647091"/>
+  </sensor>
+  <gazebo reference="chest">
+    <sensor name="chest_ems_gyro_eb1" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0692016001907 0.064548 -0.0635258 3.1415169123 -0.261799309122 0.000292641880255</pose>
+    </sensor>
+  </gazebo>
+  <sensor name="chest_ems_gyro_eb1" type="gyroscope">
+    <parent link="chest"/>
+    <origin rpy="3.1415169123 -0.261799309122 0.000292641880255" xyz="0.0692016001907 0.064548 -0.0635258"/>
+  </sensor>
+  <gazebo reference="chest">
+    <sensor name="chest_ems_acc_eb2" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0204533001907 0.088063 -0.0641645 3.14159050104 0.261799319819 3.14158433678</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="chest_ems_acc_eb2" type="accelerometer">
+    <parent link="chest"/>
+    <origin rpy="3.14159050104 0.261799319819 3.14158433678" xyz="0.0204533001907 0.088063 -0.0641645"/>
+  </sensor>
+  <gazebo reference="chest">
+    <sensor name="chest_ems_gyro_eb2" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0160371001907 0.087559 -0.0653479 3.14159050104 0.261799319819 3.14158433678</pose>
+    </sensor>
+  </gazebo>
+  <sensor name="chest_ems_gyro_eb2" type="gyroscope">
+    <parent link="chest"/>
+    <origin rpy="3.14159050104 0.261799319819 3.14158433678" xyz="0.0160371001907 0.087559 -0.0653479"/>
+  </sensor>
+  <gazebo reference="chest">
+    <sensor name="chest_ems_acc_eb3" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0230587998093 0.064019 -0.0758985 3.14110916203 0.261100516471 -0.000309071462555</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="chest_ems_acc_eb3" type="accelerometer">
+    <parent link="chest"/>
+    <origin rpy="3.14110916203 0.261100516471 -0.000309071462555" xyz="-0.0230587998093 0.064019 -0.0758985"/>
+  </sensor>
+  <gazebo reference="chest">
+    <sensor name="chest_ems_gyro_eb3" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0186416998093 0.064521 -0.0770785 3.14110916203 0.261100516471 -0.000309071462555</pose>
+    </sensor>
+  </gazebo>
+  <sensor name="chest_ems_gyro_eb3" type="gyroscope">
+    <parent link="chest"/>
+    <origin rpy="3.14110916203 0.261100516471 -0.000309071462555" xyz="-0.0186416998093 0.064521 -0.0770785"/>
+  </sensor>
+  <gazebo reference="chest">
+    <sensor name="chest_ems_acc_eb4" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0621620998093 0.088063 -0.0529887 -3.14159050476 -0.261799319819 3.14158433987</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="chest_ems_acc_eb4" type="accelerometer">
+    <parent link="chest"/>
+    <origin rpy="-3.14159050476 -0.261799319819 3.14158433987" xyz="-0.0621620998093 0.088063 -0.0529887"/>
+  </sensor>
+  <gazebo reference="chest">
+    <sensor name="chest_ems_gyro_eb4" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0665783998093 0.087559 -0.0518054 -3.14159050476 -0.261799319819 3.14158433987</pose>
+    </sensor>
+  </gazebo>
+  <sensor name="chest_ems_gyro_eb4" type="gyroscope">
+    <parent link="chest"/>
+    <origin rpy="-3.14159050476 -0.261799319819 3.14158433987" xyz="-0.0665783998093 0.087559 -0.0518054"/>
+  </sensor>
+  <gazebo reference="chest">
+    <sensor name="chest_mtb_acc_0b7" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0607539998093 -0.0017836 0.0442341 0.875167771492 0.116363734392 -1.48597350247</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="chest_mtb_acc_0b7" type="accelerometer">
+    <parent link="chest"/>
+    <origin rpy="0.875167771492 0.116363734392 -1.48597350247" xyz="-0.0607539998093 -0.0017836 0.0442341"/>
+  </sensor>
+  <gazebo reference="chest">
+    <sensor name="chest_mtb_acc_0b8" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0457046998093 -0.001846 0.0567427 0.500960084689 0.107313688983 -1.4778325291</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="chest_mtb_acc_0b8" type="accelerometer">
+    <parent link="chest"/>
+    <origin rpy="0.500960084689 0.107313688983 -1.4778325291" xyz="-0.0457046998093 -0.001846 0.0567427"/>
+  </sensor>
+  <gazebo reference="chest">
+    <sensor name="chest_mtb_acc_0b9" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0439036001907 -0.0017841 0.0577221 -0.500959928973 0.107315404248 -1.66376017469</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="chest_mtb_acc_0b9" type="accelerometer">
+    <parent link="chest"/>
+    <origin rpy="-0.500959928973 0.107315404248 -1.66376017469" xyz="0.0439036001907 -0.0017841 0.0577221"/>
+  </sensor>
+  <gazebo reference="chest">
+    <sensor name="chest_mtb_acc_0b10" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0594286001907 -0.0018543 0.0457981 -0.875168153475 0.116362025479 -1.65561807505</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="chest_mtb_acc_0b10" type="accelerometer">
+    <parent link="chest"/>
+    <origin rpy="-0.875168153475 0.116362025479 -1.65561807505" xyz="0.0594286001907 -0.0018543 0.0457981"/>
+  </sensor>
+  <gazebo reference="r_upper_arm">
+    <sensor name="r_upper_arm_mtb_acc_2b10" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0412194 0.029588 0.0295279 1.57079546365 1.57078381225 -2.68257161165</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_arm_mtb_acc_2b10" type="accelerometer">
+    <parent link="r_upper_arm"/>
+    <origin rpy="1.57079546365 1.57078381225 -2.68257161165" xyz="-0.0412194 0.029588 0.0295279"/>
+  </sensor>
+  <gazebo reference="r_upper_arm">
+    <sensor name="r_upper_arm_mtb_acc_2b11" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0430568 0.02868 0.0760604 -1.57079614695 -1.57050350741 0.459021725219</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_arm_mtb_acc_2b11" type="accelerometer">
+    <parent link="r_upper_arm"/>
+    <origin rpy="-1.57079614695 -1.57050350741 0.459021725219" xyz="-0.0430568 0.02868 0.0760604"/>
+  </sensor>
+  <gazebo reference="r_upper_arm">
+    <sensor name="r_upper_arm_mtb_acc_2b12" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0430554 0.028681 0.0049922 -1.11177442168 -1.57079632679 0.0</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_arm_mtb_acc_2b12" type="accelerometer">
+    <parent link="r_upper_arm"/>
+    <origin rpy="-1.11177442168 -1.57079632679 0.0" xyz="-0.0430554 0.028681 0.0049922"/>
+  </sensor>
+  <gazebo reference="r_upper_arm">
+    <sensor name="r_upper_arm_mtb_acc_2b13" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.010593237 0.02835 -0.010738 1.57079632702 -0.000214520362041 2.47803674451</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_arm_mtb_acc_2b13" type="accelerometer">
+    <parent link="r_upper_arm"/>
+    <origin rpy="1.57079632702 -0.000214520362041 2.47803674451" xyz="0.010593237 0.02835 -0.010738"/>
+  </sensor>
+  <gazebo reference="r_forearm">
+    <sensor name="r_forearm_mtb_acc_2b7" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0768727847342 0.005497 -0.0110479126068 0.26179949998 0.000370413042328 1.57125816863</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_forearm_mtb_acc_2b7" type="accelerometer">
+    <parent link="r_forearm"/>
+    <origin rpy="0.26179949998 0.000370413042328 1.57125816863" xyz="-0.0768727847342 0.005497 -0.0110479126068"/>
+  </sensor>
+  <gazebo reference="r_forearm">
+    <sensor name="r_forearm_mtb_acc_2b8" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0514186150796 0.015786 0.0407521537277 -0.661143946092 0.147825248461 0.092070114703</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_forearm_mtb_acc_2b8" type="accelerometer">
+    <parent link="r_forearm"/>
+    <origin rpy="-0.661143946092 0.147825248461 0.092070114703" xyz="-0.0514186150796 0.015786 0.0407521537277"/>
+  </sensor>
+  <gazebo reference="r_forearm">
+    <sensor name="r_forearm_mtb_acc_2b9" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0216379956759 0.027924 -0.0132490254018 -1.76682626732 0.261191225646 0.054048344372</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_forearm_mtb_acc_2b9" type="accelerometer">
+    <parent link="r_forearm"/>
+    <origin rpy="-1.76682626732 0.261191225646 0.054048344372" xyz="-0.0216379956759 0.027924 -0.0132490254018"/>
+  </sensor>
+  <gazebo reference="l_upper_arm">
+    <sensor name="l_upper_arm_mtb_acc_1b10" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0430554 -0.028681 0.0295279 -1.57079650664 -1.57050350741 2.68257092837</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_arm_mtb_acc_1b10" type="accelerometer">
+    <parent link="l_upper_arm"/>
+    <origin rpy="-1.57079650664 -1.57050350741 2.68257092837" xyz="-0.0430554 -0.028681 0.0295279"/>
+  </sensor>
+  <gazebo reference="l_upper_arm">
+    <sensor name="l_upper_arm_mtb_acc_1b11" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0412181 -0.029589 0.0760604 -1.57079650664 -1.57050350741 2.68257092837</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_arm_mtb_acc_1b11" type="accelerometer">
+    <parent link="l_upper_arm"/>
+    <origin rpy="-1.57079650664 -1.57050350741 2.68257092837" xyz="-0.0412181 -0.029589 0.0760604"/>
+  </sensor>
+  <gazebo reference="l_upper_arm">
+    <sensor name="l_upper_arm_mtb_acc_1b12" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0412194 -0.029588 0.0049921 -1.5707971899 -1.57078381225 2.68257161159</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_arm_mtb_acc_1b12" type="accelerometer">
+    <parent link="l_upper_arm"/>
+    <origin rpy="-1.5707971899 -1.57078381225 2.68257161159" xyz="-0.0412194 -0.029588 0.0049921"/>
+  </sensor>
+  <gazebo reference="l_upper_arm">
+    <sensor name="l_upper_arm_mtb_acc_1b13" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.010592709 -0.028351 -0.0086914 -1.57079632657 0.000214520362042 -2.47803674451</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_arm_mtb_acc_1b13" type="accelerometer">
+    <parent link="l_upper_arm"/>
+    <origin rpy="-1.57079632657 0.000214520362042 -2.47803674451" xyz="0.010592709 -0.028351 -0.0086914"/>
+  </sensor>
+  <gazebo reference="l_forearm">
+    <sensor name="l_forearm_mtb_acc_1b7" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0768727847342 -0.005483 -0.0110479126068 0.26179949998 0.000370413042328 -1.57033448496</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_forearm_mtb_acc_1b7" type="accelerometer">
+    <parent link="l_forearm"/>
+    <origin rpy="0.26179949998 0.000370413042328 -1.57033448496" xyz="0.0768727847342 -0.005483 -0.0110479126068"/>
+  </sensor>
+  <gazebo reference="l_forearm">
+    <sensor name="l_forearm_mtb_acc_1b8" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0514241740607 -0.0180279 0.0407507258436 -0.661143946092 0.147825248461 -3.04952253889</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_forearm_mtb_acc_1b8" type="accelerometer">
+    <parent link="l_forearm"/>
+    <origin rpy="-0.661143946092 0.147825248461 -3.04952253889" xyz="0.0514241740607 -0.0180279 0.0407507258436"/>
+  </sensor>
+  <gazebo reference="l_forearm">
+    <sensor name="l_forearm_mtb_acc_1b9" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0220991874996 0.025657 -0.0151174243212 1.76682134218 0.261099829847 3.08752548202</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_forearm_mtb_acc_1b9" type="accelerometer">
+    <parent link="l_forearm"/>
+    <origin rpy="1.76682134218 0.261099829847 3.08752548202" xyz="0.0220991874996 0.025657 -0.0151174243212"/>
+  </sensor>
+  <gazebo reference="r_upper_leg">
+    <sensor name="r_upper_leg_ems_acc_eb8" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0125751 0.0404072 -0.040227 1.57079632679 1.57079632679 0.0</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_leg_ems_acc_eb8" type="accelerometer">
+    <parent link="r_upper_leg"/>
+    <origin rpy="1.57079632679 1.57079632679 0.0" xyz="-0.0125751 0.0404072 -0.040227"/>
+  </sensor>
+  <gazebo reference="r_upper_leg">
+    <sensor name="r_upper_leg_ems_acc_eb11" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0125771 -0.040407 -0.083407 1.57079632679 1.57079632679 0.0</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_leg_ems_acc_eb11" type="accelerometer">
+    <parent link="r_upper_leg"/>
+    <origin rpy="1.57079632679 1.57079632679 0.0" xyz="-0.0125771 -0.040407 -0.083407"/>
+  </sensor>
+  <gazebo reference="r_upper_leg">
+    <sensor name="r_upper_leg_ems_gyro_eb8" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.013079 0.0404072 -0.035655 1.57079632679 1.57079632679 0.0</pose>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_leg_ems_gyro_eb8" type="gyroscope">
+    <parent link="r_upper_leg"/>
+    <origin rpy="1.57079632679 1.57079632679 0.0" xyz="-0.013079 0.0404072 -0.035655"/>
+  </sensor>
+  <gazebo reference="r_upper_leg">
+    <sensor name="r_upper_leg_ems_gyro_eb11" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.013081 -0.040407 -0.087979 1.57079632679 1.57079632679 0.0</pose>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_leg_ems_gyro_eb11" type="gyroscope">
+    <parent link="r_upper_leg"/>
+    <origin rpy="1.57079632679 1.57079632679 0.0" xyz="-0.013081 -0.040407 -0.087979"/>
+  </sensor>
+  <gazebo reference="r_upper_leg">
+    <sensor name="r_upper_leg_mtb_acc_11b1" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.043588612 -0.030195 0.04894 2.52670843803 -1.57044484253 -0.22287382498</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_leg_mtb_acc_11b1" type="accelerometer">
+    <parent link="r_upper_leg"/>
+    <origin rpy="2.52670843803 -1.57044484253 -0.22287382498" xyz="0.043588612 -0.030195 0.04894"/>
+  </sensor>
+  <gazebo reference="r_upper_leg">
+    <sensor name="r_upper_leg_mtb_acc_11b2" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0539467 -0.0064065 0.039056 -3.12940212057 -1.57038181496 -0.273989852569</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_leg_mtb_acc_11b2" type="accelerometer">
+    <parent link="r_upper_leg"/>
+    <origin rpy="-3.12940212057 -1.57038181496 -0.273989852569" xyz="0.0539467 -0.0064065 0.039056"/>
+  </sensor>
+  <gazebo reference="r_upper_leg">
+    <sensor name="r_upper_leg_mtb_acc_11b3" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0538313 -0.0130214 0.003986 -2.87731085451 -1.5703518031 -0.264281823992</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_leg_mtb_acc_11b3" type="accelerometer">
+    <parent link="r_upper_leg"/>
+    <origin rpy="-2.87731085451 -1.5703518031 -0.264281823992" xyz="0.0538313 -0.0130214 0.003986"/>
+  </sensor>
+  <gazebo reference="r_upper_leg">
+    <sensor name="r_upper_leg_mtb_acc_11b4" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0322719 0.0422675 -0.005045 -1.87390998809 -1.57025771326 -0.0808589029571</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_leg_mtb_acc_11b4" type="accelerometer">
+    <parent link="r_upper_leg"/>
+    <origin rpy="-1.87390998809 -1.57025771326 -0.0808589029571" xyz="0.0322719 0.0422675 -0.005045"/>
+  </sensor>
+  <gazebo reference="r_upper_leg">
+    <sensor name="r_upper_leg_mtb_acc_11b5" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0538313 0.0164786 0.003986 -2.87731085451 -1.5703518031 -0.264281823992</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_leg_mtb_acc_11b5" type="accelerometer">
+    <parent link="r_upper_leg"/>
+    <origin rpy="-2.87731085451 -1.5703518031 -0.264281823992" xyz="0.0538313 0.0164786 0.003986"/>
+  </sensor>
+  <gazebo reference="r_upper_leg">
+    <sensor name="r_upper_leg_mtb_acc_11b6" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0437518 -0.0157594 -0.026565 1.95410275534e-17 1.5703672368 -3.14159265359</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_leg_mtb_acc_11b6" type="accelerometer">
+    <parent link="r_upper_leg"/>
+    <origin rpy="1.95410275534e-17 1.5703672368 -3.14159265359" xyz="-0.0437518 -0.0157594 -0.026565"/>
+  </sensor>
+  <gazebo reference="r_upper_leg">
+    <sensor name="r_upper_leg_mtb_acc_11b7" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0437518 0.0162386 -0.026566 0.264252523901 1.57035180662 -2.87734010478</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_upper_leg_mtb_acc_11b7" type="accelerometer">
+    <parent link="r_upper_leg"/>
+    <origin rpy="0.264252523901 1.57035180662 -2.87734010478" xyz="-0.0437518 0.0162386 -0.026566"/>
+  </sensor>
+  <gazebo reference="r_lower_leg">
+    <sensor name="r_lower_leg_ems_acc_eb9" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.04351373 0.0138396 -0.092765 -3.14159265359 -1.35262978345 -8.47684971046e-16</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_lower_leg_ems_acc_eb9" type="accelerometer">
+    <parent link="r_lower_leg"/>
+    <origin rpy="-3.14159265359 -1.35262978345 -8.47684971046e-16" xyz="0.04351373 0.0138396 -0.092765"/>
+  </sensor>
+  <gazebo reference="r_lower_leg">
+    <sensor name="r_lower_leg_ems_gyro_eb9" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.044503292 0.0143435 -0.088301 -3.14159265359 -1.35262978345 -8.47684971046e-16</pose>
+    </sensor>
+  </gazebo>
+  <sensor name="r_lower_leg_ems_gyro_eb9" type="gyroscope">
+    <parent link="r_lower_leg"/>
+    <origin rpy="-3.14159265359 -1.35262978345 -8.47684971046e-16" xyz="0.044503292 0.0143435 -0.088301"/>
+  </sensor>
+  <gazebo reference="r_lower_leg">
+    <sensor name="r_lower_leg_mtb_acc_11b8" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.05362922 -0.0151958 -0.004318 -1.57079699431 -1.5706802101 -1.81514182543</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_lower_leg_mtb_acc_11b8" type="accelerometer">
+    <parent link="r_lower_leg"/>
+    <origin rpy="-1.57079699431 -1.5706802101 -1.81514182543" xyz="0.05362922 -0.0151958 -0.004318"/>
+  </sensor>
+  <gazebo reference="r_lower_leg">
+    <sensor name="r_lower_leg_mtb_acc_11b9" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0537517 0.0157229 -0.004318 -1.57079629188 -1.57068021044 -1.2217307215</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_lower_leg_mtb_acc_11b9" type="accelerometer">
+    <parent link="r_lower_leg"/>
+    <origin rpy="-1.57079629188 -1.57068021044 -1.2217307215" xyz="0.0537517 0.0157229 -0.004318"/>
+  </sensor>
+  <gazebo reference="r_lower_leg">
+    <sensor name="r_lower_leg_mtb_acc_11b10" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0278945 -0.042214 -0.043468 1.83259550627 -1.57079632679 0.0</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_lower_leg_mtb_acc_11b10" type="accelerometer">
+    <parent link="r_lower_leg"/>
+    <origin rpy="1.83259550627 -1.57079632679 0.0" xyz="0.0278945 -0.042214 -0.043468"/>
+  </sensor>
+  <gazebo reference="r_lower_leg">
+    <sensor name="r_lower_leg_mtb_acc_11b11" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0164801 0.042249 -0.092958 -1.57079369547 -1.57068021035 -0.261801810497</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_lower_leg_mtb_acc_11b11" type="accelerometer">
+    <parent link="r_lower_leg"/>
+    <origin rpy="-1.57079369547 -1.57068021035 -0.261801810497" xyz="0.0164801 0.042249 -0.092958"/>
+  </sensor>
+  <gazebo reference="r_foot">
+    <sensor name="r_foot_mtb_acc_11b12" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.111543529757 -0.00081220000825 -0.0228480961814 -0.261799181028 7.34434721372e-08 -1.5707960527</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_foot_mtb_acc_11b12" type="accelerometer">
+    <parent link="r_foot"/>
+    <origin rpy="-0.261799181028 7.34434721372e-08 -1.5707960527" xyz="0.111543529757 -0.00081220000825 -0.0228480961814"/>
+  </sensor>
+  <gazebo reference="r_foot">
+    <sensor name="r_foot_mtb_acc_11b13" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.087395382748 -0.0118122000083 -0.0163776250973 -0.261799181028 1.55431223448e-15 -1.57079632679</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="r_foot_mtb_acc_11b13" type="accelerometer">
+    <parent link="r_foot"/>
+    <origin rpy="-0.261799181028 1.55431223448e-15 -1.57079632679" xyz="0.087395382748 -0.0118122000083 -0.0163776250973"/>
+  </sensor>
+  <gazebo reference="l_upper_leg">
+    <sensor name="l_upper_leg_ems_acc_eb6" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0125771 -0.0404072 -0.083407 1.57079632679 1.57079632679 0.0</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_leg_ems_acc_eb6" type="accelerometer">
+    <parent link="l_upper_leg"/>
+    <origin rpy="1.57079632679 1.57079632679 0.0" xyz="-0.0125771 -0.0404072 -0.083407"/>
+  </sensor>
+  <gazebo reference="l_upper_leg">
+    <sensor name="l_upper_leg_ems_acc_eb10" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.0125751 0.040407 -0.040227 -1.57079632679 -1.57079632679 0.0</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_leg_ems_acc_eb10" type="accelerometer">
+    <parent link="l_upper_leg"/>
+    <origin rpy="-1.57079632679 -1.57079632679 0.0" xyz="-0.0125751 0.040407 -0.040227"/>
+  </sensor>
+  <gazebo reference="l_upper_leg">
+    <sensor name="l_upper_leg_ems_gyro_eb6" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.013081 -0.0404072 -0.087979 1.57079632679 1.57079632679 0.0</pose>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_leg_ems_gyro_eb6" type="gyroscope">
+    <parent link="l_upper_leg"/>
+    <origin rpy="1.57079632679 1.57079632679 0.0" xyz="-0.013081 -0.0404072 -0.087979"/>
+  </sensor>
+  <gazebo reference="l_upper_leg">
+    <sensor name="l_upper_leg_ems_gyro_eb10" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.013079 0.040407 -0.035655 -1.57079632679 -1.57079632679 0.0</pose>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_leg_ems_gyro_eb10" type="gyroscope">
+    <parent link="l_upper_leg"/>
+    <origin rpy="-1.57079632679 -1.57079632679 0.0" xyz="-0.013079 0.040407 -0.035655"/>
+  </sensor>
+  <gazebo reference="l_upper_leg">
+    <sensor name="l_upper_leg_mtb_acc_10b1" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.04200163 0.031565 0.049132 -1.57079551857 -1.57068021034 -0.733039094713</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_leg_mtb_acc_10b1" type="accelerometer">
+    <parent link="l_upper_leg"/>
+    <origin rpy="-1.57079551857 -1.57068021034 -0.733039094713" xyz="0.04200163 0.031565 0.049132"/>
+  </sensor>
+  <gazebo reference="l_upper_leg">
+    <sensor name="l_upper_leg_mtb_acc_10b2" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.05352109 0.0077657 0.039252 -1.57079638638 -1.57068021039 -1.3089969474</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_leg_mtb_acc_10b2" type="accelerometer">
+    <parent link="l_upper_leg"/>
+    <origin rpy="-1.57079638638 -1.57068021039 -1.3089969474" xyz="0.05352109 0.0077657 0.039252"/>
+  </sensor>
+  <gazebo reference="l_upper_leg">
+    <sensor name="l_upper_leg_mtb_acc_10b3" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.053785 0.0150706 0.004182 3.14159265359 -1.57079632679 0.0</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_leg_mtb_acc_10b3" type="accelerometer">
+    <parent link="l_upper_leg"/>
+    <origin rpy="3.14159265359 -1.57079632679 0.0" xyz="0.053785 0.0150706 0.004182"/>
+  </sensor>
+  <gazebo reference="l_upper_leg">
+    <sensor name="l_upper_leg_mtb_acc_10b4" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.053785 -0.0144294 0.004182 3.14159265359 -1.57079632679 0.0</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_leg_mtb_acc_10b4" type="accelerometer">
+    <parent link="l_upper_leg"/>
+    <origin rpy="3.14159265359 -1.57079632679 0.0" xyz="0.053785 -0.0144294 0.004182"/>
+  </sensor>
+  <gazebo reference="l_upper_leg">
+    <sensor name="l_upper_leg_mtb_acc_10b5" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.03412949 -0.0414999 -0.004858 1.95476889104 -1.57079632679 0.0</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_leg_mtb_acc_10b5" type="accelerometer">
+    <parent link="l_upper_leg"/>
+    <origin rpy="1.95476889104 -1.57079632679 0.0" xyz="0.03412949 -0.0414999 -0.004858"/>
+  </sensor>
+  <gazebo reference="l_upper_leg">
+    <sensor name="l_upper_leg_mtb_acc_10b6" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.043785 0.0178111 -0.026411 -1.57079632679 1.57077431394 1.57079632679</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_leg_mtb_acc_10b6" type="accelerometer">
+    <parent link="l_upper_leg"/>
+    <origin rpy="-1.57079632679 1.57077431394 1.57079632679" xyz="-0.043785 0.0178111 -0.026411"/>
+  </sensor>
+  <gazebo reference="l_upper_leg">
+    <sensor name="l_upper_leg_mtb_acc_10b7" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>-0.043785 -0.0141918 -0.026411 1.5707963268 1.57064733889 -1.57079632679</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_upper_leg_mtb_acc_10b7" type="accelerometer">
+    <parent link="l_upper_leg"/>
+    <origin rpy="1.5707963268 1.57064733889 -1.57079632679" xyz="-0.043785 -0.0141918 -0.026411"/>
+  </sensor>
+  <gazebo reference="l_lower_leg">
+    <sensor name="l_lower_leg_ems_acc_eb7" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.04351373 0.0113146 -0.092765 -3.14159265359 -1.35262978345 -8.47684971046e-16</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_lower_leg_ems_acc_eb7" type="accelerometer">
+    <parent link="l_lower_leg"/>
+    <origin rpy="-3.14159265359 -1.35262978345 -8.47684971046e-16" xyz="0.04351373 0.0113146 -0.092765"/>
+  </sensor>
+  <gazebo reference="l_lower_leg">
+    <sensor name="l_lower_leg_ems_gyro_eb7" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.044503292 0.0118185 -0.088301 -3.14159265359 -1.35262978345 -8.47684971046e-16</pose>
+    </sensor>
+  </gazebo>
+  <sensor name="l_lower_leg_ems_gyro_eb7" type="gyroscope">
+    <parent link="l_lower_leg"/>
+    <origin rpy="-3.14159265359 -1.35262978345 -8.47684971046e-16" xyz="0.044503292 0.0118185 -0.088301"/>
+  </sensor>
+  <gazebo reference="l_lower_leg">
+    <sensor name="l_lower_leg_mtb_acc_10b8" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.05313347 0.0171841 -0.004318 -2.89724648752 -1.57079632679 0.0</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_lower_leg_mtb_acc_10b8" type="accelerometer">
+    <parent link="l_lower_leg"/>
+    <origin rpy="-2.89724648752 -1.57079632679 0.0" xyz="0.05313347 0.0171841 -0.004318"/>
+  </sensor>
+  <gazebo reference="l_lower_leg">
+    <sensor name="l_lower_leg_mtb_acc_10b9" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0544518 -0.0137991 -0.004318 -1.57079636645 -1.57068021044 -1.91986192735</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_lower_leg_mtb_acc_10b9" type="accelerometer">
+    <parent link="l_lower_leg"/>
+    <origin rpy="-1.57079636645 -1.57068021044 -1.91986192735" xyz="0.0544518 -0.0137991 -0.004318"/>
+  </sensor>
+  <gazebo reference="l_lower_leg">
+    <sensor name="l_lower_leg_mtb_acc_10b10" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0259151 0.042744 -0.043468 -1.57079369547 -1.57068021035 -0.261801810497</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_lower_leg_mtb_acc_10b10" type="accelerometer">
+    <parent link="l_lower_leg"/>
+    <origin rpy="-1.57079369547 -1.57068021035 -0.261801810497" xyz="0.0259151 0.042744 -0.043468"/>
+  </sensor>
+  <gazebo reference="l_lower_leg">
+    <sensor name="l_lower_leg_mtb_acc_10b11" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0184593 -0.0417187 -0.092958 1.57079531928 -1.57076999786 0.261800187025</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_lower_leg_mtb_acc_10b11" type="accelerometer">
+    <parent link="l_lower_leg"/>
+    <origin rpy="1.57079531928 -1.57076999786 0.261800187025" xyz="0.0184593 -0.0417187 -0.092958"/>
+  </sensor>
+  <gazebo reference="l_foot">
+    <sensor name="l_foot_mtb_acc_10b12" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.11352174596 0.000812199758047 -0.0233781571811 0.261799192098 -3.52495810318e-15 1.57079632679</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_foot_mtb_acc_10b12" type="accelerometer">
+    <parent link="l_foot"/>
+    <origin rpy="0.261799192098 -3.52495810318e-15 1.57079632679" xyz="0.11352174596 0.000812199758047 -0.0233781571811"/>
+  </sensor>
+  <gazebo reference="l_foot">
+    <sensor name="l_foot_mtb_acc_10b13" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <pose>0.0893735989544 0.011812199825 -0.0169076861979 0.261799192098 -3.52495810318e-15 1.57079632679</pose>
+      <plugin name="iCub_yarp_gazebo_plugin_ACC" filename="libgazebo_yarp_inertial.so"/>
+    </sensor>
+  </gazebo>
+  <sensor name="l_foot_mtb_acc_10b13" type="accelerometer">
+    <parent link="l_foot"/>
+    <origin rpy="0.261799192098 -3.52495810318e-15 1.57079632679" xyz="0.0893735989544 0.011812199825 -0.0169076861979"/>
+  </sensor>
+  <gazebo reference="root_link">
+    <sensor name="root_link_imu_acc" type="imu">
+      <always_on>1</always_on>
+      <update_rate>400</update_rate>
+      <pose>0.085155 -0.011 -0.112309 -2.09439521059 -3.88578058619e-16 -1.57079632679</pose>
+      <plugin name="root_link_xsens_imu_plugin" filename="libgazebo_yarp_imu.so">
+    <yarpConfigurationFile>model://iCub/conf/gazebo_icub_xsens_inertial.ini</yarpConfigurationFile>
+</plugin>
+    </sensor>
+  </gazebo>
+  <sensor name="root_link_imu_acc" type="accelerometer">
+    <parent link="root_link"/>
+    <origin rpy="-2.09439521059 -3.88578058619e-16 -1.57079632679" xyz="0.085155 -0.011 -0.112309"/>
+  </sensor>
+  <gazebo>
+    <pose>0.0 0.0 0.63 0.0 0.0 3.14</pose>
+  </gazebo>
+</robot>

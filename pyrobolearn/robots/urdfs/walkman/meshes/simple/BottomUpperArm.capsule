@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/BottomUpperArm.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="0.018449385 0.00105223 -0.11710505" rpy="-3.11341478718 0.469891906655 -3.02400207552"/>
+      <geometry>
+        <cylinder radius="0.104204" length="0.0747499651437"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="0.00100_-0.00100_0.00100">
+    <collision>
+      <origin xyz="0.018449385 -0.00105223 -0.11710505" rpy="3.11341478718 0.469891906655 3.02400207552"/>
+      <geometry>
+        <cylinder radius="0.104204" length="0.0747499651437"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

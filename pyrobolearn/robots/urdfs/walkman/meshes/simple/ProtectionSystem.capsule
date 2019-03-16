@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/ProtectionSystem.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="-0.04847655 -0.00141936 0.077981545" rpy="-0.00495138413574 0.994743264889 -0.00268808348862"/>
+      <geometry>
+        <cylinder radius="0.299646" length="0.249609016344"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

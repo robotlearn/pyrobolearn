@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/TorsoRoll.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="-0.0267596 0.01315115 -0.01482445" rpy="-1.54076011446 0.200765946496 -0.194862576741"/>
+      <geometry>
+        <cylinder radius="0.100754" length="0.0868920081095"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

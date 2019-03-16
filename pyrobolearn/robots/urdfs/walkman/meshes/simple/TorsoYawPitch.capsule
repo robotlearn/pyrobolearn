@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/TorsoYawPitch.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="0.0003895625 -0.0029471075 0.05425794" rpy="-0.0569258722069 0.00655610295284 -0.000186657016043"/>
+      <geometry>
+        <cylinder radius="0.113414" length="0.11213616868"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

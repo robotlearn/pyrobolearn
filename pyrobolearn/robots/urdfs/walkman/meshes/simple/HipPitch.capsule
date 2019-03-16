@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/HipPitch.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="0.0263181 -0.0071117 -0.1779221" rpy="-0.104035539107 0.0288123297082 -0.00150020989473"/>
+      <geometry>
+        <cylinder radius="0.134502" length="0.333639454764"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="0.00100_-0.00100_0.00100">
+    <collision>
+      <origin xyz="0.0263181 0.0071117 -0.1779221" rpy="0.104035539107 0.0288123297082 0.00150020989473"/>
+      <geometry>
+        <cylinder radius="0.134502" length="0.333639454764"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

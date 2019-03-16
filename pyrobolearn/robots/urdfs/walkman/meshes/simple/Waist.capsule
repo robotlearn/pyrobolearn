@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/Waist.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="0.00523105 -0.00024141 0.00781525" rpy="-3.12362805491 1.06612723989 -3.11114776717"/>
+      <geometry>
+        <cylinder radius="0.180896" length="0.139493069851"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

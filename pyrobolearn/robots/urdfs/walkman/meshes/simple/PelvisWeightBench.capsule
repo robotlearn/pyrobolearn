@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/PelvisWeightBench.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="-0.000507989 0.00018076755 0.251184825" rpy="3.14078576539 -0.00353126120363 -2.6923091953"/>
+      <geometry>
+        <cylinder radius="0.101896" length="0.486071538838"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

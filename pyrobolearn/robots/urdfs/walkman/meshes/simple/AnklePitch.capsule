@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/AnklePitch.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="-0.05895115 0.0094085445 0.00913142" rpy="1.5501085724 1.31358259088 1.29362787146"/>
+      <geometry>
+        <cylinder radius="0.0953156" length="0.066225553809"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="0.00100_-0.00100_0.00100">
+    <collision>
+      <origin xyz="-0.05895115 -0.0094085445 0.00913142" rpy="-1.5501085724 1.31358259088 -1.29362787146"/>
+      <geometry>
+        <cylinder radius="0.0953156" length="0.066225553809"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

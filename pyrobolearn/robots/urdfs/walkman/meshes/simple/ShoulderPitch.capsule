@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/ShoulderPitch.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="-0.008490075 -0.0730246 0.04269895" rpy="2.08055048743 1.08336913974 1.59621633313"/>
+      <geometry>
+        <cylinder radius="0.130423" length="0.028917114959"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="0.00100_-0.00100_0.00100">
+    <collision>
+      <origin xyz="-0.008490075 0.0730246 0.04269895" rpy="-2.08055048743 1.08336913974 -1.59621633313"/>
+      <geometry>
+        <cylinder radius="0.130423" length="0.028917114959"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

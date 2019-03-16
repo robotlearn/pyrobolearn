@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/NeckYaw.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="-1.04399905e-05 0.00472036 0.1041095" rpy="-1.36933256858 0.00106812990762 -0.000872030242504"/>
+      <geometry>
+        <cylinder radius="0.0395601" length="0.0199346754519"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

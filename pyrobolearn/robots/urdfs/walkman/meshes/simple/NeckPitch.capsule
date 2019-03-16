@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/NeckPitch.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="-0.01890825 -0.00107695 0.04058815" rpy="1.58996091374 -0.0571041169593 -0.0582084980435"/>
+      <geometry>
+        <cylinder radius="0.072046" length="0.0265887141884"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

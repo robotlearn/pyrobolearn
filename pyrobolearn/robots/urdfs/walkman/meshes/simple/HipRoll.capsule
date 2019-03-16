@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/HipRoll.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="-0.110161 -0.05865925 -0.02486927" rpy="2.17933997601 0.0995562010281 0.190286284022"/>
+      <geometry>
+        <cylinder radius="0.136398" length="0.0778937301903"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="0.00100_-0.00100_0.00100">
+    <collision>
+      <origin xyz="-0.110161 0.05865925 -0.02486927" rpy="-2.17933997601 0.0995562010281 -0.190286284022"/>
+      <geometry>
+        <cylinder radius="0.136398" length="0.0778937301903"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/NewChest.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="0.000343699 0.001595 -0.0333003" rpy="-1.57241013325 -0.00289656796477 0.00290124623423"/>
+      <geometry>
+        <cylinder radius="0.11868" length="0.345891901447"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

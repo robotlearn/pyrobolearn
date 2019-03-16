@@ -1,0 +1,10 @@
+The files in this folder are a derivative work from the Open Source project
+"Pisa/IIT SoftHand", released under the CC BY 4.0 license
+(http://creativecommons.org/licenses/by/4.0/) by M. G. Catalano, G. Grioli,
+E. Farnioli, A. Serio, C. Piazza and A. Bicchi, and available at the Natural
+Machine Motion Initiative website (http://naturalmachinemotioninitiative.com).
+
+The files in this folder are a derivative of the original OS project to provide
+a simplified geometry for visualization and collision detection. Work of Carlos
+Rosales to develop this derivative has been funded by the Eu FP7 PaCMan project 
+(http://www.pacman-project.eu/).

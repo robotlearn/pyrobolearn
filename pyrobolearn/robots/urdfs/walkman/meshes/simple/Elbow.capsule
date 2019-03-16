@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/Elbow.STL">
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="-0.03209345 0.002342805 -0.0216671" rpy="-2.08146669727 -0.645511999902 1.03724426387"/>
+      <geometry>
+        <cylinder radius="0.117114" length="0.0197326330302"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="0.00100_-0.00100_0.00100">
+    <collision>
+      <origin xyz="-0.03209345 -0.00234281 -0.0216671" rpy="-1.06012626641 0.64551173392 -0.387071227308"/>
+      <geometry>
+        <cylinder radius="0.117114" length="0.019732639999"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

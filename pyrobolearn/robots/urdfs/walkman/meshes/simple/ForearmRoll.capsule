@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot name="/home/arocchi/walkman/drc/iit-bigman-ros-pkg/bigman_urdf/meshes/simple/ForearmRoll.STL">
+  <link name="0.00100_-0.00100_0.00100">
+    <collision>
+      <origin xyz="0.00202385 -0.0004605375 -0.01806125" rpy="0.611419511781 1.46981070224 0.555721199108"/>
+      <geometry>
+        <cylinder radius="0.056696" length="0.0407159361425"/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="0.00100_0.00100_0.00100">
+    <collision>
+      <origin xyz="0.00202385 0.0004605375 -0.01806125" rpy="-0.611419511781 1.46981070224 -0.555721199108"/>
+      <geometry>
+        <cylinder radius="0.056696" length="0.0407159361425"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>
