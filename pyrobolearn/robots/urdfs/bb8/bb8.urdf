@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="bb_8">
+
+  <link name="base_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0 0.0 -0.3" />
+      <mass value="40.0" />
+      <inertia ixx="0.16" ixy="0.0" ixz="0.0" iyy="0.16" iyz="0.0" izz="0.16"/>
+      <!-- inertia ixx="1.225" ixy="0.0099" ixz="0.0062" iyy="1.2853" iyz="-0.0034" izz="0.987" /-->
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <sphere radius="0.1"/> <!-- 0.5 -->
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <sphere radius="0.1"/>
+      </geometry>
+      <material name="orange">
+        <color rgba="0 0 .8 1"/>
+      </material>    
+    </visual>
+  </link>
+
+  <link name="base_rotation_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <mass value="1.0" />
+      <inertia ixx="0.004" ixy="0.0" ixz="0.0" iyy="0.004" iyz="0.0" izz="0.004" />
+      <!-- inertia ixx="1.225" ixy="0.0099" ixz="0.0062" iyy="1.2853" iyz="-0.0034" izz="0.987" /-->
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+	<sphere radius="0.1"/>        <!-- box size="0.1 0.1 0.1"/-->
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <sphere radius="0.1"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 .8 1"/>
+      </material>    
+    </visual>
+  </link>
+
+
+  <joint name="rotation_joint" type="revolute">
+    <origin rpy="0 0 0" xyz="0.0 0.0 0.0" />
+    <parent link="base_link" />
+    <child link="base_rotation_link" />
+    <axis xyz="0 0 1" />
+    <limit effort="18.85" lower="-1e+16" upper="1e+16" velocity="0.3" />
+  </joint>
+
+  <link name="base_direction_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <mass value="1.0" />
+      <inertia ixx="0.049" ixy="0.0" ixz="0.0" iyy="0.049" iyz="0.0" izz="0.049" />
+      <!--inertia ixx="1.225" ixy="0.0099" ixz="0.0062" iyy="1.2853" iyz="-0.0034" izz="0.987" /-->
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <!--mesh filename="meshes/ball.obj" scale="1 1 1"/-->
+        <sphere radius="0.35"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0.0 -0.35" />
+      <geometry>
+        <mesh filename="meshes/ball.obj" scale="1 1 1"/>
+        <!-- sphere radius="0.5"/ -->      
+      </geometry>
+      <!--material name="blue">
+        <color rgba="0 0 .8 1"/>
+      </material-->
+      <material name="white">
+        <color rgba="0.95 0.95 0.95 1"/>
+      </material>  
+    </visual>
+  </link>
+
+  <joint name="direction_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.0 0.0 0." />
+    <parent link="base_rotation_link" />
+    <child link="base_direction_link" />
+    <axis xyz="1 0 0" />
+    <limit effort="18.85" velocity="27.4" />
+  </joint>
+
+  <!-- link name="base_sphere_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0.25" />
+      <mass value="3.0" />
+      <inertia ixx="1.225" ixy="0.0099" ixz="0.0062" iyy="1.2853" iyz="-0.0034" izz="0.987" />
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <sphere radius="0.5"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+      <geometry>
+        <sphere radius="0.5"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 .8 1"/>
+      </material>    
+    </visual>
+  </link>
+
+  <joint name="wheel_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.0 0.0 0.5" />
+    <parent link="base_direction_link" />
+    <child link="base_sphere_link" />
+    <axis xyz="1 0 0" />
+    <limit effort="18.85" velocity="27.4" />
+  </joint-->
+
+  <!-- link name="head_support_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0.0" />
+      <mass value="1.0" />
+      <inertia ixx="1.225" ixy="0.0099" ixz="0.0062" iyy="1.2853" iyz="-0.0034" izz="0.987" />
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0." />
+      <geometry>
+        <cylinder length="0.7" radius="0.02"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0." />
+      <geometry>
+        <cylinder length="0.7" radius="0.02"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="wheel_joint" type="continuous">
+    <origin rpy="0 0 0" xyz="0.0 0.0 0.5" />
+    <parent link="base_link" />
+    <child link="head_support_link" />
+    <axis xyz="1 0 0" />
+    <limit effort="8.85" velocity="17.4" />
+  </joint-->
+
+  <link name="head_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0.0" />
+      <!-- mass value="3.0" /-->
+      <mass value="0.5" />
+      <inertia ixx="0.008" ixy="0.0" ixz="0.0" iyy="0.008" iyz="0.0" izz="0.008" />
+      <!-- inertia ixx="1.225" ixy="0.0099" ixz="0.0062" iyy="1.2853" iyz="-0.0034" izz="0.987" /-->
+    </inertial>
+    <collision>
+      <!-- origin rpy="1.56 0 0" xyz="0 0.0 0.35" /-->
+      <origin rpy="1.56 0 0" xyz="0 0 0.35" />
+      <geometry>
+        <sphere radius="0.2"/>
+        <!-- mesh filename="meshes/head.obj" scale="1 1 1"/-->
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 3.14" xyz="0 0 -0.35" />
+      <geometry>
+        <mesh filename="meshes/head.obj" scale="1 1 1"/>
+        <!-- sphere radius="0.2"/ -->
+      </geometry>
+      <!-- material name="orange">
+        <color rgba="0 0 .8 1"/>
+      </material-->
+      <material name="white">
+        <color rgba="0.9 0.9 0.9 1"/>
+      </material>  
+    </visual>
+  </link>
+
+  <joint name="head_joint" type="revolute">
+    <origin rpy="0 0 0" xyz="0.0 0.0 0." />
+    <parent link="base_rotation_link" />
+    <child link="head_link" />
+    <axis xyz="0 0 1" />
+    <limit effort="0.10" velocity="0.1" lower="-1e+16" upper="1e+16"/>
+  </joint>
+
+
+  <!-- Camera -->
+  <link name="camera_link">
+    <!--collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </collision-->
+    <inertial>
+      <mass value="1e-5" />
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
+    </inertial>
+  </link>
+  
+ <joint name="camera_joint" type="fixed">
+    <axis xyz="0 1 0" />
+    <origin xyz="0. 0 0.6" rpy="0 0 1.57"/>
+    <parent link="head_link"/>
+    <child link="camera_link"/>
+  </joint>
+
+
+</robot>
