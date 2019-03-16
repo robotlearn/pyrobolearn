@@ -1,0 +1,64 @@
+# To only install dependencies, type:
+# $ pip install -r requirements.txt
+
+numpy>=1.13.3
+numba>=0.42.0
+numpy-quaternion>=2019.1.13.15.7.3
+autograd>=1.2
+matplotlib>=2.0.2
+sympy>=1.3
+scipy>=0.19.1
+control>=0.8.1
+opencv-python>=4.0.0.21
+
+# multiprocessing
+pathos>=0.2.3
+
+# backend
+torch>=1.0.0
+torchvision>=0.2.1
+
+# simulators
+pybullet>=2.4.1
+gym>=0.10.9
+# git+git://github.com/benelot/pybullet-gym
+
+# interfaces
+inputs>=0.5
+gTTS>=2.0.3
+openni>=2.2.0.post6
+pyaudio>=0.2.8
+
+# models and algos
+sklearn>=0.0
+# gpytorch>=0.1.0rc4
+git+git://github.com/cornellius-gp/gpytorch/archive/alpha.zip
+GPy>=1.9.6
+GPyOpt>=1.2.5
+hmmlearn>=0.2.1
+keras>=2.2.4
+neat-python>=0.92
+tensorflow>=1.3.0
+# tensorflow-gpu
+cma>=2.6.0
+# ray>=0.6.3 [rllib]
+# git+git://github.com/ikostrikov/pytorch-a2c-ppo-acktr
+
+# robots
+urdf-parser-py>=0.0.3
+
+# optim
+cvxopt>=1.2.3
+cvxpy>=1.0.15
+quadprog>=0.1.6
+qpsolvers>=1.0.4
+nlopt>=2.4.2.post2
+# ipopt
+
+# control
+slycot>=0.3.3
+
+# worlds/utils
+# gdal>=1.11.3
+
+# need to install rbdl, ipopt, tf

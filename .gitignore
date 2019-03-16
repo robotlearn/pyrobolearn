@@ -102,3 +102,11 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# others
+*.pyc
+*.swp
+.ipynb_checkpoints/
+.idea/
+0_VRDemoSettings.txt
+tests/
