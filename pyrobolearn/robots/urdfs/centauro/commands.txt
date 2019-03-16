@@ -1,0 +1,7 @@
+# When generating the URDF from the xacro, you can specified the follow arguments:
+# END_EFFECTOR: soft_hand, heri, stick
+# visual_model: simplified, mesh
+# collision_model: primitives, simplified, mesh
+
+# Here is the command to type:
+rosrun xacro xacro --inorder centauro.urdf.xacro > centauro.urdf GAZEBO:=true MIDDLEWARE:=xbotcore XBOT_CONFIG_FILE:=configs/ADVR_shared/centauro/configs/config_centauro.yaml STATIC:=false LEFT_END_EFFECTOR:=heri RIGHT_END_EFFECTOR:=heri MASS:=0.0 ARMS:=true LEGS:=true TORSO:=true WHEELS:=false HEAD:=true ARM_ACTUATORS:=true LEG_ACTUATORS:=true TORSO_ACTUATORS:=true WHEELS_ACTUATORS:=true HEAD_ACTUATORS:=true ARM_SENSORS:=true LEG_SENSORS:=true FT_SENSORS:=true BUMBERS:=true IMU:=true VISUAL_MODEL:=mesh COLLISION_MODEL:=simplified INERTIA_PARAM:=original KINEMATIC_PARAM:=original
