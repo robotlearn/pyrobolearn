@@ -25,7 +25,7 @@ setup(
     author_email='briandelhaisse@gmail.com',
     maintainer='Brian Delhaisse',
     maintainer_email='Brian Delhaisse',
-    license='(c) Brian Delhaisse',
+    license='MIT',
     url='https://github.com/robotlearn/pyrobolearn',
     platforms=['Linux Ubuntu'],
     python_requires='2.7'
