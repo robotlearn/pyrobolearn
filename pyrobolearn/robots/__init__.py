@@ -31,7 +31,7 @@ from humanoid import Humanoid
 from aibo import Aibo
 from minitaur import Minitaur
 from littledog import LittleDog
-# from anymal import ANYmal
+# from anymal import ANYmal
 from hyq import HyQ
 from hyq2max import HyQ2Max
 from opendog import OpenDog
