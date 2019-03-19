@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Define the PCA model.
+"""Define the PCA model.
 """
 
 import numpy as np

@@ -14,7 +14,7 @@ import cv2
 import time
 
 from pyrobolearn.utils.converter import QuaternionListConverter
-from pyrobolearn.utils.heightmap_generator import *
+# from pyrobolearn.utils.heightmap_generator import *  # TODO: problem with gdal installation
 from pyrobolearn.utils import hasMethod, hasVariable, isClass
 
 from pyrobolearn.robots import Robot, robot_names_to_classes

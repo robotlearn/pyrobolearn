@@ -3,6 +3,7 @@
 """
 
 import os
+import numpy as np
 import pybullet_data
 import sympy
 import sympy.physics.mechanics as mechanics
@@ -188,11 +189,11 @@ class CartPole(Robot):
 
         # Check if the robot has a fixed base and create the generalized coordinates and speeds based on that,
         # as well the base position, orientation and velocities
-        if robot.hasFixedBase():
+        if self.hasFixedBase():
             # generalized coordinates q(t) and speeds dq(t)
             q = mechanics.dynamicsymbols('q:{}'.format(len(self.joints)))
             dq = mechanics.dynamicsymbols('dq:{}'.format(len(self.joints)))
-            pos, orn = robot.getBasePositionAndOrientation(convert_to_numpy_quaternion=False)
+            pos, orn = self.getBasePositionAndOrientation(convert_to_numpy_quaternion=False)
             linVel, angVel = [0,0,0], [0,0,0]   # 0 because fixed base
             jointId = 0
         else:

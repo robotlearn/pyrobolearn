@@ -14,16 +14,16 @@ class Fetch(WheeledRobot, ManipulatorRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 0),
+                 init_pos=(0, 0, 0.1),
                  init_orient=(0, 0, 0, 1),
                  useFixedBase=False,
                  scaling=1.,
                  urdf_path=os.path.dirname(__file__) + '/urdfs/fetch/fetch.urdf'):
         # check parameters
         if init_pos is None:
-            init_pos = (0., 0., 0.)
+            init_pos = (0., 0., 0.1)
         if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.0,)
+            init_pos = tuple(init_pos) + (0.1,)
         if init_orient is None:
             init_orient = (0, 0, 0, 1)
         if useFixedBase is None:

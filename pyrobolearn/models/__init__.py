@@ -23,7 +23,7 @@ from gmm import GMM
 from gp import GPR
 
 # HMM
-from hmm import *
+# from hmm import *
 
 # DNN
 from nn import *
