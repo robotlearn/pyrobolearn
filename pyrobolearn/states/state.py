@@ -6,6 +6,7 @@ models such as policies/controllers, dynamic transition functions, value estimat
 """
 
 import numpy as np
+import torch
 import collections
 from abc import ABCMeta, abstractmethod
 import gym
@@ -122,6 +123,7 @@ class State(object):
 
         # The following attributes should normally be set in the child classes
         self._data = data
+        self._torch_data = data if data is None else torch.from_numpy(data).float()
         self._space = space
         self._distribution = None  # for sampling
         self._normalizer = None
@@ -152,7 +154,7 @@ class State(object):
         """
         Set the list of states.
         """
-        if self.hasData():
+        if self.has_data():
             raise AttributeError("Trying to add internal states to the current state while it already has some data. "
                                  "A state should be a combination of states or should contain some kind of data, "
                                  "but not both.")
@@ -172,7 +174,7 @@ class State(object):
         Returns:
             list of np.ndarray: list of data associated to the state
         """
-        if self.hasData():
+        if self.has_data():
             return [self._data]
         return [state._data for state in self._states]
 
@@ -185,8 +187,17 @@ class State(object):
         Args:
             data: the data to set
         """
+        if self.has_states():  # combined states
+            if not isinstance(data, collections.Iterable):
+                raise TypeError("data is not an iterator")
+            if len(self._states) != len(data):
+                raise ValueError("The number of states is different from the number of data segments")
+            for state, d in zip(self._states, data):
+                state.data = d
+
         # one state: change the data
-        if self.hasData():
+        # if self.has_data():
+        else:
             if not isinstance(data, np.ndarray):
                 if isinstance(data, (list, tuple)):
                     data = np.array(data)
@@ -194,12 +205,12 @@ class State(object):
                     data = data * np.ones(self._data.shape)
                 else:
                     raise TypeError("Expecting a numpy array, a list/tuple of int/float, or an int/float for 'data'")
-            if self._data.shape != data.shape:
+            if self._data is not None and self._data.shape != data.shape:
                 raise ValueError("The given data does not have the same shape as previously.")
 
             # clip the value using the space
-            if self.hasSpace():
-                if self.isContinuous():  # continuous case
+            if self.has_space():
+                if self.is_continuous():  # continuous case
                     low, high = self._space.low, self._space.high
                     data = np.clip(data, low, high)
                 else:  # discrete case
@@ -207,14 +218,7 @@ class State(object):
                     if data.size == 1:
                         data = np.clip(data, 0, n)
             self._data = data
-
-        else:  # combined state
-            if not isinstance(data, collections.Iterable):
-                raise TypeError("data is not an iterator")
-            if len(self._states) != len(data):
-                raise ValueError("The number of states is different from the number of data segments")
-            for state, d in zip(self._states, data):
-                state.data = d
+            self._torch_data = torch.from_numpy(data).float()
 
     @property
     def merged_data(self):
@@ -227,11 +231,102 @@ class State(object):
         return fused_state.data
 
     @property
+    def torch_data(self):
+        """
+        Return the data as a list of torch tensors.
+        """
+        if self.has_data():
+            return [self._torch_data]
+        return [state._torch_data for state in self._states]
+
+    @torch_data.setter
+    def torch_data(self, data):
+        """
+        Set the torch data and update the numpy version of the data.
+
+        Args:
+            data (torch.Tensor, list of torch.Tensors): data to set.
+        """
+        if self.has_states():  # combined states
+            if not isinstance(data, collections.Iterable):
+                raise TypeError("data is not an iterator")
+            if len(self._states) != len(data):
+                raise ValueError("The number of states is different from the number of data segments")
+            for state, d in zip(self._states, data):
+                state.torch_data = d
+
+        # one state: change the data
+        # if self.has_data():
+        else:
+            if isinstance(data, torch.Tensor):
+                data = data.float()
+            elif isinstance(data, np.ndarray):
+                data = torch.from_numpy(data).float()
+            elif isinstance(data, (list, tuple)):
+                data = torch.from_numpy(np.array(data)).float()
+            elif isinstance(data, (int, float)):
+                data = data * torch.ones(self._data.shape)
+            else:
+                raise TypeError("Expecting a Torch tensor, numpy array, a list/tuple of int/float, or an int/float for"
+                                " 'data'")
+            if self._torch_data.shape != data.shape:
+                raise ValueError("The given data does not have the same shape as previously.")
+
+            # clip the value using the space
+            if self.has_space():
+                if self.is_continuous():  # continuous case
+                    low, high = torch.from_numpy(self._space.low), torch.from_numpy(self._space.high)
+                    data = torch.min(torch.max(data, low), high)
+                else:  # discrete case
+                    n = self._space.n
+                    if data.size == 1:
+                        data = torch.clamp(data, min=0, max=n)
+            self._torch_data = data
+            if data.requires_grad:
+                data = data.detach().numpy()
+            else:
+                data = data.numpy()
+            self._data = data
+
+    @property
+    def merged_torch_data(self):
+        """
+        Return the merged torch data.
+
+        Returns:
+            list of torch.Tensor: list of data torch tensors.
+        """
+        # fuse the data
+        fused_state = self.fuse()
+        # return the data
+        return fused_state.torch_data
+
+    @property
+    def vec_data(self):
+        """
+        Return a vectorized form of the data.
+
+        Returns:
+            np.array[N]: all the data.
+        """
+        return np.concatenate([data.reshape(-1) for data in self.merged_data])
+
+    @property
+    def vec_torch_data(self):
+        """
+        Return a vectorized form of all the torch tensors.
+
+        Returns:
+            torch.Tensor([N]): all the torch tensors reshaped such that they are unidimensional.
+        """
+        return torch.cat([data.reshape(-1) for data in self.merged_torch_data])
+
+    @property
     def space(self):
         """
         Get the corresponding space.
         """
-        if self.hasSpace():
+        if self.has_space():
             return [self._space]
         return [state._space for state in self._states]
 
@@ -240,7 +335,7 @@ class State(object):
         """
         Set the corresponding space. This can only be used one time!
         """
-        if self.hasData() and not self.hasSpace() and \
+        if self.has_data() and not self.has_space() and \
                 isinstance(space, (gym.spaces.Box, gym.spaces.Discrete)):
             self._space = space
 
@@ -284,6 +379,13 @@ class State(object):
         return [len(d.shape) for d in self.data]
 
     @property
+    def num_dimensions(self):
+        """
+        Return the number of different dimensions (length of shape).
+        """
+        return len(np.unique(self.dimension))
+
+    @property
     def distribution(self):
         """
         Get the current distribution used when sampling the state
@@ -302,7 +404,7 @@ class State(object):
     # Methods #
     ###########
 
-    def isCombinedState(self):
+    def is_combined_states(self):
         """
         Return a boolean value depending if the state is a combination of states.
 
@@ -312,12 +414,12 @@ class State(object):
         return len(self._states) > 0
 
     # alias
-    hasStates = isCombinedState
+    has_states = is_combined_states
 
-    def hasData(self):
+    def has_data(self):
         return self._data is not None
 
-    def hasSpace(self):
+    def has_space(self):
         return self._space is not None
 
     def add(self, state):
@@ -328,7 +430,7 @@ class State(object):
         Args:
             state (State, list/tuple of State): state(s) to add to the internal list of states
         """
-        if self.hasData():
+        if self.has_data():
             raise AttributeError("Undefined behavior: a state should be a combination of states or should contain "
                                  "some kind of data, but not both.")
         if isinstance(state, State):
@@ -353,7 +455,7 @@ class State(object):
         Read the state values from the simulator for each state, set it and return their values.
         This has to be overwritten by the child class.
         """
-        if self.hasData():  # read the current state
+        if self.has_data():  # read the current state
             self._read()
         else:  # read each state
             for state in self.states:
@@ -373,7 +475,7 @@ class State(object):
         Returns:
             initial state
         """
-        if self.hasData():  # reset the current state
+        if self.has_data():  # reset the current state
             self._reset()
         else:  # reset each state
             for state in self.states:
@@ -382,19 +484,19 @@ class State(object):
         # return the first state data
         return self.read()
 
-    def maxDimension(self):
+    def max_dimension(self):
         """
         Return the maximum dimension.
         """
         return max(self.dimension)
 
-    def totalSize(self):
+    def total_size(self):
         """
         Return the total size of the combined state.
         """
         return sum(self.size)
 
-    def hasDiscreteValues(self):
+    def has_discrete_values(self):
         """
         Does the state have discrete values?
         """
@@ -404,13 +506,13 @@ class State(object):
             return [True]
         return [False]
 
-    def isDiscrete(self):
+    def is_discrete(self):
         """
         If all the states are discrete, then it is discrete.
         """
-        return all(self.hasDiscreteValues())
+        return all(self.has_discrete_values())
 
-    def hasContinuousValues(self):
+    def has_continuous_values(self):
         """
         Does the state have continuous values?
         """
@@ -420,11 +522,11 @@ class State(object):
             return [True]
         return [False]
 
-    def isContinuous(self):
+    def is_continuous(self):
         """
         If one of the state is continuous, then the state is considered to be continuous.
         """
-        return any(self.hasContinuousValues())
+        return any(self.has_continuous_values())
 
     def bounds(self):
         """
@@ -459,7 +561,7 @@ class State(object):
         Sample some values from the state based on the given distribution.
         If no distribution is specified, it samples from a uniform distribution (default value).
         """
-        if self.isCombinedState():
+        if self.is_combined_states():
             return [state.sample() for state in self._states]
         if self._distribution is None:
             return
@@ -467,7 +569,7 @@ class State(object):
             pass
         raise NotImplementedError
 
-    def addNoise(self, noise=None, replace=True):  # parameter dependent of the state
+    def add_noise(self, noise=None, replace=True):  # parameter dependent of the state
         """
         Add some noise to the state, and returns it.
 
@@ -477,7 +579,7 @@ class State(object):
         if self._data is None:
             # apply noise
             for state in self._states:
-                state.addNoise(noise=noise)
+                state.add_noise(noise=noise)
         else:
             # add noise to the data
             noisy_data = self.data + noise
@@ -519,9 +621,9 @@ class State(object):
             raise TypeError("The 'other' argument should be None or another state.")
 
         # build list of all the states
-        states = [self] if self.hasData() else self._states
+        states = [self] if self.has_data() else self._states
         if other is not None:
-            if other.hasData():
+            if other.has_data():
                 states.append(other)
             else:
                 states.extend(other._states)
@@ -530,7 +632,7 @@ class State(object):
         if len(states) < 2:
             return self  # do nothing
 
-        # build the dictionary with key=dimension of shape, value=state
+        # build the dictionary with key=dimension of shape, value=list of states
         dic = {}
         for state in states:
             dic.setdefault(len(state._data.shape), []).append(state)
@@ -556,11 +658,25 @@ class State(object):
     def lookfor(self, class_type):
         """
         Look for the specified class type/name in the list of internal states, and returns it.
+
+        Args:
+            class_type (type, str): class type or name
+
+        Returns:
+            State: the corresponding instance of the State class
         """
-        if self.hasData():
-            return None
+        # if string, lowercase it
+        if isinstance(class_type, str):
+            class_type = class_type.lower()
+
+        # if there is one state
+        if self.has_data():
+            if self.__class__ == class_type or self.__class__.__name__.lower() == class_type:
+                return self
+
+        # the state has multiple states, thus we go through each state
         for state in self.states:
-            if state.__class__ == class_type:
+            if state.__class__ == class_type or state.__class__.__name__.lower() == class_type:
                 return state
 
     ########################
@@ -610,7 +726,7 @@ class State(object):
         """
         Iterator over the states.
         """
-        if self.isCombinedState():
+        if self.is_combined_states():
             for state in self._states:
                 yield state
         else:
@@ -645,7 +761,7 @@ class State(object):
             item = item.data
 
         # check if continuous
-        # if self.isContinuous():
+        # if self.is_continuous():
         #     low, high = self.bounds()
         #     return np.all(low <= item) and np.all(item <= high)
         # else: # discrete case
@@ -683,7 +799,7 @@ class State(object):
             key (int, slice): index of the internal state, or index/indices for the state data
             value (State, int/float, array): value to be set
         """
-        if self.isCombinedState():
+        if self.is_combined_states():
             # set/move the state to the specified key
             if isinstance(value, State) and isinstance(key, int):
                 self._states[key] = value

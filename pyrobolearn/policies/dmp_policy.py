@@ -35,10 +35,10 @@ class DMPPolicy(Policy):
     def _size(self, x):
         size = 0
         if isinstance(x, (State, Action)):
-            if x.isDiscrete():
+            if x.is_discrete():
                 size = x.space[0].n
             else:
-                size = x.totalSize()
+                size = x.total_size()
         elif isinstance(x, np.ndarray):
             size = x.size
         elif isinstance(x, torch.Tensor):
@@ -50,11 +50,13 @@ class DMPPolicy(Policy):
     def act(self, state, deterministic=True, to_numpy=True):
         # return self.model.predict(state, to_numpy=to_numpy)
         if (self.cnt % self.rate) == 0:
+            # print("Policy state value: {}".format(state.data[0][0]))
             self.y, self.dy, self.ddy = self.model.step(state.data[0][0])
         self.cnt += 1
         # y, dy, ddy = self.model.step()
         # return np.array([y, dy, ddy])
         if isinstance(self.actions, JointPositionAction):
+            # print("DMP action: {}".format(self.y))
             self.actions.data = self.y
         elif isinstance(self.actions, JointVelocityAction):
             self.actions.data = self.dy
@@ -79,7 +81,7 @@ class DMPPolicy(Policy):
             #     dy = dy.reshape(1, -1)
             # if len(ddy.shape) == 1:
             #     ddy = ddy.reshape(1, -1)
-            self.model.imitate(y, plot=True)  # dy, ddy, plot=True)  # dy, ddy)
+            self.model.imitate(y, plot=False)  # dy, ddy, plot=True)  # dy, ddy)
         else:
             print("Nothing to imitate.")
 

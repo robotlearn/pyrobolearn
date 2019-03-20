@@ -3,16 +3,16 @@
 from camera import CameraInterface
 
 # Webcam
-from webcam import WebcamInterface
+# from webcam import WebcamInterface
 
 # Asus Xtion
-from asus_xtion import AsusXtionInterface
+# from asus_xtion import AsusXtionInterface
 
 # Kinect
-from kinect import *
+# from kinect import *
 
 # FER
-from fer import FERInterface
+# from fer import FERInterface
 
 # OpenPose
-from openpose import OpenPoseInterface
+# from openpose import OpenPoseInterface

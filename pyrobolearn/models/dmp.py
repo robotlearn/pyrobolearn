@@ -68,6 +68,7 @@ class CS(object):
     def reset(self):
         """Reset the phase variable"""
         self.s = self.init_phase
+        return self.s
 
     def rollout(self, tau=1.0, error_coupling=1.0):
         """Generate phase variable in an open loop fashion.
@@ -116,6 +117,7 @@ class DiscreteCS(CS):
     def reset(self):
         """Reset the phase variable"""
         self.s = self.init_phase
+        return self.s
 
     def step(self, tau=1.0, error_coupling=1.0):
         """Generate phase value for discrete movements.
@@ -161,6 +163,7 @@ class RhythmicCS(CS):
     def reset(self):
         """Reset the phase variable"""
         self.s = self.init_phase
+        return self.s
 
     def step(self, tau=1.0, error_coupling=1.0):
         r"""Generate phase value for rhythmic movements.
@@ -686,6 +689,7 @@ class DMP(object):
         self.K = self.D**2 / 4. if stiffness is None else stiffness
 
         # set up the DMP system
+        self.prev_s = self.cs.init_phase
         self.reset()
 
         # target forcing term (keep a copy)
@@ -828,7 +832,7 @@ class DMP(object):
         self.y = self.y0.copy()
         self.dy = self.dy0.copy()  # np.zeros(self.num_dmps)
         self.ddy = self.ddy0.copy()
-        self.cs.reset()
+        self.prev_s = self.cs.reset()
 
     def step(self, s=None, tau=1.0, error=0.0, forcing_term=None, new_goal=None, external_force=None, rescale_force=True):
         """Run the DMP transformation system for a single time step.
@@ -850,6 +854,10 @@ class DMP(object):
             s = self.cs.step(tau=tau, error_coupling=error_coupling)
         elif not isinstance(s, (float, int)):
             raise TypeError("Expecting the phase 's' to be a float or integer. Instead, I got {}".format(type(s)))
+
+        # check if same phase as before
+        if s == self.prev_s:
+            return self.y, self.dy, self.ddy
 
         if new_goal is None:
             new_goal = self.goal
@@ -1360,6 +1368,12 @@ class BioDiscreteDMP(DiscreteDMP):
         # get phase from canonical system
         if s is None:
             s = self.cs.step(tau=tau, error_coupling=error_coupling)
+        elif not isinstance(s, (float, int)):
+            raise TypeError("Expecting the phase 's' to be a float or integer. Instead, I got {}".format(type(s)))
+
+        # check if same phase as before
+        if s == self.prev_s:
+            return self.y, self.dy, self.ddy
 
         if new_goal is None:
             new_goal = self.goal

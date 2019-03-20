@@ -5,6 +5,7 @@ This file defines the `Action` class, which is returned by the policy and given 
 """
 
 import numpy as np
+import torch
 import collections
 from abc import ABCMeta, abstractmethod
 import gym
@@ -52,7 +53,7 @@ class Action(object):
         Args:
             actions (list/tuple of Action): list of actions to be combined together (if given, we can not specified
                                             data)
-            data (np.ndarray): data associated to this state
+            data (np.ndarray): data associated to this action
             space (gym.space): space associated with the given data
 
         Warning:
@@ -79,6 +80,7 @@ class Action(object):
 
         # The following attributes should normally be set in the child classes
         self._data = data
+        self._torch_data = data if data is None else torch.from_numpy(data).float()
         self._space = space
         self._distribution = None  # for sampling
         self._normalizer = None
@@ -91,7 +93,7 @@ class Action(object):
             self.add(actions)
 
         # reset action
-        #self.reset()
+        # self.reset()
 
     ##############################
     # Properties (Getter/Setter) #
@@ -108,7 +110,7 @@ class Action(object):
         """
         Set the list of actions.
         """
-        if self.hasData():
+        if self.has_data():
             raise AttributeError("Trying to add internal actions to the current action while it already has some data. "
                                  "A action should be a combination of actions or should contain some kind of data, "
                                  "but not both.")
@@ -128,7 +130,7 @@ class Action(object):
         Returns:
             list of np.ndarray: list of data associated to the action
         """
-        if self.hasData():
+        if self.has_data():
             return [self._data]
         return [action._data for action in self._actions]
 
@@ -141,8 +143,17 @@ class Action(object):
         Args:
             data: the data to set
         """
+        if self.has_actions():  # combined actions
+            if not isinstance(data, collections.Iterable):
+                raise TypeError("data is not an iterator")
+            if len(self._actions) != len(data):
+                raise ValueError("The number of actions is different from the number of data segments")
+            for action, d in zip(self._actions, data):
+                action.data = d
+
         # one action: change the data
-        if self.hasData():
+        # if self.has_data():
+        else:
             if not isinstance(data, np.ndarray):
                 if isinstance(data, (list, tuple)):
                     data = np.array(data)
@@ -151,34 +162,128 @@ class Action(object):
                 else:
                     raise TypeError("Expecting a numpy array, a list/tuple of int/float, or an int/float for 'data'")
 
-            if self._data.shape != data.shape:
+            if self._data is not None and self._data.shape != data.shape:
                 raise ValueError("The given data does not have the same shape as previously.")
 
             # clip the value using the space
-            if self.hasSpace():
-                if self.isContinuous():  # continuous case
+            if self.has_space():
+                if self.is_continuous():  # continuous case
                     low, high = self._space.low, self._space.high
                     data = np.clip(data, low, high)
-                else: # discrete case
+                else:  # discrete case
                     n = self._space.n
                     if data.size == 1:
                         data = np.clip(data, 0, n)
             self._data = data
+            self._torch_data = torch.from_numpy(data).float()
 
-        else:  # combined action
+    @property
+    def merged_data(self):
+        """
+        Return the merged data.
+        """
+        # fuse the data
+        fused_action = self.fuse()
+        # return the data
+        return fused_action.data
+
+    @property
+    def torch_data(self):
+        """
+        Return the data as a list of torch tensors.
+        """
+        if self.has_data():
+            return [self._torch_data]
+        return [action._torch_data for action in self._actions]
+
+    @torch_data.setter
+    def torch_data(self, data):
+        """
+        Set the torch data and update the numpy version of the data.
+
+        Args:
+            data (torch.Tensor, list of torch.Tensors): data to set.
+        """
+        if self.has_actions():  # combined actions
             if not isinstance(data, collections.Iterable):
                 raise TypeError("data is not an iterator")
             if len(self._actions) != len(data):
                 raise ValueError("The number of actions is different from the number of data segments")
             for action, d in zip(self._actions, data):
-                action.data = d
+                action.torch_data = d
+
+        # one action: change the data
+        # if self.has_data():
+        else:
+            if isinstance(data, torch.Tensor):
+                data = data.float()
+            elif isinstance(data, np.ndarray):
+                data = torch.from_numpy(data).float()
+            elif isinstance(data, (list, tuple)):
+                data = torch.from_numpy(np.array(data)).float()
+            elif isinstance(data, (int, float)):
+                data = data * torch.ones(self._data.shape)
+            else:
+                raise TypeError("Expecting a Torch tensor, numpy array, a list/tuple of int/float, or an int/float for"
+                                " 'data'")
+            if self._torch_data.shape != data.shape:
+                raise ValueError("The given data does not have the same shape as previously.")
+
+            # clip the value using the space
+            if self.has_space():
+                if self.is_continuous():  # continuous case
+                    low, high = torch.from_numpy(self._space.low), torch.from_numpy(self._space.high)
+                    data = torch.min(torch.max(data, low), high)
+                else:  # discrete case
+                    n = self._space.n
+                    if data.size == 1:
+                        data = torch.clamp(data, min=0, max=n)
+            self._torch_data = data
+            if data.requires_grad:
+                data = data.detach().numpy()
+            else:
+                data = data.numpy()
+            self._data = data
+
+    @property
+    def merged_torch_data(self):
+        """
+        Return the merged torch data.
+
+        Returns:
+            list of torch.Tensor: list of data torch tensors.
+        """
+        # fuse the data
+        fused_action = self.fuse()
+        # return the data
+        return fused_action.torch_data
+
+    @property
+    def vec_data(self):
+        """
+        Return a vectorized form of the data.
+
+        Returns:
+            np.array[N]: all the data.
+        """
+        return np.concatenate([data.reshape(-1) for data in self.merged_data])
+
+    @property
+    def vec_torch_data(self):
+        """
+        Return a vectorized form of all the torch tensors.
+
+        Returns:
+            torch.Tensor([N]): all the torch tensors reshaped such that they are unidimensional.
+        """
+        return torch.cat([data.reshape(-1) for data in self.merged_torch_data])
 
     @property
     def space(self):
         """
         Get the corresponding space.
         """
-        if self.hasSpace():
+        if self.has_space():
             return [self._space]
         return [action._space for action in self._actions]
 
@@ -187,7 +292,7 @@ class Action(object):
         """
         Set the corresponding space. This can only be used one time!
         """
-        if self.hasData() and not self.hasSpace() and \
+        if self.has_data() and not self.has_space() and \
                 isinstance(space, (gym.spaces.Box, gym.spaces.Discrete)):
             self._space = space
 
@@ -214,7 +319,7 @@ class Action(object):
         """
         Return the shape of each action. Some actions, such as camera actions have more than 1 dimension.
         """
-        # if self.hasActions():
+        # if self.has_actions():
         return [d.shape for d in self.data]
         # return [self.data.shape]
 
@@ -223,7 +328,7 @@ class Action(object):
         """
         Return the size of each action.
         """
-        # if self.hasActions():
+        # if self.has_actions():
         return [d.size for d in self.data]
         # return [len(self.data)]
 
@@ -233,6 +338,13 @@ class Action(object):
         Return the dimension (length of shape) of each action.
         """
         return [len(d.shape) for d in self.data]
+
+    @property
+    def num_dimensions(self):
+        """
+        Return the number of different dimensions (length of shape).
+        """
+        return len(np.unique(self.dimension))
 
     @property
     def distribution(self):
@@ -252,7 +364,8 @@ class Action(object):
     ###########
     # Methods #
     ###########
-    def isCombinedAction(self):
+
+    def is_combined_actions(self):
         """
         Return a boolean value depending if the action is a combination of actions.
 
@@ -262,12 +375,12 @@ class Action(object):
         return len(self._actions) > 0
 
     # alias
-    hasActions = isCombinedAction
+    has_actions = is_combined_actions
 
-    def hasData(self):
+    def has_data(self):
         return self._data is not None
 
-    def hasSpace(self):
+    def has_space(self):
         return self._space is not None
 
     def add(self, action):
@@ -278,7 +391,7 @@ class Action(object):
         Args:
             action (Action, list/tuple of Action): action(s) to add to the internal list of actions
         """
-        if self.hasData():
+        if self.has_data():
             raise AttributeError("Undefined behavior: a action should be a combination of actions or should contain "
                                  "some kind of data, but not both.")
         if isinstance(action, Action):
@@ -303,7 +416,7 @@ class Action(object):
         Write the action values to the simulator for each action.
         This has to be overwritten by the child class.
         """
-        if self.hasData():  # write the current action
+        if self.has_data():  # write the current action
             self._write(data)
         else:  # read each action
             if self.actions:
@@ -324,7 +437,7 @@ class Action(object):
     #     Returns:
     #         initial action
     #     """
-    #     if self.hasData(): # reset the current action
+    #     if self.has_data(): # reset the current action
     #         self._reset()
     #     else: # reset each action
     #         for action in self.actions:
@@ -345,7 +458,7 @@ class Action(object):
     #     """
     #     return [len(d.shape) for d in self.data]
 
-    def maxDimension(self):
+    def max_dimension(self):
         """
         Return the maximum dimension.
         """
@@ -357,13 +470,13 @@ class Action(object):
     #     """
     #     return [d.size for d in self.data]
 
-    def totalSize(self):
+    def total_size(self):
         """
         Return the total size of the combined action.
         """
         return sum(self.size)
 
-    def hasDiscreteValues(self):
+    def has_discrete_values(self):
         """
         Does the action have discrete values?
         """
@@ -373,13 +486,13 @@ class Action(object):
             return [True]
         return [False]
 
-    def isDiscrete(self):
+    def is_discrete(self):
         """
         If all the actions are discrete, then it is discrete.
         """
-        return all(self.hasDiscreteValues())
+        return all(self.has_discrete_values())
 
-    def hasContinuousValues(self):
+    def has_continuous_values(self):
         """
         Does the action have continuous values?
         """
@@ -389,11 +502,11 @@ class Action(object):
             return [True]
         return [False]
 
-    def isContinuous(self):
+    def is_continuous(self):
         """
         If one of the action is continuous, then the action is considered to be continuous.
         """
-        return any(self.hasContinuousValues())
+        return any(self.has_continuous_values())
 
     def bounds(self):
         """
@@ -428,7 +541,7 @@ class Action(object):
         Sample some values from the action based on the given distribution.
         If no distribution is specified, it samples from a uniform distribution (default value).
         """
-        if self.isCombinedAction():
+        if self.is_combined_actions():
             return [action.sample() for action in self._actions]
         if self._distribution is None:
             return
@@ -436,7 +549,7 @@ class Action(object):
             pass
         raise NotImplementedError
 
-    def addNoise(self, noise=None, replace=True):  # parameter dependent of the action
+    def add_noise(self, noise=None, replace=True):  # parameter dependent of the action
         """
         Add some noise to the action, and returns it.
 
@@ -446,7 +559,7 @@ class Action(object):
         if self._data is None:
             # apply noise
             for action in self._actions:
-                action.addNoise(noise=noise)
+                action.add_noise(noise=noise)
         else:
             # add noise to the data
             noisy_data = self.data + noise
@@ -465,6 +578,86 @@ class Action(object):
             the normalized data
         """
         pass
+
+    def fuse(self, other=None, axis=0):
+        """
+        Fuse the actions that have the same shape together. The axis specified along which axis we concatenate the data.
+        If multiple actions with different shapes are present, the axis will be the one specified if possible,
+        otherwise it will be min(dimension, axis).
+
+        Examples:
+            a0 = JointPositionAction(robot)
+            a1 = JointVelocityAction(robot)
+            a = a0 & a1
+            print(a)
+            print(a.shape)
+            a = a0 + a1
+            a.fuse()
+            print(a)
+            print(a.shape)
+        """
+        # check argument
+        if not (other is None or isinstance(other, Action)):
+            raise TypeError("The 'other' argument should be None or another action.")
+
+        # build list of all the actions
+        actions = [self] if self.has_data() else self._actions
+        if other is not None:
+            if other.has_data():
+                actions.append(other)
+            else:
+                actions.extend(other._actions)
+
+        # check if only one action
+        if len(actions) < 2:
+            return self  # do nothing
+
+        # build the dictionary with key=dimension of shape, value=list of actions
+        dic = {}
+        for action in actions:
+            dic.setdefault(len(action._data.shape), []).append(action)
+
+        # traverse the dictionary and fuse corresponding shapes
+        actions = []
+        for key, value in dic.items():
+            if len(value) > 1:
+                # fuse
+                data = [action._data for action in value]
+                names = [action.name for action in value]
+                a = Action(data=np.concatenate(data, axis=min(axis, key)), name='+'.join(names))
+                actions.append(a)
+            else:
+                # only one action
+                actions.append(value[0])
+
+        # return the fused action
+        if len(actions) == 1:
+            return actions[0]
+        return Action(actions)
+
+    def lookfor(self, class_type):
+        """
+        Look for the specified class type/name in the list of internal actions, and returns it.
+
+        Args:
+            class_type (type, str): class type or name
+
+        Returns:
+            Action: the corresponding instance of the Action class
+        """
+        # if string, lowercase it
+        if isinstance(class_type, str):
+            class_type = class_type.lower()
+
+        # if there is one action
+        if self.has_data():
+            if self.__class__ == class_type or self.__class__.__name__.lower() == class_type:
+                return self
+
+        # the action has multiple actions, thus we go through each action
+        for action in self.actions:
+            if action.__class__ == class_type or action.__class__.__name__.lower() == class_type:
+                return action
 
     ########################
     # Operator Overloading #
@@ -513,7 +706,7 @@ class Action(object):
         """
         Iterator over the actions.
         """
-        if self.isCombinedAction():
+        if self.is_combined_actions():
             for action in self._actions:
                 yield action
         else:
@@ -548,7 +741,7 @@ class Action(object):
             item = item.data
 
         # check if continuous
-        # if self.isContinuous():
+        # if self.is_continuous():
         #     low, high = self.bounds()
         #     return np.all(low <= item) and np.all(item <= high)
         # else: # discrete case
@@ -586,7 +779,7 @@ class Action(object):
             key (int, slice): index of the internal action, or index/indices for the action data
             value (Action, int/float, array): value to be set
         """
-        if self.isCombinedAction():
+        if self.is_combined_actions():
             # set/move the action to the specified key
             if isinstance(value, Action) and isinstance(key, int):
                 self._actions[key] = value
