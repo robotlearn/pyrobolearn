@@ -55,16 +55,16 @@ class JointPositionAction(JointAction):
     Set the joint positions using position control.
     """
 
-    def __init__(self, robot, joint_ids=None, kp=None, kd=None):
-        self.kp, self.kd = kp, kd
+    def __init__(self, robot, joint_ids=None, kp=None, kd=None, max_force=None):
+        self.kp, self.kd, self.max_force = kp, kd, max_force
         super(JointPositionAction, self).__init__(robot, joint_ids)
-        self._data = robot.getJointPositions(self.joints)
+        self.data = robot.getJointPositions(self.joints)
 
     def _write(self, data=None):
         if data is None:
-            self.robot.setJointPositions(self._data, self.joints, kp=self.kp, kd=self.kd)
+            self.robot.setJointPositions(self._data, self.joints, kp=self.kp, kd=self.kd, maxTorque=self.max_force)
         else:
-            self.robot.setJointPositions(data, self.joints, kp=self.kp, kd=self.kd)
+            self.robot.setJointPositions(data, self.joints, kp=self.kp, kd=self.kd, maxTorque=self.max_force)
 
 
 class JointVelocityAction(JointAction):
@@ -75,7 +75,7 @@ class JointVelocityAction(JointAction):
 
     def __init__(self, robot, joint_ids=None):
         super(JointVelocityAction, self).__init__(robot, joint_ids)
-        self._data = robot.getJointVelocities(self.joints)
+        self.data = robot.getJointVelocities(self.joints)
 
     def _write(self, data=None):
         if data is None:
@@ -92,7 +92,7 @@ class JointForceAction(JointAction):
 
     def __init__(self, robot, joint_ids=None, f_min=-np.infty, f_max=np.infty):
         super(JointForceAction, self).__init__(robot, joint_ids)
-        self._data = robot.getJointTorques(self.joints)
+        self.data = robot.getJointTorques(self.joints)
         self.f_min = f_min
         self.f_max = f_max
 
@@ -114,7 +114,7 @@ class JointAccelerationAction(JointAction):
 
     def __init__(self, robot, joint_ids=None, a_min=-np.infty, a_max=np.infty):
         super(JointAccelerationAction, self).__init__(robot, joint_ids)
-        self._data = robot.getJointAccelerations(self.joints)
+        self.data = robot.getJointAccelerations(self.joints)
         self.a_min = a_min
         self.a_max = a_max
 

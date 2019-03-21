@@ -37,7 +37,7 @@ class Robot(object):
     """
 
     def __init__(self, simulator, urdf_path, init_pos=(0, 0, 1.5), init_orient=(0, 0, 0, 1),
-                 useFixedBase=False, scaling=1.):
+                 useFixedBase=False, scaling=1., *args, **kwargs):
         """
         Initialize the robot.
 
@@ -56,6 +56,9 @@ class Robot(object):
             init_orient = (0, 0, 0, 1)
         if useFixedBase is None:
             useFixedBase = False
+
+        self.init_position = init_pos
+        self.init_orientation = init_orient
 
         # set the simulator
         self.sim = simulator
@@ -993,40 +996,62 @@ class Robot(object):
         return torque * velocity
 
     # TODO: desVel, maxVel, and maxTorque
-    def setJointPositions(self, position, jointId=None, kp=None, kd=None, maxVelocity=True, maxTorque=True):
+    def setJointPositions(self, position, jointId=None, kp=None, kd=None, velocity=None, maxTorque=None):
         """
         Set the position of the given joint(s) (using position control).
 
         Args:
             jointId (int, int[N], None): joint id, or list of joint ids. If None, get all the actuated joints.
             position (float, float[N]): desired position, or list of desired positions [rad]
-            velocity (None, float, float[N]): desired velocity, or list of desired velocities [rad/s]
-            kp (None, float, float[N]): position gain(s)
-            kd (None, float, float[N]): velocity gain(s)
-            maxVelocity (bool): NOT CURRENTLY USED
-            maxTorque (bool, float, float[N]): maximum motor torques
+            velocity (float, float[N], None): desired velocity, or list of desired velocities [rad/s]
+            kp (float, float[N], None): position gain(s)
+            kd (float, float[N], None): velocity gain(s)
+            maxTorque (float, float[N], None): maximum motor torques
         """
         if isinstance(jointId, int):
-            if kp is not None and kd is not None:
-                self.sim.setJointMotorControl2(self.id, jointId, self.sim.POSITION_CONTROL, targetPosition=position,
-                                               positionGain=kp, velocityGain=kd)
-            else:
-                self.sim.setJointMotorControl2(self.id, jointId, self.sim.POSITION_CONTROL, targetPosition=position)
+            kwargs = {}
+            if kp is not None:
+                kwargs['positionGain'] = kp
+            if kd is not None:
+                kwargs['velocityGain'] = kd
+            if velocity is not None:
+                kwargs['targetVelocity'] = velocity
+            if maxTorque is not None:
+                kwargs['force'] = maxTorque
+            self.sim.setJointMotorControl2(self.id, jointId, self.sim.POSITION_CONTROL, targetPosition=position,
+                                           **kwargs)
         else:
             if jointId is None:
                 jointId = self.joints
-            if kp is not None and kd is not None:
+            kwargs = {}
+            if kp is not None:
                 if isinstance(kp, (float, int)):
                     kp = kp * np.ones(len(jointId))
+                kwargs['positionGains'] = kp
+            if kd is not None:
                 if isinstance(kd, (float, int)):
                     kd = kd * np.ones(len(jointId))
-                qIdx = self.getQIndex(jointId)
-                position = np.clip(position, self.joint_limits[qIdx, 0], self.joint_limits[qIdx, 1])
-                self.sim.setJointMotorControlArray(self.id, jointId, self.sim.POSITION_CONTROL,
-                                                   targetPositions=position, positionGains=kp, velocityGains=kd)
-            else:
-                self.sim.setJointMotorControlArray(self.id, jointId, self.sim.POSITION_CONTROL,
-                                                   targetPositions=position)
+                kwargs['velocityGains'] = kd
+            # qIdx = self.getQIndex(jointId)
+            # print("pos: ", position)
+            # print(self.joint_limits[qIdx, 0], self.joint_limits[qIdx, 1])
+            # TODO: the following clip causes an error... Check Minitaur...
+            # position = np.clip(position, self.joint_limits[qIdx, 0], self.joint_limits[qIdx, 1])
+            # kp = kp.tolist()
+            # kd = kd.tolist()
+            # print("pos: ", position)
+            # print("kp: ", kp)
+            # print("kd: ", kd)
+            if velocity is not None:
+                if isinstance(velocity, (float, int)):
+                    velocity = velocity * np.ones(len(jointId))
+                kwargs['targetVelocities'] = velocity
+            if maxTorque is not None:
+                if isinstance(maxTorque, (float, int)):
+                    maxTorque = maxTorque * np.ones(len(jointId))
+                kwargs['forces'] = maxTorque
+            self.sim.setJointMotorControlArray(self.id, jointId, self.sim.POSITION_CONTROL, targetPositions=position,
+                                               **kwargs)
 
     # TODO: maxVel and maxTorque
     def setJointVelocities(self, velocity, jointId=None, maxVelocity=True, maxTorque=True):
@@ -1173,10 +1198,14 @@ class Robot(object):
         # check jointIds
         if not jointIds:
             jointIds = self.joints
+        if isinstance(jointIds, int):
+            jointIds = [jointIds]
 
         # check q
         if q is None:
             q = np.zeros(len(jointIds))
+        elif isinstance(q, (int, float)):
+            q = [q]
         else:
             if len(q) != len(jointIds):
                 raise ValueError("The number of joint ids does not match up with the number of q's")
@@ -1184,6 +1213,8 @@ class Robot(object):
         # check dq
         if dq is None:
             dq = np.zeros(len(jointIds))
+        elif isinstance(dq, (int, float)):
+            dq = [dq]
         else:
             if len(dq) != len(jointIds):
                 raise ValueError("The number of joint ids does not match with the number of dq's")

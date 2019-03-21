@@ -409,12 +409,11 @@ class World(object):
         [2] Open3D: http://www.open3d.org/
     """
 
-    def __init__(self, simulator, set_gravity=True):
+    def __init__(self, simulator, gravity=(0., 0., -9.81)):
         self.sim = simulator
         # self.sim.setAdditionalSearchPath(pybullet_data.getDataPath())
 
         self.robots = {}
-        self.robot_init_states = {}
         self.movable_objects = {} # set()
         self.immovable_objects = {} # set()
         self.visual_objects = {} # set()
@@ -426,8 +425,7 @@ class World(object):
         self.quaternion_converter = QuaternionListConverter(convention=1)
 
         # By default, set the gravity
-        if set_gravity:
-            self.setGravity()
+        self.setGravity(gravity)
 
         self.worldState = None
 
@@ -564,6 +562,13 @@ class World(object):
             # reset simulation: remove all objects from the world and reset the world to initial conditions
             self.sim.resetSimulation()
 
+        # print("\nRobot reset state:")
+        # for robot_id, robot in self.robots.items():
+        #     print("Robot base position and orientation: {}".format(robot.getBasePositionAndOrientation()))
+        #     print("Robot base velocities: {}".format(robot.getBaseVelocity()))
+        #     print("Robot joint positions: {}".format(robot.getJointPositions()))
+        #     print("Robot joint velocities: {}".format(robot.getJointVelocities()))
+
     def resetSimulator(self):
         """
         Reset the simulator.
@@ -582,14 +587,14 @@ class World(object):
         if sleep_dt is not None:
             time.sleep(sleep_dt)
 
-    def setGravity(self, xyz=(0.,0.,-9.81)):
+    def setGravity(self, xyz=(0., 0., -9.81)):
         """
         Set the given gravity.
 
         Args:
             xyz (float[3]): gravity (acceleration) along the 3 axis.
         """
-        x,y,z = xyz
+        x, y, z = xyz
         self.sim.setGravity(x, y, z)
 
     def getMainCamera(self):
@@ -598,7 +603,7 @@ class World(object):
         """
         return WorldCamera(self.sim)
 
-    def loadRobot(self, robot, position=None, orientation=None, useFixedBase=None):
+    def loadRobot(self, robot, position=None, orientation=None, useFixedBase=None, *args, **kwargs):
         """
         Load the robot into the world. If the robot parameter is a known robot name or the path to the urdf file,
         it will create a `Robot` instance and return it. If the robot is already an instance of `Robot` it will
@@ -622,34 +627,35 @@ class World(object):
 
             if robot in robot_names_to_classes:
                 robot_class = robot_names_to_classes[robot]
-                robot = robot_class(self.sim, init_pos=position, init_orient=orientation, useFixedBase=useFixedBase)
+                robot = robot_class(self.sim, init_pos=position, init_orient=orientation, useFixedBase=useFixedBase,
+                                    *args, **kwargs)
 
             else:  # robot is the path to the urdf
                 robot = Robot(self.sim, urdf_path=robot, init_pos=position, init_orient=orientation,
-                              useFixedBase=useFixedBase)
+                              useFixedBase=useFixedBase, *args, **kwargs)
 
         elif isClass(robot):  # robot class
-            robot = robot(self.sim, init_pos=position, init_orient=orientation, useFixedBase=useFixedBase)
+            robot = robot(self.sim, init_pos=position, init_orient=orientation, useFixedBase=useFixedBase,
+                          *args, **kwargs)
 
-        else: # unknown type
+        else:  # unknown type
             raise TypeError('Unknown type for robot: {}. It must be a string or '
                             'an instance of Robot'.format(type(robot)))
 
         self.robots[robot.id] = robot
-        self.robot_init_states[robot.id] = (robot.getJointPositions(), robot.getJointVelocities())
         return robot
 
-    def isRobotId(self, robotId):
+    def isRobotId(self, robot_id):
         """
         Check if the given id is a robot id.
 
         Args:
-            robotId (int): the possible robot id
+            robot_id (int): the possible robot id
 
         Returns:
             bool: True if the id is a robot id, False otherwise
         """
-        return robotId in self.robots
+        return robot_id in self.robots
 
     def getRobot(self, robotId):
         """
@@ -668,12 +674,18 @@ class World(object):
 
     def resetRobots(self):
         """
-        Reset the joint states of each robot
+        Reset the base and joint states of each robot
         """
-        for robotId, robot in self.robots.items():
-            pos, vel = self.robot_init_states[robotId]
-            for jointId, p, v in zip(robot.joints, pos, vel):
-                self.sim.resetJointState(robotId, jointId, p, v)
+        for robot_id, robot in self.robots.items():
+            # reset base
+            self.sim.resetBasePositionAndOrientation(robot_id, robot.init_position, robot.init_orientation)
+            self.sim.resetBaseVelocity(robot_id, linearVelocity=[0, 0, 0], angularVelocity=[0, 0, 0])
+
+            # reset joint positions
+            positions = robot.init_joint_positions
+            velocities = np.zeros(len(positions))
+            for joint_id, position, velocity in zip(robot.joints, positions, velocities):
+                self.sim.resetJointState(robot_id, joint_id, position, velocity)
 
     def loadURDF(self, filename, position, orientation, useFixedBase=False, scaling=1., objectName=None):
         """
@@ -1742,13 +1754,13 @@ class World(object):
     def distribute_objects(self, distributor, objects):
         pass
 
-    def getDynamicsInfo(self, bodyId, linkId):
+    def getDynamicsInfo(self, bodyId, linkId=-1):
         """
         Return the dynamics information about objects that are in the world.
 
         Args:
-            bodyId: object unique id
-            linkId: link index (or -1 for the base)
+            bodyId (int): object unique id.
+            linkId (int): link index (or -1 for the base).
 
         Returns:
             float: mass in kg
@@ -1769,11 +1781,32 @@ class World(object):
         local_inertial_orn = np.array(local_inertial_orn)
         return info[:2] + [local_inertia_diag, local_inertial_pos, local_inertial_orn] + info[5:]
 
-    def changeDynamics(self, lateralFriction, spinningFriction, rollingFriction, linearDamping, angularDamping,
-                       contactStiffness=-1, contactDamping=-1):
-        self.sim.changeDynamics(bodyUniqueId=self.floor_id, linkIndex=-1, lateralFriction=lateralFriction,
-                                spinningFriction=spinningFriction, rollingFriction=rollingFriction,
-                                linearDamping=linearDamping, angularDamping=angularDamping)
+    def print_dynamics_info(self, body_id, link_id=-1):
+        """
+        Print the dynamics information related to the given body id and link id.
+
+        Args:
+            bodyId (int): object unique id.
+            linkId (int): link index (or -1 for the base).
+        """
+        info = self.sim.getDynamicsInfo(body_id, link_id)
+        print("Mass: {}".format(info[0]))
+        print("Lateral friction coefficient: {}".format(info[1]))
+        print("Local inertia diagonal: {}".format(info[2]))
+        print("Local inertial position: {}".format(info[3]))
+        print("Local inertial orientation (quat=[x,y,z,w]): {}".format(info[4]))
+        print("Restitution coefficient (bouncyness): {}".format(info[5]))
+        print("Rolling friction coefficient: {}".format(info[6]))
+        print("Spinning friction coefficient: {}".format(info[7]))
+        print("Contact damping coefficient (-1 if not available): {}".format(info[8]))
+        print("Contact stiffness coefficient (-1 if not available): {}".format(info[9]))
+
+    def changeDynamics(self, lateral_friction, spinning_friction, rolling_friction, linear_damping, angular_damping,
+                       contact_stiffness=-1, contact_damping=-1):
+        self.sim.changeDynamics(bodyUniqueId=self.floor_id, linkIndex=-1, lateralFriction=lateral_friction,
+                                spinningFriction=spinning_friction, rollingFriction=rolling_friction,
+                                linearDamping=linear_damping, angularDamping=angular_damping,
+                                contactStiffness=contact_stiffness, contactDamping=contact_damping)
 
 
 class BasicWorld(World):
@@ -1782,20 +1815,20 @@ class BasicWorld(World):
     It creates a basic world with a floor and set the gravity.
     """
 
-    def __init__(self, simulator, floor_path=None, set_gravity=True, scaling=1., lateralFriction=.9,
-                 spinningFriction=0., rollingFriction=0., contactStiffness=-1, contactDamping=-1):
-        super(BasicWorld, self).__init__(simulator, set_gravity=set_gravity)
+    def __init__(self, simulator, floor_path=None, gravity=(0., 0., -9.81), scaling=1., lateral_friction=.9,
+                 spinning_friction=0., rolling_friction=0., contact_stiffness=-1, contact_damping=-1):
+        super(BasicWorld, self).__init__(simulator, gravity=gravity)
 
         if floor_path is None:
             self.loadFloor(scaling=scaling)
-            self.changeDynamics(lateralFriction=lateralFriction, spinningFriction=spinningFriction,
-                                rollingFriction=rollingFriction, linearDamping=0, angularDamping=0,
-                                contactStiffness=30000)
+            self.changeDynamics(lateral_friction=lateral_friction, spinning_friction=spinning_friction,
+                                rolling_friction=rolling_friction, linear_damping=0, angular_damping=0,
+                                contact_stiffness=contact_stiffness, contact_damping=contact_damping)
             self.simulator.setDefaultContactERP(0.9)
         else:
             self.loadTerrain(floor_path, replace_floor=True)
 
-        print(self.sim.getDynamicsInfo(self.floor_id, -1))
+        self.print_dynamics_info(self.floor_id)
 
 
 class RobotPartyWorld(BasicWorld):

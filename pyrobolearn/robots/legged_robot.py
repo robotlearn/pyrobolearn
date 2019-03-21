@@ -2,6 +2,8 @@
 """Provide the Legged robot abstract classes.
 """
 
+import collections
+import numpy as np
 from robot import Robot
 
 
@@ -133,8 +135,37 @@ class LeggedRobot(Robot):
     def turnRight(self):
         raise NotImplementedError
 
+    def setFootFriction(self, friction, feet_id=None):
+        """
+        Set the foot friction in the simulator.
+
+        Warnings: only available in the simulator.
+
+        Args:
+            friction (float, list of float): friction value(s).
+            feet_id (int, list of int): list of foot/feet id(s).
+        """
+        if feet_id is None:
+            foot_id = self.feet
+        if isinstance(feet_id, int):
+            feet_id = [feet_id]
+        if isinstance(friction, (float, int)):
+            friction = friction * np.ones(len(feet_id))
+        for foot_id, frict in zip(feet_id, friction):
+            if isinstance(foot_id, int):
+                self.sim.changeDynamics(self.id, foot_id, lateralFriction=frict)
+            elif isinstance(foot_id, collections.Iterable):
+                for idx in foot_id:
+                    self.sim.changeDynamics(self.id, idx, lateralFriction=frict)
+            else:
+                raise TypeError("Expecting foot_id to be a list of int, or an int. Instead got: "
+                                "{}".format(type(foot_id)))
+
 
 class BipedRobot(LeggedRobot):
+    r"""Biped Robot
+
+    """
 
     def __init__(self, simulator, urdf_path, init_pos=(0,0,1.5), init_orient=(0,0,0,1), useFixedBase=False, scaling=1.):
         super(BipedRobot, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
@@ -184,6 +215,9 @@ class BipedRobot(LeggedRobot):
 
 
 class QuadrupedRobot(LeggedRobot):
+    r"""Quadruped robot
+
+    """
 
     def __init__(self, simulator, urdf_path, init_pos=(0,0,1.), init_orient=(0,0,0,1), useFixedBase=False, scaling=1.):
         super(QuadrupedRobot, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)

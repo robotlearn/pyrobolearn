@@ -35,7 +35,64 @@ class CPGNode(object):
         [1] "Central pattern generators for locomotion control in animals and robots: a review", Ijspeert, 2008
     """
 
-    def __init__(self, id, phi=0, offset=0, amplitude=1., timesteps=100, freq=None):
+    def __init__(self, id, phi=0., offset=0., amplitude=1., timesteps=100, freq=1., update_amplitude=True,
+                 update_offset=True, update_frequency=True, update_init_phase=True, update_weights=True,
+                 update_biases=True, amplitude_bounds=np.pi, offset_bounds=np.pi, phase_bounds=np.pi,
+                 frequency_bounds=5., weight_bounds=2., bias_bounds=np.pi,  *args, **kwargs):
+        """
+        Initialize the Central Pattern generator
+
+        Args:
+            id (int): unique node id.
+            phi (float): initial phase value.
+            offset (float): desired offset.
+            amplitude (float): desired amplitude.
+            timesteps (int): total number of timesteps for the phase to do a complete cycle.
+            freq (float): desired frequency. From this value, the desired angular velocity (omega) is computed.
+            update_amplitude (bool): If True, it will allow to train the desired amplitudes.
+            update_offset (bool): If True, it will allow to train the desired offsets.
+            update_frequency (bool): If True, it will allow to train the desired frequencies.
+            update_phase (bool): If True, it will allow to optimize the initial phases.
+            update_weights (bool): If True, it will allow to optimize the coupling weights.
+            update_biases (bool): If True, it will allow to optimize the coupling biases.
+            amplitude_bounds (float, tuple of float): bounds / limits to the amplitude parameter (useful when training).
+            offset_bounds (float, tuple of float): bounds / limits to the offset parameter (useful when training).
+            phase_bounds (float, tuple of float): bounds / limits to the phase parameter (useful when training).
+            frequency_bounds (float, tuple of float): bounds / limits to the frequency parameter (useful when training).
+            weight_bounds (float, tuple of float): bounds / limits to the weight parameters (useful when training).
+            bias_bounds (float, tuple of float): bounds / limits to the bias parameters (useful when training).
+            *args (list): list of other arguments given to the CPG node. NOT CURRENTLY USED.
+            **kwargs (dict): dictionary of other arguments given to the CPG node. NOT CURRENTLY USED.
+        """
+        # set which parameters we can update
+        self.update_amplitude = update_amplitude
+        self.update_offset = update_offset
+        self.update_frequency = update_frequency
+        self.update_init_phase = update_init_phase
+        self.update_weights = update_weights
+        self.update_biases = update_biases
+
+        # set bounds
+        def set_bounds(bounds):
+            if isinstance(bounds, (list, tuple, np.ndarray)):
+                if len(bounds) != 2:
+                    raise ValueError("Got more than 2 bounds for one of the parameters. Expecting an upper and lower "
+                                     "bound, instead got: {}".format(bounds))
+            elif isinstance(bounds, (float, int)):
+                bounds = (-bounds, bounds)
+            else:
+                raise TypeError("Expecting bounds to a float, list or tuple of an upper bound and lower bound, "
+                                "instead got {}".format(type(bounds)))
+            return bounds
+
+        self.amplitude_bounds = set_bounds(amplitude_bounds)
+        self.offset_bounds = set_bounds(offset_bounds)
+        self.phase_bounds = set_bounds(phase_bounds)
+        self.frequency_bounds = set_bounds(frequency_bounds)
+        self.weight_bounds = set_bounds(weight_bounds)
+        self.bias_bounds = set_bounds(bias_bounds)
+
+        # usual variables
         self.id = id
         self.timesteps = timesteps
         self.dt = 1./self.timesteps
@@ -146,26 +203,49 @@ class CPGNode(object):
     #     self.curr_phi, self.phi = phi, phi
     #     self.theta = self.offset + self.amp * np.cos(self.phi)
 
-    def set_phi(self, phi):
-        self.curr_phi, self.phi = phi, phi
-        self.theta = self.offset + self.amp * np.cos(self.phi)
-
     @property
     def num_parameters(self):
-        return 3 + 2 * len(self.nodes)
+        """Return the total number of parameters."""
+        return len(self.list_parameters())
 
     ###########
     # Methods #
     ###########
 
+    def set_phi(self, phi):
+        """
+        Set/overwrite the phase value by the new provided one.
+
+        Args:
+            phi (float): new phase value.
+        """
+        self.curr_phi, self.phi = phi, phi
+        self.theta = self.offset + self.amp * np.cos(self.phi)
+
     def add_node(self, cpg_node, weight=0., bias=0.):
-        """Add a coupling node."""
+        """
+        Add a new coupling node.
+
+        Args:
+            cpg_node (CPGNode): node that is coupled with the current one.
+            weight (float): coupling weight.
+            bias (float): coupling bias.
+        """
         self.nodes[cpg_node] = {'weight': weight, 'bias': bias}
 
     def remove_node(self, cpg_node):
-        """Remove a coupling node"""
+        """
+        Remove a coupling node, and return it if it exists.
+
+        Args:
+            cpg_node (CPGNode): coupling node to be removed.
+
+        Returns:
+            CPGNode, None: coupling node that has been removed. None if it is not a node that is coupled with the
+                current one.
+        """
         if cpg_node in self.nodes:
-            self.nodes.pop(cpg_node)
+            return self.nodes.pop(cpg_node)
 
     def reset(self):
         """Reset the phase of the CPG node; this can be useful for phase resetting."""
@@ -176,40 +256,86 @@ class CPGNode(object):
     def parameters(self):
         """Returns an iterator over the model parameters."""
         # proper node parameters
-        yield self.des_amp
-        yield self.des_offset
-        yield self.des_freq
+        if self.update_amplitude:
+            yield self.des_amp
+        if self.update_offset:
+            yield self.des_offset
+        if self.update_frequency:
+            yield self.des_freq
+        if self.update_init_phase:
+            yield self.init_phi
 
         # coupling parameters
         for node in self.nodes:
-            yield self.nodes[node]['weight']
-            yield self.nodes[node]['bias']
+            if self.update_weights:
+                yield self.nodes[node]['weight']
+            if self.update_biases:
+                yield self.nodes[node]['bias']
+
+    def bounds(self):
+        """Return an iterator over the upper and lower bounds of the parameters."""
+        # bounds for the node parameters
+        if self.update_amplitude:
+            yield self.amplitude_bounds
+        if self.update_offset:
+            yield self.offset_bounds
+        if self.update_frequency:
+            yield self.frequency_bounds
+        if self.update_init_phase:
+            yield self.phase_bounds
+
+        # bounds for coupling parameters
+        for node in self.nodes:
+            if self.update_weights:
+                yield self.weight_bounds
+            if self.update_biases:
+                yield self.bias_bounds
 
     def named_parameters(self):
-        """Returns an iterator over the model parameters, yielding both the name and the parameter itself"""
+        """Returns an iterator over the model parameters, yielding both the name and the parameter itself."""
         # proper node parameters
-        yield str(self) + ':amplitude', self.des_amp
-        yield str(self) + ':offset', self.des_offset
-        yield str(self) + ':frequency', self.des_freq
+        if self.update_amplitude:
+            yield 'amplitude ' + str(self.id), self.des_amp
+        if self.update_offset:
+            yield 'offset ' + str(self.id), self.des_offset
+        if self.update_frequency:
+            yield 'frequency ' + str(self.id), self.des_freq
+        if self.update_init_phase:
+            yield 'init_phase ' + str(self.id), self.init_phi
 
         # coupling parameters
         for node in self.nodes:
-            yield str(self) + ':weight:' + str(node), self.nodes[node]['weight']
-            yield str(self) + ':bias:' + str(node), self.nodes[node]['bias']
+            if self.update_weights:
+                yield str(self.id) + ':weight:' + str(node.id), self.nodes[node]['weight']
+            if self.update_biases:
+                yield str(self.id) + ':bias:' + str(node.id), self.nodes[node]['bias']
 
     def list_parameters(self):
-        """Return a list of parameters"""
+        """Return a list of parameters."""
         return list(self.parameters())
 
     def get_vectorized_parameters(self, to_numpy=True):
-        """Return a vectorized form of the parameters (weights, biases, offsets)."""
+        """
+        Return a vectorized form of the parameters (weights, biases, offsets).
+
+        Args:
+            to_numpy (bool): If True, it will return a np.array for the vector, otherwise it will return a
+                torch.Tensor.
+
+        Returns:
+            np.array, torch.Tensor: parameter vector
+        """
         if to_numpy:
             return np.array(self.list_parameters())
-        else:
-            return torch.from_numpy(np.array(self.list_parameters()))
+        return torch.from_numpy(np.array(self.list_parameters()))
 
     def set_vectorized_parameters(self, vector):
-        """Set the vector parameters."""
+        """
+        Set the vector parameters.
+
+        Args:
+            vector (list of float, np.array): vector containing the parameter values.
+        """
         # set the parameters from the vectorized one
         if len(vector) != self.num_parameters:
             raise ValueError("Expecting the size of the vectorized parameters to match the number of parameters "
@@ -217,13 +343,14 @@ class CPGNode(object):
         self.des_amp = vector[0]
         self.des_offset = vector[1]
         self.des_freq = vector[2]
+        self.init_phi = vector[3]
 
         # coupling parameters
         for idx, node in enumerate(self.nodes):
             self.nodes[node]['weight'] = vector[2*idx + 3]
             self.nodes[node]['bias'] = vector[2*idx + 4]
 
-    def step(self):
+    def step(self, *args, **kwargs):
         """
         Perform a step by integrating (i.e. Euler integration) the differential equations governing the CPG.
 
@@ -483,22 +610,78 @@ class CPGNode(object):
 
     def __str__(self):
         """Return a string describing the class."""
-        return self.__class__.__name__ + "(" + str(self.id) + ")"
+        coupling_description = '\n\t\t'.join(['id: ' + str(node.id) + ' - weight: ' + str(values['weight']) +
+                                              ' - bias: ' + str(values['bias']) for node, values in self.nodes.items()])
+        if len(coupling_description) == 0:
+            coupling_description = str(None)
+
+        description = [self.__class__.__name__ + "(",
+                       '\n\tnode id: ' + str(self.id),
+                       '\n\tdesired offset: ' + str(self.des_offset),
+                       '\n\tdesired amplitude: ' + str(self.des_amp),
+                       '\n\tdesired frequency: ' + str(self.des_freq),
+                       '\n\tdesired angular velocity: ' + str(self.des_omega),
+                       '\n\tinitial phase: ' + str(self.init_phi),
+                       '\n\tcoupled nodes: ' + coupling_description + ')']
+
+        return ''.join(description)
 
 
 class CPGNetwork(object):
     r"""Central Pattern Generator Network
 
+    This creates a CPG network that couples different CPG node together. Their phase becomes dependent on other phase
+    in the network/graph.
     """
 
-    def __init__(self, nodes, timesteps=100):
+    def __init__(self, nodes, timesteps=100, update_amplitudes=True, update_offsets=True, update_init_phases=True,
+                 update_frequencies=True, update_weights=True, update_biases=True, amplitude_bounds=np.pi,
+                 offset_bounds=np.pi, phase_bounds=np.pi, frequency_bounds=5., weight_bounds=2., bias_bounds=np.pi,
+                 *args, **kwargs):
+        """
+        Initialize the CPG network.
+
+        Args:
+            nodes (dict, int, None): dictionary describing the CPG network. The syntax is the following:
+                nodes = {<node_id>: {'phi': <phi>, 'offset': <offset>, 'amplitude': <amplitude>, 'freq': <freq>,
+                                     'nodes': [{'id': <coupling_node_id>, 'bias': <coupling_bias>,
+                                                'weight': <coupling_weight>}, ...]}
+                where <node_id> is the id of the current node, <phi> is the initial phase, <offset> is the initial and
+                desired offset, <amplitude> is the amplitude of the signal sent by the CPG node, <freq> is the
+                frequency at which operates the node, then we add inside the list associated with the 'nodes' key in
+                the dictionary, each node which is coupled to the current node by specifying the id of the coupled
+                node, the coupling weight and bias.
+                If nodes = integer, it will be assumed it is the total number of nodes, and a fully connected CPG
+                network will be built. That is, it will connect all the nodes to each other.
+            timesteps (int): total number of timesteps for the phase to do a complete cycle.
+            update_amplitudes (bool): If True, it will allow to train the desired amplitudes.
+            update_offsets (bool): If True, it will allow to train the desired offsets.
+            update_init_phases (bool): If True, it will allow to optimize the initial phases.
+            update_frequencies (bool): If True, it will allow to train the desired frequencies.
+            update_weights (bool): If True, it will allow to optimize the coupling weights.
+            update_biases (bool): If True, it will allow to optimize the coupling biases.
+            amplitude_bounds (float, tuple of float): bounds / limits to the amplitude parameter (useful when training).
+            offset_bounds (float, tuple of float): bounds / limits to the offset parameter (useful when training).
+            phase_bounds (float, tuple of float): bounds / limits to the phase parameter (useful when training).
+            frequency_bounds (float, tuple of float): bounds / limits to the frequency parameter (useful when training).
+            weight_bounds (float, tuple of float): bounds / limits to the weight parameters (useful when training).
+            bias_bounds (float, tuple of float): bounds / limits to the bias parameters (useful when training).
+            *args (list): list of other arguments given to the CPG network. NOT CURRENTLY USED.
+            **kwargs (dict): dictionary of other arguments given to the CPG network. NOT CURRENTLY USED.
+        """
         nodes = nodes if isinstance(nodes, dict) else self.fully_connected_network(nodes)
 
         # create each node
         self.nodes, init_params = {}, {'phi', 'offset', 'amplitude', 'freq'}
         for node_id in nodes.keys():
             d = {key: val for key, val in nodes[node_id].items() if key in init_params}
-            self.nodes[node_id] = CPGNode(node_id, timesteps=timesteps, **d)
+            self.nodes[node_id] = CPGNode(node_id, timesteps=timesteps, update_amplitude=update_amplitudes,
+                                          update_offset=update_offsets, update_init_phase=update_init_phases,
+                                          update_frequency=update_frequencies, update_weights=update_weights,
+                                          update_biases=update_biases, amplitude_bounds=amplitude_bounds,
+                                          offset_bounds=offset_bounds, phase_bounds=phase_bounds,
+                                          frequency_bounds=frequency_bounds, weight_bounds=weight_bounds,
+                                          bias_bounds=bias_bounds, **d)
 
         # couple the nodes
         for node_id, node in self.nodes.items():
@@ -512,10 +695,18 @@ class CPGNetwork(object):
         self.nodes_id = self.nodes.keys()
         self.nodes_id.sort()
 
+    ##############
+    # Properties #
+    ##############
+
     @property
     def num_parameters(self):
         """Return the total number of parameters in this CPG network."""
         return sum([node.num_parameters for node in self.nodes.values()])
+
+    ###########
+    # Methods #
+    ###########
 
     def parameters(self):
         """Returns an iterator over the model parameters."""
@@ -566,11 +757,11 @@ class CPGNetwork(object):
         for node in self.nodes.values():
             node.reset()
 
-    def step(self):
+    def step(self, *args, **kwargs):
         """Perform a step with the CPG network."""
         # perform one step
         for node in self.nodes.values():
-            node.step()
+            node.step(*args, **kwargs)
         # perform update
         for node in self.nodes.values():
             node.update()
@@ -605,6 +796,17 @@ class CPGNetwork(object):
                  'nodes': [{'id': n, 'weight': weight, 'bias': bias} for n in (node_ids[:i-1]+node_ids[i:])]}
              for i in node_ids}
         return d
+
+    #############
+    # Operators #
+    #############
+
+    def __str__(self):
+        """Return a string that describes the CPG network model."""
+        description = [self.__class__.__name__ + '(\n\t',
+                       '\n\n\t'.join([str(node) for node in self.nodes.values()]),
+                       '\n)']
+        return ''.join(description)
 
 
 # Tests
@@ -703,10 +905,13 @@ if __name__ == "__main__":
         for _ in range(10*T):
             # Get angles from CPG network and set them to the minitaur
             act = network.step()
-            for i in range(len(act)//2): # Left
+            print("kp: ", minitaur._kp)
+            print("kd: ", minitaur._kd)
+            print("max force: ", minitaur._max_force)
+            for i in range(len(act)//2):  # Left
                 minitaur._SetDesiredMotorAngleById(minitaur._motor_id_list[2*i], act[i])
                 minitaur._SetDesiredMotorAngleById(minitaur._motor_id_list[2*i+1], -np.pi-act[i])
-            for i in range(len(act)//2, len(act)): # Right
+            for i in range(len(act)//2, len(act)):  # Right
                 minitaur._SetDesiredMotorAngleById(minitaur._motor_id_list[2*i], act[i])
                 minitaur._SetDesiredMotorAngleById(minitaur._motor_id_list[2*i+1], np.pi - act[i])
 

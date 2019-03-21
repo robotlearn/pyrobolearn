@@ -90,6 +90,7 @@ class PhaseState(TimeState):
 
     def __init__(self, num_steps=100, start=0, end=1., rate=1):
         self.cnt = 0
+        self.num_steps = num_steps
         self.rate = rate
         self.end_value = end
         self.start_value = start
@@ -169,6 +170,27 @@ class ExponentialPhaseState(TimeState):
 DecayPhaseState = ExponentialPhaseState
 
 
+class RhythmicPhase(PhaseState):
+    r"""Rhythmic Phase state
+
+    The PhaseState starts from `start` and ends with `end`, calling after `num_steps` will just return `end`.
+    In this class, we cycle through the phase `[start, end[`; that is, once the end is reached it restarts
+    automatically from `start`
+    """
+
+    def __init__(self, num_steps=100, start=0, end=1., rate=1):
+        super(RhythmicPhase, self).__init__(num_steps=num_steps, start=start, end=end, rate=rate)
+
+    def _read(self):
+        if (self.cnt % self.rate) == 0:
+            self.data = self._data + self.dphase
+            if self.sign > 0 and self._data[0] >= self.end_value:
+                self.data = np.array([self.start_value])
+            if self.sign < 0 and self._data[0] <= self.end_value:
+                self.data = np.array([self.start_value])
+        self.cnt += 1
+
+
 # Tests the different time states
 if __name__ == '__main__':
     s = AbsoluteTimeState()
@@ -200,6 +222,12 @@ if __name__ == '__main__':
     print("\nPhase Time State:")
     print(s.reset())
     for i in range(200):
+        print(s())
+
+    s = RhythmicPhase(num_steps=10, start=1, end=2)
+    print("\nPhase Time State:")
+    print(s.reset())
+    for i in range(100):
         print(s())
 
     combined = AbsoluteTimeState() + RelativeTimeState() + CumulativeTimeState()
