@@ -2,7 +2,7 @@
 """Define the inverse reinforcement learning task.
 """
 
-from imitation import ILTask
+from pyrobolearn.tasks.imitation import ILTask
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

@@ -8,7 +8,8 @@ the various policies defined in the pyrobolearn framework.
 """
 
 import gym
-from state import State
+
+from pyrobolearn.states.state import State
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

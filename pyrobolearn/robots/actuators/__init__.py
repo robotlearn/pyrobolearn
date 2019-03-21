@@ -1,6 +1,6 @@
 
 # import basic actuator
-from actuator import Actuator
+from .actuator import Actuator
 
 # import joint actuators
-from joints import *
+from .joints import *

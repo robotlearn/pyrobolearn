@@ -4,7 +4,8 @@
 
 import os
 import numpy as np
-from legged_robot import QuadrupedRobot
+
+from pyrobolearn.robots.legged_robot import QuadrupedRobot
 
 
 class Laikago(QuadrupedRobot):

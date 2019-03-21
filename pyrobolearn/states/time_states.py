@@ -7,7 +7,8 @@ This includes notably the absolute, relative, and cumulative time states.
 from abc import ABCMeta
 import time
 import numpy as np
-from state import State
+
+from pyrobolearn.states.state import State
 
 
 __author__ = "Brian Delhaisse"

@@ -15,7 +15,7 @@ from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 
 # from model import Model
-from gaussian import Gaussian
+from pyrobolearn.models.gaussian import Gaussian
 
 
 __author__ = "Brian Delhaisse"

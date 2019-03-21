@@ -5,7 +5,8 @@ This includes notably the camera, contact, IMU, force/torque sensors and others.
 """
 
 from abc import ABCMeta
-from robot_states import RobotState
+
+from pyrobolearn.states.robot_states import RobotState
 
 
 __author__ = "Brian Delhaisse"

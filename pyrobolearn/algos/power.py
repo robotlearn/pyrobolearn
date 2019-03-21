@@ -5,12 +5,12 @@ This Policy learning by Weighting Exploration with the Returns (PoWER) algorithm
 Expectation-Maximization (EM) algorithm. The exploration is carried out in the parameter space.
 """
 
+# import sys
 import numpy as np
-import sys
 
 from pyrobolearn.envs import Env
 from pyrobolearn.tasks import RLTask
-# from rl_algo import EMRLAlgo
+# from pyrobolearn.algos.rl_algo import EMRLAlgo
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

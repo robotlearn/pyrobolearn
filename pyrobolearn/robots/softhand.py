@@ -3,7 +3,8 @@
 """
 
 import os
-from hand import Hand
+
+from pyrobolearn.robots.hand import Hand
 
 
 # TODO: correct the inertia matrices and masses; they are too big!

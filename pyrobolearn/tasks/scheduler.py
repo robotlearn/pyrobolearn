@@ -8,7 +8,7 @@ defined it will sequence this one with the previous policy. The same rationale a
 and so on.
 """
 
-from task import Task
+from pyrobolearn.tasks.task import Task
 
 
 __author__ = "Brian Delhaisse"

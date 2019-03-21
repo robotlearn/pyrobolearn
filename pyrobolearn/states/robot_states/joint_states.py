@@ -5,7 +5,8 @@ This includes notably the joint positions, velocities, and force/torque states.
 """
 
 from abc import ABCMeta
-from robot_states import RobotState
+
+from pyrobolearn.states.robot_states import RobotState
 
 
 __author__ = "Brian Delhaisse"

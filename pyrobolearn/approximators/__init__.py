@@ -1,3 +1,3 @@
 
 # import function approximators
-from approximator import *
+from .approximator import *

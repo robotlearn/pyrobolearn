@@ -7,8 +7,8 @@ These include: YoubotBase, KukaYoubotArm, Youbot, YoubotDualArm
 import os
 import numpy as np
 
-from manipulator import ManipulatorRobot, BiManipulatorRobot
-from wheeled_robot import DifferentialWheeledRobot
+from pyrobolearn.robots.manipulator import ManipulatorRobot, BiManipulatorRobot
+from pyrobolearn.robots.wheeled_robot import DifferentialWheeledRobot
 
 
 class YoubotBase(DifferentialWheeledRobot):

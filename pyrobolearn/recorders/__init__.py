@@ -1,3 +1,3 @@
 
 # import recorders
-from recorder import *
+from .recorder import *

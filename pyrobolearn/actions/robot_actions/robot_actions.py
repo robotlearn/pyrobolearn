@@ -9,8 +9,9 @@ Dependencies:
 """
 
 from abc import ABCMeta
-from pyrobolearn.actions import Action
-from pyrobolearn.robots import Robot
+
+from pyrobolearn.actions.action import Action
+from pyrobolearn.robots.robot import Robot
 
 
 __author__ = "Brian Delhaisse"

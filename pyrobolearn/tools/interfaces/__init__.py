@@ -1,9 +1,9 @@
 
 # import the interfaces
-from interface import *
+from .interface import *
 
 # mouse-keyboard interface
-from mouse_keyboard import *
+from .mouse_keyboard import *
 
 # audio
 # from audio import *

@@ -11,7 +11,7 @@ from itertools import count
 import time
 import numpy as np
 
-from task import Task
+from pyrobolearn.tasks.task import Task
 from pyrobolearn.recorders import Recorder, StateRecorder, ActionRecorder
 # from pyrobolearn.tools.interfaces import Interface
 from pyrobolearn.tools.bridges import Bridge

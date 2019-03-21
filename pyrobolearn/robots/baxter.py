@@ -3,7 +3,8 @@
 """
 
 import os
-from manipulator import BiManipulatorRobot
+
+from pyrobolearn.robots.manipulator import BiManipulatorRobot
 
 
 class Baxter(BiManipulatorRobot):

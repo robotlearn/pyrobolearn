@@ -2,7 +2,7 @@
 """Define the transfer learning task.
 """
 
-from task import Task
+from pyrobolearn.tasks.task import Task
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

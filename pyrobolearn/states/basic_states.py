@@ -5,8 +5,9 @@ This includes notably the fixed, functional, and counter states.
 """
 
 import numpy as np
-from state import State
-from pyrobolearn.actions import Action
+
+from pyrobolearn.states.state import State
+from pyrobolearn.actions.action import Action
 
 
 __author__ = "Brian Delhaisse"

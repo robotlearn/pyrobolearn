@@ -7,7 +7,10 @@ this policy (i.e. the neural network) is tightly coupled with the algorithm that
 """
 
 import numpy as np
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ImportError as e:
+    import pickle
 
 try:
     import neat

@@ -2,7 +2,7 @@
 """Provide the Unmanned Aerial Vehicle (UAV) robot abstract classes.
 """
 
-from robot import Robot
+from pyrobolearn.robots.robot import Robot
 
 
 class UAVRobot(Robot):

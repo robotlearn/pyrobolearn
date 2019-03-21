@@ -3,8 +3,9 @@
 """
 
 import os
-from wheeled_robot import WheeledRobot
-from manipulator import BiManipulatorRobot
+
+from pyrobolearn.robots.wheeled_robot import WheeledRobot
+from pyrobolearn.robots.manipulator import BiManipulatorRobot
 
 
 class PR2(WheeledRobot, BiManipulatorRobot):

@@ -1,24 +1,24 @@
 
 # import basic sensor
-from sensor import Sensor
+from .sensor import Sensor
 
 # import joint + encoder sensors
-from joints import *
+from .joints import *
 
 # import link sensors
-from links import *
+from .links import *
 
 # import ft sensors
-from force_torque import *
+from .force_torque import *
 
 # import imu sensors
-from imu import *
+from .imu import *
 
 # import camera sensors
-from camera import *
+from .camera import *
 
 # import light / laser sensors
-from light import *
+from .light import *
 
 # import miscellaneous sensors
-from misc import *
+from .misc import *

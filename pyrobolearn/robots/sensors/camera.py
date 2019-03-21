@@ -6,7 +6,7 @@ Cameras have one of the most richest sensory inputs (i.e. visual).
 
 import numpy as np
 
-from links import LinkSensor
+from pyrobolearn.robots.sensors.links import LinkSensor
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

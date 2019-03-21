@@ -11,8 +11,8 @@ import numpy as np
 from scipy.linalg import block_diag
 import scipy.interpolate
 
-from model import Model
-from gaussian import Gaussian
+# from pyrobolearn.models.model import Model
+from pyrobolearn.models.gaussian import Gaussian
 
 
 __author__ = "Brian Delhaisse"

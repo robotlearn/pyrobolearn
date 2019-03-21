@@ -5,7 +5,7 @@ Define the various neural network policies that can be used.
 """
 
 from pyrobolearn.approximators import NNApproximator, MLPApproximator
-from policy import Policy
+from pyrobolearn.policies.policy import Policy
 
 
 __author__ = "Brian Delhaisse"

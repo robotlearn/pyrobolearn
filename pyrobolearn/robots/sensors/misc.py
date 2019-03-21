@@ -2,7 +2,7 @@
 """Define miscellaneous sensors.
 """
 
-from links import Sensor, LinkSensor
+from pyrobolearn.robots.sensors.links import Sensor, LinkSensor
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

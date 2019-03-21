@@ -1,10 +1,10 @@
 # a bridge links an interface with something else
 
 # general bridge import
-from bridge import Bridge
+from .bridge import Bridge
 
 # Bridge for mouse-keyboard interfaces
-from mouse_keyboard import *
+from .mouse_keyboard import *
 
 # Bridge for audio interfaces
 # from audio import *

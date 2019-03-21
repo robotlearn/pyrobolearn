@@ -6,7 +6,7 @@ This mainly include encoders.
 
 from abc import ABCMeta, abstractmethod
 
-from sensor import Sensor
+from pyrobolearn.robots.sensors.sensor import Sensor
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

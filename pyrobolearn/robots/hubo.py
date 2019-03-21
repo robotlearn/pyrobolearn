@@ -3,9 +3,10 @@
 """
 
 import os
-from legged_robot import BipedRobot
-from manipulator import BiManipulatorRobot
-from hand import TwoHand
+
+from pyrobolearn.robots.legged_robot import BipedRobot
+from pyrobolearn.robots.manipulator import BiManipulatorRobot
+from pyrobolearn.robots.hand import TwoHand
 
 
 class Hubo(BipedRobot, BiManipulatorRobot, TwoHand):

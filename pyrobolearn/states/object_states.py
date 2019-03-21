@@ -5,8 +5,9 @@ This includes notably the joint positions, velocities, and force/torque states.
 """
 
 from abc import ABCMeta, abstractmethod
-from state import State
-from pyrobolearn.worlds import World
+
+from pyrobolearn.states.state import State
+from pyrobolearn.worlds.world import World
 from pyrobolearn.robots import Object
 
 

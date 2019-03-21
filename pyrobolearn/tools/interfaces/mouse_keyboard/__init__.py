@@ -1,3 +1,3 @@
 
 # import mouse keyboard interface
-from mousekeyboard import MouseKeyboardInterface
+from .mousekeyboard import MouseKeyboardInterface

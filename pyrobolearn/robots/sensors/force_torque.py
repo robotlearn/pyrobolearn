@@ -4,7 +4,7 @@
 
 import numpy as np
 
-from joints import JointSensor
+from pyrobolearn.robots.sensors.joints import JointSensor
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

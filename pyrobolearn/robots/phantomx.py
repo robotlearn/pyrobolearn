@@ -3,7 +3,8 @@
 """
 
 import os
-from legged_robot import HexapodRobot
+
+from pyrobolearn.robots.legged_robot import HexapodRobot
 
 
 class PhantomX(HexapodRobot):

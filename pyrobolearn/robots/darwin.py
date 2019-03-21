@@ -5,8 +5,8 @@
 import os
 import numpy as np
 
-from legged_robot import BipedRobot
-from manipulator import BiManipulatorRobot
+from pyrobolearn.robots.legged_robot import BipedRobot
+from pyrobolearn.robots.manipulator import BiManipulatorRobot
 
 
 class Darwin(BipedRobot, BiManipulatorRobot):

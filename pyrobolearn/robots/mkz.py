@@ -4,7 +4,8 @@
 
 import os
 import numpy as np
-from wheeled_robot import AckermannWheeledRobot
+
+from pyrobolearn.robots.wheeled_robot import AckermannWheeledRobot
 
 
 class MKZ(AckermannWheeledRobot):

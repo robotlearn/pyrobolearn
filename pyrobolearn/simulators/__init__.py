@@ -2,7 +2,7 @@
 # load all simulators
 
 # basic simulator
-from simulator import Simulator
+from .simulator import Simulator
 
 # PyBullet simulator
 import pybullet

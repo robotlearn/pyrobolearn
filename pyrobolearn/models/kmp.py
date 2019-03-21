@@ -9,8 +9,8 @@ import numpy as np
 from scipy.linalg import block_diag
 import copy
 
-# from model import Model
-from gmm import GMM, Gaussian
+# from pyrobolearn.models.model import Model
+from pyrobolearn.models.gmm import GMM, Gaussian
 
 
 __author__ = "Brian Delhaisse"

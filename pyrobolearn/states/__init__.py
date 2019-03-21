@@ -1,18 +1,18 @@
 
 # import state
-from state import State
+from .state import State
 
 # import basic states
-from basic_states import *
+from .basic_states import *
 
 # import object states
-from object_states import *
+from .object_states import *
 
 # import time/count states
-from time_states import *
+from .time_states import *
 
 # import robot states
-from robot_states import *
+from .robot_states import *
 
 # import gym states
-from gym_states import *
+from .gym_states import *

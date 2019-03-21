@@ -2,7 +2,7 @@
 """Provide the manipulator abstract classes.
 """
 
-from robot import Robot
+from pyrobolearn.robots.robot import Robot
 
 
 class ManipulatorRobot(Robot):

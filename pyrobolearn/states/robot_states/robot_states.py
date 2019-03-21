@@ -10,6 +10,7 @@ Dependencies:
 
 from abc import ABCMeta, abstractmethod
 import numpy as np
+
 from pyrobolearn.states import State
 from pyrobolearn.robots import Robot
 

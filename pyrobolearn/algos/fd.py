@@ -9,7 +9,7 @@ import torch
 
 from pyrobolearn.envs import Env
 from pyrobolearn.tasks import RLTask
-# from rl_algo import GradientRLAlgo
+# from pyrobolearn.algos.rl_algo import GradientRLAlgo
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

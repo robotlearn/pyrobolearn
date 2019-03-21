@@ -5,7 +5,8 @@ Define the various basic policies such as the random policy, linear policy, poli
 """
 
 import numpy as np
-from policy import Policy
+
+from pyrobolearn.policies.policy import Policy
 from pyrobolearn.approximators import LinearApproximator
 
 

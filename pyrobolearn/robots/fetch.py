@@ -3,8 +3,9 @@
 """
 
 import os
-from wheeled_robot import WheeledRobot
-from manipulator import ManipulatorRobot
+
+from pyrobolearn.robots.wheeled_robot import WheeledRobot
+from pyrobolearn.robots.manipulator import ManipulatorRobot
 
 
 class Fetch(WheeledRobot, ManipulatorRobot):

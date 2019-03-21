@@ -4,7 +4,8 @@
 
 import collections
 import numpy as np
-from robot import Robot
+
+from pyrobolearn.robots.robot import Robot
 
 
 class LeggedRobot(Robot):

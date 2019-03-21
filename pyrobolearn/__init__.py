@@ -2,41 +2,34 @@
 import sys
 
 # import simulators
-# from simulators import *
-import simulators
+from . import simulators
 
 # import robots
-# from robots import *
-import robots
+from . import robots
 
 # import worlds
-# from worlds import *
-import worlds
+from . import worlds
 
 # import states
-# from states import *
-import states
+from . import states
 
 # import actions
-# from actions import *
-import actions
+from . import actions
 
 # import rewards
-# from rewards import *
-import rewards
+from . import rewards
 
 # import environments
-# from envs import *
-import envs
+from . import envs
 
 # import models
-import models
+from . import models
 
 # import approximators
-import approximators
+from . import approximators
 
 # import policies
-import policies
+from . import policies
 
 # import values
 
@@ -45,18 +38,18 @@ import policies
 # import dynamical models
 
 # import tools (interfaces and bridges)
-# import tools
+# from . import tools  # uncommenting this will oblige the user to install a bunch of libraries which are not straightforward to install...
 
 # import tasks
-import tasks
+from . import tasks
 
 # import metrics
 
 # import optimizers
-# import optimizers
+# from . import optimizers
 
 # import algos
-import algos
+from . import algos
 
 # import experiments
 

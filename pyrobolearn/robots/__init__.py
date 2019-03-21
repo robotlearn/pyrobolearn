@@ -5,113 +5,113 @@ import importlib
 import inspect
 
 # General robot class
-from base import Object, MovableObject, ControllableObject
-from actuators import *
-from sensors import *
-from robot import Robot
+from .base import Object, MovableObject, ControllableObject
+from .actuators import *
+from .sensors import *
+from .robot import Robot
 
 # Categories/types of robots
-from legged_robot import *
-from manipulator import *
-from wheeled_robot import *
-from uav import *
-from usv import *
-from uuv import *
-from hand import *
+from .legged_robot import *
+from .manipulator import *
+from .wheeled_robot import *
+from .uav import *
+from .usv import *
+from .uuv import *
+from .hand import *
 
 # Mujoco models
-from ant import Ant
-from hopper import Hopper
-from walker2d import Walker2D
-from half_cheetah import HalfCheetah
-from swimmer import Swimmer
-from humanoid import Humanoid
+from .ant import Ant
+from .hopper import Hopper
+from .walker2d import Walker2D
+from .half_cheetah import HalfCheetah
+from .swimmer import Swimmer
+from .humanoid import Humanoid
 
 # Quadruped
-from aibo import Aibo
-from minitaur import Minitaur
-from littledog import LittleDog
-# from anymal import ANYmal
-from hyq import HyQ
-from hyq2max import HyQ2Max
-from opendog import OpenDog
-from laikago import Laikago
+from .aibo import Aibo
+from .minitaur import Minitaur
+from .littledog import LittleDog
+# from .anymal import ANYmal
+from .hyq import HyQ
+from .hyq2max import HyQ2Max
+from .opendog import OpenDog
+from .laikago import Laikago
 
 # Biped
-from cassie import Cassie
+from .cassie import Cassie
 
 # Biped + Bi-manipulators
-from atlas import Atlas
-from nao import Nao
-from icub import ICub
-from coman import Coman
-from walkman import Walkman
-from cogimon import Cogimon
-from darwin import Darwin
-# from kondo import KHR3HV
-from hubo import Hubo
+from .atlas import Atlas
+from .nao import Nao
+from .icub import ICub
+from .coman import Coman
+from .walkman import Walkman
+from .cogimon import Cogimon
+from .darwin import Darwin
+# from .kondo import KHR3HV
+from .hubo import Hubo
 
 # Hexapod
-from crab import Crab
-from sea_hexapod import SEAHexapod
-from phantomx import PhantomX
-from morphex import Morphex
-from rhex import Rhex
+from .crab import Crab
+from .sea_hexapod import SEAHexapod
+from .phantomx import PhantomX
+from .morphex import Morphex
+from .rhex import Rhex
 
 # Manipulators
-from rrbot import RRBot
-from wam import WAM
-from kuka_lwr import KukaLWR
-from kuka_iiwa import KukaIIWA
-from jaco import Jaco
-from franka import Franka
-from sawyer import Sawyer
-from edo import Edo
-from kr5 import KR5
-from manipulator2d import Manipulator2D
+from .rrbot import RRBot
+from .wam import WAM
+from .kuka_lwr import KukaLWR
+from .kuka_iiwa import KukaIIWA
+from .jaco import Jaco
+from .franka import Franka
+from .sawyer import Sawyer
+from .edo import Edo
+from .kr5 import KR5
+from .manipulator2d import Manipulator2D
 
 # Bi-Manipulators
-from baxter import Baxter
+from .baxter import Baxter
 
 # Hands
-from allegrohand import AllegroHand
-from softhand import SoftHand
+from .allegrohand import AllegroHand
+from .softhand import SoftHand
 
 # Wheeled
-from epuck import Epuck
-from f10_racecar import F10Racecar
-from mkz import MKZ
-from husky import Husky
+from .epuck import Epuck
+from .f10_racecar import F10Racecar
+from .mkz import MKZ
+from .husky import Husky
 
 # Wheeled + (single) manipulator
-from fetch import Fetch
+from .fetch import Fetch
 
 # Wheeled + Bi-manipulators
-from pepper import Pepper
-from pr2 import PR2
+from .pepper import Pepper
+from .pr2 import PR2
 
 # Wheeled + Quadruped + Bi-manipulators
-from centauro import Centauro
+from .centauro import Centauro
 
 # UAV
-from quadcopter import Quadcopter
-# from techpod import Techpod
+from .quadcopter import Quadcopter
+# from .techpod import Techpod
 
 # UUV
-# from ecaa9 import ECAA9
+# from .ecaa9 import ECAA9
 
 # USV
 
 # Quadruped + UUV + USV
-from pleurobot import Pleurobot
+from .pleurobot import Pleurobot
 
 # Others
-from cartpole import CartPole
-from cubli import Cubli
-from sea_snake import SEASnake
-from bb8 import BB8
-from youbot import Youbot, YoubotBase, KukaYoubotArm, YoubotDualArm
-from ballbot import Ballbot
+from .cartpole import CartPole
+from .cubli import Cubli
+from .sea_snake import SEASnake
+from .bb8 import BB8
+from .youbot import Youbot, YoubotBase, KukaYoubotArm, YoubotDualArm
+from .ballbot import Ballbot
 
 # Robots #
 

@@ -8,7 +8,7 @@ import pybullet_data
 import sympy
 import sympy.physics.mechanics as mechanics
 
-from robot import Robot
+from pyrobolearn.robots.robot import Robot
 from pyrobolearn.utils.orientation import getSymbolicMatrixFromAxisAngle
 
 

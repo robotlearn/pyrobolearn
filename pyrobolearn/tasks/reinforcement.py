@@ -2,8 +2,9 @@
 """Define the reinforcement learning task.
 """
 
-from task import Task
-import gym
+# import gym
+
+from pyrobolearn.tasks.task import Task
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

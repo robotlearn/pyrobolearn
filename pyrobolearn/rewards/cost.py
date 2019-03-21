@@ -20,7 +20,7 @@ import numpy as np
 import torch
 
 # from objective import Objective
-from reward import Reward
+from pyrobolearn.rewards.reward import Reward
 
 
 # class Cost(Objective):

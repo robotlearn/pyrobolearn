@@ -3,9 +3,10 @@
 """
 
 import os
-from legged_robot import QuadrupedRobot
-from uuv import UUVRobot
-from usv import USVRobot
+
+from pyrobolearn.robots.legged_robot import QuadrupedRobot
+from pyrobolearn.robots.uuv import UUVRobot
+from pyrobolearn.robots.usv import USVRobot
 
 
 class Pleurobot(QuadrupedRobot, UUVRobot, USVRobot):

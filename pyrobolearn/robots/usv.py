@@ -2,7 +2,7 @@
 """Provide the Unmanned Surface Vehicle (USV) robot abstract classes.
 """
 
-from robot import Robot
+from pyrobolearn.robots.robot import Robot
 
 
 class USVRobot(Robot):

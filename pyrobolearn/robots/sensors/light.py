@@ -4,7 +4,7 @@
 
 import numpy as np
 
-from links import LinkSensor
+from pyrobolearn.robots.sensors.links import LinkSensor
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

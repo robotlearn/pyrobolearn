@@ -6,7 +6,7 @@ import quaternion
 import sympy
 from collections import Iterable
 
-from converter import QuaternionNumpyConverter
+from pyrobolearn.utils.converter import QuaternionNumpyConverter
 
 
 def getMatrixFromAxisAngle(axis, angle):

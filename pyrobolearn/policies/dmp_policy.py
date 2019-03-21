@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from pyrobolearn.models import DMP, DiscreteDMP, RhythmicDMP, BioDiscreteDMP
-from policy import Policy
+from pyrobolearn.policies.policy import Policy
 from pyrobolearn.states import State
 from pyrobolearn.actions import Action, JointPositionAction, JointVelocityAction, JointAccelerationAction
 

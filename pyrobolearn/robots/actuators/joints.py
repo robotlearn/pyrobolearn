@@ -4,7 +4,7 @@
 
 import numpy as np
 
-from actuator import Actuator
+from pyrobolearn.robots.actuators.actuator import Actuator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

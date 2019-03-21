@@ -4,7 +4,8 @@
 
 import os
 import numpy as np
-from wheeled_robot import DifferentialWheeledRobot
+
+from pyrobolearn.robots.wheeled_robot import DifferentialWheeledRobot
 
 
 class Epuck(DifferentialWheeledRobot):

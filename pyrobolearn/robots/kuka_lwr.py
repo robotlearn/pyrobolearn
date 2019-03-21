@@ -3,7 +3,8 @@
 """
 
 import os
-from manipulator import ManipulatorRobot
+
+from pyrobolearn.robots.manipulator import ManipulatorRobot
 
 
 class KukaLWR(ManipulatorRobot):

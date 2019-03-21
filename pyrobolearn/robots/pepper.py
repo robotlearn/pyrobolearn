@@ -3,10 +3,10 @@
 """
 
 import os
-from wheeled_robot import WheeledRobot
-from manipulator import BiManipulatorRobot
 
-from sensors import CameraSensor
+from pyrobolearn.robots.wheeled_robot import WheeledRobot
+from pyrobolearn.robots.manipulator import BiManipulatorRobot
+from pyrobolearn.robots.sensors.camera import CameraSensor
 
 
 class Pepper(WheeledRobot, BiManipulatorRobot):

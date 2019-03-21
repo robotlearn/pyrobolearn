@@ -6,7 +6,8 @@ This includes notably the joint positions, velocities, and force/torque actions.
 
 import numpy as np
 from abc import ABCMeta
-from robot_actions import RobotAction
+
+from pyrobolearn.actions.robot_actions.robot_actions import RobotAction
 
 
 __author__ = "Brian Delhaisse"

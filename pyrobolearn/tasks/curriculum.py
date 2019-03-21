@@ -17,8 +17,9 @@ References:
 """
 
 import collections
+
 from pyrobolearn.worlds import World
-from task import Task, Env
+from pyrobolearn.tasks.task import Task, Env
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

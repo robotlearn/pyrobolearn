@@ -1,24 +1,24 @@
 
 # import general neural network model
-from dnn import NN
+from .dnn import NN
 
 # import multilayer perceptron model
-from mlp import *
+from .mlp import *
 
 # import NEAT model
-from neat_model import NEATModel
+from .neat_model import NEATModel
 
 # import convolutional neural network
-# from cnn import *
+# from .cnn import *
 
 # import recurrent neural network
-# from rnn import *
+# from .rnn import *
 
 # import auto-encoder
-# from ae import *
+# from .ae import *
 
 # import variational auto-encoder
-# from vae import *
+# from .vae import *
 
 # import generative adversarial networks
-# from gan import *
+# from .gan import *

@@ -6,9 +6,11 @@ parameters/weights but also the topological structure of neural networks. Note t
 this policy (i.e. the neural network) is tightly coupled with the algorithm that modifies it.
 """
 
-
 import numpy as np
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ImportError as e:
+    import pickle
 
 try:
     # from neat import nn, population, config, statistics
@@ -16,7 +18,7 @@ try:
 except ImportError as e:
     raise ImportError(e.__str__() + "\n HINT: you can install NEAT directly via 'pip install neat-python'.")
 
-from policy import Policy
+from pyrobolearn.policies.policy import Policy
 from pyrobolearn.approximators import NEATApproximator
 
 

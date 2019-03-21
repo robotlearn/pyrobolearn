@@ -5,7 +5,8 @@ This includes notably the link positions, velocities, and force/torque actions.
 """
 
 from abc import ABCMeta
-from robot_actions import RobotAction
+
+from pyrobolearn.actions.robot_actions.robot_actions import RobotAction
 
 
 __author__ = "Brian Delhaisse"

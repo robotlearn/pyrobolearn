@@ -3,7 +3,8 @@
 """
 
 import os
-from robot import Robot
+
+from pyrobolearn.robots.robot import Robot
 
 
 class HalfCheetah(Robot):

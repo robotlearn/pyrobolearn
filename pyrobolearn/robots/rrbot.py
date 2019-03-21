@@ -4,7 +4,8 @@
 
 import os
 import numpy as np
-from manipulator import ManipulatorRobot
+
+from pyrobolearn.robots.manipulator import ManipulatorRobot
 
 
 class RRBot(ManipulatorRobot):

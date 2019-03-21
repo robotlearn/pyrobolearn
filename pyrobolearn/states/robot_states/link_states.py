@@ -5,7 +5,8 @@ This includes notably the link positions and velocities.
 """
 
 from abc import ABCMeta
-from robot_states import RobotState
+
+from pyrobolearn.states.robot_states import RobotState
 
 
 __author__ = "Brian Delhaisse"

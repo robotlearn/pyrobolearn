@@ -2,7 +2,7 @@
 """Define the miscellaneous tasks.
 """
 
-from tasks import Task, ILTask, RLTask
+from pyrobolearn.tasks.tasks import Task, ILTask, RLTask
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

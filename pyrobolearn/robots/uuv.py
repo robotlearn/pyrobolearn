@@ -2,7 +2,7 @@
 """Provide the Unmanned Underwater Vehicle (UUV) robot abstract classes.
 """
 
-from robot import Robot
+from pyrobolearn.robots.robot import Robot
 
 
 class UUVRobot(Robot):

@@ -4,7 +4,8 @@
 
 import os
 import numpy as np
-from legged_robot import HexapodRobot
+
+from pyrobolearn.robots.legged_robot import HexapodRobot
 
 
 # TODO add inertial tags

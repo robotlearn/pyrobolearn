@@ -8,16 +8,16 @@ works with neural networks and is thus tightly coupled with its associated polic
 
 import numpy as np
 
-from pyrobolearn.envs import Env
-from pyrobolearn.tasks import RLTask
-from pyrobolearn.policies import NEATPolicy
-# from rl_algo import RLAlgo
-
 try:
     import neat
     # from neat import nn, population, config, statistics
 except ImportError as e:
     raise ImportError(e.__str__() + "\n HINT: you can install NEAT directly via 'pip install neat-python'.")
+
+from pyrobolearn.envs import Env
+from pyrobolearn.tasks import RLTask
+from pyrobolearn.policies import NEATPolicy
+# from pyrobolearn.algos.rl_algo import RLAlgo
 
 
 __author__ = "Brian Delhaisse"

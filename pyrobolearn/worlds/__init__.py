@@ -1,3 +1,3 @@
 
 # import worlds
-from world import World, BasicWorld, WorldCamera
+from .world import World, BasicWorld, WorldCamera

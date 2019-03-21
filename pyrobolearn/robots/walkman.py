@@ -3,9 +3,10 @@
 """
 
 import os
-from legged_robot import BipedRobot
-from manipulator import BiManipulatorRobot
-from sensors import CameraSensor
+
+from pyrobolearn.robots.legged_robot import BipedRobot
+from pyrobolearn.robots.manipulator import BiManipulatorRobot
+from pyrobolearn.robots.sensors import CameraSensor
 
 
 class Walkman(BipedRobot, BiManipulatorRobot):

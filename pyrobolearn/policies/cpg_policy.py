@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from pyrobolearn.models import CPGNetwork
-from policy import Policy
+from pyrobolearn.policies.policy import Policy
 from pyrobolearn.states import State, PhaseState
 from pyrobolearn.actions import JointAction, Action
 

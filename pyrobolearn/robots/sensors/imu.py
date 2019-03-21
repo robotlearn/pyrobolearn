@@ -6,7 +6,7 @@ angular rate, and sometimes the magnetic field surroundings the body, using a co
 and gyroscopes, sometimes also magnetometers' (Wikipedia)
 """
 
-from links import LinkSensor
+from pyrobolearn.robots.sensors.links import LinkSensor
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

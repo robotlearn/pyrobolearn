@@ -2,7 +2,7 @@
 # Define common data structures
 
 # Ordered sets
-from orderedset import *
+from .orderedset import *
 
 # Graph
-from graph import *
+from .graph import *
