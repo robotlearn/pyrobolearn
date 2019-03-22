@@ -3,6 +3,8 @@
 This repository contains the code for the *PyRoboLearn* (PRL) framework: a Python framework for Robot Learning.
 This framework revolves mainly around 7 axes: simulators, worlds, robots, interfaces, learning tasks (= environment and policy), learning models, and learning algorithms. 
 
+This development of this framework is ongoing.
+
 ## Requirements
 
 The framework has been tested with Python 2.7 and Ubuntu 16.04 and 18.04. We also tested parts of it with Python 3.5 on Ubuntu 16.04 and so far so good, but there might be some errors that escaped me.

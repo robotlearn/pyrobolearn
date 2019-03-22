@@ -9,7 +9,7 @@ import sympy
 import sympy.physics.mechanics as mechanics
 
 from pyrobolearn.robots.robot import Robot
-from pyrobolearn.utils.orientation import getSymbolicMatrixFromAxisAngle
+from pyrobolearn.utils.orientation import get_symbolic_matrix_from_axis_angle
 
 
 class CartPole(Robot):

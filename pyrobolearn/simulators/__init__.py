@@ -4,6 +4,9 @@
 # basic simulator
 from .simulator import Simulator
 
+# bullet simulator
+from .bullet import Bullet
+
 # PyBullet simulator
 import pybullet
 import pybullet_data

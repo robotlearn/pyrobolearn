@@ -5,7 +5,7 @@ import importlib
 import inspect
 
 # General robot class
-from .base import Object, MovableObject, ControllableObject
+from .base import Body, MovableBody, ControllableBody
 from .actuators import *
 from .sensors import *
 from .robot import Robot

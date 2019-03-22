@@ -7,8 +7,8 @@ This includes notably the joint positions, velocities, and force/torque states.
 from abc import ABCMeta, abstractmethod
 
 from pyrobolearn.states.state import State
-from pyrobolearn.worlds.world import World
-from pyrobolearn.robots import Object
+from pyrobolearn.worlds import World
+from pyrobolearn.robots import Body
 
 
 __author__ = "Brian Delhaisse"
@@ -21,15 +21,15 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class ObjectState(State):
-    """Object state (abstract)
+class BodyState(State):
+    """Body state (abstract)
     """
     __metaclass__ = ABCMeta
 
     def __init__(self, obj, world=None):
-        super(ObjectState, self).__init__()
-        if not isinstance(obj, (Object, int)):
-            raise TypeError("Expecting an instance of Object, or an identifier from the simulator/world.")
+        super(BodyState, self).__init__()
+        if not isinstance(obj, (Body, int)):
+            raise TypeError("Expecting an instance of Body, or an identifier from the simulator/world.")
         if isinstance(obj, int):
             if not isinstance(world, World):
                 # try to look for the world in global variables
@@ -37,7 +37,7 @@ class ObjectState(State):
                     world = globals()['world']
                 else:
                     raise ValueError("When giving the object identifier, the world need to be given as well.")
-            obj = Object(world.getSimulator(), obj)
+            obj = Body(world.simulator, obj)
         self.obj = obj
 
     @abstractmethod
@@ -45,7 +45,7 @@ class ObjectState(State):
         pass
 
 
-class PositionState(ObjectState):
+class PositionState(BodyState):
     """Position of an object.
     """
     def __init__(self, obj, world=None):
@@ -56,7 +56,7 @@ class PositionState(ObjectState):
         self.data = self.obj.position
 
 
-class OrientationState(ObjectState):
+class OrientationState(BodyState):
     """Orientation of an object.
     """
     def __init__(self, obj, world=None):
@@ -67,7 +67,7 @@ class OrientationState(ObjectState):
         self.data = self.obj.orientation
 
 
-class VelocityState(ObjectState):
+class VelocityState(BodyState):
     """Velocity of an object.
     """
     def __init__(self, obj, world=None):

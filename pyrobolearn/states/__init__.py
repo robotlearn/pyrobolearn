@@ -6,7 +6,7 @@ from .state import State
 from .basic_states import *
 
 # import object states
-from .object_states import *
+from .body_states import *
 
 # import time/count states
 from .time_states import *

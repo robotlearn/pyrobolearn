@@ -21,12 +21,13 @@ References:
 import time
 import numpy as np
 import quaternion
-from pyrobolearn.utils.converter import NumpyListConverter, QuaternionListConverter
 
 import pybullet
+import pybullet_data
 from pybullet_envs.bullet.bullet_client import BulletClient
 
-from simulator import Simulator
+from pyrobolearn.utils.converter import NumpyListConverter, QuaternionListConverter
+from pyrobolearn.simulators.simulator import Simulator
 
 
 __author__ = "Brian Delhaisse"
@@ -74,8 +75,10 @@ class Bullet(Simulator):
             Erwin Coumans and Yunfei Bai, 2017/2018
     """
 
-    def __init__(self, render=True):  # , converter=None):
+    def __init__(self, render=True, **kwargs):  # , converter=None):
         super(Bullet, self).__init__()
+
+        # parse the kwargs
 
         # Connect to pybullet
         if render:
@@ -83,6 +86,9 @@ class Bullet(Simulator):
         else:
             self.sim = BulletClient(connection_mode=pybullet.DIRECT)
         self.id = self.sim._client
+
+        # add additional search path when loading URDFs, SDFs, MJCFs, etc.
+        self.sim.setAdditionalSearchPath(pybullet_data.getDataPath())
 
         # Converters
         # if converter is None:
@@ -133,12 +139,22 @@ class Bullet(Simulator):
         """
         self.sim.resetSimulation()
 
+    def close(self):
+        """Close the simulator."""
+        try:
+            self.sim.disconnect(physicsClientId=self.id)
+        except pybullet.error:
+            pass
+
     def step(self, sleep_time=0.):
         """Perform a step in the simulator.
 
         "stepSimulation will perform all the actions in a single forward dynamics simulation step such as collision
         detection, constraint solving and integration. The default timestep is 1/240 second, it can be changed using
         the setTimeStep or setPhysicsEngineParameter API." [1]
+
+        Args:
+            sleep_time (float): time to sleep after performing one step in the simulation.
         """
         self.sim.stepSimulation()
         time.sleep(sleep_time)
@@ -170,7 +186,7 @@ class Bullet(Simulator):
         """
         self.sim.setTimeStep(timeStep=time_step)
 
-    def set_real_time(self, flag=True):
+    def set_real_time(self, enable=True):
         """Enable/disable real time in the simulator.
 
         "By default, the physics server will not step the simulation, unless you explicitly send a 'stepSimulation'
@@ -185,9 +201,9 @@ class Bullet(Simulator):
         allows the physicsserver  thread to add additional calls to stepSimulation." [1]
 
         Args:
-            flag (bool): If True, it will enable the real-time simulation. If False, it will disable it.
+            enable (bool): If True, it will enable the real-time simulation. If False, it will disable it.
         """
-        self.sim.setRealTimeSimulation(enableRealTimeSimulation=int(flag))
+        self.sim.setRealTimeSimulation(enableRealTimeSimulation=int(enable))
 
     def pause(self):
         """Pause the simulator if in real-time."""
@@ -201,18 +217,25 @@ class Bullet(Simulator):
         """Get the physics engine parameters.
 
         Returns:
-            dict: dictionary containing the following tags with their corresponding values: ['gravityAccelerationX',
-                'useRealTimeSimulation', 'gravityAccelerationZ', 'numSolverIterations', 'gravityAccelerationY',
-                'numSubSteps', 'fixedTimeStep']
+            dict: dictionary containing the following tags with their corresponding values: ['gravity',
+                'num_solver_iterations', 'use_real_time_simulation', 'num_sub_steps', 'fixed_time_step']
         """
-        return self.sim.getPhysicsEngineParameters()
+        d = self.sim.getPhysicsEngineParameters()
+        properties = dict()
+        properties['gravity'] = np.array([d['gravityAccelerationX'], d['gravityAccelerationY'],
+                                          d['gravityAccelerationZ']])
+        properties['num_solver_iterations'] = d['numSolverIterations']
+        properties['use_real_time_simulation'] = d['useRealTimeSimulation']
+        properties['num_sub_steps'] = d['numSubSteps']
+        properties['fixed_time_step'] = d['fixedTimeStep']
+        return properties
 
     def set_physics_properties(self, time_step=None, num_solver_iterations=None, use_split_impulse=None,
                                split_impulse_penetration_threshold=None, num_sub_steps=None,
                                collision_filter_mode=None, contact_breaking_threshold=None, max_num_cmd_per_1ms=None,
                                enable_file_caching=None, restitution_velocity_threshold=None, erp=None,
                                contact_erp=None, friction_erp=None, enable_cone_friction=None,
-                               deterministic_overlapping_pairs=None, solver_residual_threshold=None):
+                               deterministic_overlapping_pairs=None, solver_residual_threshold=None, **kwargs):
         """Set the physics engine parameters.
 
         Args:
@@ -415,7 +438,7 @@ class Bullet(Simulator):
 
         Args:
             plugin_id (int): unique plugin id.
-            args (list): list of argument values to be interpreted by the plugin. One can be a string, while the
+            *args (list): list of argument values to be interpreted by the plugin. One can be a string, while the
                 others must be integers or float.
         """
         kwargs = {}
@@ -462,9 +485,9 @@ class Bullet(Simulator):
 
         Args:
             filename (str): a relative or absolute path to the URDF file on the file system of the physics server.
-            position (vec3): create the base of the object at the specified position in world space coordinates [X,Y,Z]
+            position (vec3): create the base of the object at the specified position in world space coordinates [x,y,z]
             orientation (quat): create the base of the object at the specified orientation as world space quaternion
-                [X,Y,Z,W]
+                [x,y,z,w]
             use_maximal_coordinates (int): Experimental. By default, the joints in the URDF file are created using the
                 reduced coordinate method: the joints are simulated using the Featherstone Articulated Body algorithm
                 (btMultiBody in Bullet 2.x). The useMaximalCoordinates option will create a 6 degree of freedom rigid
@@ -529,7 +552,7 @@ class Bullet(Simulator):
         return self.sim.loadMJCF(filename, globalScaling=scaling)
 
     def load_mesh(self, filename, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.),
-                  color=None, flags=None):
+                  color=None, flags=None, *args, **kwargs):
         """
         Load a mesh in the world (only available in the simulator).
 
@@ -541,7 +564,7 @@ class Bullet(Simulator):
                 If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
             mass (float): mass of the mesh (in kg). If mass = 0, it won't move even if there is a collision.
             scale (float[3]): scale the mesh in the (x,y,z) directions
-            color (int[4]): color of the mesh (by default: white and opaque)
+            color (int[4], None): color of the mesh (by default: white and opaque)
             flags (int, None): if flag = `sim.GEOM_FORCE_CONCAVE_TRIMESH` (=1), this will create a concave static
                 triangle mesh. This should not be used with dynamic/moving objects, only for static (mass=0) terrain.
 
@@ -648,9 +671,10 @@ class Bullet(Simulator):
 
     def create_constraint(self, parent_body_id, parent_link_id, child_body_id, child_link_id, joint_type,
                           joint_axis, parent_frame_position, child_frame_position,
-                          parent_frame_orientation=(0., 0., 0., 1.), child_frame_orientation=(0., 0., 0., 1.)):
+                          parent_frame_orientation=(0., 0., 0., 1.), child_frame_orientation=(0., 0., 0., 1.),
+                          *args, **kwargs):
         """
-        Create a constaint.
+        Create a constraint.
 
         "URDF, SDF and MJCF specify articulated bodies as a tree-structures without loops. The 'createConstraint'
         allows you to connect specific links of bodies to close those loops. In addition, you can create arbitrary
@@ -697,7 +721,8 @@ class Bullet(Simulator):
         self.sim.removeConstraint(constraint_id)
 
     def change_constraint(self, constraint_id, child_joint_pivot=None, child_frame_orientation=None, max_force=None,
-                          gear_ratio=None, gear_auxiliary_link=None, relative_position_target=None, erp=None):
+                          gear_ratio=None, gear_auxiliary_link=None, relative_position_target=None, erp=None, *args,
+                          **kwargs):
         """
         Change the parameters of an existing constraint.
 
@@ -804,7 +829,11 @@ class Bullet(Simulator):
         return np.sum(self.get_link_masses(body_id, [-1] + list(range(self.num_links(body_id)))))
 
     def get_base_mass(self, body_id):
-        """Return the base mass of the robot."""
+        """Return the base mass of the robot.
+
+        Args:
+            body_id (int): unique object id.
+        """
         return self.get_link_masses(body_id, -1)
 
     def get_base_name(self, body_id):
@@ -991,7 +1020,7 @@ class Bullet(Simulator):
         self.sim.resetBaseVelocity(body_id, angularVelocity=angular_velocity)
 
     def apply_external_force(self, body_id, link_id=-1, force=(0., 0., 0.), position=(0., 0., 0.),
-                             flags=pybullet.LINK_FRAME):
+                             frame=pybullet.LINK_FRAME):
         """
         Apply the specified external force on the specified position on the body / link.
 
@@ -1006,10 +1035,10 @@ class Bullet(Simulator):
             force (np.float[3]): external force to be applied.
             position (np.float[3]): position on the link where the force is applied. See `flags` for coordinate
                 systems.
-            flags (int): Specify the coordinate system of force/position: either `pybullet.WORLD_FRAME` (=2) for
+            frame (int): Specify the coordinate system of force/position: either `pybullet.WORLD_FRAME` (=2) for
                 Cartesian world coordinates or `pybullet.LINK_FRAME` (=1) for local link coordinates.
         """
-        self.sim.applyExternalForce(body_id, link_id, force, position, flags)
+        self.sim.applyExternalForce(body_id, link_id, force, position, frame)
 
     def apply_external_torque(self, body_id, link_id=-1, torque=(0., 0., 0.)):
         """
@@ -1091,7 +1120,11 @@ class Bullet(Simulator):
             [15] np.float[4]:  joint orientation in parent frame
             [16] int:       parent link index, -1 for base
         """
-        return self.sim.getJointInfo(body_id, joint_id)
+        info = self.sim.getJointInfo(body_id, joint_id)
+        info[13] = np.array(info[13])
+        info[14] = np.array(info[14])
+        info[15] = np.array(info[15])
+        return info
 
     def get_joint_state(self, body_id, joint_id):
         """
@@ -1227,7 +1260,8 @@ class Bullet(Simulator):
             joint_ids (list of int): list of joint id.
             control_mode (int): POSITION_CONTROL (=2) (which is in fact CONTROL_MODE_POSITION_VELOCITY_PD),
                 VELOCITY_CONTROL (=0), TORQUE_CONTROL (=1) and PD_CONTROL (=3).
-            positions (list of float): list of target joint positions (used in POSITION_CONTROL) the target value is target position of the joint.
+            positions (list of float): list of target joint positions (used in POSITION_CONTROL) the target value is
+                target position of the joint.
             velocities (list of float): list of target joint velocities (used in PD_CONTROL, VELOCITY_CONTROL and
                 POSITION_CONTROL).
             forces (list of float): list of forces. In POSITION_CONTROL and VELOCITY_CONTROL, these are the maximum
@@ -1663,7 +1697,7 @@ class Bullet(Simulator):
             velocities (None, float, np.float[N]): desired velocity, or list of desired velocities [rad/s]
             kps (None, float, np.float[N]): position gain(s)
             kds (None, float, np.float[N]): velocity gain(s)
-            forces (float): maximum motor force(s)/torque(s) used to reach the target values.
+            forces (None, float, np.float[N]): maximum motor force(s)/torque(s) used to reach the target values.
         """
         if isinstance(joint_ids, int):
             self.set_joint_motor_control(body_id, joint_ids, control_mode=pybullet.POSITION_CONTROL, position=positions,
@@ -1699,7 +1733,7 @@ class Bullet(Simulator):
             body_id (int): unique body id.
             joint_ids (int, list of int): joint id, or list of joint ids.
             velocities (float, np.float[N]): desired velocity, or list of desired velocities [rad/s]
-            max_force (bool, float, float[N]): maximum motor forces/torques
+            max_force (None, float, np.float[N]): maximum motor forces/torques
         """
         if isinstance(joint_ids, int):
             if max_force is None:
@@ -1820,7 +1854,7 @@ class Bullet(Simulator):
         Args:
             body_id (int): unique body id.
             joint_ids (int, list of int): joint id, or list of joint ids.
-            torque (float, list of float): desired torque(s) to apply to the joint(s) [N].
+            torques (float, list of float): desired torque(s) to apply to the joint(s) [N].
         """
         if isinstance(joint_ids, int):
             self.sim.setJointMotorControl2(body_id, joint_ids, self.sim.TORQUE_CONTROL, force=torques)
@@ -2077,7 +2111,7 @@ class Bullet(Simulator):
         * orthographic projection
         * perspective projection
 
-        For the perspective projection, see `computeProjectionMatrixFOV(self)
+        For the perspective projection, see `computeProjectionMatrixFOV(self)`.
 
         Args:
             left (float): left screen (canvas) coordinate
@@ -2989,50 +3023,50 @@ class Bullet(Simulator):
 
     def calculate_forward_dynamics(self, body_id, q, dq, torques):
         r"""
-       Given the specified joint positions :math:`q` and velocities :math:`\dot{q}`, and joint torques :math:`\tau`,
-       it computes the joint accelerations :math:`\ddot{q}`. That is, :math:`\ddot{q} = FD(model, q, \dot{q}, \tau)`.
+        Given the specified joint positions :math:`q` and velocities :math:`\dot{q}`, and joint torques :math:`\tau`,
+        it computes the joint accelerations :math:`\ddot{q}`. That is, :math:`\ddot{q} = FD(model, q, \dot{q}, \tau)`.
 
-       Specifically, it uses the rigid-body equation of motion in joint space given by (see [1]):
+        Specifically, it uses the rigid-body equation of motion in joint space given by (see [1]):
 
-       .. math:: \ddot{q} = H(q)^{-1} (\tau - C(q,\dot{q}))
+        .. math:: \ddot{q} = H(q)^{-1} (\tau - C(q,\dot{q}))
 
-       where :math:`\tau` is the vector of applied torques, :math:`H(q)` is the inertia matrix, and
-       :math:`C(q,\dot{q}) \dot{q}` is the vector accounting for Coriolis, centrifugal forces, gravity, and any
-       other forces acting on the system except the applied torques :math:`\tau`.
+        where :math:`\tau` is the vector of applied torques, :math:`H(q)` is the inertia matrix, and
+        :math:`C(q,\dot{q}) \dot{q}` is the vector accounting for Coriolis, centrifugal forces, gravity, and any
+        other forces acting on the system except the applied torques :math:`\tau`.
 
-       Normally, a more popular form of this equation of motion (in joint space) is given by:
+        Normally, a more popular form of this equation of motion (in joint space) is given by:
 
-       .. math:: H(q) \ddot{q} + S(q,\dot{q}) \dot{q} + g(q) = \tau + J^T(q) F
+        .. math:: H(q) \ddot{q} + S(q,\dot{q}) \dot{q} + g(q) = \tau + J^T(q) F
 
-       which is the same as the first one with :math:`C = S\dot{q} + g(q) - J^T(q) F`. However, this last formulation
-       is useful to understand what happens when we set some variables to 0.
-       Assuming that there are no forces acting on the system, and giving desired joint torques of 0, this
-       method will return :math:`\ddot{q} = - H(q)^{-1} (S(q,\dot{q}) \dot{q} + g(q))`. If in addition
-       the joint velocities are also 0, it will return :math:`\ddot{q} = - H(q)^{-1} g(q)` which are
-       the accelerations due to gravity.
+        which is the same as the first one with :math:`C = S\dot{q} + g(q) - J^T(q) F`. However, this last formulation
+        is useful to understand what happens when we set some variables to 0.
+        Assuming that there are no forces acting on the system, and giving desired joint torques of 0, this
+        method will return :math:`\ddot{q} = - H(q)^{-1} (S(q,\dot{q}) \dot{q} + g(q))`. If in addition
+        the joint velocities are also 0, it will return :math:`\ddot{q} = - H(q)^{-1} g(q)` which are
+        the accelerations due to gravity.
 
-       For inverse dynamics, which computes the joint torques given the joint positions, velocities, and
-       accelerations (that is, :math:`\tau = ID(model, q, \dot{q}, \ddot{q})`, this can be computed using
-       :math:`\tau = H(q)\ddot{q} + C(q,\dot{q})`. For more information about different
-       control schemes (position, force, impedance control and others), or about the formulation of the equation
-       of motion in task/operational space (instead of joint space), check the references [1-4].
+        For inverse dynamics, which computes the joint torques given the joint positions, velocities, and
+        accelerations (that is, :math:`\tau = ID(model, q, \dot{q}, \ddot{q})`, this can be computed using
+        :math:`\tau = H(q)\ddot{q} + C(q,\dot{q})`. For more information about different
+        control schemes (position, force, impedance control and others), or about the formulation of the equation
+        of motion in task/operational space (instead of joint space), check the references [1-4].
 
-       Args:
-           body_id (int): unique body id.
-           q (np.float[N]): joint positions
-           dq (np.float[N]): joint velocities
-           torques (np.float[N]): desired joint torques
+        Args:
+            body_id (int): unique body id.
+            q (np.float[N]): joint positions
+            dq (np.float[N]): joint velocities
+            torques (np.float[N]): desired joint torques
 
-       Returns:
-           float[N]: joint accelerations computed using the rigid-body equation of motion
+        Returns:
+            float[N]: joint accelerations computed using the rigid-body equation of motion
 
-       References:
-           [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
-           [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
-           [3] "Springer Handbook of Robotics", Siciliano et al., 2008
-           [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
-               http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
-       """
+        References:
+            [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+                http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
+        """
         # convert numpy arrays to lists
         if isinstance(q, np.ndarray):
             q = q.ravel().tolist()
