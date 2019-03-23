@@ -157,7 +157,7 @@ class Action(object):
             if not isinstance(data, np.ndarray):
                 if isinstance(data, (list, tuple)):
                     data = np.array(data)
-                elif isinstance(data, (int, float)):
+                elif isinstance(data, (int, float, np.integer)):  # np.integer is for Py3.5
                     data = data * np.ones(self._data.shape)
                 else:
                     raise TypeError("Expecting a numpy array, a list/tuple of int/float, or an int/float for 'data'")

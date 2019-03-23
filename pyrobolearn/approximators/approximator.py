@@ -11,6 +11,7 @@ Dependencies:
 """
 
 from abc import ABCMeta, abstractmethod
+import collections
 import numpy as np
 import torch
 
@@ -81,8 +82,17 @@ class Approximator(object):
         self.outputs = outputs
 
         # preprocessors and postprocessors
-        self.preprocessors = preprocessors if preprocessors is not None else lambda x: x
-        self.postprocessors = postprocessors if postprocessors is not None else lambda x: x
+        if preprocessors is None:
+            preprocessors = []
+        if not isinstance(preprocessors, collections.Iterable):
+            preprocessors = [preprocessors]
+        self.preprocessors = preprocessors
+
+        if postprocessors is None:
+            postprocessors = []
+        if not isinstance(postprocessors, collections.Iterable):
+            postprocessors = [postprocessors]
+        self.postprocessors = postprocessors
 
         # Check the given model: check if correct input/output sizes wrt the previous arguments, and check
         # the model type and wrap it if necessary. That is, if the type is from the original module/library,
@@ -230,24 +240,35 @@ class Approximator(object):
         return self.model.is_generative()
 
     def reset(self):
-        pass
+        """Reset the approximator."""
+        for processor in self.preprocessors:
+            processor.reset()
+        for processor in self.postprocessors:
+            processor.reset()
+        self.model.reset()
 
     def predict(self, x, to_numpy=True):
-        # x = self.preprocessors(x)
+        for processor in self.preprocessors:
+            x = processor(x)
         x = self.model(x.data[0])
-        # x = self.postprocessors(x)
+        for processor in self.postprocessors:
+            x = processor(x)
         return x
 
     def parameters(self):
+        """Return the approximator parameters."""
         return self.model.parameters()
 
     def get_params(self):
+        """Return the list of parameters."""
         return list(self.parameters())
 
     def hyperparameters(self):
+        """Return the approximator hyper-parameters."""
         return self.model.hyperparameters()
 
     def get_hyperparams(self):
+        """Return the list of hyper-parameters."""
         return list(self.hyperparameters())
 
     def get_vectorized_parameters(self, to_numpy=True):
@@ -257,18 +278,19 @@ class Approximator(object):
         self.model.set_vectorized_parameters(vector=vector)
 
     def get_input_dims(self):
+        """Return the input dimensions."""
         return self.model.input_dims
 
     def get_output_dims(self):
+        """Return the output dimensions."""
         return self.model.output_dims
 
-    def set_exploration(self):
-        pass
-
     def save(self, filename):
+        """save the inner model."""
         self.model.save(filename)
 
     def load(self, filename):
+        """load the inner model."""
         self.model.load(filename)
 
     #############
@@ -302,10 +324,10 @@ class RandomApproximator(Approximator):
     def _size(self, x):
         size = 0
         if isinstance(x, (State, Action)):
-            if x.isDiscrete():
+            if x.is_discrete():
                 size = x.space[0].n
             else:
-                size = x.totalSize()
+                size = x.total_size()
         elif isinstance(x, np.ndarray):
             size = x.size
         elif isinstance(x, torch.Tensor):
@@ -330,7 +352,7 @@ class RandomApproximator(Approximator):
     def predict(self, x):
         # x = self.preprocessors(x)
         x = self.model.predict(x.data[0])
-        if isinstance(self.outputs, (State, Action)) and self.outputs.isDiscrete():
+        if isinstance(self.outputs, (State, Action)) and self.outputs.is_discrete():
             x = np.argmax(x)
         # x = self.postprocessors(x)
         return x
@@ -349,10 +371,10 @@ class LinearApproximator(Approximator):
     def _size(self, x):
         size = 0
         if isinstance(x, (State, Action)):
-            if x.isDiscrete():
+            if x.is_discrete():
                 size = x.space[0].n
             else:
-                size = x.totalSize()
+                size = x.total_size()
         elif isinstance(x, np.ndarray):
             size = x.size
         elif isinstance(x, torch.Tensor):
@@ -361,10 +383,12 @@ class LinearApproximator(Approximator):
             size = x
         return size
 
-    def predict(self, x, to_numpy=True):
-        # x = self.preprocessors(x)
-        x = self.model.predict(x.data[0], to_numpy=to_numpy)
-        if isinstance(self.outputs, (State, Action)) and self.outputs.isDiscrete():
+    def predict(self, x, to_numpy=True, return_logits=False):
+        x = x.data[0]
+        for processor in self.preprocessors:
+            x = processor(x)
+        x = self.model.predict(x, to_numpy=to_numpy)
+        if isinstance(self.outputs, (State, Action)) and self.outputs.is_discrete() and not return_logits:
             if to_numpy:
                 x = np.array([np.argmax(x)])
             else:
@@ -422,7 +446,7 @@ class MLPApproximator(NNApproximator):
 
     def _size(self, x):
         if isinstance(x, (State, Action)):
-            size = x.totalSize()
+            size = x.total_size()
         elif isinstance(x, np.ndarray):
             size = x.size
         elif isinstance(x, torch.Tensor):
@@ -518,10 +542,10 @@ class NEATApproximator(Approximator):
     def _size(self, x):
         size = 0
         if isinstance(x, (State, Action)):
-            if x.isDiscrete():
+            if x.is_discrete():
                 size = x.space[0].n
             else:
-                size = x.totalSize()
+                size = x.total_size()
         elif isinstance(x, np.ndarray):
             size = x.size
         elif isinstance(x, torch.Tensor):
@@ -535,9 +559,9 @@ class NEATApproximator(Approximator):
         x = self.model.predict(x.merged_data[0])
 
         if isinstance(self.outputs, (State, Action)):
-            if self.outputs.isDiscrete():
+            if self.outputs.is_discrete():
                 x = np.argmax(x)
-            elif self.outputs.isContinuous():
+            elif self.outputs.is_continuous():
                 x = 2 * np.array(x) - 1
             else:
                 raise NotImplementedError("The outputs are not discrete or continuous...")
