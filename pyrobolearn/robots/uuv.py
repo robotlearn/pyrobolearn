@@ -11,6 +11,5 @@ class UUVRobot(Robot):
     Vehicles/Robots that operate under water.
     """
 
-    def __init__(self, simulator, urdf_path, init_pos=(0, 0, 1.), init_orient=(0, 0, 0, 1), useFixedBase=False,
-                 scaling=1.):
-        super(UUVRobot, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
+        super(UUVRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)

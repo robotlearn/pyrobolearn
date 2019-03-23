@@ -14,38 +14,38 @@ class Humanoid(BipedRobot, BiManipulatorRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(-0.5, 0, 1.),
-                 init_orient=(0, 0.707, 0, 0.707),
-                 useFixedBase=False,
+                 position=(-0.5, 0, 1.),
+                 orientation=(0, 0.707, 0, 0.707),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/mjcfs/humanoid.xml'):  # humanoid_symmetric.xml
+                 urdf=os.path.dirname(__file__) + '/mjcfs/humanoid.xml'):  # humanoid_symmetric.xml
         # check parameters
-        if init_pos is None:
-            init_pos = (-0.5, 0., 1.)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (1.,)
-        if init_orient is None:
-            init_orient = (0, 0.707, 0, 0.707)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (-0.5, 0., 1.)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (1.,)
+        if orientation is None:
+            orientation = (0, 0.707, 0, 0.707)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(Humanoid, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Humanoid, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'humanoid'
 
-        # self.waist = self.getLinkIds('DWL') if 'DWL' in self.link_names else None
-        # self.torso = self.getLinkIds('DWYTorso') if 'DWYTorso' in self.link_names else None
+        # self.waist = self.get_link_ids('DWL') if 'DWL' in self.link_names else None
+        # self.torso = self.get_link_ids('DWYTorso') if 'DWYTorso' in self.link_names else None
         #
-        # self.legs = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        # self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]
         #              for links in [['LHipMot', 'LThighUpLeg', 'LThighLowLeg', 'LLowLeg', 'LFootmot', 'LFoot'],
         #                            ['RHipMot', 'RThighUpLeg', 'RThighLowLeg', 'RLowLeg', 'RFootmot', 'RFoot']]]
 
-        self.feet = [self.getLinkIds(link) for link in ['left_foot', 'right_foot'] if link in self.link_names]
+        self.feet = [self.get_link_ids(link) for link in ['left_foot', 'right_foot'] if link in self.link_names]
 
-        # self.arms = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        # self.arms = [[self.get_link_ids(link) for link in links if link in self.link_names]
         #              for links in [['LShp', 'LShr', 'LShy', 'LElb', 'LForearm', 'LWrMot2', 'LWrMot3'],
         #                            ['RShp', 'RShr', 'RShy', 'RElb', 'RForearm', 'RWrMot2', 'RWrMot3']]]
 
-        self.hands = [self.getLinkIds(link) for link in ['left_lower_arm', 'right_lower_arm']
+        self.hands = [self.get_link_ids(link) for link in ['left_lower_arm', 'right_lower_arm']
                       if link in self.link_names]
 
 
@@ -65,13 +65,13 @@ if __name__ == "__main__":
     robot = Humanoid(sim)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
     # Position control using sliders
-    # robot.addJointSlider()
+    # robot.add_joint_slider()
 
     # run simulation
     for i in count():
-        # robot.updateJointSlider()
+        # robot.update_joint_slider()
         # step in simulation
         world.step(sleep_dt=1./240)

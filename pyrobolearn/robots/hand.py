@@ -12,12 +12,12 @@ class Hand(Robot):
 
     def __init__(self,
                  simulator,
-                 urdf_path,
-                 init_pos=(0, 0, 1.),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 urdf,
+                 position=(0, 0, 1.),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.):
-        super(Hand, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Hand, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
 
         self.fingers = []  # list of fingers where each finger is a list of links/joints
 
@@ -39,12 +39,12 @@ class TwoHand(Hand):
     """
     def __init__(self,
                  simulator,
-                 urdf_path,
-                 init_pos=(0, 0, 1.),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 urdf,
+                 position=(0, 0, 1.),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.):
-        super(TwoHand, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(TwoHand, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
 
         self.left_fingers = []  # list of ids in self.fingers
         self.right_fingers = []     # list of ids in self.fingers

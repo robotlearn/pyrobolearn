@@ -18,27 +18,27 @@ class AllegroHand(Hand):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 0),
-                 init_orient=(0, 0, 0, 1),
+                 position=(0, 0, 0),
+                 orientation=(0, 0, 0, 1),
                  scaling=1.,
                  left=False,
-                 useFixedBase=True):
+                 fixed_base=True):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = True
+        if position is None:
+            position = (0., 0., 0.)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = True
 
         # if left:
         #     urdf_path = '../robots/urdfs/allegrohand/allegro_left_hand.urdf'
         # else:
         urdf_path = os.path.dirname(__file__) + '/urdfs/allegrohand/allegro_right_hand.urdf'
 
-        super(AllegroHand, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(AllegroHand, self).__init__(simulator, urdf_path, position, orientation, fixed_base, scaling)
         self.name = 'allegro_hand'
 
 
@@ -58,16 +58,16 @@ if __name__ == "__main__":
     right_hand = AllegroHand(sim)  # , init_pos=(0.,0.,0.), init_orient=(0,0,1,0))
 
     # print information about the robot
-    right_hand.printRobotInfo()
-    # H = right_hand.calculateMassMatrix()
+    right_hand.print_info()
+    # H = right_hand.get_mass_matrix()
     # print("Inertia matrix: H(q) = {}".format(H))
 
     # Position control using sliders
-    right_hand.addJointSlider()
+    right_hand.add_joint_slider()
 
     for i in count():
-        right_hand.updateJointSlider()
-        # right_hand.setJointPositions([0.] * right_hand.getNumberOfDoFs())
+        right_hand.update_joint_slider()
+        # right_hand.set_joint_positions([0.] * right_hand.getNumberOfDoFs())
 
         # step in simulation
         world.step(sleep_dt=1./240)

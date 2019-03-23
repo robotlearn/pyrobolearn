@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 """Provide the Legged robot abstract classes.
+
+Classes that are defined here: LeggedRobot, BipedRobot, QuadrupedRobot, HexapodRobot.
 """
 
 import collections
@@ -15,14 +17,8 @@ class LeggedRobot(Robot):
     in the standard regime are rhythmic movements.
     """
 
-    def __init__(self,
-                 simulator,
-                 urdf_path,
-                 init_pos=(0, 0, 1.),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
-                 scaling=1.):
-        super(LeggedRobot, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling=1.)
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
+        super(LeggedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling=scaling)
 
         self.legs = []  # list of legs where a leg is a list of links
         self.feet = []  # list of feet ids
@@ -45,75 +41,120 @@ class LeggedRobot(Robot):
     # Methods #
     ###########
 
-    def getNumberOfLegs(self):
+    def get_leg_ids(self, legs=None):
         """
-        Return the number of legs/feet.
+        Return the leg id associated with the given leg index(ices)/name(s).
+
+        Args:
+            legs (int, str): leg index(ices) which is [0..num_legs()], or leg name(s)
 
         Returns:
-            int: the number of legs/feet
+            int, list[int]: leg id(s)
         """
-        return self.num_legs
+        if legs is not None:
+            if isinstance(legs, int):
+                return self.legs[legs]
+            elif isinstance(legs, str):
+                return self.legs[self.get_link_ids(legs)]
+            elif isinstance(legs, (list, tuple)):
+                leg_ids = []
+                for leg in legs:
+                    if isinstance(leg, int):
+                        leg_ids.append(self.legs[leg])
+                    elif isinstance(leg, str):
+                        leg_ids.append(self.legs[self.get_link_ids(leg)])
+                    else:
+                        raise TypeError("Expecting a str or int for items in legs")
+                return leg_ids
+        return self.legs
 
-    def getLegLinkIds(self, legIds=None):
-        pass
+    def get_feet_ids(self, feet=None):
+        """
+        Return the foot id associated with the given foot index(ices)/name(s).
 
-    def getLegLinkNames(self, legIds=None):
-        pass
+        Args:
+            feet (int, str): foot index(ices) which is [0..num_feet()], or foot name(s)
 
-    def getFeetIds(self, footId=None):
-        pass
+        Returns:
+            int, list[int]: foot id(s)
+        """
+        if feet is not None:
+            if isinstance(feet, int):
+                return self.feet[feet]
+            elif isinstance(feet, str):
+                return self.feet[self.get_link_ids(feet)]
+            elif isinstance(feet, (list, tuple)):
+                foot_ids = []
+                for foot in feet:
+                    if isinstance(foot, int):
+                        foot_ids.append(self.feet[foot])
+                    elif isinstance(foot, str):
+                        foot_ids.append(self.feet[self.get_link_ids(foot)])
+                    else:
+                        raise TypeError("Expecting a str or int for items in feet")
+                return foot_ids
+        return self.feet
 
-    def getFeetNames(self, footIds=None):
-        pass
+    def set_foot_friction(self, frictions, feet_ids=None):
+        """
+        Set the foot friction in the simulator.
 
-    def getCoP(self):
+        Warnings: only available in the simulator.
+
+        Args:
+            frictions (float, list of float): friction value(s).
+            feet_ids (int, list of int): list of foot/feet id(s).
+        """
+        if feet_ids is None:
+            feet_ids = self.feet
+        if isinstance(feet_ids, int):
+            feet_ids = [feet_ids]
+        if isinstance(frictions, (float, int)):
+            frictions = frictions * np.ones(len(feet_ids))
+        for foot_id, frict in zip(feet_ids, frictions):
+            if isinstance(foot_id, int):
+                self.sim.change_dynamics(self.id, foot_id, lateral_friction=frict)
+            elif isinstance(foot_id, collections.Iterable):
+                for idx in foot_id:
+                    self.sim.change_dynamics(self.id, idx, lateral_friction=frict)
+            else:
+                raise TypeError("Expecting foot_id to be a list of int, or an int. Instead got: "
+                                "{}".format(type(foot_id)))
+
+    def center_of_pressure(self):
         """
         Center of Pressure
-
-        Returns:
-
         """
         # self.sim.getContactPoints(self.id, FootID) # use simulator
         # use F/T sensor to get CoP
         pass
 
-    def getZMP(self):
+    def zero_moment_point(self):
         """
         Zero Moment Point.
         Assumptions: the contact area is planar and has sufficiently high friction to keep the feet from sliding.
-
-        Returns:
-
         """
         pass
 
-    def getFRI(self):
+    def foot_rotation_index(self):
         """
         Foot Rotation Index
-
-        Returns:
-
         """
         pass
 
-    def getDCM(self):
+    def divergent_component_motion(self):
         """
         Divergent Component of Motion, a.k.a 'eXtrapolated Center of Mass'
-
-        Returns:
-
         """
         pass
 
-    def getCMP(self):
+    def centroidal_moment_pivot(self):
         """
         Centroidal Moment Pivot
-
-        Returns:
-
         """
+        pass
 
-    def drawSupportPolygon(self):
+    def draw_support_polygon(self):
         """
         draw the support polygon / convex hull
         """
@@ -122,54 +163,34 @@ class LeggedRobot(Robot):
     # the following methods need to be overwritten in the children classes
 
     def move(self, velocity):
-        raise NotImplementedError
+        """Move the robot at the specified velocity."""
+        pass
 
-    def walkForward(self):
-        raise NotImplementedError
+    def walk_forward(self):
+        """Walk forward."""
+        pass
 
-    def walkBackward(self):
-        raise NotImplementedError
+    def walk_backward(self):
+        """Walk backward."""
+        pass
 
-    def turnLeft(self):
-        raise NotImplementedError
+    def turn_left(self):
+        """Turn left."""
+        pass
 
-    def turnRight(self):
-        raise NotImplementedError
-
-    def setFootFriction(self, friction, feet_id=None):
-        """
-        Set the foot friction in the simulator.
-
-        Warnings: only available in the simulator.
-
-        Args:
-            friction (float, list of float): friction value(s).
-            feet_id (int, list of int): list of foot/feet id(s).
-        """
-        if feet_id is None:
-            foot_id = self.feet
-        if isinstance(feet_id, int):
-            feet_id = [feet_id]
-        if isinstance(friction, (float, int)):
-            friction = friction * np.ones(len(feet_id))
-        for foot_id, frict in zip(feet_id, friction):
-            if isinstance(foot_id, int):
-                self.sim.changeDynamics(self.id, foot_id, lateralFriction=frict)
-            elif isinstance(foot_id, collections.Iterable):
-                for idx in foot_id:
-                    self.sim.changeDynamics(self.id, idx, lateralFriction=frict)
-            else:
-                raise TypeError("Expecting foot_id to be a list of int, or an int. Instead got: "
-                                "{}".format(type(foot_id)))
+    def turn_right(self):
+        """Turn right."""
+        pass
 
 
 class BipedRobot(LeggedRobot):
     r"""Biped Robot
 
+    A biped robot is a robot which has 2 legs.
     """
 
-    def __init__(self, simulator, urdf_path, init_pos=(0,0,1.5), init_orient=(0,0,0,1), useFixedBase=False, scaling=1.):
-        super(BipedRobot, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
+        super(BipedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
 
         self.left_leg_id = 0
         self.right_leg_id = 1
@@ -180,48 +201,33 @@ class BipedRobot(LeggedRobot):
 
     @property
     def left_leg(self):
+        """Return the left leg joint ids"""
         return self.legs[self.left_leg_id]
 
     @property
     def right_leg(self):
+        """Return the right leg joint ids"""
         return self.legs[self.right_leg_id]
 
-    ###########
-    # Methods #
-    ###########
-
-    def getLeftLegIds(self):
-        """
-        Return the left leg actuated joint/link ids.
-        """
-        return self.legs[self.left_leg_id]
-
-    def getRightLegIds(self):
-        """
-        Return the right leg actuated joint/link ids.
-        """
-        return self.legs[self.right_leg_id]
-
-    def getLeftFootId(self):
-        """
-        Return the left foot id.
-        """
+    @property
+    def left_foot(self):
+        """Return the left foot id"""
         return self.feet[self.left_leg_id]
 
-    def getRightFootId(self):
-        """
-        Return the right foot id.
-        """
+    @property
+    def right_foot(self):
+        """Return the right foot id"""
         return self.feet[self.right_leg_id]
 
 
 class QuadrupedRobot(LeggedRobot):
     r"""Quadruped robot
 
+    A quadruped robot is a robot which has 4 legs.
     """
 
-    def __init__(self, simulator, urdf_path, init_pos=(0,0,1.), init_orient=(0,0,0,1), useFixedBase=False, scaling=1.):
-        super(QuadrupedRobot, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
+        super(QuadrupedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
 
         self.left_front_leg_id = 0
         self.right_front_leg_id = 1
@@ -234,61 +240,53 @@ class QuadrupedRobot(LeggedRobot):
 
     @property
     def left_front_leg(self):
+        """Return the left front leg joint ids"""
         return self.legs[self.left_front_leg_id]
 
     @property
     def right_front_leg(self):
+        """Return the right front leg joint ids"""
         return self.legs[self.right_front_leg_id]
 
     @property
     def left_back_leg(self):
+        """Return the left back leg joint ids"""
         return self.legs[self.left_back_leg_id]
 
     @property
     def right_back_leg(self):
+        """Return the right back leg joint ids"""
         return self.legs[self.right_back_leg_id]
 
-    ###########
-    # Methods #
-    ###########
-
-    def getLeftFrontLegIds(self):
-        """Return the left front leg ids"""
-        return self.legs[self.left_front_leg_id]
-
-    def getLeftFrontFootId(self):
+    @property
+    def left_front_foot(self):
         """Return the left front foot id"""
         return self.feet[self.left_front_leg_id]
 
-    def getRightFrontLegIds(self):
-        """Return the right front leg ids"""
-        return self.legs[self.right_front_leg_id]
-
-    def getRightFrontFootId(self):
+    @property
+    def right_front_foot(self):
         """Return the right front foot id"""
         return self.feet[self.right_front_leg_id]
 
-    def getLeftBackLegIds(self):
-        """Return the left back leg ids"""
-        return self.legs[self.left_back_leg_id]
-
-    def getLeftBackFootId(self):
+    @property
+    def left_back_foot(self):
         """Return the left back foot id"""
         return self.feet[self.left_back_leg_id]
 
-    def getRightBackLegIds(self):
-        """Return the right back leg ids"""
-        return self.legs[self.right_back_leg_id]
-
-    def getRightBackFootId(self):
+    @property
+    def right_back_foot(self):
         """Return the right back foot id"""
         return self.feet[self.right_back_leg_id]
 
 
 class HexapodRobot(LeggedRobot):
+    r"""Hexapod Robot
 
-    def __init__(self, simulator, urdf_path, init_pos=(0,0,1.), init_orient=(0,0,0,1), useFixedBase=False, scaling=1.):
-        super(HexapodRobot, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+    An hexapod robot is a robot which has 6 legs.
+    """
+
+    def __init__(self, simulator, urdf, position, orientation=None, fixed_base=False, scaling=1.):
+        super(HexapodRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
 
         self.left_front_leg_id = 0
         self.right_front_leg_id = 1
@@ -303,76 +301,60 @@ class HexapodRobot(LeggedRobot):
 
     @property
     def left_front_leg(self):
+        """Return the left front leg ids"""
         return self.legs[self.left_front_leg_id]
 
     @property
     def right_front_leg(self):
+        """Return the right front leg ids"""
         return self.legs[self.right_front_leg_id]
 
     @property
     def left_middle_leg(self):
+        """Return the left middle leg ids"""
         return self.legs[self.left_middle_leg_id]
 
     @property
     def right_middle_leg(self):
+        """Return the right middle leg ids"""
         return self.legs[self.right_middle_leg_id]
 
     @property
     def left_back_leg(self):
+        """Return the left back leg ids"""
         return self.legs[self.left_back_leg_id]
 
     @property
     def right_back_leg(self):
-        return self.legs[self.right_back_leg_id]
-
-    ###########
-    # Methods #
-    ###########
-
-    def getLeftFrontLegIds(self):
-        """Return the left front leg ids"""
-        return self.legs[self.left_front_leg_id]
-
-    def getLeftFrontFootId(self):
-        """Return the left front foot id"""
-        return self.feet[self.left_front_leg_id]
-
-    def getRightFrontLegIds(self):
-        """Return the right front leg ids"""
-        return self.legs[self.right_front_leg_id]
-
-    def getRightFrontFootId(self):
-        """Return the right front foot id"""
-        return self.feet[self.right_front_leg_id]
-
-    def getLeftMiddleLegIds(self):
-        """Return the left middle leg ids"""
-        return self.legs[self.left_middle_leg_id]
-
-    def getLeftMiddleFootId(self):
-        """Return the left middle foot id"""
-        return self.feet[self.left_middle_leg_id]
-
-    def getRightMiddleLegIds(self):
-        """Return the right middle leg ids"""
-        return self.legs[self.right_middle_leg_id]
-
-    def getRightMiddleFootId(self):
-        """Return the right middle foot id"""
-        return self.feet[self.right_middle_leg_id]
-
-    def getLeftBackLegIds(self):
-        """Return the left back leg ids"""
-        return self.legs[self.left_back_leg_id]
-
-    def getLeftBackFootId(self):
-        """Return the left back foot id"""
-        return self.feet[self.left_back_leg_id]
-
-    def getRightBackLegIds(self):
         """Return the right back leg ids"""
         return self.legs[self.right_back_leg_id]
 
-    def getRightBackFootId(self):
+    @property
+    def left_front_foot(self):
+        """Return the left front foot id"""
+        return self.feet[self.left_front_leg_id]
+
+    @property
+    def right_front_foot(self):
+        """Return the right front foot id"""
+        return self.feet[self.right_front_leg_id]
+
+    @property
+    def left_middle_foot(self):
+        """Return the left middle foot id"""
+        return self.feet[self.left_middle_leg_id]
+
+    @property
+    def right_middle_foot(self):
+        """Return the right middle foot id"""
+        return self.feet[self.right_middle_leg_id]
+
+    @property
+    def left_back_foot(self):
+        """Return the left back foot id"""
+        return self.feet[self.left_back_leg_id]
+
+    @property
+    def right_back_foot(self):
         """Return the right back foot id"""
         return self.feet[self.right_back_leg_id]

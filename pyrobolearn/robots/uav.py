@@ -11,9 +11,8 @@ class UAVRobot(Robot):
     Vehicles/Robots that operate in the air. These are also called drones.
     """
 
-    def __init__(self, simulator, urdf_path, init_pos=(0, 0, 1.), init_orient=(0, 0, 0, 1), useFixedBase=False,
-                 scaling=1.):
-        super(UAVRobot, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
+        super(UAVRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
 
         self.propellers = []  # list of propellers id
 
@@ -28,9 +27,8 @@ class FixedWingUAV(UAVRobot):
 
     """
 
-    def __init__(self, simulator, urdf_path, init_pos=(0, 0, 1.), init_orient=(0, 0, 0, 1), useFixedBase=False,
-                 scaling=1.):
-        super(FixedWingUAV, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
+        super(FixedWingUAV, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
 
 
 class RotaryWingUAV(UAVRobot):
@@ -38,6 +36,5 @@ class RotaryWingUAV(UAVRobot):
 
     """
 
-    def __init__(self, simulator, urdf_path, init_pos=(0, 0, 1.), init_orient=(0, 0, 0, 1), useFixedBase=False,
-                 scaling=1.):
-        super(RotaryWingUAV, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
+        super(RotaryWingUAV, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)

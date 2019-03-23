@@ -4,7 +4,8 @@
 
 import numpy as np
 from itertools import count
-from pyrobolearn.simulators import BulletSim, pybullet
+from pyrobolearn.utils.orientation import get_rpy_from_quaternion
+from pyrobolearn.simulators import BulletSim
 from pyrobolearn.worlds import BasicWorld
 from pyrobolearn.robots import Cubli
 
@@ -21,8 +22,8 @@ orientation = [0.383, 0, 0, 0.924]
 robot = Cubli(sim, position, orientation, scaling=scale)
 
 # print information about the robot
-robot.printRobotInfo()
-H = robot.calculateMassMatrix(qIdx=slice(6, 6+len(robot.joints)))  # floating base, thus keep only the last q
+robot.print_info()
+H = robot.get_mass_matrix(q_idx=slice(6, 6 + len(robot.joints)))  # floating base, thus keep only the last q
 print("Inertia matrix: H(q) = {}\n".format(H))
 
 # PD control
@@ -32,13 +33,13 @@ desired_roll = np.pi / 4.
 
 for i in count():
     # get state
-    quaternion = robot.getBaseOrientation(False)
-    w = robot.getBaseAngularVelocity()
-    euler = pybullet.getEulerFromQuaternion(quaternion.tolist())
+    quaternion = robot.get_base_orientation()
+    w = robot.get_base_angular_velocity()
+    euler = get_rpy_from_quaternion(quaternion)
 
     # PD control
     torques = [-Kp * (desired_roll - euler[0]) + Kd * w[0], 0., 0.]
-    robot.setJointTorques(torques)
+    robot.set_joint_torques(torques)
 
     # step in simulation
     world.step(sleep_dt=1./240)

@@ -17,13 +17,13 @@ world = BasicWorld(sim)
 robot = Humanoid(sim)
 
 # print information about the robot
-robot.printRobotInfo()
+robot.print_info()
 
 # Position control using sliders
-# robot.addJointSlider()
+# robot.add_joint_slider()
 
 # run simulation
 for i in count():
-    # robot.updateJointSlider()
+    # robot.update_joint_slider()
     # step in simulation
     world.step(sleep_dt=1./240)

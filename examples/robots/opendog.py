@@ -17,12 +17,12 @@ world = BasicWorld(sim)
 robot = OpenDog(sim)
 
 # print information about the robot
-robot.printRobotInfo()
+robot.print_info()
 
 # Position control using sliders
-# robot.addJointSlider(robot.getLeftFrontLegIds())
+# robot.add_joint_slider(robot.getLeftFrontLegIds())
 
 # run simulator
 for _ in count():
-    # robot.updateJointSlider()
+    # robot.update_joint_slider()
     world.step(sleep_dt=1./240)

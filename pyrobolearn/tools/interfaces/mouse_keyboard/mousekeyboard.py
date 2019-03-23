@@ -16,7 +16,7 @@ from pyrobolearn.simulators import Simulator
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "MIT"
+__license__ = "(c) Brian Delhaisse"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
@@ -144,7 +144,7 @@ class MouseKeyboardInterface(InputInterface):
 
     def check_key_events(self):
         # get key events
-        events = self.simulator.getKeyboardEvents()
+        events = self.simulator.get_keyboard_events()
 
         # create new list of key pressed
         self.key_pressed = []
@@ -162,7 +162,7 @@ class MouseKeyboardInterface(InputInterface):
 
     def check_mouse_events(self):
         # get mouse events
-        events = self.simulator.getMouseEvents()
+        events = self.simulator.get_mouse_events()
 
         # reset mouse events
         self.mouse_moving, self.mouse_pressed = False, False

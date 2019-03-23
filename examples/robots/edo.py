@@ -17,8 +17,8 @@ world = BasicWorld(sim)
 robot = Edo(sim)
 
 # print information about the robot
-robot.printRobotInfo()
-# H = robot.calculateMassMatrix()
+robot.print_info()
+# H = robot.get_mass_matrix()
 # print("Inertia matrix: H(q) = {}".format(H))
 
 for i in count():

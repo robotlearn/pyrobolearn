@@ -17,14 +17,14 @@ world = BasicWorld(sim)
 robot = Rhex(sim)
 
 # print information about the robot
-robot.printRobotInfo()
+robot.print_info()
 
 # Position control using sliders
-# robot.addJointSlider(robot.right_back_leg)
+# robot.add_joint_slider(robot.right_back_leg)
 
 # run simulation
 for i in count():
-    # robot.updateJointSlider()
+    # robot.update_joint_slider()
     robot.drive(2)
     # step in simulation
     world.step(sleep_dt=1./240)

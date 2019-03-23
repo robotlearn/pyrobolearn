@@ -17,13 +17,13 @@ world = BasicWorld(sim)
 robot = Husky(sim)
 
 # print information about the robot
-robot.printRobotInfo()
+robot.print_info()
 
 # Position control using sliders
-# robot.addJointSlider()
+# robot.add_joint_slider()
 
 # run simulator
 for _ in count():
-    # robot.updateJointSlider()
-    robot.driveForward(2)
+    # robot.update_joint_slider()
+    robot.drive_forward(2)
     world.step(sleep_dt=1./240)

@@ -19,37 +19,37 @@ class HyQ2Max(QuadrupedRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 0.8),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 position=(0, 0, 0.8),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/hyq2max/hyq2max.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/hyq2max/hyq2max.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.8)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.8,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 0.8)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.8,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(HyQ2Max, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(HyQ2Max, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'hyq2max'
         self.height = 0.9
 
-        self.legs = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['lf_hipassembly', 'lf_upperleg', 'lf_lowerleg'],
                                    ['rf_hipassembly', 'rf_upperleg', 'rf_lowerleg'],
                                    ['lh_hipassembly', 'lh_upperleg', 'lh_lowerleg'],
                                    ['rh_hipassembly', 'rh_upperleg', 'rh_lowerleg']]]
 
-        self.feet = [self.getLinkIds(link) for link in ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
+        self.feet = [self.get_link_ids(link) for link in ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
                      if link in self.link_names]
 
         for foot in self.feet:
-            self.sim.changeDynamics(self.id, foot, lateralFriction=.9, spinningFriction=1., rollingFriction=1.)
-            self.sim.changeDynamics(self.id, foot, restitution=0.)
+            self.sim.change_dynamics(self.id, foot, lateral_friction=.9, spinning_friction=1., rolling_friction=1.)
+            self.sim.change_dynamics(self.id, foot, restitution=0.)
 
         # taken from "Learning agile and dynamic motor skills for legged robots", Hwangbo et al., 2019
         self.kp = 50. * np.ones(12)
@@ -67,21 +67,21 @@ if __name__ == "__main__":
 
     # create world
     world = BasicWorld(sim)
-    world.loadJapaneseMonastery()
+    world.load_japanese_monastery()
 
     # create robot
     robot = HyQ2Max(sim)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
     # Position control using sliders
-    # robot.addJointSlider(robot.getLeftFrontLegIds())
+    # robot.add_joint_slider(robot.getLeftFrontLegIds())
 
     # run simulator
     for _ in count():
-        # robot.updateJointSlider()
-        robot.computeAndDrawCoMPosition()
-        robot.computeAndDrawProjectedCoMPosition()
+        # robot.update_joint_slider()
+        robot.compute_and_draw_com_position()
+        robot.compute_and_draw_projected_com_position()
 
         world.step(sleep_dt=1./240)

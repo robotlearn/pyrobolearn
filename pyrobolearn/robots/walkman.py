@@ -22,25 +22,25 @@ class Walkman(BipedRobot, BiManipulatorRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 1.14),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 position=(0, 0, 1.14),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/walkman/walkman.urdf',
+                 urdf=os.path.dirname(__file__) + '/urdfs/walkman/walkman.urdf',
                  lower_body=False):  # 'walkman_lower_body.urdf'
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 1.14)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (1.14,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 1.14)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (1.14,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = False
         if lower_body:
-            urdf_path = os.path.dirname(__file__) + '/urdfs/walkman/walkman_lower_body.urdf'
+            urdf = os.path.dirname(__file__) + '/urdfs/walkman/walkman_lower_body.urdf'
 
-        super(Walkman, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Walkman, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'walkman'
 
         # Camera sensors: Two 2D Camera sensor (stereo-camera)
@@ -66,27 +66,27 @@ class Walkman(BipedRobot, BiManipulatorRobot):
         # IMU sensors
 
         # End-effectors (arms and legs)
-        self.waist = [self.getLinkIds(link) for link in ['DWL', 'DWS', 'DWYTorso'] if link in self.link_names]
-        self.neck = [self.getLinkIds(link) for link in ['NeckYaw', 'NeckPitch'] if link in self.link_names]
+        self.waist = [self.get_link_ids(link) for link in ['DWL', 'DWS', 'DWYTorso'] if link in self.link_names]
+        self.neck = [self.get_link_ids(link) for link in ['NeckYaw', 'NeckPitch'] if link in self.link_names]
 
-        self.legs = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['LHipMot', 'LThighUpLeg', 'LThighLowLeg', 'LLowLeg', 'LFootmot', 'LFoot'],
                                    ['RHipMot', 'RThighUpLeg', 'RThighLowLeg', 'RLowLeg', 'RFootmot', 'RFoot']]]
 
-        self.feet = [self.getLinkIds(link) for link in ['LFoot', 'RFoot'] if link in self.link_names]
+        self.feet = [self.get_link_ids(link) for link in ['LFoot', 'RFoot'] if link in self.link_names]
 
-        self.arms = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.arms = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['LShp', 'LShr', 'LShy', 'LElb', 'LForearm', 'LWrMot2', 'LWrMot3'],
                                    ['RShp', 'RShr', 'RShy', 'RElb', 'RForearm', 'RWrMot2', 'RWrMot3']]]
 
-        self.hands = [self.getLinkIds(link) for link in ['LSoftHand', 'RSoftHand'] if link in self.link_names]
+        self.hands = [self.get_link_ids(link) for link in ['LSoftHand', 'RSoftHand'] if link in self.link_names]
 
 
 def WalkmanLowerBody(simulator, init_pos=(0, 0, 1.5), init_orient=(0, 0, 0, 1), useFixedBase=False, scaling=1.,
                        urdf_path=os.path.dirname(__file__) + '/urdfs/walkman/walkman_lower_body.urdf'):
     """Load Walkman Lower Body"""
-    return Walkman(simulator=simulator, init_pos=init_pos, init_orient=init_orient, useFixedBase=useFixedBase,
-                    scaling=scaling, urdf_path=urdf_path)
+    return Walkman(simulator=simulator, position=init_pos, orientation=init_orient, fixed_base=useFixedBase,
+                   scaling=scaling, urdf=urdf_path)
 
 
 # Test
@@ -105,18 +105,18 @@ if __name__ == "__main__":
     world.loadSphere([2., 1., 2.], mass=0., color=(0, 0, 1, 1))
 
     # load robot
-    robot = Walkman(sim, useFixedBase=False, lower_body=False)
+    robot = Walkman(sim, fixed_base=False, lower_body=False)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
     # # Position control using sliders
-    robot.addJointSlider(robot.left_leg)
+    robot.add_joint_slider(robot.left_leg)
 
     # run simulator
     for i in count():
-        robot.updateJointSlider()
+        robot.update_joint_slider()
         if i % 60 == 0:
-            img = robot.left_camera.getRGBImage()
+            img = robot.left_camera.get_rgb_image()
 
         world.step(sleep_dt=1./240)

@@ -100,12 +100,12 @@ if __name__ == "__main__":
     robot = CartPole(sim, num_links=num_links)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
-    robot.getSymbolicEquationsOfMotion()
+    robot.get_symbolic_equations_of_motion()
 
     eq_point = np.zeros((num_links + 1) * 2)  # state = [q, dq]
-    A, B = robot.linearizeEquationOfMotion(eq_point)
+    A, B = robot.linearize_equations_of_motion(eq_point)
 
     # LQR controller
     lqr = LQR(A, B)
@@ -113,9 +113,9 @@ if __name__ == "__main__":
 
     for i in count():
         # control
-        x = np.concatenate((robot.getJointPositions(), robot.getJointVelocities()))
+        x = np.concatenate((robot.get_joint_positions(), robot.get_joint_velocities()))
         u = K.dot(eq_point - x)
-        robot.setJointTorques(u[0], 0)
+        robot.set_joint_torques(u[0], 0)
 
         print("U[0] = {}".format(u[0]))
 

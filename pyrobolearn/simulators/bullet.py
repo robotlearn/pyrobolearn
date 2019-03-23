@@ -83,6 +83,7 @@ class Bullet(Simulator):
         # Connect to pybullet
         if render:
             self.sim = BulletClient(connection_mode=pybullet.GUI)
+            self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_GUI, 0)
         else:
             self.sim = BulletClient(connection_mode=pybullet.DIRECT)
         self.id = self.sim._client
@@ -90,10 +91,11 @@ class Bullet(Simulator):
         # add additional search path when loading URDFs, SDFs, MJCFs, etc.
         self.sim.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-        # Converters
-        # if converter is None:
-        self.conv = NumpyListConverter()
-        self.quat_conv = QuaternionListConverter(convention=1)
+        # go through the global variables / attributes defined in pybullet and set them here
+        # this includes for instance: JOINT_REVOLUTE, POSITION_CONTROL, etc.
+        # for attribute in dir(pybullet):
+        #     if attribute[0].isupper():  # any global variable starts with a capital letter
+        #         setattr(self, attribute, getattr(pybullet, attribute))
 
     # def __del__(self):
     #     """Clean up connection if not already done.
@@ -391,7 +393,7 @@ class Bullet(Simulator):
         """
         self.sim.setGravity(gravity[0], gravity[1], gravity[2])
 
-    def save(self, filename=None):
+    def save(self, filename=None, *args, **kwargs):
         """
         Save the state of the simulator.
 
@@ -400,13 +402,14 @@ class Bullet(Simulator):
                 memory instead of the disk.
 
         Returns:
-            int: unique state id. This id can be used to load the state.
+            int / str: unique state id, or filename. This id / filename can be used to load the state.
         """
         if filename is None:
             return self.sim.saveState()
-        return self.sim.saveBullet(filename)
+        self.sim.saveBullet(filename)
+        return filename
 
-    def load(self, state):
+    def load(self, state, *args, **kwargs):
         """
         Load/Restore the simulator to a previous state.
 
@@ -418,7 +421,7 @@ class Bullet(Simulator):
         elif isinstance(state, str):
             self.sim.restoreState(fileName=state)
 
-    def load_plugin(self, plugin_path, name):
+    def load_plugin(self, plugin_path, name, *args, **kwargs):
         """Load a certain plugin in the simulator.
 
         Few examples can be found at: https://github.com/bulletphysics/bullet3/tree/master/examples/SharedMemory/plugins
@@ -451,7 +454,7 @@ class Bullet(Simulator):
                 kwargs.setdefault('floatArgs', []).append(arg)
         self.sim.executePluginCommand(plugin_id, **kwargs)
 
-    def unload_plugin(self, plugin_id):
+    def unload_plugin(self, plugin_id, *args, **kwargs):
         """Unload the specified plugin from the simulator.
 
         Args:
@@ -463,11 +466,11 @@ class Bullet(Simulator):
     # loading URDFs, SDFs, MJCFs, meshes #
     ######################################
 
-    def load_urdf(self, filename, position=None, orientation=None, use_maximal_coordinates=0,
-                  use_fixed_base=0, flags=0, scale=1.0):
+    def load_urdf(self, filename, position=None, orientation=None, use_maximal_coordinates=None,
+                  use_fixed_base=None, flags=None, scale=None):
         """Load the given URDF file.
 
-        The loadURDF will send a command to the physics server to load a physics model from a Universal Robot
+        The load_urdf will send a command to the physics server to load a physics model from a Universal Robot
         Description File (URDF). The URDF file is used by the ROS project (Robot Operating System) to describe robots
         and other objects, it was created by the WillowGarage and the Open Source Robotics Foundation (OSRF).
         Many robots have public URDF files, you can find a description and tutorial here:
@@ -509,22 +512,30 @@ class Bullet(Simulator):
         Returns:
             int (non-negative): unique id associated to the load model.
         """
+        kwargs = {}
         if position is not None:
             if isinstance(position, np.ndarray):
                 position = position.ravel().tolist()
+            kwargs['basePosition'] = position
         if orientation is not None:
             if isinstance(orientation, np.ndarray):
                 orientation = orientation.ravel().tolist()
-            elif isinstance(orientation, quaternion.quaternion):
-                orientation = self.quat_conv.convertFrom(orientation)
+            kwargs['baseOrientation'] = orientation
+        if use_maximal_coordinates is not None:
+            kwargs['useMaximalCoordinates'] = use_maximal_coordinates
+        if use_fixed_base is not None:
+            kwargs['useFixedBase'] = use_fixed_base
+        if flags is not None:
+            kwargs['flags'] = flags
+        if scale is not None:
+            kwargs['globalScaling'] = scale
 
-        return self.sim.loadURDF(filename, position, orientation, use_maximal_coordinates, int(use_fixed_base), flags,
-                                 scale)
+        return self.sim.loadURDF(filename, **kwargs)
 
-    def load_sdf(self, filename, scaling=1.):
+    def load_sdf(self, filename, scaling=1., *args, **kwargs):
         """Load the given SDF file.
 
-        The loadSDF command only extracts some essential parts of the SDF related to the robot models and geometry,
+        The load_sdf command only extracts some essential parts of the SDF related to the robot models and geometry,
         and ignores many elements related to cameras, lights and so on.
 
         Args:
@@ -536,10 +547,10 @@ class Bullet(Simulator):
         """
         return self.sim.loadSDF(filename, globalScaling=scaling)
 
-    def load_mjcf(self, filename, scaling=1.):
+    def load_mjcf(self, filename, scaling=1., *args, **kwargs):
         """Load the given MJCF file.
 
-        "The loadMJCF command performs basic import of MuJoCo MJCF xml files, used in OpenAI Gym". [1]
+        "The load_mjcf command performs basic import of MuJoCo MJCF xml files, used in OpenAI Gym". [1]
         It will load all the object described in a MJCF file.
 
         Args:
@@ -549,10 +560,10 @@ class Bullet(Simulator):
         Returns:
             list(int): list of object unique id for each object loaded
         """
-        return self.sim.loadMJCF(filename, globalScaling=scaling)
+        return self.sim.loadMJCF(filename)
 
     def load_mesh(self, filename, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.),
-                  color=None, flags=None, *args, **kwargs):
+                  color=None, with_collision=True, flags=None, *args, **kwargs):
         """
         Load a mesh in the world (only available in the simulator).
 
@@ -565,6 +576,7 @@ class Bullet(Simulator):
             mass (float): mass of the mesh (in kg). If mass = 0, it won't move even if there is a collision.
             scale (float[3]): scale the mesh in the (x,y,z) directions
             color (int[4], None): color of the mesh (by default: white and opaque)
+            with_collision (bool): If True, it will also create the collision mesh, and not only a visual mesh.
             flags (int, None): if flag = `sim.GEOM_FORCE_CONCAVE_TRIMESH` (=1), this will create a concave static
                 triangle mesh. This should not be used with dynamic/moving objects, only for static (mass=0) terrain.
 
@@ -575,9 +587,11 @@ class Bullet(Simulator):
         if flags is not None:
             kwargs['flags'] = flags
 
-        # create collision shape
-        collision_shape = self.sim.createCollisionShape(pybullet.GEOM_MESH, fileName=filename, meshScale=scale,
-                                                        **kwargs)
+        # create collision shape if specified
+        collision_shape = None
+        if with_collision:
+            collision_shape = self.sim.createCollisionShape(pybullet.GEOM_MESH, fileName=filename, meshScale=scale,
+                                                            **kwargs)
 
         if color is not None:
             kwargs['rgbaColor'] = color
@@ -586,11 +600,17 @@ class Bullet(Simulator):
         visual_shape = self.sim.createVisualShape(pybullet.GEOM_MESH, fileName=filename, meshScale=scale, **kwargs)
 
         # create body
-        mesh = self.sim.createMultiBody(baseMass=mass,
-                                        baseCollisionShapeIndex=collision_shape,
-                                        baseVisualShapeIndex=visual_shape,
-                                        basePosition=position,
-                                        baseOrientation=orientation)
+        if with_collision:
+            mesh = self.sim.createMultiBody(baseMass=mass,
+                                            baseCollisionShapeIndex=collision_shape,
+                                            baseVisualShapeIndex=visual_shape,
+                                            basePosition=position,
+                                            baseOrientation=orientation)
+        else:
+            mesh = self.sim.createMultiBody(baseMass=mass,
+                                            baseVisualShapeIndex=visual_shape,
+                                            basePosition=position,
+                                            baseOrientation=orientation)
 
         return mesh
 
@@ -599,15 +619,15 @@ class Bullet(Simulator):
     ##########
 
     # TODO: add the other arguments
-    def create_body(self, visual_shape_id=-1, collision_shape_id=-1, mass=0, position=(0., 0., 0.),
-                    orientation=(0., 0., 0., 1.)):
+    def create_body(self, visual_shape_id=-1, collision_shape_id=-1, mass=0., position=(0., 0., 0.),
+                    orientation=(0., 0., 0., 1.), *args, **kwargs):
         """Create a body in the simulator.
 
         Args:
             visual_shape_id (int): unique id from createVisualShape or -1. You can reuse the visual shape (instancing)
             collision_shape_id (int): unique id from createCollisionShape or -1. You can re-use the collision shape
                 for multiple multibodies (instancing)
-            mass (int): mass of the base, in kg (if using SI units)
+            mass (float): mass of the base, in kg (if using SI units)
             position (np.float[3]): Cartesian world position of the base
             orientation (np.float[4]): Orientation of base as quaternion [x,y,z,w]
 
@@ -618,11 +638,9 @@ class Bullet(Simulator):
             position = position.ravel().tolist()
         if isinstance(orientation, np.ndarray):
             orientation = orientation.ravel().tolist()
-        elif isinstance(orientation, quaternion.quaternion):
-            orientation = self.quat_conv.convertFrom(orientation)
         return self.sim.createMultiBody(baseMass=mass, baseCollisionShapeIndex=collision_shape_id,
                                         baseVisualShapeIndex=visual_shape_id, basePosition=position,
-                                        baseOrientation=orientation)
+                                        baseOrientation=orientation, **kwargs)
 
     def remove_body(self, body_id):
         """Remove a particular body in the simulator.
@@ -848,7 +866,7 @@ class Bullet(Simulator):
         """
         return self.sim.getBodyInfo(body_id)[0]
 
-    def get_center_of_mass(self, body_id, link_ids=None):
+    def get_center_of_mass_position(self, body_id, link_ids=None):
         """
         Return the center of mass position.
 
@@ -867,8 +885,41 @@ class Bullet(Simulator):
         mass = self.get_link_masses(body_id, link_ids)
 
         com = np.sum(pos.T * mass, axis=1) / np.sum(mass)
-
         return com
+
+    def get_center_of_mass_velocity(self, body_id, link_ids=None):
+        """
+        Return the center of mass linear velocity.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (list of int): link ids associated with the given body id. If None, it will take all the links
+                of the specified body.
+
+        Returns:
+            np.float[3]: center of mass linear velocity.
+        """
+        if link_ids is None:
+            link_ids = list(range(self.num_links(body_id)))
+
+        vel = self.get_link_world_linear_velocities(body_id, link_ids)
+        mass = self.get_link_masses(body_id, link_ids)
+
+        com = np.sum(vel.T * mass, axis=1) / np.sum(mass)
+        return com
+
+    def get_linear_momentum(self, body_id, link_ids=None):
+        """
+        Return the total linear momentum in the world space.
+
+        Returns:
+            np.float[3]: linear momentum
+        """
+        if link_ids is None:
+            link_ids = list(range(self.num_links(body_id)))
+        mass = self.get_link_masses(body_id, link_ids)
+        vel = self.get_link_world_linear_velocities(body_id, link_ids)
+        return np.sum(vel.T * mass, axis=1)
 
     def get_base_pose(self, body_id):
         """
@@ -1026,7 +1077,7 @@ class Bullet(Simulator):
 
         "This method will only work when explicitly stepping the simulation using stepSimulation, in other words:
         setRealTimeSimulation(0). After each simulation step, the external forces are cleared to zero. If you are
-        using 'setRealTimeSimulation(1), applyExternalForce/Torque will have undefined behavior (either 0, 1 or
+        using 'setRealTimeSimulation(1), apply_external_force/Torque will have undefined behavior (either 0, 1 or
         multiple force/torque applications)" [1]
 
         Args:
@@ -1074,6 +1125,21 @@ class Bullet(Simulator):
         """
         return self.sim.getNumJoints(body_id)
 
+    def num_actuated_joints(self, body_id):
+        """
+        Return the total number of actuated joints associated with the given body id.
+
+        Warnings: this checks through the list of all joints each time it is called. It might be a good idea to call
+        this method one time and cache the actuated joint ids.
+
+        Args:
+            body_id (int): unique body id.
+
+        Returns:
+            int: number of actuated joints of the specified body.
+        """
+        return len(self.get_actuated_joint_ids(body_id))
+
     def num_links(self, body_id):
         """
         Return the total number of links of the specified body. This is the same as calling `num_joints`.
@@ -1120,7 +1186,7 @@ class Bullet(Simulator):
             [15] np.float[4]:  joint orientation in parent frame
             [16] int:       parent link index, -1 for base
         """
-        info = self.sim.getJointInfo(body_id, joint_id)
+        info = list(self.sim.getJointInfo(body_id, joint_id))
         info[13] = np.array(info[13])
         info[14] = np.array(info[14])
         info[15] = np.array(info[15])
@@ -1164,9 +1230,12 @@ class Bullet(Simulator):
                     VELOCITY_CONTROL and POSITION_CONTROL. If you use TORQUE_CONTROL then the applied joint motor
                     torque is exactly what you provide, so there is no need to report it separately.
         """
-        return self.sim.getJointStates(body_id, joint_ids)
+        states = self.sim.getJointStates(body_id, joint_ids)
+        for idx, state in enumerate(states):
+            states[idx][2] = np.array(state[2])
+        return states
 
-    def reset_joint_state(self, body_id, joint_id, target_position, target_velocity=0.):
+    def reset_joint_state(self, body_id, joint_id, position, velocity=0.):
         """
         Reset the state of the joint. It is best only to do this at the start, while not running the simulation:
         `reset_joint_state` overrides all physics simulation. Note that we only support 1-DOF motorized joints at
@@ -1175,12 +1244,12 @@ class Bullet(Simulator):
         Args:
             body_id (int): body unique id as returned by `load_urdf`, etc.
             joint_id (int): joint index in range [0..num_joints(body_id)]
-            target_position (float): the joint position (angle in radians [rad] or position [m])
-            target_velocity (float): the joint velocity (angular [rad/s] or linear velocity [m/s])
+            position (float): the joint position (angle in radians [rad] or position [m])
+            velocity (float): the joint velocity (angular [rad/s] or linear velocity [m/s])
         """
-        self.sim.resetJointState(body_id, joint_id, target_position, target_velocity)
+        self.sim.resetJointState(body_id, joint_id, position, velocity)
 
-    def enable_joint_force_torque_sensor(self, body_id, joint_id, enable=True):
+    def enable_joint_force_torque_sensor(self, body_id, joint_ids, enable=True):
         """
         You can enable or disable a joint force/torque sensor in each joint. Once enabled, if you perform a
         `step`, the 'get_joint_state' will report the joint reaction forces in the fixed degrees of freedom: a fixed
@@ -1190,13 +1259,17 @@ class Bullet(Simulator):
 
         Args:
             body_id (int): body unique id as returned by `load_urdf`, etc.
-            joint_id (int): joint index in range [0..num_joints(body_id)]
+            joint_ids (int, int[N]): joint index in range [0..num_joints(body_id)], or list of joint ids.
             enable (bool): True to enable, False to disable the force/torque sensor
         """
-        self.sim.enableJointForceTorqueSensor(body_id, joint_id, enable)
+        if isinstance(joint_ids, int):
+            self.sim.enableJointForceTorqueSensor(body_id, joint_ids, int(enable))
+        else:
+            for joint_id in joint_ids:
+                self.sim.enableJointForceTorqueSensor(body_id, joint_id, int(enable))
 
-    def set_joint_motor_control(self, body_id, joint_id, control_mode=pybullet.POSITION_CONTROL, position=None,
-                                velocity=None, force=None, kp=None, kd=None, max_velocity=None):
+    def set_joint_motor_control(self, body_id, joint_ids, control_mode=pybullet.POSITION_CONTROL, positions=None,
+                                velocities=None, forces=None, kp=None, kd=None, max_velocity=None):
         """
         Set the joint motor control.
 
@@ -1219,69 +1292,49 @@ class Bullet(Simulator):
 
         Args:
             body_id (int): body unique id.
-            joint_id (int): joint/link id.
+            joint_ids (int): joint/link id, or list of joint ids.
             control_mode (int): POSITION_CONTROL (=2) (which is in fact CONTROL_MODE_POSITION_VELOCITY_PD),
                 VELOCITY_CONTROL (=0), TORQUE_CONTROL (=1) and PD_CONTROL (=3).
-            position (float): target joint position (used in POSITION_CONTROL).
-            velocity (float): target joint velocity. In VELOCITY_CONTROL and POSITION_CONTROL, the target velocity is
-                the desired velocity of the joint. Note that the target velocity is not the maximum joint velocity.
-                In PD_CONTROL and POSITION_CONTROL/CONTROL_MODE_POSITION_VELOCITY_PD, the final target velocity is
-                computed using:
+            positions (float, np.float[N]): target joint position(s) (used in POSITION_CONTROL).
+            velocities (float, np.float[N]): target joint velocity(ies). In VELOCITY_CONTROL and POSITION_CONTROL,
+                the target velocity(ies) is(are) the desired velocity of the joint. Note that the target velocity(ies)
+                is(are) not the maximum joint velocity(ies). In PD_CONTROL and
+                POSITION_CONTROL/CONTROL_MODE_POSITION_VELOCITY_PD, the final target velocities are computed using:
                 `kp*(erp*(desiredPosition-currentPosition)/dt)+currentVelocity+kd*(m_desiredVelocity - currentVelocity)`
-            force (float): in POSITION_CONTROL and VELOCITY_CONTROL, this is the maximum motor force used to reach the
-                target value. In TORQUE_CONTROL this is the force/torque to be applied each simulation step.
-            kp (float): position (stiffness) gain (used in POSITION_CONTROL).
-            kd (float): velocity (damping) gain (used in POSITION_CONTROL).
+            forces (float, list of float): in POSITION_CONTROL and VELOCITY_CONTROL, these are the maximum motor
+                forces used to reach the target values. In TORQUE_CONTROL these are the forces / torques to be applied
+                each simulation step.
+            kp (float, list of float): position (stiffness) gain(s) (used in POSITION_CONTROL).
+            kd (float, list of float): velocity (damping) gain(s) (used in POSITION_CONTROL).
             max_velocity (float): in POSITION_CONTROL this limits the velocity to a maximum.
         """
         kwargs = {}
-        if position is not None:
-            kwargs['targetPosition'] = position
-        if velocity is not None:
-            kwargs['targetVelocity'] = velocity
-        if force is not None:
-            kwargs['force'] = force
-        if kp is not None:
-            kwargs['positionGain'] = kp
-        if kd is not None:
-            kwargs['velocityGain'] = kd
-        if max_velocity is not None:
-            kwargs['maxVelocity'] = max_velocity
-        self.sim.setJointMotorControl2(body_id, joint_id, controlMode=control_mode, **kwargs)
-
-    def set_joint_motor_control_array(self, body_id, joint_ids, control_mode=pybullet.POSITION_CONTROL, positions=None,
-                                      velocities=None, forces=None, kps=None, kds=None):
-        """
-        Instead of making individual calls for each joint, you can pass arrays for all inputs to reduce calling
-        overhead dramatically.
-
-        Args:
-            body_id (int): body unique id.
-            joint_ids (list of int): list of joint id.
-            control_mode (int): POSITION_CONTROL (=2) (which is in fact CONTROL_MODE_POSITION_VELOCITY_PD),
-                VELOCITY_CONTROL (=0), TORQUE_CONTROL (=1) and PD_CONTROL (=3).
-            positions (list of float): list of target joint positions (used in POSITION_CONTROL) the target value is
-                target position of the joint.
-            velocities (list of float): list of target joint velocities (used in PD_CONTROL, VELOCITY_CONTROL and
-                POSITION_CONTROL).
-            forces (list of float): list of forces. In POSITION_CONTROL and VELOCITY_CONTROL, these are the maximum
-                motor forces used to reach the target values. In TORQUE_CONTROL these are the forces/torques to be
-                applied each simulation step.
-            kps (list of float): list of position (stiffness) gains (used in POSITION_CONTROL).
-            kds (list of float): list of velocity (damping) gains (used in POSITION_CONTROL).
-        """
-        kwargs = {}
-        if positions is not None:
-            kwargs['targetPositions'] = positions
-        if velocities is not None:
-            kwargs['targetVelocities'] = velocities
-        if forces is not None:
-            kwargs['forces'] = forces
-        if kps is not None:
-            kwargs['positionGains'] = kps
-        if kds is not None:
-            kwargs['velocityGains'] = kds
-        self.sim.setJointMotorControlArray(body_id, joint_ids, controlMode=control_mode, **kwargs)
+        if isinstance(joint_ids, int):
+            if positions is not None:
+                kwargs['targetPosition'] = positions
+            if velocities is not None:
+                kwargs['targetVelocity'] = velocities
+            if forces is not None:
+                kwargs['force'] = forces
+            if kp is not None:
+                kwargs['positionGain'] = kp
+            if kd is not None:
+                kwargs['velocityGain'] = kd
+            if max_velocity is not None:
+                kwargs['maxVelocity'] = max_velocity
+            self.sim.setJointMotorControl2(body_id, joint_ids, controlMode=control_mode, **kwargs)
+        else:
+            if positions is not None:
+                kwargs['targetPositions'] = positions
+            if velocities is not None:
+                kwargs['targetVelocities'] = velocities
+            if forces is not None:
+                kwargs['forces'] = forces
+            if kp is not None:
+                kwargs['positionGains'] = kp
+            if kd is not None:
+                kwargs['velocityGains'] = kd
+            self.sim.setJointMotorControlArray(body_id, joint_ids, controlMode=control_mode, **kwargs)
 
     def get_link_state(self, body_id, link_id, compute_velocity=False, compute_forward_kinematics=False):
         """
@@ -1305,8 +1358,8 @@ class Bullet(Simulator):
             np.float[3]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
             np.float[3]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
         """
-        results = self.sim.getLinkState(body_id, link_id, computeLinkVelocity=compute_velocity,
-                                        computeForwardKinematics=compute_forward_kinematics)
+        results = self.sim.getLinkState(body_id, link_id, computeLinkVelocity=int(compute_velocity),
+                                        computeForwardKinematics=int(compute_forward_kinematics))
         return [np.array(result) for result in results]
 
     def get_link_states(self, body_id, link_ids, compute_velocity=False, compute_forward_kinematics=False):
@@ -1517,7 +1570,7 @@ class Bullet(Simulator):
     def get_link_velocities(self, body_id, link_ids):
         pass
 
-    def get_qindex(self, body_id, joint_ids):
+    def get_q_indices(self, body_id, joint_ids):
         """
         Get the corresponding q index of the given joint(s).
 
@@ -1551,9 +1604,9 @@ class Bullet(Simulator):
         joint_ids = []
         for joint_id in range(self.num_joints(body_id)):
             # Get joint info
-            jnt = self.get_joint_info(body_id, joint_id)
-            if jnt[2] != self.sim.JOINT_FIXED:  # if not a fixed joint
-                joint_ids.append(jnt[0])
+            joint = self.get_joint_info(body_id, joint_id)
+            if joint[2] != self.sim.JOINT_FIXED:  # if not a fixed joint
+                joint_ids.append(joint[0])
         return joint_ids
 
     def get_joint_names(self, body_id, joint_ids):
@@ -1573,6 +1626,41 @@ class Bullet(Simulator):
         if isinstance(joint_ids, int):
             return self.sim.getJointInfo(body_id, joint_ids)[1]
         return [self.sim.getJointInfo(body_id, joint_id)[1] for joint_id in joint_ids]
+
+    def get_joint_type_ids(self, body_id, joint_ids):
+        """
+        Get the joint type ids.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list of int): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                int: joint type id.
+            if multiple joints: list of above
+        """
+        if isinstance(joint_ids, int):
+            return self.sim.getJointInfo(body_id, joint_ids)[2]
+        return [self.sim.getJointInfo(body_id, joint_id)[2] for joint_id in joint_ids]
+
+    def get_joint_type_names(self, body_id, joint_ids):
+        """
+        Get joint type names.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list of int): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                str: joint type name.
+            if multiple joints: list of above
+        """
+        joint_type_names = ['revolute', 'prismatic', 'spherical', 'planar', 'fixed', 'point2point', 'gear']
+        if isinstance(joint_ids, int):
+            return joint_type_names[self.sim.getJointInfo(body_id, joint_ids)[2]]
+        return [joint_type_names[self.sim.getJointInfo(body_id, joint_id)[2]] for joint_id in joint_ids]
 
     def get_joint_dampings(self, body_id, joint_ids):
         """
@@ -1604,7 +1692,7 @@ class Bullet(Simulator):
             if 1 joint:
                 float: friction coefficient of the given joint
             if multiple joints:
-                float[N]: friction coefficient for each specified joint
+                np.float[N]: friction coefficient for each specified joint
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointInfo(body_id, joint_ids)[7]
@@ -1642,7 +1730,7 @@ class Bullet(Simulator):
             if 1 joint:
                 float: maximum force [N]
             if multiple joints:
-                float[N]: maximum force for each specified joint [N]
+                np.float[N]: maximum force for each specified joint [N]
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointInfo(body_id, joint_ids)[10]
@@ -1699,13 +1787,8 @@ class Bullet(Simulator):
             kds (None, float, np.float[N]): velocity gain(s)
             forces (None, float, np.float[N]): maximum motor force(s)/torque(s) used to reach the target values.
         """
-        if isinstance(joint_ids, int):
-            self.set_joint_motor_control(body_id, joint_ids, control_mode=pybullet.POSITION_CONTROL, position=positions,
-                                         velocity=velocities, force=forces, kp=kps, kd=kds)
-        else:
-            self.set_joint_motor_control_array(body_id, joint_ids, control_mode=pybullet.POSITION_CONTROL,
-                                               positions=positions, velocities=velocities, forces=forces, kps=kps,
-                                               kds=kds)
+        self.set_joint_motor_control(body_id, joint_ids, control_mode=pybullet.POSITION_CONTROL, positions=positions,
+                                     velocities=velocities, forces=forces, kp=kps, kd=kds)
 
     def get_joint_positions(self, body_id, joint_ids):
         """
@@ -1796,7 +1879,7 @@ class Bullet(Simulator):
 
         # if joint accelerations vector is not the same size as the actuated joints
         if len(accelerations) != num_actuated_joints:
-            q_idx = self.get_qindex(joint_ids)
+            q_idx = self.get_q_indices(joint_ids)
             acc = np.zeros(num_actuated_joints)
             acc[q_idx] = accelerations
             accelerations = acc
@@ -1806,7 +1889,7 @@ class Bullet(Simulator):
 
         # get corresponding torques
         if len(torques) != len(joint_ids):
-            q_idx = self.get_qindex(joint_ids)
+            q_idx = self.get_q_indices(joint_ids)
             torques = torques[q_idx]
 
         # set the joint torques
@@ -1844,7 +1927,7 @@ class Bullet(Simulator):
         accelerations = self.calculate_forward_dynamics(body_id, q, dq, torques=torques)
 
         # return the specified accelerations
-        q_idx = self.get_qindex(body_id, joint_ids)
+        q_idx = self.get_q_indices(body_id, joint_ids)
         return accelerations[q_idx]
 
     def set_joint_torques(self, body_id, joint_ids, torques):
@@ -1992,26 +2075,33 @@ class Bullet(Simulator):
 
     def get_visual_shape_data(self, object_id, flags=-1):
         """
-        Get the visual shape data associated with the given object id.
+        Get the visual shape data associated with the given object id. It will output a list of visual shape data.
 
         Args:
             object_id (int): object unique id.
             flags (int, None): VISUAL_SHAPE_DATA_TEXTURE_UNIQUE_IDS (=1) will also provide `texture_unique_id`.
 
         Returns:
-            int: object unique id.
-            int: link index or -1 for the base
-            int: visual geometry type (TBD)
-            np.float[3]: dimensions (size, local scale) of the geometry
-            str: path to the triangle mesh, if any. Typically relative to the URDF, SDF or MJCF file location, but
-                could be absolute
-            np.float[3]: position of local visual frame, relative to link/joint frame
-            np.float[4]: orientation of local visual frame relative to link/joint frame
-            list of 4 floats: URDF color (if any specified) in Red / Green / Blue / Alpha
-            int: texture unique id of the shape or -1 if None. This field only exists if using
-                VISUAL_SHAPE_DATA_TEXTURE_UNIQUE_IDS (=1) flag.
+            list:
+                int: object unique id.
+                int: link index or -1 for the base
+                int: visual geometry type (TBD)
+                np.float[3]: dimensions (size, local scale) of the geometry
+                str: path to the triangle mesh, if any. Typically relative to the URDF, SDF or MJCF file location, but
+                    could be absolute
+                np.float[3]: position of local visual frame, relative to link/joint frame
+                np.float[4]: orientation of local visual frame relative to link/joint frame
+                list of 4 floats: URDF color (if any specified) in Red / Green / Blue / Alpha
+                int: texture unique id of the shape or -1 if None. This field only exists if using
+                    VISUAL_SHAPE_DATA_TEXTURE_UNIQUE_IDS (=1) flag.
         """
-        return self.sim.getVisualShapeData(object_id, flags=flags)
+        shapes = list(self.sim.getVisualShapeData(object_id, flags=flags))
+        for idx, shape in enumerate(shapes):
+            shapes[idx] = list(shape)
+            shapes[idx][3] = np.array(shape[3])
+            shapes[idx][5] = np.array(shape[5])
+            shapes[idx][6] = np.array(shape[6])
+        return shapes
 
     def change_visual_shape(self, object_id, link_id, shape_id=None, texture_id=None, rgba_color=None,
                             specular_color=None):
@@ -2071,7 +2161,8 @@ class Bullet(Simulator):
             [1] http://www.codinglabs.net/article_world_view_projection_matrix.aspx
             [2] http://www.thecodecrate.com/opengl-es/opengl-transformation-matrices/
         """
-        view = self.sim.computeViewMatrix(eyePosition=eye_position, targetPosition=target_position, upVector=up_vector)
+        view = self.sim.computeViewMatrix(cameraEyePosition=eye_position, cameraTargetPosition=target_position,
+                                          cameraUpVector=up_vector)
         return np.array(view).reshape(4, 4).T
 
     def compute_view_matrix_from_ypr(self, target_position, distance, yaw, pitch, roll, up_axis_index=2):
@@ -2096,7 +2187,7 @@ class Bullet(Simulator):
             [1] http://www.codinglabs.net/article_world_view_projection_matrix.aspx
             [2] http://www.thecodecrate.com/opengl-es/opengl-transformation-matrices/
         """
-        view = self.sim.computeViewMatrixFromYawPitchRoll(targetPosition=target_position, distance=distance,
+        view = self.sim.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=target_position, distance=distance,
                                                           yaw=np.rad2deg(yaw), pitch=np.rad2deg(pitch),
                                                           roll=np.rad2deg(roll), upAxisIndex=up_axis_index)
         return np.array(view).reshape(4, 4).T
@@ -2189,7 +2280,7 @@ class Bullet(Simulator):
                 z-buffer. See https://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
                 Using the projection matrix, the depth is computed as:
                 `depth = far * near / (far - (far - near) * depthImg)`, where `depthImg` is the depth from Bullet
-                `getCameraImage`, far=1000. and near=0.01.
+                `get_camera_image`, far=1000. and near=0.01.
             np.int[width, height]: Segmentation mask buffer. For each pixels the visible object unique id.
                 If ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX (=1) is used, the segmentationMaskBuffer combines the
                 object unique id and link index as follows: value = objectUniqueId + (linkIndex+1)<<24.
@@ -2346,7 +2437,7 @@ class Bullet(Simulator):
                 z-buffer. See https://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
                 Using the projection matrix, the depth is computed as:
                 `depth = far * near / (far - (far - near) * depthImg)`, where `depthImg` is the depth from Bullet
-                `getCameraImage`, far=1000. and near=0.01.
+                `get_camera_image`, far=1000. and near=0.01.
         """
         kwargs = {}
         if view_matrix is not None:
@@ -2572,16 +2663,16 @@ class Bullet(Simulator):
         aabb_min, aabb_max = self.sim.getAABB(body_id, link_id)
         return np.array(aabb_min), np.array(aabb_max)
 
-    def get_contact_points(self, body_a, body_b, link_id_a=None, link_id_b=None):
+    def get_contact_points(self, body1, body2, link1_id=None, link2_id=None):
         """
         Returns the contact points computed during the most recent call to `step`.
 
         Args:
-            body_a (int): only report contact points that involve body A
-            body_b (int): only report contact points that involve body B. Important: you need to have a valid body A
+            body1 (int): only report contact points that involve body A
+            body2 (int): only report contact points that involve body B. Important: you need to have a valid body A
                 if you provide body B
-            link_id_a (int): only report contact points that involve link index of body A
-            link_id_b (int): only report contact points that involve link index of body B
+            link1_id (int): only report contact points that involve link index of body A
+            link2_id (int): only report contact points that involve link index of body B
 
         Returns:
             list:
@@ -2601,14 +2692,14 @@ class Bullet(Simulator):
                 np.float[3]: second lateral friction direction
         """
         kwargs = {}
-        if body_a is not None:
-            kwargs['bodyA'] = body_a
-            if link_id_a is not None:
-                kwargs['linkIndexA'] = link_id_a
-        if body_b is not None:
-            kwargs['bodyB'] = body_b
-            if link_id_b is not None:
-                kwargs['linkIndexB'] = link_id_b
+        if body1 is not None:
+            kwargs['bodyA'] = body1
+            if link1_id is not None:
+                kwargs['linkIndexA'] = link1_id
+        if body2 is not None:
+            kwargs['bodyB'] = body2
+            if link2_id is not None:
+                kwargs['linkIndexB'] = link2_id
 
         results = self.sim.getContactPoints(**kwargs)
         if len(results) == 0:
@@ -2616,18 +2707,18 @@ class Bullet(Simulator):
         return [[r[0], r[1], r[2], r[3], r[4], np.array(r[5]), np.array(r[6]), np.array(r[7]), r[8], r[9], r[10],
                  np.array(r[11]), r[12], np.array(r[13])] for r in results]
 
-    def get_closest_points(self, body_a, body_b, distance, link_id_a=None, link_id_b=None):
+    def get_closest_points(self, body1, body2, distance, link1_id=None, link2_id=None):
         """
         Computes the closest points, independent from `step`. This also lets you compute closest points of objects
         with an arbitrary separating distance. In this query there will be no normal forces reported.
 
         Args:
-            body_a (int): only report contact points that involve body A
-            body_b (int): only report contact points that involve body B. Important: you need to have a valid body A
+            body1 (int): only report contact points that involve body A
+            body2 (int): only report contact points that involve body B. Important: you need to have a valid body A
                 if you provide body B
             distance (float): If the distance between objects exceeds this maximum distance, no points may be returned.
-            link_id_a (int): only report contact points that involve link index of body A
-            link_id_b (int): only report contact points that involve link index of body B
+            link1_id (int): only report contact points that involve link index of body A
+            link2_id (int): only report contact points that involve link index of body B
 
         Returns:
             list:
@@ -2647,12 +2738,12 @@ class Bullet(Simulator):
                 np.float[3]: second lateral friction direction
         """
         kwargs = {}
-        if link_id_a is not None:
-            kwargs['linkIndexA'] = link_id_a
-        if link_id_b is not None:
-            kwargs['linkIndexB'] = link_id_b
+        if link1_id is not None:
+            kwargs['linkIndexA'] = link1_id
+        if link2_id is not None:
+            kwargs['linkIndexB'] = link2_id
 
-        results = self.sim.getContactPoints(body_a, body_b, distance, **kwargs)
+        results = self.sim.getContactPoints(body1, body2, distance, **kwargs)
         if len(results) == 0:
             return results
         return [[r[0], r[1], r[2], r[3], r[4], np.array(r[5]), np.array(r[6]), np.array(r[7]), r[8], r[9], r[10],
@@ -2667,18 +2758,19 @@ class Bullet(Simulator):
             to_position (np.float[3]): end of the ray in world coordinates
 
         Returns:
-            int: object unique id of the hit object
-            int: link index of the hit object, or -1 if none/parent
-            float: hit fraction along the ray in range [0,1] along the ray.
-            np.float[3]: hit position in Cartesian world coordinates
-            np.float[3]: hit normal in Cartesian world coordinates
+            list:
+                int: object unique id of the hit object
+                int: link index of the hit object, or -1 if none/parent
+                float: hit fraction along the ray in range [0,1] along the ray.
+                np.float[3]: hit position in Cartesian world coordinates
+                np.float[3]: hit normal in Cartesian world coordinates
         """
         if isinstance(from_position, np.ndarray):
             from_position = from_position.ravel().tolist()
         if isinstance(to_position, np.ndarray):
             to_position = to_position.ravel().tolist()
-        object_id, link_id, hit_fraction, position, normal = self.sim.rayTest(from_position, to_position)
-        return object_id, link_id, hit_fraction, np.array(position), np.array(normal)
+        collisions = self.sim.rayTest(from_position, to_position)
+        return [[c[0], c[1], c[2], np.array(c[3]), np.array(c[4])] for c in collisions]
 
     def ray_test_batch(self, from_positions, to_positions, parent_object_id=None, parent_link_id=None):
         """Perform a batch of raycasts to find the intersection information of the first objects hit.
@@ -2733,18 +2825,18 @@ class Bullet(Simulator):
         """
         self.sim.setCollisionFilterGroupMask(body_id, link_id, filter_group, filter_mask)
 
-    def set_collision_filter_pair(self, body_a, body_b, link_a=-1, link_b=-1, enable=True):
+    def set_collision_filter_pair(self, body1, body2, link1=-1, link2=-1, enable=True):
         """
         Enable/disable collision between two bodies/links.
 
         Args:
-            body_a (int): unique id of body A to be filtered
-            body_b (int): unique id of body B to be filtered, A==B implies self-collision
-            link_a (int): link index of body A
-            link_b (int): link index of body B
+            body1 (int): unique id of body A to be filtered
+            body2 (int): unique id of body B to be filtered, A==B implies self-collision
+            link1 (int): link index of body A
+            link2 (int): link index of body B
             enable (bool): True to enable collision, False to disable collision
         """
-        self.sim.setCollisionFilterPair(body_a, body_b, link_a, link_b, int(enable))
+        self.sim.setCollisionFilterPair(body1, body2, link1, link2, int(enable))
 
     ###########################
     # Kinematics and Dynamics #
@@ -2771,8 +2863,10 @@ class Bullet(Simulator):
             float: damping of contact constraints. -1 if not available.
             float: stiffness of contact constraints. -1 if not available.
         """
-        mass, friction, inertia, pos, quat, restitution, roll, spin, kd, kp = self.sim.getDynamicsInfo(body_id, link_id)
-        return mass, friction, np.array(inertia), np.array(pos), np.array(quat), restitution, roll, spin, kd, kp
+        info = list(self.sim.getDynamicsInfo(body_id, link_id))
+        for i in range(2, 5):
+            info[i] = np.array(info[i])
+        return info
 
     def change_dynamics(self, body_id, link_id=-1, mass=None, lateral_friction=None, spinning_friction=None,
                         rolling_friction=None, restitution=None, linear_damping=None, angular_damping=None,
@@ -2894,7 +2988,7 @@ class Bullet(Simulator):
             np.float[N,N], np.float[6+N,6+N]: inertia matrix
         """
         if isinstance(q, np.ndarray):
-            q = q.ravel().tolist()
+            q = q.ravel().tolist()    # Note that pybullet doesn't accept numpy arrays here
         return np.array(self.sim.calculateMassMatrix(body_id, q))
 
     def calculate_inverse_kinematics(self, body_id, link_id, position, orientation=None, lower_limits=None,
@@ -2927,7 +3021,7 @@ class Bullet(Simulator):
             solver (int): p.IK_DLS (=0) or p.IK_SDLS (=1), Damped Least Squares or Selective Damped Least Squares, as
                 described in the paper by Samuel Buss "Selectively Damped Least Squares for Inverse Kinematics".
             q_curr (np.float[N]): list of joint positions. By default PyBullet uses the joint positions of the body.
-                If provided, the targetPosition and targetOrientation is in local space!
+                If provided, the target_position and targetOrientation is in local space!
             max_iters (int): maximum number of iterations. Refine the IK solution until the distance between target
                 and actual end effector position is below this threshold, or the `max_iters` is reached.
             threshold (float): residual threshold. Refine the IK solution until the distance between target and actual
@@ -3058,7 +3152,7 @@ class Bullet(Simulator):
             torques (np.float[N]): desired joint torques
 
         Returns:
-            float[N]: joint accelerations computed using the rigid-body equation of motion
+            np.float[N]: joint accelerations computed using the rigid-body equation of motion
 
         References:
             [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1

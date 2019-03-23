@@ -8,10 +8,13 @@ from pyrobolearn.robots.robot import Robot
 
 
 class WheeledRobot(Robot):
+    r"""Wheeled robot
 
-    def __init__(self, simulator, urdf_path, init_pos=(0, 0, 1.), init_orient=(0, 0, 0, 1), useFixedBase=False,
-                 scaling=1.):
-        super(WheeledRobot, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+    This type of robots has wheels.
+    """
+
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
+        super(WheeledRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
 
         self.wheels = []
         self.wheel_directions = []
@@ -22,23 +25,14 @@ class WheeledRobot(Robot):
 
     @property
     def num_wheels(self):
-        """Return the number of wheels"""
+        """Return the number of wheels."""
         return len(self.wheels)
 
     ###########
     # Methods #
     ###########
 
-    def getNumberOfWheels(self):
-        """
-        Return the number of wheels.
-
-        Returns:
-            int: the number of wheels.
-        """
-        return self.num_wheels
-
-    def getWheelIds(self, wheels=None):
+    def get_wheel_ids(self, wheels=None):
         """
         Return the wheel id associated with the given wheel number(s)/name(s).
 
@@ -48,46 +42,42 @@ class WheeledRobot(Robot):
         Returns:
             list[int]: wheel id(s)
         """
-        if wheels:
+        if wheels is not None:
             if isinstance(wheels, int):
                 return self.wheels[wheels]
             elif isinstance(wheels, str):
-                return self.wheels[self.getLinkIds(wheels)]
+                return self.wheels[self.get_link_ids(wheels)]
             elif isinstance(wheels, (list, tuple)):
-                wheelIds = []
+                wheel_ids = []
                 for wheel in wheels:
-                    if isinstance(wheels, int):
-                        wheelIds.append(self.wheels[wheels])
-                    elif isinstance(wheels, str):
-                        wheelIds.append(self.wheels[self.getLinkIds(wheels)])
+                    if isinstance(wheel, int):
+                        wheel_ids.append(self.wheels[wheel])
+                    elif isinstance(wheel, str):
+                        wheel_ids.append(self.wheels[self.get_link_ids(wheel)])
                     else:
                         raise TypeError("Expecting a str or int for items in wheels")
-                return wheelIds
+                return wheel_ids
         return self.wheels
-
-    def getWheelNames(self, wheelId=None):
-        """Return the wheel names associated to the given ids"""
-        return self.getLinkNames(wheelId)
 
     def drive(self, speed):
         if isinstance(speed, (int, float)):
             speed = speed * np.ones(self.num_wheels)
             speed = speed * self.wheel_directions
-        self.setJointVelocities(speed, self.wheels)
+        self.set_joint_velocities(speed, self.wheels)
 
     def stop(self):
-        self.setJointVelocities(np.zeros(self.num_wheels), self.wheels)
+        self.set_joint_velocities(np.zeros(self.num_wheels), self.wheels)
 
-    def driveForward(self, speed):
+    def drive_forward(self, speed):
         self.drive(speed)
 
-    def driveBackward(self, speed):
+    def drive_backward(self, speed):
         self.drive(-speed)
 
-    def turnRight(self):
+    def turn_right(self):
         pass
 
-    def turnLeft(self):
+    def turn_left(self):
         pass
 
 
@@ -109,9 +99,8 @@ class DifferentialWheeledRobot(WheeledRobot):
             http://www.robotplatform.com/knowledge/Classification_of_Robots/wheel_control_theory.html
     """
 
-    def __init__(self, simulator, urdf_path, init_pos=(0, 0, 1.), init_orient=(0, 0, 0, 1), useFixedBase=False,
-                 scaling=1.):
-        super(DifferentialWheeledRobot, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase,
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
+        super(DifferentialWheeledRobot, self).__init__(simulator, urdf, position, orientation, fixed_base,
                                                        scaling)
 
 
@@ -131,13 +120,13 @@ class AckermannWheeledRobot(WheeledRobot):
         [3] Wheel Control Theory:
             http://www.robotplatform.com/knowledge/Classification_of_Robots/wheel_control_theory.html
     """
-    def __init__(self, simulator, urdf_path, init_pos=(0, 0, 1.), init_orient=(0, 0, 0, 1), useFixedBase=False,
-                 scaling=1.):
-        super(AckermannWheeledRobot, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase,
+
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
+        super(AckermannWheeledRobot, self).__init__(simulator, urdf, position, orientation, fixed_base,
                                                     scaling)
 
         self.steering = 0   # id of steering joint
 
-    def setSteering(self, angle):
+    def set_steering(self, angle):
         """Set steering angle"""
         pass

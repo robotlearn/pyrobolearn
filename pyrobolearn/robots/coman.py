@@ -16,42 +16,42 @@ class Coman(BipedRobot, BiManipulatorRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 0.5),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 position=(0, 0, 0.5),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/coman/coman.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/coman/coman.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.5)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.5,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 0.5)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.5,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(Coman, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Coman, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'coman'
 
-        self.torso = [self.getLinkIds(link) for link in ['DWL', 'DWS', 'DWYTorso'] if link in self.link_names]
+        self.torso = [self.get_link_ids(link) for link in ['DWL', 'DWS', 'DWYTorso'] if link in self.link_names]
 
-        self.legs = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['LHipMot', 'LThighUpLeg', 'LThighLowLeg', 'LLowLeg', 'LFootmot', 'LFoot'],
                                    ['RHipMot', 'RThighUpLeg', 'RThighLowLeg', 'RLowLeg', 'RFootmot', 'RFoot']]]
 
-        self.feet = [self.getLinkIds(link) for link in ['LFoot', 'RFoot'] if link in self.link_names]
+        self.feet = [self.get_link_ids(link) for link in ['LFoot', 'RFoot'] if link in self.link_names]
 
-        self.arms = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.arms = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['LShp', 'LShr', 'LShy', 'LElb', 'LForearm', 'LWrMot2', 'LWrMot3'],
                                    ['RShp', 'RShr', 'RShy', 'RElb', 'RForearm', 'RWrMot2', 'RWrMot3']]]
 
-        self.hands = [self.getLinkIds(link) for link in ['LSoftHand', 'RSoftHand'] if link in self.link_names]
+        self.hands = [self.get_link_ids(link) for link in ['LSoftHand', 'RSoftHand'] if link in self.link_names]
 
         # move a little bit the arms
-        # self.setJointPositions([-np.pi/12, np.pi/12], [self.joints[i] for i in [4,11]]) # shoulder
-        # self.setJointPositions([-np.pi / 4, -np.pi / 4], [self.joints[i] for i in [6, 13]]) # elbow
-        # self.setJointPositions([-np.pi/4, -np.pi/4], [self.joints[i] for i in [17,23]])
+        # self.set_joint_positions([-np.pi/12, np.pi/12], [self.joints[i] for i in [4,11]]) # shoulder
+        # self.set_joint_positions([-np.pi / 4, -np.pi / 4], [self.joints[i] for i in [6, 13]]) # elbow
+        # self.set_joint_positions([-np.pi/4, -np.pi/4], [self.joints[i] for i in [17,23]])
         # for _ in range(10):
         #     self.sim.stepSimulation()
 
@@ -69,23 +69,23 @@ if __name__ == "__main__":
     world = BasicWorld(sim)
 
     # create robot
-    robot = Coman(sim, useFixedBase=True)
+    robot = Coman(sim, fixed_base=True)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
     print(robot.link_names)
 
     # # Position control using sliders
-    # robot.addJointSlider()
+    # robot.add_joint_slider()
 
-    robot.changeTransparency()
-    # robot.drawLinkCoMs()
-    robot.drawLinkFrames()
-    # robot.drawBoundingBoxes(robot.right_leg[4])
+    robot.change_transparency()
+    # robot.draw_link_coms()
+    robot.draw_link_frames()
+    # robot.draw_bounding_boxes(robot.right_leg[4])
 
     # run simulator
     for _ in count():
-        # robot.updateJointSlider()
-        # robot.computeAndDrawCoMPosition()
-        # robot.computeAndDrawProjectedCoMPosition()
+        # robot.update_joint_slider()
+        # robot.compute_and_draw_com_position()
+        # robot.compute_and_draw_projected_com_position()
         world.step(sleep_dt=1./240)

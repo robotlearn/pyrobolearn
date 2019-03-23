@@ -18,7 +18,7 @@ world = BasicWorld(sim)
 robot = Quadcopter(sim)
 
 # print information about the robot
-robot.printRobotInfo()
+robot.print_info()
 
 rpm = robot.getStationaryRPM()
 print("Stationary RPM: {}".format(rpm))
@@ -27,6 +27,6 @@ v = [v, -v, v, -v]
 
 # run simulation
 for i in count():
-    robot.setJointVelocities(v)
+    robot.set_joint_velocities(v)
     # step in simulation
     world.step(sleep_dt=1./240)

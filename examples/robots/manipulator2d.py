@@ -14,14 +14,14 @@ sim = BulletSim()
 world = BasicWorld(sim)
 
 # create robot
-robot = Manipulator2D(sim, init_pos=(0, -0.25, 0))
-robot1 = Manipulator2D(sim, init_pos=(0, 0.25, 0))
-robot.printRobotInfo()
+robot = Manipulator2D(sim, position=(0, -0.25, 0))
+robot1 = Manipulator2D(sim, position=(0, 0.25, 0))
+robot.print_info()
 
 # Position control using sliders
-# robot.addJointSlider()
+# robot.add_joint_slider()
 
 # run simulator
 for _ in count():
-    # robot.updateJointSlider()
+    # robot.update_joint_slider()
     world.step(sleep_dt=1./240)

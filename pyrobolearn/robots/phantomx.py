@@ -16,22 +16,22 @@ class PhantomX(HexapodRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 0.2),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 position=(0, 0, 0.2),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/phantomx/phantomx.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/phantomx/phantomx.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.2)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.2,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 0.2)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.2,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(PhantomX, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(PhantomX, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'phantomx'
 
 
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     robot = PhantomX(sim)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
     # run simulation
     for i in count():

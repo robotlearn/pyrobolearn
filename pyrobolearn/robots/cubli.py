@@ -24,26 +24,26 @@ class Cubli(Robot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 0.5),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 position=(0, 0, 0.5),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/cubli/cubli.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/cubli/cubli.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.5)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.5,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 0.5)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.5,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(Cubli, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Cubli, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'cubli'
 
         # disable each motor joint
-        self.disableMotor()
+        self.disable_motor()
 
 
 # Test
@@ -66,8 +66,8 @@ if __name__ == "__main__":
     robot = Cubli(sim, position, orientation, scaling=scale)
 
     # print information about the robot
-    robot.printRobotInfo()
-    H = robot.calculateMassMatrix(qIdx=slice(6, 6+len(robot.joints)))  # floating base, thus keep only the last q
+    robot.print_info()
+    H = robot.get_mass_matrix(q_idx=slice(6, 6 + len(robot.joints)))  # floating base, thus keep only the last q
     print("Inertia matrix: H(q) = {}\n".format(H))
 
     # PD control
@@ -77,13 +77,13 @@ if __name__ == "__main__":
 
     for i in count():
         # get state
-        quaternion = robot.getBaseOrientation(False)
-        w = robot.getBaseAngularVelocity()
+        quaternion = robot.get_base_orientation(False)
+        w = robot.get_base_angular_velocity()
         euler = pybullet.getEulerFromQuaternion(quaternion.tolist())
 
         # PD control
         torques = [-Kp * (desired_roll - euler[0]) + Kd * w[0], 0., 0.]
-        robot.setJointTorques(torques)
+        robot.set_joint_torques(torques)
 
         # step in simulation
         world.step(sleep_dt=1./240)

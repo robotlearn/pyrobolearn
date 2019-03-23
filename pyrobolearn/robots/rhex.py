@@ -23,28 +23,28 @@ class Rhex(HexapodRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 0.12),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 position=(0, 0, 0.12),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/rhex/rhex.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/rhex/rhex.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.12)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.12,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 0.12)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.12,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(Rhex, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Rhex, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'rhex'
 
-        self.legs = [[self.getLinkIds(link + str(idx))] for link, idx in zip(['leg']*6, range(1, 7))
+        self.legs = [[self.get_link_ids(link + str(idx))] for link, idx in zip(['leg'] * 6, range(1, 7))
                      if link + str(idx) in self.link_names]
 
-        self.feet = [self.getLinkIds(link + str(idx)) for link, idx in zip(['leg']*6, range(1, 7))
+        self.feet = [self.get_link_ids(link + str(idx)) for link, idx in zip(['leg'] * 6, range(1, 7))
                      if link + str(idx) in self.link_names]
 
         self.leg_axis = np.ones(len(self.feet))
@@ -53,7 +53,7 @@ class Rhex(HexapodRobot):
         if isinstance(speed, (int, float)):
             speed = speed * np.ones(len(self.feet))
             speed = speed * self.leg_axis
-        self.setJointVelocities(speed, self.feet)
+        self.set_joint_velocities(speed, self.feet)
 
 
 # Test
@@ -72,14 +72,14 @@ if __name__ == "__main__":
     robot = Rhex(sim)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
     # Position control using sliders
-    # robot.addJointSlider(robot.right_back_leg)
+    # robot.add_joint_slider(robot.right_back_leg)
 
     # run simulation
     for i in count():
-        # robot.updateJointSlider()
+        # robot.update_joint_slider()
         robot.drive(2)
         # step in simulation
         world.step(sleep_dt=1./240)

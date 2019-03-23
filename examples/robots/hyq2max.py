@@ -12,21 +12,21 @@ sim = BulletSim()
 
 # create world
 world = BasicWorld(sim)
-world.loadJapaneseMonastery()
+world.load_japanese_monastery()
 
 # create robot
 robot = HyQ2Max(sim)
 
 # print information about the robot
-robot.printRobotInfo()
+robot.print_info()
 
 # Position control using sliders
-# robot.addJointSlider(robot.getLeftFrontLegIds())
+# robot.add_joint_slider(robot.getLeftFrontLegIds())
 
 # run simulator
 for _ in count():
-    # robot.updateJointSlider()
-    robot.computeAndDrawCoMPosition()
-    robot.computeAndDrawProjectedCoMPosition()
+    # robot.update_joint_slider()
+    robot.compute_and_draw_com_position()
+    robot.compute_and_draw_projected_com_position()
 
     world.step(sleep_dt=1./240)

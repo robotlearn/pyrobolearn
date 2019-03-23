@@ -18,29 +18,29 @@ world = BasicWorld(sim)
 robot = WAM(sim)
 
 # print information about the robot
-robot.printRobotInfo()
-# H = robot.calculateMassMatrix()
+robot.print_info()
+# H = robot.get_mass_matrix()
 # print("Inertia matrix: H(q) = {}".format(H))
 
-robot.setJointPositions([np.pi / 4, np.pi / 2], jointId=[0,1]) #2, 4])
+robot.set_joint_positions([np.pi / 4, np.pi / 2], joint_ids=[0, 1]) #2, 4])
 
-Jlin = robot.calculateJacobian(6, localPosition=(0., 0., 0.))[:3]
-robot.drawVelocityManipulabilityEllipsoid(6, Jlin, color=(1,0,0,0.7))
+Jlin = robot.get_jacobian(6)[:3]
+robot.draw_velocity_manipulability_ellipsoid(6, Jlin, color=(1, 0, 0, 0.7))
 for _ in range(5):
     world.step(sleep_dt=1./240)
 
-Jlin = robot.calculateJacobian(6, localPosition=(0., 0., 0.))[:3]
-robot.drawVelocityManipulabilityEllipsoid(6, Jlin, color=(0, 0, 1, 0.7))
+Jlin = robot.get_jacobian(6)[:3]
+robot.draw_velocity_manipulability_ellipsoid(6, Jlin, color=(0, 0, 1, 0.7))
 for _ in range(45):
     world.step(sleep_dt=1./240)
 
-Jlin = robot.calculateJacobian(6, localPosition=(0., 0., 0.))[:3]
-robot.drawVelocityManipulabilityEllipsoid(6, Jlin)
+Jlin = robot.get_jacobian(6)[:3]
+robot.draw_velocity_manipulability_ellipsoid(6, Jlin)
 
 for i in count():
     if i%1000 == 0:
-        print("Joint Torques: {}".format(robot.getJointTorques()))
-        print("Gravity Torques: {}".format(robot.getGravityCompensationTorques()))
-        print("Compensation Torques: {}".format(robot.getCoriolisAndGravityCompensationTorques()))
+        print("Joint Torques: {}".format(robot.get_joint_torques()))
+        print("Gravity Torques: {}".format(robot.get_gravity_compensation_torques()))
+        print("Compensation Torques: {}".format(robot.get_coriolis_and_gravity_compensation_torques()))
     # step in simulation
     world.step(sleep_dt=1./240)

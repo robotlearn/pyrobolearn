@@ -7,6 +7,7 @@ Dependencies:
 """
 
 import collections
+import inspect
 import multiprocessing
 import os
 import numpy as np
@@ -14,9 +15,11 @@ import numpy as np
 import cv2
 import time
 
+from pyrobolearn.simulators import Simulator
+
 from pyrobolearn.utils.converter import QuaternionListConverter
 # from pyrobolearn.utils.heightmap_generator import *  # TODO: problem with gdal installation
-from pyrobolearn.utils import hasMethod, hasVariable, isClass
+from pyrobolearn.utils import has_method, has_variable
 
 from pyrobolearn.robots import Robot, robot_names_to_classes
 # from pyrobolearn.tools.bridges.bridge import Bridge
@@ -71,10 +74,10 @@ class WorldCamera(object):
         """
         Return all the information about the camera.
         """
-        return self.getDebugVisualizerCamera(convert=False)
+        return self.get_debug_visualizer_camera(convert=False)
 
     # alias
-    def getDebugVisualizerCamera(self, convert=True):
+    def get_debug_visualizer_camera(self, convert=True):
         """
         Return all the information provided by the camera.
 
@@ -84,9 +87,9 @@ class WorldCamera(object):
         Returns:
             width (int): width of the camera image in pixels
             height (int): height of the camera image in pixels
-            viewMatrix (float[16], float[4x4]): view matrix of the camera
-            projectionMatrix (float[16], float[4x4]): projection matrix of the camera
-            cameraUp (float[3]): up axis of the camera, in Cartesian world space coordinates
+            view_matrix (float[16], float[4x4]): view matrix of the camera
+            projection_matrix (float[16], float[4x4]): projection matrix of the camera
+            camera_up (float[3]): up axis of the camera, in Cartesian world space coordinates
             cameraForward (float[3]): forward axis of the camera, in Cartesian world space coordinates
             horizontal (float[3]): TBD. This is a horizontal vector that can be used to generate rays (for mouse
                 picking or creating a simple ray tracer for example)
@@ -98,49 +101,31 @@ class WorldCamera(object):
             target (float[3]): target of the camera, in Cartesian world space coordinates
 
         """
-        if convert:
-            width, height, viewMatrix, projectionMatrix, cameraUp,\
-                cameraForward, horizontal, vertical, yaw, pitch, dist, target = self.sim.getDebugVisualizerCamera()
-
-            # convert
-            viewMatrix = np.array(viewMatrix).reshape(4, 4).T
-            projectionMatrix = np.array(projectionMatrix).reshape(4, 4).T
-            cameraUp = np.array(cameraUp)
-            cameraForward = np.array(cameraForward)
-            horizontal = np.array(horizontal)
-            vertical = np.array(vertical)
-            target = np.array(target)
-            yaw, pitch = np.deg2rad(yaw), np.deg2rad(pitch)
-
-            # return
-            return width, height, viewMatrix, projectionMatrix, cameraForward, cameraForward, horizontal, vertical,\
-                    yaw, pitch, dist, target
-        return self.sim.getDebugVisualizerCamera()
+        return self.sim.get_debug_visualizer()
 
     @property
     def width(self):
         """
         Return the width of the pictures (in pixel)
         """
-        return self.sim.getDebugVisualizerCamera()[0]
+        return self.sim.get_debug_visualizer()[0]
 
     @property
     def height(self):
         """
         Return the height of the pictures (in pixel)
         """
-        return self.sim.getDebugVisualizerCamera()[1]
+        return self.sim.get_debug_visualizer()[1]
 
     @property
     def V(self):
         """
         Return the view matrix, which maps from the world to the view space.
         """
-        viewMatrix = self.sim.getDebugVisualizerCamera()[2]
-        return np.array(viewMatrix).reshape(4, 4).T
+        return self.sim.get_debug_visualizer()[2]
 
     # alias
-    viewMatrix = V
+    view_matrix = V
 
     @property
     def Vinv(self):
@@ -154,11 +139,10 @@ class WorldCamera(object):
         """
         Return the projection matrix, which maps from the view to the projected/clipped space.
         """
-        projectionMatrix = self.sim.getDebugVisualizerCamera()[3]
-        return np.array(projectionMatrix).reshape(4, 4).T
+        return self.sim.get_debug_visualizer()[3]
 
     # alias
-    projectionMatrix = P
+    projection_matrix = P
 
     @property
     def Pinv(self):
@@ -172,13 +156,13 @@ class WorldCamera(object):
         """
         Return the viewport matrix, which maps from the normalized clip coordinates to pixel coordinates.
         """
-        width, height = self.sim.getDebugVisualizerCamera()[:2]
+        width, height = self.sim.get_debug_visualizer()[:2]
         return np.array([[width / 2, 0, 0, width / 2],
                          [0, height / 2, 0, height / 2],
                          [0, 0, 0.5, 0.5],
                          [0, 0, 0, 1]])
 
-    viewportMatrix = Vp
+    viewport_matrix = Vp
 
     @property
     def Vp_inv(self):
@@ -187,13 +171,11 @@ class WorldCamera(object):
         """
         return np.linalg.inv(self.Vp)
 
-    def getMatrices(self, inverse=False):
+    def get_matrices(self, inverse=False):
         """
         Return the view, projection, and viewport matrices.
         """
-        width, height, V, P = self.sim.getDebugVisualizerCamera()[:4]
-        V = np.array(V).reshape(4, 4).T
-        P = np.array(P).reshape(4, 4).T
+        width, height, V, P = self.sim.get_debug_visualizer()[:4]
         Vp = np.array([[width / 2, 0, 0, width / 2],
                          [0, height / 2, 0, height / 2],
                          [0, 0, 0.5, 0.5],
@@ -206,134 +188,133 @@ class WorldCamera(object):
         return V, P, Vp
 
     @property
-    def upVector(self):
+    def up_vector(self):
         """
         Return the up axis of the camera in the Cartesian world space coordinates
         """
-        return np.array(self.sim.getDebugVisualizerCamera()[4])
+        return self.sim.get_debug_visualizer()[4]
 
     @property
-    def forwardVector(self):
+    def forward_vector(self):
         """
         Return the forward axis of the camera in the Cartesian world space coordinates.
         """
-        return np.array(self.sim.getDebugVisualizerCamera()[5])
+        return self.sim.get_debug_visualizer()[5]
 
-    def getVectors(self):
+    def get_vectors(self):
         """
         Return the forward, up, and lateral vectors of the camera.
         """
-        upVector, forwardVector = self.sim.getDebugVisualizerCamera()[4:6]
-        upVector, forwardVector = np.array(upVector), np.array(forwardVector)
-        lateralVector = np.cross(forwardVector, upVector)
-        return forwardVector, upVector, lateralVector
+        up_vector, forward_vector = self.sim.get_debug_visualizer()[4:6]
+        lateral_vector = np.cross(forward_vector, up_vector)
+        return forward_vector, up_vector, lateral_vector
 
     @property
     def yaw(self):
         """
         Return the yaw angle of the camera in radian
         """
-        return np.deg2rad(self.sim.getDebugVisualizerCamera()[8])
+        return self.sim.get_debug_visualizer()[8]
 
     @property
     def pitch(self):
         """
         Return the pitch angle of the camera.
         """
-        return np.deg2rad(self.sim.getDebugVisualizerCamera()[9])
+        return self.sim.get_debug_visualizer()[9]
 
     @property
     def dist(self):
         """
         Return the distance between the camera and the camera target.
         """
-        return self.sim.getDebugVisualizerCamera()[10]
+        return self.sim.get_debug_visualizer()[10]
 
     @property
-    def targetPosition(self):
+    def target_position(self):
         """
         Return the target of the camera in the Cartesian world space coordinates.
         """
-        return np.array(self.sim.getDebugVisualizerCamera()[11])
+        return self.sim.get_debug_visualizer()[11]
 
-    @targetPosition.setter
-    def targetPosition(self, pos):
-        yaw, pitch, dist = self.sim.getDebugVisualizerCamera()[-4:-1]
-        self.sim.resetDebugVisualizerCamera(dist, yaw, pitch, pos)
+    @target_position.setter
+    def target_position(self, pos):
+        yaw, pitch, dist = self.sim.get_debug_visualizer()[-4:-1]
+        self.sim.reset_debug_visualizer(dist, yaw, pitch, pos)
 
     @property
     def position(self):
         """
         Return the current position of the camera in the Cartesian world space coordinates.
         """
-        Vinv = np.linalg.inv(self.V) # compute inverse of the view matrix
-        position = Vinv[:3,3] # the last column is the current position of the camera
+        Vinv = np.linalg.inv(self.V)  # compute inverse of the view matrix
+        position = Vinv[:3, 3]  # the last column is the current position of the camera
         return position
 
     @position.setter
     def position(self, pos):
-        self.sim.resetDebugVisualizerCamera(dist, yaw, pitch, targetPos)
+        self.sim.reset_debug_visualizer(dist, yaw, pitch, targetPos)
 
     @property
     def orientation(self):
-        # based on forwardVector and upVector
+        # based on forward_vector and up_vector
         pass
 
     @orientation.setter
     def orientation(self, orientation):
         pass
 
-    def setYawPitch(self, yaw, pitch, radian=True):
+    def set_yaw_pitch(self, yaw, pitch, radian=True):
         if radian:
             yaw, pitch = np.rad2deg(yaw), np.rad2deg(pitch)
-        dist, targetPos = self.sim.getDebugVisualizerCamera()[-2:]
-        self.sim.resetDebugVisualizerCamera(dist, yaw, pitch, targetPos)
+        dist, target_pos = self.sim.get_debug_visualizer()[-2:]
+        self.sim.reset_debug_visualizer(dist, yaw, pitch, target_pos)
 
-    def addYawPitch(self, dyaw, dpitch, radian=True):
-        yaw, pitch, dist, targetPos = self.sim.getDebugVisualizerCamera()[-4:]
+    def add_yaw_pitch(self, dyaw, dpitch, radian=True):
+        yaw, pitch, dist, target_pos = self.sim.get_debug_visualizer()[-4:]
         if radian:
             dyaw, dpitch = np.rad2deg(dyaw), np.rad2deg(dpitch)
         yaw += dyaw
         pitch += dpitch
-        self.sim.resetDebugVisualizerCamera(dist, yaw, pitch, targetPos)
+        self.sim.reset_debug_visualizer(dist, yaw, pitch, target_pos)
 
-    def getRGBImage(self):
+    def get_rgb_image(self):
         """
         Return the captured RGB image.
         """
-        return self.getRGBAImage()[:, :, :3]
+        return self.get_rgba_image()[:, :, :3]
 
-    def getRGBAImage(self):
+    def get_rgba_image(self):
         """
         Return the captured RGBA image. 'A' stands for alpha channel (for opacity/transparency)
         """
-        width, height, viewMatrix, projectionMatrix = self.sim.getDebugVisualizerCamera()[:4]
-        img = np.array(self.sim.getCameraImage(width, height, viewMatrix, projectionMatrix)[2])
+        width, height, view_matrix, projection_matrix = self.sim.get_debug_visualizer()[:4]
+        img = np.array(self.sim.get_camera_image(width, height, view_matrix, projection_matrix)[2])
         img = img.reshape(width, height, 4)  # RGBA
         return img
 
-    def getDepthImage(self):
+    def get_depth_image(self):
         """
         Return the depth image.
         """
-        width, height, viewMatrix, projectionMatrix = self.sim.getDebugVisualizerCamera()[:4]
-        img = np.array(self.sim.getCameraImage(width, height, viewMatrix, projectionMatrix)[3])
+        width, height, viewMatrix, projectionMatrix = self.sim.get_debug_visualizer()[:4]
+        img = np.array(self.sim.get_camera_image(width, height, viewMatrix, projectionMatrix)[3])
         img = img.reshape(width, height)
         return img
 
-    def getRGBADImage(self, concatenate=True):
+    def get_rgbad_image(self, concatenate=True):
         """
         Return the RGBA and depth images.
         """
-        width, height, viewMatrix, projectionMatrix = self.sim.getDebugVisualizerCamera()[:4]
-        rgba, depth = self.sim.getCameraImage(width, height, viewMatrix, projectionMatrix)[2:4]
+        width, height, view_matrix, projection_matrix = self.sim.get_debug_visualizer()[:4]
+        rgba, depth = self.sim.get_camera_image(width, height, view_matrix, projection_matrix)[2:4]
         rgba = np.array(rgba).reshape(width, height, 4)
         depth = np.array(depth).reshape(width, height)
         if concatenate:
             return np.dstack((rgba, depth))
         return (rgba, depth)
 
-    def screenToWorld(self, x_screen, Vp_inv=None, P_inv=None, V_inv=None):
+    def screen_to_world(self, x_screen, Vp_inv=None, P_inv=None, V_inv=None):
         """
         Return the corresponding coordinates in the Cartesian world space from the coordinates of a point
         on the screen.
@@ -347,9 +328,12 @@ class WorldCamera(object):
         Returns:
             float[4]: augmented vector coordinates of the corresponding point in the world
         """
-        if Vp_inv is None: Vp_inv = self.Vp_inv
-        if P_inv is None: P_inv = self.Pinv
-        if V_inv is None: V_inv = self.Vinv
+        if Vp_inv is None:
+            Vp_inv = self.Vp_inv
+        if P_inv is None:
+            P_inv = self.Pinv
+        if V_inv is None:
+            V_inv = self.Vinv
 
         x_ndc = Vp_inv.dot(x_screen)
         x_ndc[1] = -x_ndc[1]  # invert y-axis
@@ -359,7 +343,7 @@ class WorldCamera(object):
         x_world = V_inv.dot(x_eye)
         return x_world
 
-    def worldToScreen(self, x_world, V=None, P=None, Vp=None):
+    def world_to_screen(self, x_world, V=None, P=None, Vp=None):
         """
         Return the corresponding screen coordinates from a 3D point in the world.
 
@@ -410,13 +394,16 @@ class World(object):
     """
 
     def __init__(self, simulator, gravity=(0., 0., -9.81)):
-        self.sim = simulator
-        # self.sim.setAdditionalSearchPath(pybullet_data.getDataPath())
+        # set simulator
+        self.simulator = simulator
+
+        # By default, set the gravity
+        self.gravity = gravity
 
         self.robots = {}
-        self.movable_objects = {} # set()
-        self.immovable_objects = {} # set()
-        self.visual_objects = {} # set()
+        self.movable_bodies = {}  # set()
+        self.immovable_bodies = {}  # set()
+        self.visual_objects = {}  # set()
 
         self.visual_shapes = {}
         self.map = None
@@ -424,13 +411,10 @@ class World(object):
 
         self.quaternion_converter = QuaternionListConverter(convention=1)
 
-        # By default, set the gravity
-        self.setGravity(gravity)
-
-        self.worldState = None
+        self.world_state = None
 
         # configure debug visualizer
-        # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_GUI, 0)
+        self.sim.configure_debug_visualizer(self.sim.COV_ENABLE_GUI, 0)
 
         # interfaces and bridges
         self.interfaces = set([])
@@ -442,11 +426,136 @@ class World(object):
 
     @property
     def simulator(self):
+        """Return the simulator instance."""
         return self.sim
 
+    @simulator.setter
+    def simulator(self, simulator):
+        """Set the simulator instance."""
+        if not isinstance(simulator, Simulator):
+            raise TypeError("Expecting the given simulator to be an instance of `Simulator`, instead got: "
+                            "{}".format(type(simulator)))
+        self.sim = simulator
+
     @property
-    def mainCamera(self):
-        return self.getMainCamera()
+    def main_camera(self):
+        """Return the main camera of the simulator."""
+        return WorldCamera(self.sim)
+
+    @property
+    def gravity(self):
+        """Return the gravity vector."""
+        return self._gravity
+
+    @gravity.setter
+    def gravity(self, gravity):
+        """Set the gravity vector in the world.
+
+        Args:
+            gravity (np.float[3]): 3d gravity vector.
+        """
+        gravity = np.array(gravity)
+        self.sim.set_gravity(gravity)
+        self._gravity = gravity
+
+    @property
+    def lateral_friction(self):
+        """Return the floor lateral friction coefficient."""
+        if self.floor_id > 0:
+            return self.sim.get_dynamics_info(self.floor_id, link_id=-1)[1]
+
+    @lateral_friction.setter
+    def lateral_friction(self, coefficient):
+        """Set the floor lateral friction coefficient."""
+        if self.floor_id > 0:
+            self.sim.change_dynamics(body_id=self.floor_id, link_id=-1, lateral_friction=coefficient)
+
+    @property
+    def rolling_friction(self):
+        """Return the floor rolling friction coefficient."""
+        if self.floor_id > 0:
+            return self.sim.get_dynamics_info(self.floor_id, -1)[6]
+
+    @rolling_friction.setter
+    def rolling_friction(self, coefficient):
+        """Set the floor rolling friction coefficient."""
+        if self.floor_id > 0:
+            self.sim.change_dynamics(body_id=self.floor_id, link_id=-1, rolling_friction=coefficient)
+
+    @property
+    def spinning_friction(self):
+        """Return the floor spinning friction coefficient."""
+        if self.floor_id > 0:
+            return self.sim.get_dynamics_info(self.floor_id, -1)[7]
+
+    @spinning_friction.setter
+    def spinning_friction(self, coefficient):
+        """Set the spinning friction coefficient."""
+        if self.floor_id > 0:
+            self.sim.change_dynamics(body_id=self.floor_id, link_id=-1, spinning_friction=coefficient)
+
+    @property
+    def restitution(self):
+        """Return the floor restitution (bounciness) coefficient."""
+        if self.floor_id > 0:
+            return self.sim.get_dynamics_info(self.floor_id, -1)[5]
+
+    @restitution.setter
+    def restitution(self, coefficient):
+        """Set the floor restitution (bounciness) coefficient."""
+        if self.floor_id > 0:
+            self.sim.change_dynamics(body_id=self.floor_id, link_id=-1, restitution=coefficient)
+
+    @property
+    def contact_damping(self):
+        """Return the floor contact damping."""
+        if self.floor_id > 0:
+            return self.sim.get_dynamics_info(self.floor_id, -1)[8]
+
+    @contact_damping.setter
+    def contact_damping(self, value):
+        """Set the floor contact damping value."""
+        if self.floor_id > 0:
+            self.sim.change_dynamics(body_id=self.floor_id, link_id=-1, contact_damping=value)
+
+    @property
+    def contact_stiffness(self):
+        """Return the floor contact stiffness."""
+        if self.floor_id > 0:
+            return self.sim.get_dynamics_info(self.floor_id, -1)[9]
+
+    @contact_stiffness.setter
+    def contact_stiffness(self, value):
+        """Set the floor contact stiffness value."""
+        if self.floor_id > 0:
+            self.sim.change_dynamics(body_id=self.floor_id, link_id=-1, contact_stiffness=value)
+
+    @property
+    def floor_dynamics(self):
+        """Return the floor dynamical parameters (friction, restitution, etc).
+
+        Returns:
+            float: lateral friction coefficient
+            float: rolling friction coefficient
+            float: spinning friction coefficient
+            float: restitution coefficient
+            float: contact damping value
+            float: contact stiffness value
+        """
+        if self.floor_id > 0:
+            info = self.sim.get_dynamics_info(self.floor_id, -1)
+            return info[1], info[6], info[7], info[5], info[8], info[9]
+
+    @floor_dynamics.setter
+    def floor_dynamics(self, dynamics):
+        """
+        Set the floor dynamics.
+
+        Args:
+            dynamics (dict): dictionary of coefficients.
+        """
+        if self.floor_id > 0:
+            self.sim.change_dynamics(body_id=self.floor_id, link_id=-1, **dynamics)
 
     ########################
     # Operator Overloading #
@@ -468,14 +577,14 @@ class World(object):
         if not isinstance(item, int):
             item = item.id
 
-        return (item in self.robots) or (item in self.movable_objects) or (item in self.immovable_objects) \
+        return (item in self.robots) or (item in self.movable_bodies) or (item in self.immovable_bodies) \
                 or (item in self.visual_objects)
 
     ###########
     # Methods #
     ###########
 
-    def setBridges(self, bridges):
+    def set_bridges(self, bridges):
         """
         This append the given bridges to various interfaces to the list of bridges.
 
@@ -488,92 +597,70 @@ class World(object):
             for bridge in bridges:
                 # if not isinstance(bridge, Bridge):
                 #    raise TypeError("Expecting a list of bridges (must be an instance of Bridge)")
-                if not hasMethod(bridge, 'step') and not hasVariable(bridge, 'interface'):
+                if not has_method(bridge, 'step') and not has_variable(bridge, 'interface'):
                     raise TypeError("Expecting bridge to have a `step` method and an `interface` variable")
-                if not hasMethod(bridge.interface, 'step'):
+                if not has_method(bridge.interface, 'step'):
                     raise TypeError("Expecting the bridge.interface to have a `step` method")
                 self.bridges.append(bridge)
                 self.interfaces.add(bridge.interface)
         # elif isinstance(bridges, Bridge):
-        elif hasMethod(bridges, 'step') and hasVariable(bridges, 'interface') and hasMethod(bridges.interface, 'step'):
+        elif has_method(bridges, 'step') and has_variable(bridges, 'interface') and has_method(bridges.interface, 'step'):
             self.bridges.append(bridges)
             self.interfaces.add(bridges.interface)
         else:
             raise TypeError("Expecting a bridge (instance of Bridge) or a list of instances of Bridge")
 
-    def setRealTimeSimulation(self, enable=True):
-        """
-        Simulate in real-time. This is wrapper around the original `setRealTimeSimulation` method.
-        From the user-guide (https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA):
-        "By default, the physics server will not step the simulation, unless you explicitly send a 'stepSimulation'
-        command. This way you can maintain control determinism of the simulation. It is possible to run the
-        simulation in real-time by letting the physics server automatically step the simulation according to
-        its real-time-clock (RTC) using the setRealTimeSimulation command. If you enable the real-time simulation,
-        you don't need to call 'stepSimulation'.
-
-        Note that setRealTimeSimulation has no effect in DIRECT mode: in DIRECT mode the physics server and client
-        happen in the same thread and you trigger every command. In GUI mode and in Virtual Reality mode, and TCP/UDP
-        mode, the physics server runs in a separate thread from the client (PyBullet), and setRealTimeSimulation
-        allows the physicsserver  thread to add additional calls to stepSimulation."
-
-        Args:
-            enable (bool): If True, it enables the real-time simulation. If False, it disables it.
-        """
-        self.sim.setRealTimeSimulation(enable)
-
     def save(self, filename=None):
         """
-        Save the world in the given filename. If the filename is None, it will save it in memory (RAM).
+        Save the world in the given filename, or in the RAM.
+
+        Args:
+            filename (str, None): path to file to save the state of the world. If None, it will save it in the main
+                memory (RAM).
+
+        Returns:
+            str or int: filename, or unique state id.
         """
         # save approximate world state on the disk
         # self.sim.saveWorld(filename)
+        self.world_state = self.sim.save(filename)
+        return self.world_state
 
-        if filename is None:
-            # save world state in memory (RAM)
-            self.worldState = self.sim.saveState()
-        else:
-            # save world state on the disk
-            self.sim.saveBullet(filename)
-            self.worldState = filename
-        return self.worldState
-
-    def reset(self):
+    def reset(self, world_state=None):
         """
         Reset the world. Put back each object where they were when added to the world.
-        """
-        # save to current instance if not already saved
-        if self.worldState is None:
-            self.worldState = self.save()
 
-        # reset world to a previous instance
-        if isinstance(self.worldState, int):
-            # load world state from memory
-            self.sim.restoreState(self.worldState)
-            # reset the robot
-            # for robot in self.robots.values():
-            #     # robot.resetBasePositionAndOrientation()
-            #     # robot.resetBaseVelocity()
-            #     robot.resetJointStates()
-            #     robot.setJointInitPositions()
-        elif isinstance(self.worldState, str):
-            # load world state from the disk
-            self.sim.restoreState(fileName=self.worldState)
+        Args:
+            world_state (int, str, None): world state id (int), or path to file (str). If None, it will restore the
+                last saved world state.
+        """
+        if world_state is None:
+            # save to current instance if not already saved
+            if self.world_state is None:
+                self.world_state = self.save()
+
+            # reset world to a previous instance
+            if isinstance(self.world_state, (int, str)):
+                # load world from the disk / memory
+                self.sim.load(self.world_state)
+                # reset the robot
+                # self.reset_robots()
+            else:
+                # reset simulation: remove all objects from the world and reset the world to initial conditions
+                self.sim.reset()
         else:
-            # reset simulation: remove all objects from the world and reset the world to initial conditions
-            self.sim.resetSimulation()
+            if isinstance(world_state, (int, float)):
+                # load world state from memory / disk
+                self.sim.load(world_state)
+            else:
+                raise TypeError("Expecting the world state to be an int (id) or a string (path to file), instead got "
+                                "{}".format(type(world_state)))
 
-        # print("\nRobot reset state:")
-        # for robot_id, robot in self.robots.items():
-        #     print("Robot base position and orientation: {}".format(robot.getBasePositionAndOrientation()))
-        #     print("Robot base velocities: {}".format(robot.getBaseVelocity()))
-        #     print("Robot joint positions: {}".format(robot.getJointPositions()))
-        #     print("Robot joint velocities: {}".format(robot.getJointVelocities()))
-
-    def resetSimulator(self):
+    def reset_simulator(self):
         """
-        Reset the simulator.
+        Reset the simulator; remove the world from the simulator.
         """
-        self.sim.resetSimulation()
+        self.sim.reset()
 
     def step(self, sleep_dt=None):
         """
@@ -583,27 +670,11 @@ class World(object):
             interface.step()
         for bridge in self.bridges:
             bridge.step()
-        self.sim.stepSimulation()
+        self.sim.step()
         if sleep_dt is not None:
             time.sleep(sleep_dt)
 
-    def setGravity(self, xyz=(0., 0., -9.81)):
-        """
-        Set the given gravity.
-
-        Args:
-            xyz (float[3]): gravity (acceleration) along the 3 axis.
-        """
-        x, y, z = xyz
-        self.sim.setGravity(x, y, z)
-
-    def getMainCamera(self):
-        """
-        Return the main camera of the simulator.
-        """
-        return WorldCamera(self.sim)
-
-    def loadRobot(self, robot, position=None, orientation=None, useFixedBase=None, *args, **kwargs):
+    def load_robot(self, robot, position=None, orientation=None, fixed_base=None, *args, **kwargs):
         """
         Load the robot into the world. If the robot parameter is a known robot name or the path to the urdf file,
         it will create a `Robot` instance and return it. If the robot is already an instance of `Robot` it will
@@ -614,7 +685,7 @@ class World(object):
                 `implemented_robots` from `pyrobolearn.robots` module.
             position (float[3], None): position of the robot. If None, it will take the default position.
             orientation (float[4], None): orientation of the robot. If None, it will be the default orientation.
-            useFixedBase (bool, None): if True, it will fix the robot's base. If None, it will be the default option.
+            fixed_base (bool, None): if True, it will fix the robot's base. If None, it will be the default option.
 
         Return:
             Robot: instance of the Robot class
@@ -627,16 +698,15 @@ class World(object):
 
             if robot in robot_names_to_classes:
                 robot_class = robot_names_to_classes[robot]
-                robot = robot_class(self.sim, init_pos=position, init_orient=orientation, useFixedBase=useFixedBase,
+                robot = robot_class(self.sim, position=position, orientation=orientation, fixed_base=fixed_base,
                                     *args, **kwargs)
 
             else:  # robot is the path to the urdf
-                robot = Robot(self.sim, urdf_path=robot, init_pos=position, init_orient=orientation,
-                              useFixedBase=useFixedBase, *args, **kwargs)
+                robot = Robot(self.sim, urdf=robot, position=position, orientation=orientation, fixed_base=fixed_base,
+                              *args, **kwargs)
 
-        elif isClass(robot):  # robot class
-            robot = robot(self.sim, init_pos=position, init_orient=orientation, useFixedBase=useFixedBase,
-                          *args, **kwargs)
+        elif inspect.isclass(robot):  # robot class
+            robot = robot(self.sim, position=position, orientation=orientation, fixed_base=fixed_base, *args, **kwargs)
 
         else:  # unknown type
             raise TypeError('Unknown type for robot: {}. It must be a string or '
@@ -645,7 +715,7 @@ class World(object):
         self.robots[robot.id] = robot
         return robot
 
-    def isRobotId(self, robot_id):
+    def is_robot_id(self, robot_id):
         """
         Check if the given id is a robot id.
 
@@ -657,12 +727,12 @@ class World(object):
         """
         return robot_id in self.robots
 
-    def getRobot(self, robotId):
+    def get_robot(self, robot_id):
         """
         Return the robot object (instance of Robot) associated to the given robot id.
 
         Args:
-            robotId (int): unique id of the robot
+            robot_id (int): unique id of the robot
 
         Raises:
             KeyError: if the given robot id is not in the world.
@@ -670,43 +740,43 @@ class World(object):
         Returns:
             Robot: robot instance
         """
-        return self.robots[robotId]
+        return self.robots[robot_id]
 
-    def resetRobots(self):
+    def reset_robots(self):
         """
         Reset the base and joint states of each robot
         """
         for robot_id, robot in self.robots.items():
             # reset base
-            self.sim.resetBasePositionAndOrientation(robot_id, robot.init_position, robot.init_orientation)
-            self.sim.resetBaseVelocity(robot_id, linearVelocity=[0, 0, 0], angularVelocity=[0, 0, 0])
+            self.sim.reset_base_pose(robot_id, robot.init_position, robot.init_orientation)
+            self.sim.reset_base_velocity(robot_id, linear_velocity=[0, 0, 0], angular_velocity=[0, 0, 0])
 
             # reset joint positions
             positions = robot.init_joint_positions
             velocities = np.zeros(len(positions))
             for joint_id, position, velocity in zip(robot.joints, positions, velocities):
-                self.sim.resetJointState(robot_id, joint_id, position, velocity)
+                self.sim.reset_joint_state(robot_id, joint_id, position, velocity)
 
-    def loadURDF(self, filename, position, orientation, useFixedBase=False, scaling=1., objectName=None):
+    def load_urdf(self, filename, position, orientation, fixed_base=False, scale=1., name=None):
         """
-        Load URDF specified by the given path. This is basically a wrapper around the simulator's `loadURDF` method.
+        Load URDF specified by the given path. This is basically a wrapper around the simulator's `load_urdf` method.
 
         Args:
             filename (str): path to the URDF file
             position (float[3]): position of the object described in the URDF
             orientation (float[4]): orientation represented as a quaternion
-            usedFixedBase (bool): if the base of the object should be fixed or not
-            scaling (float): scale factor for the object
-            objectName (str, None): name of the object. If None, it will extract it from the URDF.
+            fixed_base (bool): if the base of the object should be fixed or not
+            scale (float): scale factor for the object
+            name (str, None): name of the object. If None, it will extract it from the URDF.
 
         Returns:
             int: unique id of the loaded body.
         """
-        obj = self.sim.loadURDF(filename, position, orientation, useFixedBase=useFixedBase, globalScaling=scaling)
-        self.movable_objects[obj] = self.sim.getBodyInfo(obj) if objectName is None else objectName
-        return obj
+        body = self.sim.load_urdf(filename, position, orientation, use_fixed_base=fixed_base, scale=scale)
+        self.movable_bodies[body] = self.sim.get_body_info(body) if name is None else name
+        return body
 
-    def loadSDF(self, filename, scaling=1.):
+    def load_sdf(self, filename, scaling=1.):
         """
         Load the given SDF file; this will thus load all the object described in a SDF file.
 
@@ -717,12 +787,12 @@ class World(object):
         Returns:
             list(int): list of ids
         """
-        objects = self.sim.loadSDF(filename, globalScaling=scaling)
-        for obj in objects:
-            self.movable_objects[obj] = self.sim.getBodyInfo(obj)
-        return objects
+        bodies = self.sim.load_sdf(filename, scaling=scaling)
+        for body in bodies:
+            self.movable_bodies[body] = self.sim.get_body_info(body)
+        return bodies
 
-    def loadMJCF(self, filename, scaling=1.):
+    def load_mjcf(self, filename, scaling=1.):
         """
         Load the given MJCF file; this will thus load all the object described in a MJCF file.
 
@@ -733,31 +803,31 @@ class World(object):
         Returns:
             list(int): list of ids
         """
-        objects = self.sim.loadMJCF(filename) #, globalScaling=scaling)
-        for obj in objects:
-            self.movable_objects[obj] = self.sim.getBodyInfo(obj)
-        return objects
+        bodies = self.sim.load_mjcf(filename, scaling=scaling)
+        for body in bodies:
+            self.movable_bodies[body] = self.sim.getBodyInfo(body)
+        return bodies
 
     def _loadSDForURDF(self, path, position, orientation, scaling, objectType=None):
         extension_name = path.split('.')[-1]
         if extension_name == 'urdf':
-            object_id = self.sim.loadURDF(path, position, orientation, globalScaling=scaling)
-            self.movable_objects[object_id] = 'urdf' if objectType is None else objectType
+            object_id = self.sim.load_urdf(path, position, orientation, scale=scaling)
+            self.movable_bodies[object_id] = 'urdf' if objectType is None else objectType
         elif extension_name == 'sdf':
-            object_id = self.sim.loadSDF(path, globalScaling=scaling) # list of ids
+            object_id = self.sim.loadSDF(path, scale=scaling) # list of ids
             for i in object_id: # assume for now that the objects are movable...
-                self.movable_objects[i] = 'sdf' if objectType is None else objectType
+                self.movable_bodies[i] = 'sdf' if objectType is None else objectType
         else:
             raise ValueError('Extension name of the file is not known; this method only accepts URDF/SDF files.')
         return object_id
 
-    def loadObject(self, objectType, path=None, position=(0,0,0), orientation=(0,0,0,1), scaling=1.):
+    def load_object(self, object_type, path=None, position=(0, 0, 0), orientation=(0, 0, 0, 1), scaling=1.):
         """
         Load the specified object. This is a method that allows you to quickly load stuffs however it is less
         accurate than other methods in this class.
 
         Args:
-            objectType (str): type of the object (name, 'sphere',
+            object_type (str): type of the object (name, 'sphere',
             path:
             position:
             orientation:
@@ -769,27 +839,27 @@ class World(object):
         # check if an object has already been loaded at that place.
 
         if path is not None:
-            objectId = self._loadSDForURDF(path, position, orientation, scaling=1., objectType=objectType)
+            object_id = self._loadSDForURDF(path, position, orientation, scaling=1., objectType=object_type)
         else:
-            if objectType == 'sphere':
-                objectId = self.loadSphere(position)
-            elif objectType == 'box':
-                objectId = self.loadBox(position, orientation)
-            elif objectType == 'cylinder':
-                objectId = self.loadCylinder(position, orientation)
-            elif objectType == 'capsule':
-                objectId = self.loadCapsule(position, orientation)
+            if object_type == 'sphere':
+                object_id = self.load_sphere(position)
+            elif object_type == 'box':
+                object_id = self.load_box(position, orientation)
+            elif object_type == 'cylinder':
+                object_id = self.load_cylinder(position, orientation)
+            elif object_type == 'capsule':
+                object_id = self.load_capsule(position, orientation)
             else:
                 raise TypeError("Object type not known...")
 
-        return objectId
+        return object_id
 
-    def moveObject(self, objectId, position=None, orientation=None):
+    def move_object(self, object_id, position=None, orientation=None):
         """
         Move the given object at the specified position and orientation.
 
         Args:
-            objectId (int): object id
+            object_id (int): object id
             position (float[3]): new position of the object. If None, it will keep the old position.
             orientation (float[4]): new orientation of the object. If None, it will keep the old orientation.
 
@@ -797,12 +867,12 @@ class World(object):
             None
         """
         if position is None:
-            position = self.sim.getBasePositionAndOrientation(objectId)[0]
+            position = self.sim.get_base_pose(object_id)[0]
         if orientation is None:
-            orientation = self.sim.getBasePositionAndOrientation(objectId)[1]
-        self.sim.resetBasePositionAndOrientation(objectId, position, orientation)
+            orientation = self.sim.get_base_pose(object_id)[1]
+        self.sim.reset_base_pose(object_id, position, orientation)
 
-    def applyForce(self, objectId, linkId=-1, force=(0.,0.,0.), position=None, frameFlag=2):
+    def apply_force(self, object_id, link_id=-1, force=(0., 0., 0.), position=None, frame=2):
         """
         Apply the given force on the specified object or link of the object.
 
@@ -811,183 +881,183 @@ class World(object):
             - this does not work when using `sim.setRealTimeSimulation(1)`.
 
         Args:
-            objectId (int): object id to apply the force on
-            linkId (int): link id to apply the force, if -1 it will apply the force on the base
+            object_id (int): object id to apply the force on
+            link_id (int): link id to apply the force, if -1 it will apply the force on the base
             force (float[3]): Cartesian forces to be applied on the body
             position (float[3]): position on the link where the force is applied. If None, it is the center of mass
                 of the object (or the link if specified)
-            frameFlag (int): allows to specify the coordinate system of force/position. sim.LINK_FRAME (=1) for local
+            frame (int): allows to specify the coordinate system of force/position. sim.LINK_FRAME (=1) for local
                 link frame, and sim.WORLD_FRAME (=2) for world frame. By default, it is the world frame.
 
         Returns:
             None
         """
         if position is None:
-            if linkId != -1:
-                position = self.sim.getBasePositionAndOrientation(objectId)[0]
+            if link_id != -1:
+                position = self.sim.get_base_pose(object_id)[0]
             else:
-                position = self.sim.getLinkState(objectId, linkId)[0]
-        self.sim.applyExternalForce(objectId, linkId, force, position, frameFlag)
+                position = self.sim.get_link_state(object_id, link_id)[0]
+        self.sim.apply_external_force(object_id, link_id, force, position, frame)
 
-    def getObjectColor(self, objectId):
+    def get_object_color(self, object_id):
         """
         Return the RGBA color of the given object.
 
         Args:
-            objectId (int): object id
+            object_id (int): object id
 
         Returns:
             float[4]: RGBA color
         """
-        return self.sim.getVisualShapeData(objectId)[-1]
+        return self.sim.get_visual_shape_data(object_id)[-1]
 
-    def changeObjectColor(self, objectId, color=(1,1,1,1), linkId=-1):
+    def change_object_color(self, object_id, color, link_id=-1):
         """
         Change the color of the given object.
 
         Args:
-            objectId (int): object id
+            object_id (int): object id
             color (float[4]): RGBA color
-            linkId (int): link id
+            link_id (int): link id
 
         Returns:
             None
         """
-        self.sim.changeVisualShape(objectId, linkId, rgbaColor=color)
+        self.sim.change_visual_shape(object_id, link_id, rgba_color=color)
 
-    def getObjectPosition(self, objectId):
+    def get_object_position(self, object_id):
         """
         Return the position of the given object.
 
         Args:
-            objectId (int): object id
+            object_id (int): object id
 
         Returns:
             float[3]: position of the object
         """
-        return np.array(self.sim.getBasePositionAndOrientation(objectId)[0])
+        return np.array(self.sim.get_base_pose(object_id)[0])
 
-    def getObjectOrientation(self, objectId):
+    def get_object_orientation(self, object_id):
         """
         Return the orientation of the given object.
 
         Args:
-            objectId (int): object id
+            object_id (int): object id
 
         Returns:
             float[4]: orientation of the object
         """
-        return np.array(self.sim.getBasePositionAndOrientation(objectId)[1])
+        return np.array(self.sim.get_base_pose(object_id)[1])
 
-    def getObjectVelocity(self, objectId):
+    def get_object_velocity(self, object_id):
         """
         Return the linear and angular velocities of the given object.
 
         Args:
-            objectId (int): object id
+            object_id (int): object id
 
         Returns:
             float[6]: linear and angular velocities of the object
         """
-        lin_vel, ang_vel = self.sim.getBaseVelocity(objectId)
+        lin_vel, ang_vel = self.sim.get_base_velocity(object_id)
         return np.array(lin_vel + ang_vel)
 
-    def getObjectLinearVelocity(self, objectId):
+    def get_object_linear_velocity(self, object_id):
         """
         Return the linear velocity of the given object.
 
         Args:
-            objectId (int): object id
+            object_id (int): object id
 
         Returns:
             float[3]: linear velocity of the object
         """
-        return np.array(self.sim.getBaseVelocity(objectId)[0])
+        return np.array(self.sim.get_base_velocity(object_id)[0])
 
-    def getObjectAngularVelocity(self, objectId):
+    def get_object_angular_velocity(self, object_id):
         """
         Return the angular velocity of the given object.
 
         Args:
-            objectId (int): object id
+            object_id (int): object id
 
         Returns:
             float[3]: angular velocity of the object
         """
-        return np.array(self.sim.getBaseVelocity(objectId)[1])
+        return np.array(self.sim.get_base_velocity(object_id)[1])
 
-    def hideObject(self, objectId):
+    def hide_object(self, object_id):
         """
         Hide (visually) the given object; by making it transparent.
 
         Args:
-            objectId (int): object id
+            object_id (int): object id
 
         Returns:
             None
         """
-        color = self.getObjectColor(objectId)
+        color = self.get_object_color(object_id)
         color[-1] = 0.
-        self.changeObjectColor(objectId, color=color)
+        self.change_object_color(object_id, color=color)
 
-    def showObject(self, objectId):
+    def show_object(self, object_id):
         """
         Show (visually) a hidden object; by making it opaque.
 
         Args:
-            objectId (int): object id
+            object_id (int): object id
 
         Returns:
             None
         """
-        color = self.getObjectColor(objectId)
+        color = self.get_object_color(object_id)
         color[-1] = 1.
-        self.changeObjectColor(objectId, color=color)
+        self.change_object_color(object_id, color=color)
 
-    def removeObject(self, objectId):
+    def remove(self, body):
         """
         Remove the object specified by its unique id from the world/simulator.
 
         Args:
-            objectId (int, Robot): unique id of the object in the simulator.
+            body (int, Robot): unique id of the object in the simulator.
 
         Returns:
             bool: True if succeeded, False if not. This method does not raise any errors.
         """
-        if isinstance(objectId, Robot):
-            objectId = objectId.id
-        if objectId in self.robots:
-            self.robots.pop(objectId)
-        elif objectId in self.movable_objects:
-            self.movable_objects.pop(objectId)
-        elif objectId in self.immovable_objects:
-            self.immovable_objects.pop(objectId)
-        elif objectId in self.visual_objects:
-            self.visual_objects.pop(objectId)
+        if isinstance(body, Robot):
+            body = body.id
+        if body in self.robots:
+            self.robots.pop(body)
+        elif body in self.movable_bodies:
+            self.movable_bodies.pop(body)
+        elif body in self.immovable_bodies:
+            self.immovable_bodies.pop(body)
+        elif body in self.visual_objects:
+            self.visual_objects.pop(body)
         else:
             return False
 
-        self.sim.removeBody(objectId)
+        self.sim.remove_body(body)
         return True
 
-    def getObjectDimensions(self, objectId):
+    def get_object_dimensions(self, object_id):
         """
         Return the object dimensions of the given object.
 
         Args:
-            objectId (int): object id
+            object_id (int): object id
 
         Returns:
             float[3]: dimensions of the object
         """
-        return np.array(self.sim.getVisualShapeData[3])
+        return np.array(self.sim.get_visual_shape_data(object_id)[3])
 
-    def changeObjectScale(self, objectId, scale=(1.,1.,1.)):
+    def change_object_scale(self, object_id, scale=(1., 1., 1.)):
         """
         Change the scale of the given object; it changes the scale for the visual and collision shapes.
 
         Args:
-            objectId (int): object id
+            object_id (int): object id
             scale (float[3]): scaling factors in each direction
 
         Returns:
@@ -996,50 +1066,50 @@ class World(object):
         # TODO: currently not possible in PyBullet
         raise NotImplementedError
 
-    def getObjectAABB(self, objectId, linkId=-1):
+    def get_object_aabb(self, object_id, link_id=-1):
         """
         Return the axis-aligned bounding box (AABB) in world space of the given object.
 
         Args:
-            objectId (int): object id
-            linkId (int): optional link id
+            object_id (int): object id
+            link_id (int): optional link id
 
         Returns:
             float[3]: coordinates in world space of the min corner of the AABB
             float[3]: coordinates in world space of the max corner of the AABB
         """
-        bbMin, bbMax = self.sim.getAABB(objectId, linkId)
-        return np.array(bbMin), np.array(bbMax)
+        aabb_min, aabb_max = self.sim.get_aabb(object_id, link_id)
+        return np.array(aabb_min), np.array(aabb_max)
 
-    def getObjectIdsInAABB(self, bbMin, bbMax):
+    def get_object_ids_in_aabb(self, aabb_min, aabb_max):
         """
         Get the list of object ids that have AABB overlap with a given AABB.
 
         Args:
-            bbMin (float[3]): coordinates of the min corner of the bounding box
-            bbMax (float[3]): coordinates of the max corner of the bounding box
+            aabb_min (float[3]): coordinates of the min corner of the bounding box
+            aabb_max (float[3]): coordinates of the max corner of the bounding box
 
         Returns:
             int[N]: list of object ids
         """
-        overlapping_objects = self.sim.getOverlappingObjects(bbMin, bbMax)
+        overlapping_objects = self.sim.get_overlapping_objects(aabb_min, aabb_max)
         if overlapping_objects is None:
             return []
         return overlapping_objects
 
-    def isThereAnObject(self, bbMin, bbMax, except_floor=True):
+    def is_there_an_object(self, aabb_min, aabb_max, except_floor=True):
         """
-        Return True if there is an object in the bounding box defined by bbMin and bbMax.
+        Return True if there is an object in the bounding box defined by aabb_min and aabb_max.
 
         Args:
-            bbMin (float[3]): minimum coordinates of the bounding box
-            bbMax (float[3]): maximum coordinates of the bounding box
+            aabb_min (float[3]): minimum coordinates of the bounding box
+            aabb_max (float[3]): maximum coordinates of the bounding box
             except_floor (bool): if the floor should be counted as an object
 
         Returns:
             bool: True if there is an object in the specified bounding box
         """
-        objects = self.sim.getOverlappingObjects(bbMin, bbMax)
+        objects = self.sim.get_overlapping_objects(aabb_min, aabb_max)
         if len(objects) > 2:
             return True
         if len(objects) == 0:
@@ -1049,13 +1119,13 @@ class World(object):
             return False
         return True
 
-    def getClosestObject(self): # Not possible for now
+    def get_closest_object(self):  # Not possible for now
         raise NotImplementedError
 
-    def getClosestObjects(self, radius): # Not possible for now
+    def get_closest_objects(self, radius):  # Not possible for now
         raise NotImplementedError
 
-    def loadFloor(self, scaling=1.):
+    def load_floor(self, scaling=1.):
         """
         Load a basic floor in the world.
 
@@ -1065,11 +1135,11 @@ class World(object):
         Returns:
             int: unique id of the floor in the world
         """
-        # self.floor_id = self.sim.loadURDF('plane100.urdf', useFixedBase=True, globalScaling=scaling)
-        self.floor_id = self.sim.loadURDF('plane.urdf', useFixedBase=True, globalScaling=scaling)
+        # self.floor_id = self.sim.load_urdf('plane100.urdf', use_fixed_base=True, scale=scaling)
+        self.floor_id = self.sim.load_urdf('plane.urdf', use_fixed_base=True, scale=scaling)
         return self.floor_id
 
-    def loadTerrain(self, heightmap, position=(0.,0.,0.), scaling=1., replace_floor=True):
+    def load_terrain(self, heightmap, position=(0., 0., 0.), scaling=1., replace_floor=True):
         """
         Load the given terrain/heightmap.
 
@@ -1092,18 +1162,18 @@ class World(object):
         """
         if self.floor_id > -1:  # there is already a floor defined
             if replace_floor:
-                self.sim.removeBody(self.floor_id)
+                self.sim.remove_body(self.floor_id)
 
         if heightmap[-4:] == 'obj':  # obj (mesh)
-            self.floor_id = self.loadMesh(heightmap, position, mass=0., scale=[scaling]*3,
-                                          flags=self.sim.GEOM_FORCE_CONCAVE_TRIMESH, objectType='terrain')
+            self.floor_id = self.load_mesh(heightmap, position, mass=0., scale=[scaling] * 3, flags=1,
+                                           object_type='terrain')
         elif heightmap[-4:] == '.sdf':  # SDF
-            self.floor_id = self.loadSDF(filename=heightmap, scaling=scaling)
+            self.floor_id = self.load_sdf(filename=heightmap, scaling=scaling)
         elif heightmap[-4:] == '.xml':  # MJCF
-            self.floor_id = self.loadMJCF(filename=heightmap, scaling=scaling)
+            self.floor_id = self.load_mjcf(filename=heightmap, scaling=scaling)
         elif heightmap[-5:] == '.urdf':  # URDF
-            self.floor_id = self.sim.loadURDF(heightmap, position, useFixedBase=True, globalScaling=scaling)
-        else: # heightmap (.tif, .jpg, .png, etc)
+            self.floor_id = self.sim.load_urdf(heightmap, position, use_fixed_base=True, scale=scaling)
+        else:  # heightmap (.tif, .jpg, .png, etc)
             def create_mesh(heightmap):
                 # create 3D mesh
                 # create3DMesh(heightmap, filename=, subsample=, interpolate_fct=)
@@ -1120,18 +1190,21 @@ class World(object):
 
             # apply the given texture if provided
             if isinstance(texture, str):
-                texture = self.sim.loadTexture(texture)
-                self.sim.changeVisualShape(heightmap, -1, textureUniqueId=texture)
+                texture = self.sim.load_texture(texture)
+                self.sim.change_visual_shape(heightmap, -1, texture_id=texture)
 
         return self.floor_id
 
-    def loadHeightmap(self, heightmap, texture=None, position=(0.,0.,0.), scale=1.):
+    def load_heightmap(self, heightmap, texture=None, position=(0., 0., 0.), scale=1.):
         """
         Load a heightmap for the terrain.
 
         Args:
             heightmap (str, np.ndarray[M,M]): if string, filename containing the heightmap in  the png, jpg, obj format
                 if a 2D numpy arrays, the values represent the height in meters.
+            texture: texture to apply
+            position (float[3]): position of the terrain
+            scale (float): scaling factor
 
         Returns:
             int: unique id of the floor
@@ -1165,7 +1238,7 @@ class World(object):
             raise ValueError("Expecting heightmap in a png/jpg/obj format")
 
         # load the mesh of the terrain
-        heightmap = self.loadTerrain(filename, position=position, scaling=scale)
+        heightmap = self.load_terrain(filename, position=position, scaling=scale)
 
         # change the dynamic properties of the terrain based on the given type (grass, mud, bumpy
         # WARNING: only 1 type can be specified. Currently, it is not possible to have different dynamic properties
@@ -1174,8 +1247,8 @@ class World(object):
 
         # apply the given texture if provided
         if isinstance(texture, str):
-            texture = p.loadTexture(texture)
-            self.sim.changeVisualShape(heightmap, -1, textureUniqueId=texture)
+            texture = self.sim.load_texture(texture)
+            self.sim.change_visual_shape(heightmap, -1, texture_id=texture)
 
         # remove mesh from memory
         os.remove(filename + '.obj') # remove mesh from memory
@@ -1183,13 +1256,13 @@ class World(object):
 
         # replace the floor if there is already one present
         if self.floor_id > -1:
-            self.sim.removeBody(self.floor_id)
+            self.sim.remove_body(self.floor_id)
         self.floor_id = heightmap
 
         return self.floor_id
 
     # aliases
-    loadDEM = loadHeightmap
+    loadDEM = load_heightmap
 
     def generateHeightmap(self, filename=None, algo=None):
         """
@@ -1210,10 +1283,10 @@ class World(object):
         """
         pass
 
-    def generateTerrain(self, filename=None):
+    def generate_terrain(self, filename=None):
         pass
 
-    def loadStadium(self, scaling=1.):
+    def load_stadium(self, scaling=1.):
         """
         Load a stadium as the floor.
 
@@ -1224,11 +1297,11 @@ class World(object):
             int: unique id of the floor/stadium in the world
         """
         if self.floor_id > -1:
-            self.sim.removeBody(self.floor_id)
-        self.floor_id = self.sim.loadURDF('stadium.urdf', useFixedBase=True, globalScaling=scaling)
+            self.sim.remove_body(self.floor_id)
+        self.floor_id = self.sim.load_urdf('stadium.urdf', use_fixed_base=True, scale=scaling)
         return self.floor_id
 
-    def loadJapaneseMonastery(self, scaling=1.):
+    def load_japanese_monastery(self, scaling=1.):
         """
         Load a japanese monastery.
 
@@ -1240,14 +1313,14 @@ class World(object):
         """
         # replace the floor if there is already one present
         if self.floor_id > -1:
-            self.sim.removeBody(self.floor_id)
-        self.floor_id = self.sim.loadURDF('samurai.urdf', useFixedBase=True, globalScaling=scaling)
+            self.sim.remove_body(self.floor_id)
+        self.floor_id = self.sim.load_urdf('samurai.urdf', use_fixed_base=True, scale=scaling)
         return self.floor_id
 
-    def loadBotLab(self, scaling=2.):
-        return self.loadSDF('sdf/botlab/botlab.sdf', scaling=scaling)
+    def load_bot_lab(self, scaling=2.):
+        return self.load_sdf('sdf/botlab/botlab.sdf', scaling=scaling)
 
-    def loadStairs(self):
+    def load_stairs(self):
         pass
 
     def createCity(self):
@@ -1270,11 +1343,11 @@ class World(object):
         Returns:
             int: unique id of the table
         """
-        table = self.sim.loadURDF('table/table.urdf', globalScaling=scaling)
-        self.movable_objects[table] = 'table'
+        table = self.sim.load_urdf('table/table.urdf', scale=scaling)
+        self.movable_bodies[table] = 'table'
         return table
 
-    def loadKivaShelf(self, scaling=1.):
+    def load_kiva_shelf(self, scaling=1.):
         """
         Load a Kiva shelf.
 
@@ -1284,11 +1357,11 @@ class World(object):
         Returns:
             int: unique id of the shelf
         """
-        shelf = self.sim.loadSDF('kiva_shelf/model.sdf', globalScaling=scaling)[0]
-        self.movable_objects[shelf] = 'shelf'
+        shelf = self.sim.loadSDF('kiva_shelf/model.sdf', scale=scaling)[0]
+        self.movable_bodies[shelf] = 'shelf'
         return shelf
 
-    def loadVisualSphere(self, position, radius=0.5, color=(1,1,1,1)):
+    def load_visual_Sphere(self, position, radius=0.5, color=None):
         """
         Load a visual sphere in the world (only available in the simulator).
 
@@ -1300,14 +1373,12 @@ class World(object):
         Returns:
             int: unique id of the visual sphere in the world
         """
-        visualShape = self.sim.createVisualShape(self.sim.GEOM_SPHERE, radius=radius, rgbaColor = color)
-        sphere = self.sim.createMultiBody(baseMass = 0.,
-                                          baseVisualShapeIndex = visualShape,
-                                          basePosition = position)
+        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_SPHERE, radius=radius, rgba_color=color)
+        sphere = self.sim.create_body(visual_shape_id=visual_shape, mass=0., position=position)
         self.visual_objects[sphere] = 'sphere'
         return sphere
 
-    def loadSphere(self, position, mass=1., radius=0.5, color=(1,1,1,1)):
+    def load_sphere(self, position, mass=1., radius=0.5, color=None):
         """
         Load a sphere in the world (only available in the simulator).
 
@@ -1320,30 +1391,24 @@ class World(object):
         Returns:
             int: unique id of the sphere in the world
         """
-        collisionShape = self.sim.createCollisionShape(self.sim.GEOM_SPHERE,
-                                                       radius = radius)
-        visualShape = self.sim.createVisualShape(self.sim.GEOM_SPHERE,
-                                                 radius = radius,
-                                                 rgbaColor = color)
-        sphere = self.sim.createMultiBody(baseMass = mass,
-                                          baseCollisionShapeIndex = collisionShape,
-                                          baseVisualShapeIndex = visualShape,
-                                          basePosition = position)
+        collision_shape = self.sim.create_collision_shape(self.sim.GEOM_SPHERE, radius=radius)
+        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_SPHERE, radius=radius, rgba_color=color)
+        sphere = self.sim.create_body(mass=mass, collision_shape_id=collision_shape, visual_shape_id=visual_shape,
+                                      position=position)
         if mass == 0.0:
-            self.immovable_objects[sphere] = 'sphere'
+            self.immovable_bodies[sphere] = 'sphere'
         else:
-            self.movable_objects[sphere] = 'sphere'
+            self.movable_bodies[sphere] = 'sphere'
 
         return sphere
 
-    def loadVisualBox(self, position, orientation=(0,0,0,1), dimensions=(1.,1.,1.), color=(1,1,1,1)):
+    def load_visual_box(self, position, orientation=(0, 0, 0, 1), dimensions=(1., 1., 1.), color=None):
         """
         Load a visual box in the world (only available in the simulator).
 
         Args:
             position (float[3]): position of the box in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation of the box using quaternion. If np.quaternion then it
-                uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w).
+            orientation (float[4]): orientation of the box using quaternion [x,y,z,w].
             dimensions (float[3]): dimensions of the box
             color (int[4]): color of the box (by default: white and opaque)
 
@@ -1351,23 +1416,18 @@ class World(object):
             int: unique id of the box in the world
         """
         dimensions = np.array(dimensions) / 2.
-        visualShape = self.sim.createVisualShape(self.sim.GEOM_BOX, halfExtents=dimensions, rgbaColor = color)
-        orientation = self.quaternion_converter.convertFrom(orientation) # convert to list
-        box = self.sim.createMultiBody(baseMass = 0.,
-                                       baseVisualShapeIndex = visualShape,
-                                       basePosition = position,
-                                       baseOrientation = orientation)
+        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_BOX, half_extents=dimensions, rgba_color=color)
+        box = self.sim.create_body(mass=0., visual_shape_id=visual_shape, position=position, orientation=orientation)
         self.visual_objects[box] = 'box'
         return box
 
-    def loadBox(self, position, orientation=(0,0,0,1), mass=1., dimensions=(1.,1.,1.), color=(1,1,1,1)):
+    def load_box(self, position, orientation=(0, 0, 0, 1), mass=1., dimensions=(1., 1., 1.), color=None):
         """
         Load a box in the world (only available in the simulator).
 
         Args:
             position (float[3]): position of the box in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation of the box using quaternion. If np.quaternion then it
-                uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w).
+            orientation (float[4]): orientation of the box using quaternion [x,y,z,w].
             mass (float): mass of the box (in kg). If mass = 0, the box won't move even if there is a collision.
             dimensions (float[3]): dimensions of the box
             color (int[4]): color of the box (by default: white and opaque)
@@ -1376,28 +1436,25 @@ class World(object):
             int: unique id of the box in the world
         """
         dimensions = np.array(dimensions) / 2.
-        collisionShape = self.sim.createCollisionShape(self.sim.GEOM_BOX, halfExtents=dimensions)
-        visualShape = self.sim.createVisualShape(self.sim.GEOM_BOX, halfExtents=dimensions, rgbaColor=color)
-        orientation = self.quaternion_converter.convertFrom(orientation)  # convert to list
-        box = self.sim.createMultiBody(baseMass = mass,
-                                       baseCollisionShapeIndex = collisionShape,
-                                       baseVisualShapeIndex = visualShape,
-                                       basePosition = position,
-                                       baseOrientation = orientation)
+        collision_shape = self.sim.create_collision_shape(self.sim.GEOM_BOX, half_extents=dimensions)
+        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_BOX, half_extents=dimensions, rgba_color=color)
+        
+        box = self.sim.create_body(mass=mass, collision_shape_id=collision_shape, visual_shape_id=visual_shape,
+                                   position=position, orientation=orientation)
+
         if mass == 0.0:
-            self.immovable_objects[box] = 'box'
+            self.immovable_bodies[box] = 'box'
         else:
-            self.movable_objects[box] = 'box'
+            self.movable_bodies[box] = 'box'
         return box
 
-    def loadVisualCylinder(self, position, orientation=(0,0,0,1), radius=0.5, height=1., color=(1,1,1,1)):
+    def load_visual_cylinder(self, position, orientation=(0, 0, 0, 1), radius=0.5, height=1., color=None):
         """
         Load a visual cylinder in the world (only available in the simulator).
 
         Args:
             position (float[3]): position of the cylinder in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation of the cylinder using quaternion.
-                If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+            orientation (float[4]): orientation of the cylinder using quaternion [x,y,z,w].
             radius (float): radius of the cylinder (in meters)
             height (float): height of the cylinder (in meters)
             color (int[4]): color of the cylinder (by default: white and opaque)
@@ -1405,24 +1462,21 @@ class World(object):
         Returns:
             int: unique id of the cylinder in the world
         """
-        visualShape = self.sim.createVisualShape(self.sim.GEOM_CYLINDER, radius=radius, length=height,
-                                                 rgbaColor = color)
-        orientation = self.quaternion_converter.convertFrom(orientation) # convert to list
-        cylinder = self.sim.createMultiBody(baseMass = 0.,
-                                            baseVisualShapeIndex = visualShape,
-                                            basePosition = position,
-                                            baseOrientation = orientation)
+        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_CYLINDER, radius=radius, length=height,
+                                                    rgba_color=color)
+        
+        cylinder = self.sim.create_body(mass=0., visual_shape_id=visual_shape, position=position,
+                                        orientation=orientation)
         self.visual_objects[cylinder] = 'cylinder'
         return cylinder
 
-    def loadCylinder(self, position, orientation=(0,0,0,1), mass=1., radius=0.5, height=1., color=(1,1,1,1)):
+    def load_cylinder(self, position, orientation=(0, 0, 0, 1), mass=1., radius=0.5, height=1., color=None):
         """
         Load a cylinder in the world (only available in the simulator).
 
         Args:
             position (float[3]): position of the cylinder in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation of the cylinder using quaternion.
-                If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+            orientation (float[4]): orientation of the cylinder using quaternion [x,y,z,w].
             mass (float): mass of the cylinder (in kg). If mass = 0, it won't move even if there is a collision.
             radius (float): radius of the cylinder (in meters)
             height (float): height of the cylinder (in meters)
@@ -1431,29 +1485,26 @@ class World(object):
         Returns:
             int: unique id of the cylinder in the world
         """
-        collisionShape = self.sim.createCollisionShape(self.sim.GEOM_CYLINDER, radius=radius, height=height)
-        visualShape = self.sim.createVisualShape(self.sim.GEOM_CYLINDER, radius=radius, length=height,
-                                                 rgbaColor = color)
-        orientation = self.quaternion_converter.convertFrom(orientation) # convert to list
-        cylinder = self.sim.createMultiBody(baseMass = mass,
-                                            baseCollisionShapeIndex = collisionShape,
-                                            baseVisualShapeIndex = visualShape,
-                                            basePosition = position,
-                                            baseOrientation = orientation)
+        collision_shape = self.sim.create_collision_shape(self.sim.GEOM_CYLINDER, radius=radius, height=height)
+        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_CYLINDER, radius=radius, length=height,
+                                                    rgba_color=color)
+        
+        cylinder = self.sim.create_body(mass=mass, collision_shape_id=collision_shape, visual_shape_id=visual_shape,
+                                        position=position, orientation=orientation)
+
         if mass == 0.0:
-            self.immovable_objects[cylinder] = 'cylinder'
+            self.immovable_bodies[cylinder] = 'cylinder'
         else:
-            self.movable_objects[cylinder] = 'cylinder'
+            self.movable_bodies[cylinder] = 'cylinder'
         return cylinder
 
-    def loadVisualCapsule(self, position, orientation=(0,0,0,1), radius=0.5, height=1., color=(1,1,1,1)):
+    def load_visual_capsule(self, position, orientation=(0, 0, 0, 1), radius=0.5, height=1., color=None):
         """
         Load a visual capsule in the world (only available in the simulator).
 
         Args:
             position (float[3]): position of the capsule in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation of the capsule using quaternion.
-                If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+            orientation (float[4]): orientation of the capsule using quaternion [x,y,z,w].
             radius (float): radius of the capsule (in meters)
             height (float): height of the capsule (in meters)
             color (int[4]): color of the capsule (by default: white and opaque)
@@ -1462,24 +1513,22 @@ class World(object):
             int: unique id of the capsule in the world
         """
         height = height/2.
-        visualShape = self.sim.createVisualShape(self.sim.GEOM_CAPSULE, radius=radius, length=height,
-                                                 rgbaColor=color)
-        orientation = self.quaternion_converter.convertFrom(orientation) # convert to list
-        capsule = self.sim.createMultiBody(baseMass = 0.,
-                                            baseVisualShapeIndex = visualShape,
-                                            basePosition = position,
-                                            baseOrientation = orientation)
+        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_CAPSULE, radius=radius, length=height,
+                                                    rgba_color=color)
+        
+        capsule = self.sim.create_body(mass=0., visual_shape_id=visual_shape, position=position,
+                                       orientation=orientation)
+
         self.visual_objects[capsule] = 'capsule'
         return capsule
 
-    def loadCapsule(self, position, orientation=(0,0,0,1), mass=1., radius=0.5, height=1., color=(1,1,1,1)):
+    def load_capsule(self, position, orientation=(0, 0, 0, 1), mass=1., radius=0.5, height=1., color=None):
         """
         Load a capsule in the world (only available in the simulator).
 
         Args:
             position (float[3]): position of the capsule in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation of the capsule using quaternion.
-                If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+            orientation (float[4]): orientation of the capsule using quaternion [x,y,z,w].
             mass (float): mass of the capsule (in kg). If mass = 0, it won't move even if there is a collision.
             radius (float): radius of the capsule (in meters)
             height (float): height of the capsule (in meters)
@@ -1489,23 +1538,20 @@ class World(object):
             int: unique id of the capsule in the world
         """
         height = height / 2.
-        collisionShape = self.sim.createCollisionShape(self.sim.GEOM_CAPSULE, radius=radius, height=height)
-        visualShape = self.sim.createVisualShape(self.sim.GEOM_CAPSULE, radius=radius, length=height,
-                                                 rgbaColor = color)
-        orientation = self.quaternion_converter.convertFrom(orientation) # convert to list
-        capsule = self.sim.createMultiBody(baseMass = mass,
-                                            baseCollisionShapeIndex = collisionShape,
-                                            baseVisualShapeIndex = visualShape,
-                                            basePosition = position,
-                                            baseOrientation = orientation)
+        collision_shape = self.sim.create_collision_shape(self.sim.GEOM_CAPSULE, radius=radius, height=height)
+        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_CAPSULE, radius=radius, length=height,
+                                                    rgba_color=color)
+        
+        capsule = self.sim.create_body(mass=mass, collision_shape_id=collision_shape, visual_shape_id=visual_shape,
+                                       position=position, orientation=orientation)
         if mass == 0.0:
-            self.immovable_objects[capsule] = 'capsule'
+            self.immovable_bodies[capsule] = 'capsule'
         else:
-            self.movable_objects[capsule] = 'capsule'
+            self.movable_bodies[capsule] = 'capsule'
         return capsule
 
-    def loadVisualMesh(self, filename, position, orientation=(0,0,0,1), scale=(1.,1.,1.), color=(1,1,1,1),
-                       objectType='mesh'):
+    def load_visual_mesh(self, filename, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None,
+                         object_type='mesh'):
         """
         Load a visual mesh in the world (only available in the simulator).
 
@@ -1513,26 +1559,20 @@ class World(object):
             filename (str): path to file for the mesh. Currently, only Wavefront .obj. It will create convex hulls
                 for each object (marked as 'o') in the .obj file.
             position (float[3]): position of the mesh in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation of the mesh using quaternion.
-                If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+            orientation (float[4]): orientation of the mesh using quaternion [x,y,z,w].
             scale (float[3]): scale the mesh in the (x,y,z) directions
             color (int[4]): color of the mesh (by default: white and opaque)
 
         Returns:
             int: unique id of the mesh in the world
         """
-        visualShape = self.sim.createVisualShape(self.sim.GEOM_MESH, fileName=filename, meshScale=scale,
-                                                 rgbaColor=color)
-        orientation = self.quaternion_converter.convertFrom(orientation) # convert to list
-        mesh = self.sim.createMultiBody(baseMass = 0.,
-                                        baseVisualShapeIndex = visualShape,
-                                        basePosition = position,
-                                        baseOrientation = orientation)
-        self.visual_objects[mesh] = objectType
+        mesh = self.sim.load_mesh(filename, position, orientation, mass=0., scale=scale, color=color,
+                                  with_collision=False)
+        self.visual_objects[mesh] = object_type
         return mesh
 
-    def loadMesh(self, filename, position, orientation=(0,0,0,1), mass=1., scale=(1.,1.,1.), color=(1,1,1,1),
-                 flags=None, objectType='mesh'):
+    def load_mesh(self, filename, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None,
+                  flags=None, object_type='mesh'):
         """
         Load a mesh in the world (only available in the simulator).
 
@@ -1540,8 +1580,7 @@ class World(object):
             filename (str): path to file for the mesh. Currently, only Wavefront .obj. It will create convex hulls
                 for each object (marked as 'o') in the .obj file.
             position (float[3]): position of the mesh in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation of the mesh using quaternion.
-                If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+            orientation (float[4]): orientation of the mesh using quaternion [x,y,z,w].
             mass (float): mass of the mesh (in kg). If mass = 0, it won't move even if there is a collision.
             scale (float[3]): scale the mesh in the (x,y,z) directions
             color (int[4]): color of the mesh (by default: white and opaque)
@@ -1551,58 +1590,45 @@ class World(object):
         Returns:
             int: unique id of the mesh in the world
         """
-        if flags is None:
-            collisionShape = self.sim.createCollisionShape(self.sim.GEOM_MESH, fileName=filename, meshScale=scale)
-        else:
-            collisionShape = self.sim.createCollisionShape(self.sim.GEOM_MESH, fileName=filename, meshScale=scale,
-                                                           flags=flags)
-        visualShape = self.sim.createVisualShape(self.sim.GEOM_MESH, fileName=filename, meshScale=scale,
-                                                 rgbaColor=color)
-        orientation = self.quaternion_converter.convertFrom(orientation) # convert to list
-        mesh = self.sim.createMultiBody(baseMass = mass,
-                                        baseCollisionShapeIndex=collisionShape,
-                                        baseVisualShapeIndex = visualShape,
-                                        basePosition = position,
-                                        baseOrientation = orientation)
+        mesh = self.sim.load_mesh(filename, position, orientation, mass, scale, color, with_collision=True,
+                                  flags=flags)
         if mass == 0.0:
-            self.immovable_objects[mesh] = objectType
+            self.immovable_bodies[mesh] = object_type
         else:
-            self.movable_objects[mesh] = objectType
+            self.movable_bodies[mesh] = object_type
         return mesh
 
     # The following commented code does not work currently because URDF_GEOM_PLANE is not set in Bullet
     # Note that a plane can be seen as a thin box.
-    # def loadVisualPlane(self, position, orientation, normal=(0.,0.,1.), color=(1,1,1,1)):
+    # def load_visual_plane(self, position, orientation, normal=(0.,0.,1.), color=(1,1,1,1)):
     #     """
     #     Load a visual plane in the world (only available in the simulator).
     #
     #     Args:
     #         position (float[3]): position of the plane in the Cartesian world space (in meters)
-    #         orientation (float[4], np.quaternion): orientation of the plane using quaternion.
-    #             If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+    #         orientation (float[4]): orientation of the plane using quaternion [x,y,z,w].
     #         normal (float[3]): normal to the plane
     #         color (int[4]): color of the plane (by default: white and opaque)
     #
     #     Returns:
     #         int: unique id of the plane in the world
     #     """
-    #     visualShape = self.sim.createVisualShape(self.sim.GEOM_PLANE, planeNormal=normal, rgbaColor=color)
-    #     orientation = self.quaternion_converter.convertFrom(orientation)  # convert to list
-    #     plane = self.sim.createMultiBody(baseMass=0.,
-    #                                     baseVisualShapeIndex=visualShape,
-    #                                     basePosition=position,
-    #                                     baseOrientation=orientation)
+    #     visual_shape = self.sim.create_visual_shape(self.sim.GEOM_PLANE, planeNormal=normal, rgba_color=color)
+    #     
+    #     plane = self.sim.create_body(mass=0.,
+    #                                     visual_shape_id=visual_shape,
+    #                                     position=position,
+    #                                     orientation=orientation)
     #     self.visual_objects[plane] = 'plane'
     #     return plane
     #
-    # def loadPlane(self, position, orientation, mass=1., normal=(0.,0.,1.), color=(1,1,1,1)):
+    # def load_plane(self, position, orientation, mass=1., normal=(0.,0.,1.), color=(1,1,1,1)):
     #     """
     #     Load a plane in the world (only available in the simulator).
     #
     #     Args:
     #         position (float[3]): position of the plane in the Cartesian world space (in meters)
-    #         orientation (float[4], np.quaternion): orientation of the plane using quaternion.
-    #             If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+    #         orientation (float[4]): orientation of the plane using quaternion [x,y,z,w].
     #         mass (float): mass of the plane (in kg). If mass = 0, it won't move even if there is a collision.
     #         normal (float[3]): normal to the plane
     #         color (int[4]): color of the plane (by default: white and opaque)
@@ -1610,45 +1636,44 @@ class World(object):
     #     Returns:
     #         int: unique id of the plane in the world
     #     """
-    #     collisionShape = self.sim.createCollisionShape(self.sim.GEOM_PLANE, planeNormal=normal)
-    #     visualShape = self.sim.createVisualShape(self.sim.GEOM_PLANE, planeNormal=normal, rgbaColor=color)
-    #     orientation = self.quaternion_converter.convertFrom(orientation)  # convert to list
-    #     plane = self.sim.createMultiBody(baseMass=mass,
-    #                                      baseCollisionShapeIndex=collisionShape,
-    #                                      baseVisualShapeIndex=visualShape,
-    #                                      basePosition=position,
-    #                                      baseOrientation=orientation)
+    #     collision_shape = self.sim.create_collision_shape(self.sim.GEOM_PLANE, planeNormal=normal)
+    #     visual_shape = self.sim.create_visual_shape(self.sim.GEOM_PLANE, planeNormal=normal, rgba_color=color)
+    #     
+    #     plane = self.sim.create_body(mass=mass,
+    #                                      collision_shape_id=collision_shape,
+    #                                      visual_shape_id=visual_shape,
+    #                                      position=position,
+    #                                      orientation=orientation)
     #     if mass == 0.0:
-    #         self.immovable_objects[plane] = 'plane'
+    #         self.immovable_bodies[plane] = 'plane'
     #     else:
-    #         self.movable_objects[plane] = 'plane'
+    #         self.movable_bodies[plane] = 'plane'
     #     return plane
 
     # Temporary because the code above doesn't work
-    def loadPlane(self, position=(0.,0.,0.), orientation=(0.,0.,0.,1.), scaling=1.):
+    def load_plane(self, position=(0., 0., 0.), orientation=(0., 0., 0., 1.), scale=1.):
         """
         Load a plane in the world (only available in the simulator)
 
         Args:
             position (float[3]): position of the plane
             orientation (float[4]): orientation of the plane
-            scaling (float): scaling of the plane
+            scale (float): scale factor of the plane
 
         Returns:
             int: unique id of the plane
         """
-        plane = self.sim.loadURDF('plane.urdf', position, orientation, useFixedBase=True, globalScaling=scaling)
-        self.immovable_objects[plane] = plane
+        plane = self.sim.load_urdf('plane.urdf', position, orientation, use_fixed_base=True, scale=scale)
+        self.immovable_bodies[plane] = plane
         return plane
 
-    def loadVisualEllipsoid(self, position, orientation=(0,0,0,1), scale=(1., 1., 1.), color=(1,1,1,1)):
+    def load_visual_ellipsoid(self, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None):
         """
         Load a visual ellipsoid (using a mesh) in the world (only available in the simulator).
 
         Args:
             position (float[3]): position in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation using quaternion.
-                If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+            orientation (float[4]): orientation using quaternion [x,y,z,w].
             scale (float[3]): scale in the (x,y,z) directions
             color (int[4]): color (by default: white and opaque)
 
@@ -1656,16 +1681,15 @@ class World(object):
             int: unique id of the ellipsoid in the world
         """
         filename = os.path.dirname(__file__) + '/meshes/ellipsoid.obj'
-        return self.loadVisualMesh(filename, position, orientation, scale=scale, color=color)
+        return self.load_visual_mesh(filename, position, orientation, scale=scale, color=color)
 
-    def loadEllipsoid(self, position, orientation=(0,0,0,1), mass=1., scale=(1., 1., 1.), color=(1,1,1,1)):
+    def load_ellipsoid(self, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None):
         """
         Load a ellipsoid (using a mesh) in the world (only available in the simulator).
 
         Args:
             position (float[3]): position in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation using quaternion.
-                If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+            orientation (float[4]): orientation using quaternion [x,y,z,w].
             mass (float): mass [kg]
             scale (float[3]): scale in the (x,y,z) directions
             color (int[4]): color (by default: white and opaque)
@@ -1674,16 +1698,16 @@ class World(object):
             int: unique id of the ellipsoid in the world
         """
         filename = os.path.dirname(__file__) + '/meshes/ellipsoid.obj'
-        return self.loadMesh(filename, position, orientation, mass=mass, scale=scale, color=color)
+        return self.load_mesh(filename, position, orientation, mass=mass, scale=scale, color=color)
 
-    def loadVisualRightTriangularPrism(self, position, orientation=(0,0,0,1), scale=(1., 1., 1.), color=(1,1,1,1)):
+    def load_visual_right_triangular_prism(self, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.),
+                                           color=None):
         """
         Load a visual right triangular prism (using a mesh) in the world (only available in the simulator).
 
         Args:
             position (float[3]): position in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation using quaternion.
-                If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+            orientation (float[4]): orientation using quaternion [x,y,z,w].
             scale (float[3]): scale in the (x,y,z) directions
             color (int[4]): color (by default: white and opaque)
 
@@ -1691,16 +1715,16 @@ class World(object):
             int: unique id of the triangular prism in the world
         """
         filename = os.path.dirname(__file__) + '/meshes/right_triangular_prism.obj'
-        return self.loadVisualMesh(filename, position, orientation, scale=scale, color=color)
+        return self.load_visual_mesh(filename, position, orientation, scale=scale, color=color)
 
-    def loadRightTriangularPrism(self, position, orientation=(0,0,0,1), mass=1., scale=(1., 1., 1.), color=(1,1,1,1)):
+    def load_right_triangular_prism(self, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.),
+                                    color=None):
         """
         Load a right triangular prism (using a mesh) in the world (only available in the simulator).
 
         Args:
             position (float[3]): position in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation using quaternion.
-                If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+            orientation (float[4]): orientation using quaternion [x,y,z,w].
             mass (float): mass [kg]
             scale (float[3]): scale in the (x,y,z) directions
             color (int[4]): color (by default: white and opaque)
@@ -1709,16 +1733,15 @@ class World(object):
             int: unique id of the triangular prism in the world
         """
         filename = os.path.dirname(__file__) + '/meshes/right_triangular_prism.obj'
-        return self.loadMesh(filename, position, orientation, mass=mass, scale=scale, color=color)
+        return self.load_mesh(filename, position, orientation, mass=mass, scale=scale, color=color)
 
-    def loadVisualCone(self, position, orientation=(0,0,0,1), scale=(1., 1., 1.), color=(1,1,1,1)):
+    def load_visual_cone(self, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None):
         """
         Load a visual cone (using a mesh) in the world (only available in the simulator).
 
         Args:
             position (float[3]): position in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation using quaternion.
-                If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+            orientation (float[4]): orientation using quaternion [x,y,z,w].
             scale (float[3]): scale in the (x,y,z) directions
             color (int[4]): color (by default: white and opaque)
 
@@ -1726,16 +1749,16 @@ class World(object):
             int: unique id of the cone in the world
         """
         filename = os.path.dirname(__file__) + '/meshes/cone.obj'
-        return self.loadVisualMesh(filename, position, orientation, scale=scale, color=color)
+        return self.load_visual_mesh(filename, position, orientation, scale=scale, color=color)
 
-    def loadCone(self, position, orientation=(0,0,0,1), mass=1., scale=(1.,1.,1.), color=(1,1,1,1)):
+    def load_cone(self, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None):
         """
         Load a visual cone (using a mesh) in the world (only available in the simulator).
 
         Args:
             position (float[3]): position in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation using quaternion.
-                If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+            orientation (float[4]): orientation using quaternion [x,y,z,w].
+            mass (float): mass [kg]
             scale (float[3]): scale in the (x,y,z) directions
             color (int[4]): color (by default: white and opaque)
 
@@ -1743,24 +1766,24 @@ class World(object):
             int: unique id of the cone in the world
         """
         filename = os.path.dirname(__file__) + '/meshes/cone.obj'
-        return self.loadMesh(filename, position, orientation, mass=mass, scale=scale, color=color)
+        return self.load_mesh(filename, position, orientation, mass=mass, scale=scale, color=color)
 
-    def loadVisualArrow(self, position, orientation=(0,0,0,1), scale=(1.,1.,1.), color=(1,1,1,1)):
+    def load_visual_arrow(self, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None):
         pass
 
-    def loadArrow(self, position, orientation=(0,0,0,1), mass=1., scale=(1.,1.,1.), color=(1,1,1,1)):
+    def load_arrow(self, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None):
         pass
 
     def distribute_objects(self, distributor, objects):
         pass
 
-    def getDynamicsInfo(self, bodyId, linkId=-1):
+    def get_dynamics_info(self, body_id, link_id=-1):
         """
         Return the dynamics information about objects that are in the world.
 
         Args:
-            bodyId (int): object unique id.
-            linkId (int): link index (or -1 for the base).
+            body_id (int): object unique id.
+            link_id (int): link index (or -1 for the base).
 
         Returns:
             float: mass in kg
@@ -1774,39 +1797,50 @@ class World(object):
             float: -1 if not available, damping of contact constraints
             float: -1 if not available, stiffness contact constraints
         """
-        info = self.sim.getDynamicsInfo(bodyId, linkId)
-        local_inertia_diag, local_inertial_pos, local_inertial_orn = info[2:5]
-        local_inertia_diag = np.array(local_inertia_diag)
-        local_inertial_pos = np.array(local_inertial_pos)
-        local_inertial_orn = np.array(local_inertial_orn)
-        return info[:2] + [local_inertia_diag, local_inertial_pos, local_inertial_orn] + info[5:]
+        return self.sim.get_dynamics_info(body_id, link_id)
 
     def print_dynamics_info(self, body_id, link_id=-1):
         """
         Print the dynamics information related to the given body id and link id.
 
         Args:
-            bodyId (int): object unique id.
-            linkId (int): link index (or -1 for the base).
+            body_id (int): object unique id.
+            link_id (int): link index (or -1 for the base).
         """
-        info = self.sim.getDynamicsInfo(body_id, link_id)
+        info = self.sim.get_dynamics_info(body_id, link_id)
         print("Mass: {}".format(info[0]))
         print("Lateral friction coefficient: {}".format(info[1]))
         print("Local inertia diagonal: {}".format(info[2]))
         print("Local inertial position: {}".format(info[3]))
         print("Local inertial orientation (quat=[x,y,z,w]): {}".format(info[4]))
-        print("Restitution coefficient (bouncyness): {}".format(info[5]))
+        print("Restitution coefficient (bounciness): {}".format(info[5]))
         print("Rolling friction coefficient: {}".format(info[6]))
         print("Spinning friction coefficient: {}".format(info[7]))
         print("Contact damping coefficient (-1 if not available): {}".format(info[8]))
         print("Contact stiffness coefficient (-1 if not available): {}".format(info[9]))
 
-    def changeDynamics(self, lateral_friction, spinning_friction, rolling_friction, linear_damping, angular_damping,
-                       contact_stiffness=-1, contact_damping=-1):
-        self.sim.changeDynamics(bodyUniqueId=self.floor_id, linkIndex=-1, lateralFriction=lateral_friction,
-                                spinningFriction=spinning_friction, rollingFriction=rolling_friction,
-                                linearDamping=linear_damping, angularDamping=angular_damping,
-                                contactStiffness=contact_stiffness, contactDamping=contact_damping)
+    def change_dynamics(self, lateral_friction=1., spinning_friction=0., rolling_friction=0., restitution=0.,
+                        linear_damping=0.04, angular_damping=0.04, contact_stiffness=-1, contact_damping=-1, **kwargs):
+        """
+        Change the world floor dynamics.
+
+        Args:
+            lateral_friction (float): lateral (linear) contact friction
+            spinning_friction (float): torsional friction around the contact normal
+            rolling_friction (float): torsional friction orthogonal to contact normal
+            restitution (float): bounciness of contact. Keep it a bit less than 1.
+            linear_damping (float): linear damping of the link.
+            angular_damping (float): angular damping of the link.
+            contact_stiffness (float): stiffness of the contact constraints, used together with `contact_damping`
+            contact_damping (float): damping of the contact constraints for this body/link. Used together with
+                `contact_stiffness`. This overrides the value if it was specified in the URDF file in the contact
+                section.
+        """
+        self.sim.change_dynamics(body_id=self.floor_id, link_id=-1, lateral_friction=lateral_friction,
+                                 spinning_friction=spinning_friction, rolling_friction=rolling_friction,
+                                 restitution=restitution, linear_damping=linear_damping,
+                                 angular_damping=angular_damping, contact_stiffness=contact_stiffness,
+                                 contact_damping=contact_damping)
 
 
 class BasicWorld(World):
@@ -1815,18 +1849,19 @@ class BasicWorld(World):
     It creates a basic world with a floor and set the gravity.
     """
 
-    def __init__(self, simulator, floor_path=None, gravity=(0., 0., -9.81), scaling=1., lateral_friction=.9,
+    def __init__(self, simulator, floor_path=None, gravity=(0., 0., -9.81), scaling=1., lateral_friction=1.,
                  spinning_friction=0., rolling_friction=0., contact_stiffness=-1, contact_damping=-1):
         super(BasicWorld, self).__init__(simulator, gravity=gravity)
 
         if floor_path is None:
-            self.loadFloor(scaling=scaling)
-            self.changeDynamics(lateral_friction=lateral_friction, spinning_friction=spinning_friction,
-                                rolling_friction=rolling_friction, linear_damping=0, angular_damping=0,
-                                contact_stiffness=contact_stiffness, contact_damping=contact_damping)
-            self.simulator.setDefaultContactERP(0.9)
+            self.load_floor(scaling=scaling)
+            self.change_dynamics(lateral_friction=lateral_friction, spinning_friction=spinning_friction,
+                                 rolling_friction=rolling_friction, linear_damping=0.04, angular_damping=0.04,
+                                 contact_stiffness=contact_stiffness, contact_damping=contact_damping)
+            # self.simulator.setDefaultContactERP(0.9)
+            self.simulator.set_physics_properties(erp=0.9)
         else:
-            self.loadTerrain(floor_path, replace_floor=True)
+            self.load_terrain(floor_path, replace_floor=True)
 
         self.print_dynamics_info(self.floor_id)
 
@@ -1863,11 +1898,11 @@ if __name__ == '__main__':
     # create world
     world = BasicWorld(sim)
     # world = World(sim)
-    # world.loadBotLab()
+    # world.load_bot_lab()
 
-    # world.loadSDF('/home/brian/Downloads/cobblestones_origin/model.sdf', scaling=1)
+    # world.load_sdf('/home/brian/Downloads/cobblestones_origin/model.sdf', scaling=1)
 
-    # world.loadMesh('/home/brian/Downloads/cobblestones_origin/mesh/cobblestones.obj',
+    # world.load_mesh('/home/brian/Downloads/cobblestones_origin/mesh/cobblestones.obj',
     #                position=[0, 0, 0],
     #                orientation=[.707, 0, 0, .707],
     #                mass=0.,
@@ -1875,7 +1910,7 @@ if __name__ == '__main__':
     #                # color=[1, 0, 0, 1],
     #                flags=1)
 
-    # world.loadMesh('/home/brian/save/code/random-terrain-generator-master/terrain.obj',
+    # world.load_mesh('/home/brian/save/code/random-terrain-generator-master/terrain.obj',
     #                position=[0, 0, -2],
     #                orientation=[.707, 0, 0, .707],
     #                mass=0.,
@@ -1883,67 +1918,67 @@ if __name__ == '__main__':
     #                # color=[1, 0, 0, 1],
     #                flags=1)
 
-    # world.loadMesh('bedroom.obj', [0, 0, 0], mass=0., color=[0.4, 0.4, 0.4, 1], flags=1) #, scale=(0.01, 0.01, 0.01))
-    # world.loadMesh('mtsthelens.obj', [0, 0, -8], mass=0., color=[0.2, 0.5, 0.2, 1], flags=1, scale=(0.01,0.01,0.01))
-    # world.loadMesh('meshes/terrain.obj', [0,0,0], mass=0., color=[1,1,1,1], flags=1)
-    # world.loadMesh('/home/brian/heightmap_old.obj', [0,0,0], mass=0., scale=(0.1,0.1,0.01), color=[1,1,1,1], flags=1)
-    # world.loadMesh('/home/brian/Downloads/arab_desert/desert.obj',
+    # world.load_mesh('bedroom.obj', [0, 0, 0], mass=0., color=[0.4, 0.4, 0.4, 1], flags=1) #, scale=(0.01, 0.01, 0.01))
+    # world.load_mesh('mtsthelens.obj', [0, 0, -8], mass=0., color=[0.2, 0.5, 0.2, 1], flags=1, scale=(0.01,0.01,0.01))
+    # world.load_mesh('meshes/terrain.obj', [0,0,0], mass=0., color=[1,1,1,1], flags=1)
+    # world.load_mesh('/home/brian/heightmap_old.obj', [0,0,0], mass=0., scale=(0.1,0.1,0.01), color=[1,1,1,1], flags=1)
+    # world.load_mesh('/home/brian/Downloads/arab_desert/desert.obj',
     #                position=[0, 0, -10.8], orientation=(0.707,0,0,0.707), mass=0., scale=(1, 1, 1),
     #                color=[1, 1, 1, 1], flags=1)
-    # world.loadMesh('/home/brian/PhD-repos/pyrobolearn/tests/heightmap_test_exp.obj', [0, 0, 0], mass=0.,
+    # world.load_mesh('/home/brian/PhD-repos/pyrobolearn/tests/heightmap_test_exp.obj', [0, 0, 0], mass=0.,
     #                scale=(0.1, 0.1, 0.015),
     #                color=[1, 0, 0, 1],
     #                flags=1)
 
-    # world.loadRobot('Cogimon', position=[0,0,1.])
+    # world.load_robot('Cogimon', position=[0,0,1.])
 
-    # world.loadRobot('coman', useFixedBase=False)
-    # sphere = world.loadVisualSphere([1.,0,1.], color=(1,0,0,0.5))
-    # world.loadVisualBox([-1,0,1], dimensions=[1.,1.,1.], color=[0,0,1,0.5])
-    # world.loadCylinder([0, -1, 1], color=[1, 0, 0, 1])
-    #  world.loadCapsule([0, 1, 1],  color=[1, 0, 0, 1])
-    #  world.loadMesh(filename='duck.obj', [1, 0, 2], [0.707, 0, 0, 0.707], mass=0.1, scale=[0.1,0.1,0.1],
+    # world.load_robot('coman', use_fixed_base=False)
+    # sphere = world.load_visual_Sphere([1.,0,1.], color=(1,0,0,0.5))
+    # world.load_visual_box([-1,0,1], dimensions=[1.,1.,1.], color=[0,0,1,0.5])
+    # world.load_cylinder([0, -1, 1], color=[1, 0, 0, 1])
+    #  world.load_capsule([0, 1, 1],  color=[1, 0, 0, 1])
+    #  world.load_mesh(filename='duck.obj', [1, 0, 2], [0.707, 0, 0, 0.707], mass=0.1, scale=[0.1,0.1,0.1],
     #                 color=[1, 0, 0, 1])
 
     # from utils.orientation import RotX, RotY, RotZ, getQuaternionFromMatrix
     # R = RotZ(np.deg2rad(90.))
     # q = tuple(getQuaternionFromMatrix(R))
-    # world.loadEllipsoid([0,0,2], orientation=q, mass=0, scale=[2.,1.,1.], color=(0,0,1,1))
-    # world.loadCone([1,1,2])
-    world.loadRightTriangularPrism([-1,-1,2])
-    # floor = world.loadMesh(filename='box', [1, 0, 2], mass=0, color=(1, 1, 1, 1))
+    # world.load_ellipsoid([0,0,2], orientation=q, mass=0, scale=[2.,1.,1.], color=(0,0,1,1))
+    # world.load_cone([1,1,2])
+    world.load_right_triangular_prism([-1, -1, 2])
+    # floor = world.load_mesh(filename='box', [1, 0, 2], mass=0, color=None)
 
-    # floor = world.loadFloor()
-    # print(p.getDynamicsInfo(floor, -1))
-    # floor = world.loadMesh([1,0,0], [0,0,0,1], filename='grass.obj', mass=0, color=(1,1,1,1))
-    # texture = sim.loadTexture('grass.png')
-    # sim.changeVisualShape(floor, -1, textureUniqueId=texture)
+    # floor = world.load_floor()
+    # print(p.get_dynamics_info(floor, -1))
+    # floor = world.load_mesh([1,0,0], [0,0,0,1], filename='grass.obj', mass=0, color=(1,1,1,1))
+    # texture = sim.load_texture('grass.png')
+    # sim.change_visual_shape(floor, -1, texture_id=texture)
 
-    # grass = sim.loadURDF('grass.urdf')
-    # texture = sim.loadTexture('grass.png')
-    # sim.changeVisualShape(grass, -1, textureUniqueId=texture)
+    # grass = sim.load_urdf('grass.urdf')
+    # texture = sim.load_texture('grass.png')
+    # sim.change_visual_shape(grass, -1, texture_id=texture)
 
-    # vs = world.loadVisualSphere([0,0,2], radius=0.1, color=(0,0,1,1))
+    # vs = world.load_visual_Sphere([0,0,2], radius=0.1, color=(0,0,1,1))
 
     # path = '/home/brian/bullet3/data/'
-    # objects = p.loadMJCF(path+"MPL/mpl2.xml")
+    # objects = p.load_mjcf(path+"MPL/mpl2.xml")
 
-    # world.loadPlane([1.,0.,1.], [0,0,0,1], color=(1,0,0,1))
+    # world.load_plane([1.,0.,1.], [0,0,0,1], color=(1,0,0,1))
 
     T = 1000
     w = 2.*np.pi / T
     red = True
     # loop
     for t in count():
-        # p = world.getObjectPosition(sphere)
+        # p = world.get_object_position(sphere)
         # p -= 0.001 * np.array([1.,0,0])
         p = np.array([np.cos(w*t), np.sin(w*t), 1.])
-        # world.moveObject(sphere, p)
+        # world.move_object(sphere, p)
         # if t % T == 0:
         #     if red:
-        #         world.changeObjectColor(sphere, (1,0,0,0.5))
+        #         world.change_object_color(sphere, (1,0,0,0.5))
         #     else:
-        #         world.changeObjectColor(sphere, (0,0,1,0.5))
+        #         world.change_object_color(sphere, (0,0,1,0.5))
         #     red = not red
-        # world.moveObject(sphere)
+        # world.move_object(sphere)
         world.step(sleep_dt=1./240)

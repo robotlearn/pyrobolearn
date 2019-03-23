@@ -17,14 +17,14 @@ world = BasicWorld(sim)
 robot = Franka(sim)
 
 # print information about the robot
-robot.printRobotInfo()
-# H = robot.calculateMassMatrix()
+robot.print_info()
+# H = robot.get_mass_matrix()
 # print("Inertia matrix: H(q) = {}".format(H))
 
 # Position control using sliders
-# robot.addJointSlider()
+# robot.add_joint_slider()
 
 for i in count():
-    # robot.updateJointSlider()
+    # robot.update_joint_slider()
     # step in simulation
     world.step(sleep_dt=1./240)

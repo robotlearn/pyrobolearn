@@ -17,25 +17,25 @@ class Crab(HexapodRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 0.12),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 position=(0, 0, 0.12),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/crab/crab.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/crab/crab.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.12)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.12,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 0.12)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.12,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(Crab, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Crab, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'crab'
 
-        self.legs = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['coxa_l1', 'femur_l1', 'tibia_l1'],
                                    [ 'coxa_r1', 'femur_r1', 'tibia_r1'],
                                    ['coxa_l2', 'femur_l2', 'tibia_l2'],
@@ -43,7 +43,7 @@ class Crab(HexapodRobot):
                                    ['coxa_l3', 'femur_l3', 'tibia_l3'],
                                    ['coxa_r3', 'femur_r3', 'tibia_r3']]]
 
-        self.feet = [self.getLinkIds(link) for link in ['tibia_foot_l1', 'tibia_foot_r1', 'tibia_foot_l2',
+        self.feet = [self.get_link_ids(link) for link in ['tibia_foot_l1', 'tibia_foot_r1', 'tibia_foot_l2',
                                                         'tibia_foot_r2', 'tibia_foot_l3', 'tibia_foot_r3']
                      if link in self.link_names]
 
@@ -64,13 +64,13 @@ if __name__ == "__main__":
     robot = Crab(sim)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
     # Position control using sliders
-    robot.addJointSlider(robot.right_middle_leg)
+    robot.add_joint_slider(robot.right_middle_leg)
 
     # run simulation
     for i in count():
-        robot.updateJointSlider()
+        robot.update_joint_slider()
         # step in simulation
         world.step(sleep_dt=1./240)

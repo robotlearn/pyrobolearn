@@ -14,23 +14,23 @@ sim = BulletSim()
 world = BasicWorld(sim)
 
 # create robot
-robot = Coman(sim, useFixedBase=True)
+robot = Coman(sim, fixed_base=True)
 
 # print information about the robot
-robot.printRobotInfo()
+robot.print_info()
 print(robot.link_names)
 
 # # Position control using sliders
-# robot.addJointSlider()
+# robot.add_joint_slider()
 
-robot.changeTransparency()
-# robot.drawLinkCoMs()
-robot.drawLinkFrames()
-# robot.drawBoundingBoxes(robot.right_leg[4])
+robot.change_transparency()
+# robot.draw_link_coms()
+robot.draw_link_frames()
+# robot.draw_bounding_boxes(robot.right_leg[4])
 
 # run simulator
 for _ in count():
-    # robot.updateJointSlider()
-    # robot.computeAndDrawCoMPosition()
-    # robot.computeAndDrawProjectedCoMPosition()
+    # robot.update_joint_slider()
+    # robot.compute_and_draw_com_position()
+    # robot.compute_and_draw_projected_com_position()
     world.step(sleep_dt=1./240)

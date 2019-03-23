@@ -18,29 +18,29 @@ class SoftHand(Hand):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 0),
-                 init_orient=(0, 0, 0, 1),
+                 position=(0, 0, 0),
+                 orientation=(0, 0, 0, 1),
                  scaling=1.,
                  left=True,
-                 useFixedBase=True):
+                 fixed_base=True):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.,)
-        if useFixedBase is None:
-            useFixedBase = True
+        if position is None:
+            position = (0., 0., 0.)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.,)
+        if fixed_base is None:
+            fixed_base = True
 
         if left:
-            if init_orient is None:
-                init_orient = (0, 0, 0, 1)
+            if orientation is None:
+                orientation = (0, 0, 0, 1)
             urdf_path = os.path.dirname(__file__) + '/urdfs/softhand/left_hand.urdf'
         else:
-            if init_orient is None:
-                init_orient = (0, 0, 1, 0)
+            if orientation is None:
+                orientation = (0, 0, 1, 0)
             urdf_path = os.path.dirname(__file__) + '/urdfs/softhand/right_hand.urdf'
 
-        super(SoftHand, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(SoftHand, self).__init__(simulator, urdf_path, position, orientation, fixed_base, scaling)
         self.name = 'soft_hand'
 
 
@@ -57,23 +57,23 @@ if __name__ == "__main__":
     world = BasicWorld(sim)
 
     # create robot
-    left_hand = SoftHand(sim, init_pos=(-0.15, 0, 0), left=True)
-    right_hand = SoftHand(sim, init_pos=(0.15, 0., 0.), init_orient=(0, 0, 1, 0), left=False)
+    left_hand = SoftHand(sim, position=(-0.15, 0, 0), left=True)
+    right_hand = SoftHand(sim, position=(0.15, 0., 0.), orientation=(0, 0, 1, 0), left=False)
 
     # print information about the robot
-    left_hand.printRobotInfo()
-    # H = left_hand.calculateMassMatrix()
+    left_hand.print_info()
+    # H = left_hand.get_mass_matrix()
     # print("Inertia matrix: H(q) = {}".format(H))
 
     # Position control using sliders
-    # left_hand.addJointSlider()
+    # left_hand.add_joint_slider()
 
-    left_hand.setJointPositions([0.] * left_hand.getNumberOfDoFs())
-    right_hand.setJointPositions([0.] * right_hand.getNumberOfDoFs())
+    left_hand.set_joint_positions([0.] * left_hand.getNumberOfDoFs())
+    right_hand.set_joint_positions([0.] * right_hand.getNumberOfDoFs())
 
     for i in count():
-        # left_hand.updateJointSlider()
-        # left_hand.setJointPositions([0.] * left_hand.getNumberOfDoFs())
-        # right_hand.setJointPositions([0.] * right_hand.getNumberOfDoFs())
+        # left_hand.update_joint_slider()
+        # left_hand.set_joint_positions([0.] * left_hand.getNumberOfDoFs())
+        # right_hand.set_joint_positions([0.] * right_hand.getNumberOfDoFs())
 
         world.step(sleep_dt=1./240)

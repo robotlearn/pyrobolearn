@@ -12,22 +12,22 @@ sim = BulletSim()
 
 # Create world
 world = BasicWorld(sim)
-world.loadSphere([2., 0, 2.], mass=0., color=(1, 0, 0, 1))
-world.loadSphere([2., 1., 2.], mass=0., color=(0, 0, 1, 1))
+world.load_sphere([2., 0, 2.], mass=0., color=(1, 0, 0, 1))
+world.load_sphere([2., 1., 2.], mass=0., color=(0, 0, 1, 1))
 
 # load robot
-robot = Walkman(sim, useFixedBase=False, lower_body=False)
+robot = Walkman(sim, fixed_base=False, lower_body=False)
 
 # print information about the robot
-robot.printRobotInfo()
+robot.print_info()
 
 # # Position control using sliders
-robot.addJointSlider(robot.left_leg)
+robot.add_joint_slider(robot.left_leg)
 
 # run simulator
 for i in count():
-    robot.updateJointSlider()
+    robot.update_joint_slider()
     if i % 60 == 0:
-        img = robot.left_camera.getRGBImage()
+        img = robot.left_camera.get_rgb_image()
 
     world.step(sleep_dt=1./240)

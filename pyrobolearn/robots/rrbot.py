@@ -17,41 +17,41 @@ class RRBot(ManipulatorRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 0),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=True,
+                 position=(0, 0, 0),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=True,
                  scaling=1,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/rrbot/rrbot.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/rrbot/rrbot.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = True
+        if position is None:
+            position = (0., 0., 0.)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = True
 
-        super(RRBot, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(RRBot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'rrbot'
 
         # set initial joint positions
-        self.setJointPositions(self.joints, [np.pi/4, np.pi/2])
+        self.set_joint_positions(self.joints, [np.pi / 4, np.pi / 2])
 
         for _ in range(100):
-            self.sim.stepSimulation()
+            self.sim.step()
 
         # disable each motor joint
-        self.disableMotor()
+        self.disable_motor()
         # self.sim.setJointMotorControlArray(self.id, self.joints, self.sim.VELOCITY_CONTROL, forces=forces)
 
         # enable F/T sensor at the end effector
-        self.enableJointForceTorqueSensor(2)
+        self.enable_joint_force_torque_sensor(2)
 
-        # Coriolis and gravity compensation (note that the setJointTorques need to be called at each time step)
-        self.enableCoriolisAndGravityCompensation()
+        # Coriolis and gravity compensation (note that the set_joint_torques need to be called at each time step)
+        self.enable_coriolis_and_gravity_compensation()
 
-    def getForceTorqueSensor(self, idx=0):
+    def get_force_torque_sensor(self, idx=0):
         return np.array(self.sim.getJointState(self.id, 2)[2])
 
 
@@ -69,35 +69,35 @@ if __name__ == "__main__":
 
     # load robot
     robot = RRBot(sim)
-    # robot.addJointSlider()
+    # robot.add_joint_slider()
 
     print("Robot: {}".format(robot))
-    print("Total number of joints: {}".format(robot.getNumberOfJoints()))
-    print("Joint names: {}".format(robot.getJointNames(range(robot.getNumberOfJoints()))))
-    print("Link names: {}".format(robot.getLinkNames(range(robot.getNumberOfJoints()))))
+    print("Total number of joints: {}".format(robot.num_joints))
+    print("Joint names: {}".format(robot.get_joint_names(range(robot.num_joints))))
+    print("Link names: {}".format(robot.get_link_names(range(robot.num_joints))))
 
-    print("Number of DoFs: {}".format(robot.getNumberOfDoFs()))
+    print("Number of DoFs: {}".format(robot.num_dofs))
     print("Robot actuated joint ids: {}".format(robot.joints))
-    print("Actuated joint names: {}".format(robot.getJointNames()))
-    print("Actuated link names: {}".format(robot.getLinkNames()))
-    print("Current joint positions: {}".format(robot.getJointPositions()))
+    print("Actuated joint names: {}".format(robot.get_joint_names()))
+    print("Actuated link names: {}".format(robot.get_link_names()))
+    print("Current joint positions: {}".format(robot.get_joint_positions()))
 
-    print("Number of end-effectors: {}".format(robot.getNumberOfEndEffectors()))
-    print("End-effector names: {}".format(robot.getEndEffectorNames()))
+    print("Number of end-effectors: {}".format(robot.num_end_effectors))
+    print("End-effector names: {}".format(robot.get_link_names(robot.end_effectors)))
 
-    print("Robot base position: {}".format(robot.getBasePosition()))
-    robot.changeTransparency()
-    visuals = robot.sim.getVisualShapeData(robot.id)
+    print("Robot base position: {}".format(robot.get_base_position()))
+    robot.change_transparency()
+    visuals = robot.sim.get_visual_shape_data(robot.id)
     visuals = {visual[1]: visual[3] for visual in visuals}
 
-    # robot.drawLinkCoMs()
-    robot.drawLinkFrames()
-    # robot.drawBoundingBoxes()
+    # robot.draw_link_coms()
+    robot.draw_link_frames()
+    # robot.draw_bounding_boxes()
 
     for i in robot.joints:
         print("Link {}".format(i))
-        state = robot.sim.getLinkState(robot.id, i)
-        info = robot.sim.getJointInfo(robot.id, i)
+        state = robot.sim.get_link_state(robot.id, i)
+        info = robot.sim.get_joint_info(robot.id, i)
 
         print("\t CoM world position: {}".format(state[0]))
         print("\t Local inertial frame position: {}".format(state[2]))
@@ -116,35 +116,35 @@ if __name__ == "__main__":
 
     raw_input('press enter')
 
-    print("Inertia matrix: {}".format(np.array(sim.calculateMassMatrix(robot.id, [0.,0.,0.,0.,0.,0.]))))
+    print("Inertia matrix: {}".format(np.array(sim.calculate_mass_matrix(robot.id, [0., 0., 0., 0., 0., 0.]))))
     linkId = 2
-    com_frame = robot.getLinkStates(linkId)[2]
-    q = robot.getJointPositions()
+    com_frame = robot.get_link_states(linkId)[2]
+    q = robot.get_joint_positions()
     print(com_frame)
     # com_frame = [0.,0.,0.]
-    print("Jacobian matrix: {}".format(np.vstack((sim.calculateJacobian(robot.id, linkId, com_frame, q.tolist(), [0.,0.], [0.,0.])))))
+    print("Jacobian matrix: {}".format(sim.calculate_jacobian(robot.id, linkId, com_frame)))
 
-    Jlin = robot.calculateJacobian(linkId+1, localPosition=(0.,0.,0.))[:3]
+    Jlin = robot.get_jacobian(linkId + 1)[:3]
     print("Jacobian matrix: {}".format(Jlin))
 
-    robot.drawVelocityManipulabilityEllipsoid(linkId+1, Jlin)
+    robot.draw_velocity_manipulability_ellipsoid(linkId + 1, Jlin)
 
-    Jlin = robot.calculateJacobian(linkId)[:3]
-    robot.drawVelocityManipulabilityEllipsoid(linkId, Jlin, color=(1,0,0,0.7))
+    Jlin = robot.get_jacobian(linkId)[:3]
+    robot.draw_velocity_manipulability_ellipsoid(linkId, Jlin, color=(1, 0, 0, 0.7))
 
     cnt = 0
     for i in count():
         if i%240 == 0:
             if cnt < 3:
-                Jlin = robot.calculateJacobian(linkId + 1, localPosition=(0., 0., 0.))[:3]
-                robot.drawVelocityManipulabilityEllipsoid(linkId + 1, Jlin)
+                Jlin = robot.get_jacobian(linkId + 1)[:3]
+                robot.draw_velocity_manipulability_ellipsoid(linkId + 1, Jlin)
             cnt += 1
         world.step(sleep_dt=1./240)
-        # robot.setJointTorques()
+        # robot.set_joint_torques()
 
     raw_input('press enter')
 
-    print(robot.getLinkNames())
+    print(robot.get_link_names())
     force = np.array([1., 0., 0.])
     pos = np.array([0., 0., 0.])
     sim.applyExternalForce(robot.id, 1, force, pos, flags=p.LINK_FRAME) # link_frame = 1
@@ -152,32 +152,32 @@ if __name__ == "__main__":
     slider = sim.addUserDebugParameter('force', -1000., 1000., 0)
 
     dq, ddq = [0., 0.], [0., 0.]
-    J = sim.calculateJacobian(robot.id, 1, [0.,0.,0.], [0.,0.], dq, ddq)
+    J = sim.get_jacobian(robot.id, 1, [0., 0., 0.])
     print(np.array(J[0]))
 
-    a = robot.getJointPositions()
+    a = robot.get_joint_positions()
     # print(robot.getJacobianMatrix(1, np.array([0.,0.]))) # TODO: need to convert numpy array to list
 
     linkId = 2
     com_frame = robot.getLinkStates(linkId)[2]
-    xdes = np.array(robot.getLinkWorldPositions(linkId))
+    xdes = np.array(robot.get_link_world_positions(linkId))
     K = 100*np.identity(3)
     D = 2*np.sqrt(K)  # critically damped
     D = 3*D  # manually increase damping
 
     # run simulator
     for i in range(10000):
-        joint_states = p.getJointStates(robot.id, robot.joints)
+        joint_states = p.get_joint_states(robot.id, robot.joints)
         # print("joint state: ", joint_states)
         q = [joint_state[0] for joint_state in joint_states]
         dq = [joint_state[1] for joint_state in joint_states]
 
-        # q = robot.getJointPositions().tolist()
-        # dq = robot.getJointVelocities().tolist()
-        x = np.array(robot.getLinkWorldPositions(linkId))
-        dx = np.array(robot.getLinkWorldLinearVelocities(linkId))
+        # q = robot.get_joint_positions().tolist()
+        # dq = robot.get_joint_velocities().tolist()
+        x = np.array(robot.get_link_world_positions(linkId))
+        dx = np.array(robot.get_link_world_linear_velocities(linkId))
         tau = robot.calculateID(q, dq, ddq)  # Coriolis, centrifugal and gravity compensation
-        Jlin = np.array(sim.calculateJacobian(robot.id, linkId, com_frame, q, [0.,0.], ddq)[0])
+        Jlin = np.array(sim.get_jacobian(robot.id, linkId, com_frame)[0])
         F = K.dot(xdes - x) - D.dot(dx) # compute cartesian forces
         # print("force: {}".format(F))
         tau += Jlin.T.dot(F) # cartesian PD with gravity compensation
@@ -200,5 +200,5 @@ if __name__ == "__main__":
             force = np.array([0., 0., 0.])
         sim.applyExternalForce(robot.id, linkId, force, pos, flags=p.LINK_FRAME)  # p.LINK_FRAME = 1
 
-        # robot.updateJointSlider()
+        # robot.update_joint_slider()
         world.step(sleep_dt=1./240)

@@ -66,8 +66,8 @@ class BridgeXboxOneAckermannWheeledRobot(Bridge):
 
     def step(self):
         x,y = self.interface.LJ
-        self.robot.setSteering(-x / 2.)
-        self.robot.driveForward(y * self.speed)
+        self.robot.set_steering(-x / 2.)
+        self.robot.drive_forward(y * self.speed)
 
         if self.interface.A:
             print('increasing speed +1')

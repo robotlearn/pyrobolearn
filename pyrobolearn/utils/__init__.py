@@ -3,13 +3,15 @@ import inspect
 import types
 import numpy as np
 
+
 # Built-in functions
 
-def hasAttribute(object, name):
+def has_attribute(object, name):
     """Check if the given object has an attribute (variable or method) with the given name"""
     return hasattr(object, name)
 
-def hasVariable(object, name):
+
+def has_variable(object, name):
     """Check if the given object has a variable with the given name"""
     attribute = getattr(object, name, None)
     if attribute is not None:
@@ -20,70 +22,86 @@ def hasVariable(object, name):
         return not isinstance(attribute, types.MethodType)  # types.FunctionType
     return False
 
-def hasMethod(object, name):
+
+def has_method(object, name):
     """Check if the given object has a method with the given name"""
     method = getattr(object, name, None)
     return inspect.ismethod(method)
 
-def isMethod(object):
+
+def is_method(object):
     """Check if the given object is a method"""
     return inspect.ismethod(object)
 
-def isClass(object):
+
+def is_class(object):
     """Check if the given object is a class"""
     return inspect.isclass(object)
 
-def isModule(object):
+
+def is_module(object):
     """Check if the given object is a module"""
     return inspect.ismodule(object)
 
-def isList(object):
+
+def is_list(object):
     """Check if the given object is a list"""
     return isinstance(object, list)
 
-def isTuple(object):
+
+def is_tuple(object):
     """Check if the given object is a tuple"""
     return isinstance(object, tuple)
 
-def isNumpyArray(object):
+
+def is_numpy_array(object):
     """Check if the given object is a numpy array"""
     return isinstance(object, np.ndarray)
 
-def isDict(object):
+
+def is_dict(object):
     """Check if the given object is a dictionary"""
     return isinstance(object, dict)
 
-def isSet(object):
+
+def is_set(object):
     """Check the given object is a set"""
     return isinstance(object, set)
 
-def isNone(object):
+
+def is_none(object):
     """Check if the given object is None"""
     return object is None
 
-def isInt(object):
+
+def is_int(object):
     """Check if the given object is an integer"""
     return isinstance(object, int)
 
-def isFloat(object):
+
+def is_float(object):
     """Check if the given object is a float"""
     return isinstance(object, float)
 
-def isStr(object):
+
+def is_str(object):
     """Check if the given object is a string"""
     return isinstance(object, str)
 
-def isChar(object):
+
+def is_char(object):
     """Check if the given object is a character"""
     if isinstance(object, str):
         if len(object) == 1:
             return True
     return False
 
-def isBool(object):
+
+def is_bool(object):
     """Check if the given object is a boolean"""
     return isinstance(object, bool)
 
-def isComplex(object):
+
+def is_complex(object):
     """Check if the given object is a complex number"""
     return isinstance(object, complex)

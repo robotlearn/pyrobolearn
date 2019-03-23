@@ -13,22 +13,22 @@ class Swimmer(Robot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(-0.5, 0, 0.1),
-                 init_orient=(0, 0.707, 0, 0.707),
-                 useFixedBase=False,
+                 position=(-0.5, 0, 0.1),
+                 orientation=(0, 0.707, 0, 0.707),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/mjcfs/swimmer.xml'):
+                 urdf=os.path.dirname(__file__) + '/mjcfs/swimmer.xml'):
         # check parameters
-        if init_pos is None:
-            init_pos = (-0.5, 0., 0.1)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.1,)
-        if init_orient is None:
-            init_orient = (0, 0.707, 0, 0.707)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (-0.5, 0., 0.1)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.1,)
+        if orientation is None:
+            orientation = (0, 0.707, 0, 0.707)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(Swimmer, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Swimmer, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'swimmer'
 
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     robot = Swimmer(sim)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
     # run simulation
     for i in count():

@@ -36,7 +36,7 @@ class LinkAction(RobotAction):
 
         # get the joints of the robot
         if link_ids is None:
-            link_ids = robot.getLinkIds()
+            link_ids = robot.get_link_ids()
         self.links = link_ids
 
 
@@ -50,9 +50,9 @@ class LinkPositionAction(LinkAction):
 
     def _write(self, data=None):
         if data is None:
-            self.robot.setLinkPositions(self.links, self._data)
+            self.robot.set_link_positions(self.links, self._data)
         else:
-            self.robot.setLinkPositions(self.links, data)
+            self.robot.set_link_positions(self.links, data)
 
 
 ########################
@@ -63,7 +63,7 @@ class EndEffectorAction(LinkAction):
 
     def __init__(self, robot, end_effector_ids=None):
         if end_effector_ids is None:
-            end_effector_ids = robot.getEndEffectorIds()
+            end_effector_ids = robot.get_end_effector_ids()
         super(EndEffectorAction, self).__init__(robot, end_effector_ids)
 
 

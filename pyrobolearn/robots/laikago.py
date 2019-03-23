@@ -18,36 +18,36 @@ class Laikago(QuadrupedRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, .5),
-                 init_orient=(0.5, 0.5, 0.5, 0.5),
-                 useFixedBase=False,
+                 position=(0, 0, .5),
+                 orientation=(0.5, 0.5, 0.5, 0.5),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/laikago/laikago.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/laikago/laikago.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.5)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.5,)
-        if init_orient is None:
-            init_orient = (0.5, 0.5, 0.5, 0.5)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 0.5)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.5,)
+        if orientation is None:
+            orientation = (0.5, 0.5, 0.5, 0.5)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(Laikago, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Laikago, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'laikago'
 
-        self.legs = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['FL_hip_motor', 'FL_upper_leg', 'FL_lower_leg'],
                                    ['FR_hip_motor', 'FR_upper_leg', 'FR_lower_leg'],
                                    ['RL_hip_motor', 'RL_upper_leg', 'RL_lower_leg'],
                                    ['RR_hip_motor','RR_upper_leg', 'RR_lower_leg']]]
 
-        self.feet = [self.getLinkIds(link) for link in ['FL_lower_leg', 'FR_lower_leg',
+        self.feet = [self.get_link_ids(link) for link in ['FL_lower_leg', 'FR_lower_leg',
                                                         'RL_lower_leg', 'RR_lower_leg'] if link in self.link_names]
 
-    def getHomeJointPositions(self):
+    def get_home_joint_positions(self):
         """Return the joint positions for the home position"""
-        return np.zeros(self.getNumberOfDoFs())
+        return np.zeros(self.num_dofs)
 
 
 # Test
@@ -66,13 +66,13 @@ if __name__ == "__main__":
     robot = Laikago(sim)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
     # # Position control using sliders
-    # robot.addJointSlider()
+    # robot.add_joint_slider()
 
     # run simulator
     for _ in count():
-        # robot.updateJointSlider()
-        robot.moveJointHomePositions()
+        # robot.update_joint_slider()
+        robot.move_joint_home_positions()
         world.step(sleep_dt=1./240)

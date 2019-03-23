@@ -17,31 +17,31 @@ class Aibo(QuadrupedRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 0.02),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 position=(0, 0, 0.02),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/aibo/aibo.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/aibo/aibo.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.02)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.02,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 0.02)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.02,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(Aibo, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Aibo, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'aibo'
 
-        self.legs = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['LF_up_leg_rot_y', 'LF_up_leg_rot_x', 'LF_down_leg'],
                                    ['RF_up_leg_rot_y', 'RF_up_leg_rot_x', 'RF_down_leg'],
                                    ['LB_up_leg_rot_y', 'LB_up_leg_rot_x', 'LB_down_leg'],
                                    ['RB_up_leg_rot_y', 'RB_up_leg_rot_x', 'RB_down_leg']]]
 
-        self.feet = [self.getLinkIds(link) for link in ['LF_paw', 'RF_paw', 'LB_paw', 'RB_paw']
+        self.feet = [self.get_link_ids(link) for link in ['LF_paw', 'RF_paw', 'LB_paw', 'RB_paw']
                      if link in self.link_names]
 
 
@@ -61,12 +61,12 @@ if __name__ == "__main__":
     robot = Aibo(sim)  # , useFixedBase=True)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
     # # Position control using sliders
-    # robot.addJointSlider(robot.getLeftFrontLegIds() + robot.getRightFrontLegIds())
+    # robot.add_joint_slider(robot.getLeftFrontLegIds() + robot.getRightFrontLegIds())
 
     # run simulator
     for _ in count():
-        # robot.updateJointSlider()
+        # robot.update_joint_slider()
         world.step(sleep_dt=1./240)

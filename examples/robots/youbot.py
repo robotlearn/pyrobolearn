@@ -16,23 +16,23 @@ sim = BulletSim()
 world = BasicWorld(sim)
 
 # create robot
-youbot_base = YoubotBase(sim, init_pos=(0, -0.75))
-kuka_arm = KukaYoubotArm(sim, init_pos=(0, -0.25))
-youbot = Youbot(sim, init_pos=(0, 0.25))
-youbot_dual_arm = YoubotDualArm(sim, init_pos=(0, 0.75))
+youbot_base = YoubotBase(sim, position=(0, -0.75))
+kuka_arm = KukaYoubotArm(sim, position=(0, -0.25))
+youbot = Youbot(sim, position=(0, 0.25))
+youbot_dual_arm = YoubotDualArm(sim, position=(0, 0.75))
 
 robots = [youbot_base, kuka_arm, youbot, youbot_dual_arm]
 
 # print information about the robot
 for robot in robots:
-    robot.printRobotInfo()
+    robot.print_info()
 
 # Position control using sliders
-# robot.addJointSlider()
+# robot.add_joint_slider()
 
 # run simulator
 for _ in count():
-    # robots[0].updateJointSlider()
+    # robots[0].update_joint_slider()
     # for robot in robots:
     #     robot.drive(5)
     world.step(sleep_dt=1./240)

@@ -65,14 +65,14 @@ class OculusInterface(VRInterface):
         self.task = None
 
         # create visual spheres in the world for the hands
-        self.worldCamera = self.world.getMainCamera()
-        V, P, Vp, V_inv, P_inv, Vp_inv = self.worldCamera.getMatrices(True)
-        camera = self.worldCamera.getDebugVisualizerCamera(convert=False)
+        self.worldCamera = self.world.get_main_camera()
+        V, P, Vp, V_inv, P_inv, Vp_inv = self.worldCamera.get_matrices(True)
+        camera = self.worldCamera.get_debug_visualizer_camera(convert=False)
         width, height = camera[:2]
         posL = np.array([width / 2 - 20, height / 2, 0.95, 1])
         posR = np.array([width / 2 + 20, height / 2, 0.95, 1])
-        posL = self.worldCamera.screenToWorld(posL, Vp_inv, P_inv, V_inv)[:3]
-        posR = self.worldCamera.screenToWorld(posR, Vp_inv, P_inv, V_inv)[:3]
+        posL = self.worldCamera.screen_to_world(posL, Vp_inv, P_inv, V_inv)[:3]
+        posR = self.worldCamera.screen_to_world(posR, Vp_inv, P_inv, V_inv)[:3]
         self.leftSphere = self.world.loadVisualSphere(posL, radius=0.1, color=RGBAColor.red)  # red
         self.rightSphere = self.world.loadVisualSphere(posR, radius=0.1, color=RGBAColor.blue)  # blue
 
@@ -137,9 +137,9 @@ class OculusInterface(VRInterface):
                 self.rightJoystick = [values[0], values[1], values[-2:]]
                 # move the camera by rotating
                 yaw, pitch = values[-2:]
-                #self.worldCamera.addYawPitch(yaw, pitch, radian=False)
+                #self.worldCamera.add_yaw_pitch(yaw, pitch, radian=False)
                 #print(pitch, yaw)
-                pos = self.worldCamera.targetPosition
+                pos = self.worldCamera.target_position
                 dist = self.worldCamera.dist
             elif name == 'BA': # button A: [touch, button]
                 pass
@@ -163,8 +163,8 @@ class OculusInterface(VRInterface):
         ### update world ###
 
         headWorldPos = self.worldCamera.position
-        targetPos = self.worldCamera.targetPosition
-        forwardVec, upVec, lateralVec = self.worldCamera.getVectors()
+        targetPos = self.worldCamera.target_position
+        forwardVec, upVec, lateralVec = self.worldCamera.get_vectors()
         if self.prevOculusHeadPos is None:
             self.prevOculusHeadPos = self.head[0]
 
@@ -174,15 +174,15 @@ class OculusInterface(VRInterface):
         #targetPos += (self.head[0] - self.prevOculusHeadPos)
         lateral, forward = self.leftJoystick[-1] # move the camera by translating
         targetPos += 0.1 * (forward * forwardVec + lateral * lateralVec)
-        self.worldCamera.targetPosition = targetPos
+        self.worldCamera.target_position = targetPos
 
         # update hand positions in world
         leftHandWorldPos = headWorldPos + (self.leftHand[0] - self.head[0])
         rightHandWorldPos = headWorldPos + (self.rightHand[0] - self.head[0])
-        #self.world.moveObject(self.leftSphere, self.leftHand[0], (0, 0, 0, 1))
-        #self.world.moveObject(self.rightSphere, self.rightHand[0], (0, 0, 0, 1))
-        self.world.moveObject(self.leftSphere, leftHandWorldPos, (0, 0, 0, 1))
-        self.world.moveObject(self.rightSphere, rightHandWorldPos, (0, 0, 0, 1))
+        #self.world.move_object(self.leftSphere, self.leftHand[0], (0, 0, 0, 1))
+        #self.world.move_object(self.rightSphere, self.rightHand[0], (0, 0, 0, 1))
+        self.world.move_object(self.leftSphere, leftHandWorldPos, (0, 0, 0, 1))
+        self.world.move_object(self.rightSphere, rightHandWorldPos, (0, 0, 0, 1))
 
         # change color if hands collide with an object
         self.leftCollided = self.updateSphereColor(self.leftSphere, self.leftCollided,
@@ -207,9 +207,9 @@ class OculusInterface(VRInterface):
         self.cnt += 1
 
     def updateSphereColor(self, sphere, hasCollidedPreviously, collisionColor, freeColor):
-        aabb = self.world.getObjectAABB(sphere)
+        aabb = self.world.get_object_aabb(sphere)
 
-        if len(self.world.getObjectIdsInAABB(aabb[0], aabb[1])) > 1:
+        if len(self.world.get_object_ids_in_aabb(aabb[0], aabb[1])) > 1:
             update = not hasCollidedPreviously
         else:
             update = hasCollidedPreviously
@@ -217,9 +217,9 @@ class OculusInterface(VRInterface):
         if update:
             hasCollidedPreviously = not hasCollidedPreviously
             if hasCollidedPreviously:
-                self.world.changeObjectColor(sphere, color=collisionColor)
+                self.world.change_object_color(sphere, color=collisionColor)
             else:
-                self.world.changeObjectColor(sphere, color=freeColor)
+                self.world.change_object_color(sphere, color=freeColor)
 
         return hasCollidedPreviously
 
@@ -248,7 +248,7 @@ class OculusInterface(VRInterface):
         eyeTargetPos = targetPos + beta * lateralVec
         V = self.sim.computeViewMatrix(cameraEyePosition=eyePos, cameraTargetPosition=eyeTargetPos,
                                        cameraUpVector=(0,0,1))
-        pic = np.array(self.sim.getCameraImage(self.width, self.height, viewMatrix=V)[2])
+        pic = np.array(self.sim.get_camera_image(self.width, self.height, viewMatrix=V)[2])
         pic = pic.reshape(self.width, self.height, 4)[:, :, :3]
         return pic
 

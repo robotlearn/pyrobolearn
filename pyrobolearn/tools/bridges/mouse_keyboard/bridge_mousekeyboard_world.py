@@ -49,7 +49,7 @@ class BridgeMouseKeyboardWorld(Bridge):
         * `w`: show the wireframe (collision shapes)
         * `s`: show the reference system
         * `v`: show bounding boxes
-        * `g`: show/hide parts of the GUI the side columns (check `sim.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)`)
+        * `g`: show/hide parts of the GUI the side columns (check `sim.configure_debug_visualizer(p.COV_ENABLE_GUI, 0)`)
         * `esc`: quit the simulator
     * `x`: change camera view such that it is perpendicular to the x-axis
     * `y`: change camera view such that it is perpendicular to the y-axis
@@ -166,7 +166,7 @@ class BridgeMouseKeyboardWorld(Bridge):
     @property
     def camera(self):
         if self._camera is None:
-            self._camera = self.world_camera.getDebugVisualizerCamera(convert=False)
+            self._camera = self.world_camera.get_debug_visualizer_camera(convert=False)
             if self.default_camera is None:
                 self.default_camera = self._camera
         return self._camera
@@ -196,7 +196,7 @@ class BridgeMouseKeyboardWorld(Bridge):
 
         # update joint sliders if present (position control)
         if self.joint_sliders:
-            self.robot.updateJointSlider()
+            self.robot.update_joint_slider()
 
         # update task sliders if present (IK)
         if self.task_sliders:
@@ -213,30 +213,27 @@ class BridgeMouseKeyboardWorld(Bridge):
         """Change camera view X."""
         self.print_debug('change camera view X')
         dist, target = self.camera[-2:]
-        self.simulator.resetDebugVisualizerCamera(cameraDistance=dist, cameraYaw=90., cameraPitch=0.,
-                                                  cameraTargetPosition=target)
+        self.simulator.reset_debug_visualizer(distance=dist, yaw=np.deg2rad(90.), pitch=0., target_position=target)
 
     def change_camera_view_y(self):
         """Change camera view Y."""
         self.print_debug('change camera view Y')
         dist, target = self.camera[-2:]
-        self.simulator.resetDebugVisualizerCamera(cameraDistance=dist, cameraYaw=180., cameraPitch=0.,
-                                                  cameraTargetPosition=target)
+        self.simulator.reset_debug_visualizer(distance=dist, yaw=np.deg2rad(180.), pitch=0., target_position=target)
 
     def change_camera_view_z(self):
         """Change camera view Z."""
         self.print_debug('change camera view Z')
         dist, target = self.camera[-2:]
-        self.simulator.resetDebugVisualizerCamera(cameraDistance=dist, cameraYaw=-90., cameraPitch=-89.99,
-                                                  cameraTargetPosition=target)
+        self.simulator.reset_debug_visualizer(distance=dist, yaw=-np.deg2rad(90.), pitch=-np.deg2rad(89.99),
+                                              target_position=target)
 
     def reset_camera_view(self):
         """Reset camera view."""
         self.print_debug('reset camera view')
         if self.default_camera is not None:
             yaw, pitch, dist, target = self.default_camera[-4:]
-            self.simulator.resetDebugVisualizerCamera(cameraDistance=dist, cameraYaw=yaw, cameraPitch=pitch,
-                                                      cameraTargetPosition=target)
+            self.simulator.reset_debug_visualizer(distance=dist, yaw=yaw, pitch=pitch, target_position=target)
             self.default_camera = None
 
     def pause(self):
@@ -247,23 +244,23 @@ class BridgeMouseKeyboardWorld(Bridge):
     def gui(self):
         """show/hide GUI."""
         self.hiding_gui = not self.hiding_gui
-        self.simulator.configureDebugVisualizer(self.simulator.COV_ENABLE_GUI, self.hiding_gui)
+        self.simulator.configure_debug_visualizer(self.simulator.COV_ENABLE_GUI, self.hiding_gui)
         self.print_debug('hide the GUI', 'enable the GUI', self.hiding_gui)
 
     def reset_world(self):
         """Reset the world."""
         self.print_debug('reset the world')
-        self.world.resetRobots()
+        self.world.reset_robots()
         self.simulator.removeAllUserDebugItems()
 
     def update_joint_sliders(self):
         """Update joint sliders."""
         if self.robot is not None:
             if self.joint_sliders:  # remove joint sliders
-                self.robot.removeJointSlider()
+                self.robot.remove_joint_slider()
                 self.print_debug('remove joint sliders')
             else:  # add joint sliders
-                self.robot.addJointSlider()
+                self.robot.add_joint_slider()
                 self.print_debug('add joint sliders')
             self.joint_sliders = not self.joint_sliders
 
@@ -272,14 +269,14 @@ class BridgeMouseKeyboardWorld(Bridge):
         if self.robot is not None and self.link_id is not None:
             if self.link_id in self.task_sliders:  # remove task sliders
                 for idx in self.task_sliders[self.link_id]:
-                    self.simulator.removeUserDebugItem(self.task_sliders[self.link_id][idx])
+                    self.simulator.remove_user_debug_item(self.task_sliders[self.link_id][idx])
                 self.task_sliders.pop(self.link_id)
                 self.print_debug('remove task sliders')
             else:  # add task sliders
                 self.task_sliders[self.link_id] = {}
-                pos = self.robot.getLinkWorldPositions(self.link_id)
+                pos = self.robot.get_link_world_positions(self.link_id)
                 for i, name in zip(pos, ['x', 'y', 'z']):
-                    slider = self.simulator.addUserDebugParameter(name, i - 2., i + 2., i)
+                    slider = self.simulator.add_user_debug_parameter(name, i - 2., i + 2., i)
                     self.task_sliders[self.link_id][name] = slider
                 self.print_debug('add task sliders')
 
@@ -291,14 +288,14 @@ class BridgeMouseKeyboardWorld(Bridge):
     def add_world_text(self, string, position, color=(0.,0.,0.), size=1., lifetime=0.):
         """Add world text."""
         self.print_debug('add world text')
-        self.simulator.addUserDebugText(string, position, color, size, lifetime)
+        self.simulator.add_user_debug_text(string, position, color, size, lifetime)
 
     def add_screen_text(self, string, world_position, color=(0.,0.,0.), size=1., lifetime=0.):
         """Add screen text."""
         self.print_debug('add screen text')
-        V, P, Vp, V_inv, P_inv, Vp_inv = self.world_camera.getMatrices(True)
-        position = self.world_camera.screenToWorld(world_position, Vp_inv, P_inv, V_inv)[:3]
-        self.simulator.addUserDebugText(string, position, color, size, lifetime)
+        V, P, Vp, V_inv, P_inv, Vp_inv = self.world_camera.get_matrices(True)
+        position = self.world_camera.screen_to_world(world_position, Vp_inv, P_inv, V_inv)[:3]
+        self.simulator.add_user_debug_text(string, position, color, size, lifetime)
 
     def check_key_events(self):
         # call function corresponding to key combination
@@ -314,20 +311,20 @@ class BridgeMouseKeyboardWorld(Bridge):
 
         # check what object we are trying to grab with the mouse by checking collision
         if self.interface.mouse_pressed:
-            V, P, Vp, V_inv, P_inv, Vp_inv = self.world_camera.getMatrices(True)
-            camera = self.world_camera.getDebugVisualizerCamera(convert=False)
+            V, P, Vp, V_inv, P_inv, Vp_inv = self.world_camera.get_matrices(True)
+            camera = self.world_camera.get_debug_visualizer_camera()
 
             # from the point (x,y) on the screen, get nearest and farthest point on the screen
             x_screen_init = np.array([self.interface.mouse_x, self.interface.mouse_y, 1., 1.])
             x_screen_final = np.array([self.interface.mouse_x, self.interface.mouse_y, 0., 1.])
 
             # get the corresponding points in the world
-            x_world_init = self.world_camera.screenToWorld(x_screen_init, Vp_inv, P_inv, V_inv)
-            x_world_final = self.world_camera.screenToWorld(x_screen_final, Vp_inv, P_inv, V_inv)
+            x_world_init = self.world_camera.screen_to_world(x_screen_init, Vp_inv, P_inv, V_inv)
+            x_world_final = self.world_camera.screen_to_world(x_screen_final, Vp_inv, P_inv, V_inv)
 
             # check if there is a collision
             # print(x_world_init[:3], x_world_final[:3])
-            collision = self.simulator.rayTest(list(x_world_init[:3]), list(x_world_final[:3]))
+            collision = self.simulator.ray_test(list(x_world_init[:3]), list(x_world_final[:3]))
 
             # if collision, proceed the inverse operation to get the depth on the screen
             if len(collision) > 0:
@@ -337,25 +334,25 @@ class BridgeMouseKeyboardWorld(Bridge):
                 #                                   basePosition=list(x_world_init[:3]))
                 # bodyId = self.simulator.createMultiBody(baseMass=0, baseVisualShapeIndex=self.vs2,
                 #                                   basePosition=list(x_world_final[:3]))
-                if object_id != -1 and self.world.isRobotId(object_id):  # valid object
+                if object_id != -1 and self.world.is_robot_id(object_id):  # valid object
 
                     # Set robot and link_id
-                    self.robot, self.link_id = self.world.getRobot(object_id), link_id
+                    self.robot, self.link_id = self.world.get_robot(object_id), link_id
 
                     width, height = camera[:2]
                     x_screen = np.array([width/2, height/10, 0.95, 1])
-                    pos = self.world_camera.screenToWorld(x_screen, Vp_inv, P_inv, V_inv)[:3]
-                    # self.simulator.addUserDebugText(str(self.robot) + ": " + self.robot.getLinkNames(self.link_id),
+                    pos = self.world_camera.screen_to_world(x_screen, Vp_inv, P_inv, V_inv)[:3]
+                    # self.simulator.add_user_debug_text(str(self.robot) + ": " + self.robot.get_link_names(self.link_id),
                     #                                 pos, RGBColor.black, textSize=1)
 
                     # calculate plane
                     # 1. compute the initial point on the plane (collision point)
                     if link_id == -1:  # no link
-                        x0 = np.array(self.simulator.getBasePositionAndOrientation(object_id)[0])
+                        x0 = np.array(self.simulator.get_base_pose(object_id)[0])
                     else:  # link
-                        x0 = np.array(self.simulator.getLinkState(object_id, link_id)[0])
+                        x0 = np.array(self.simulator.get_link_state(object_id, link_id)[0])
 
-                    # 2. calculate normal (=targetPosition - eyePosition) to the plane
+                    # 2. calculate normal (=target_position - eyePosition) to the plane
                     # normal = x_world_final[:3] - x_world_init[:3]
                     yaw, pitch, dist, target = camera[-4:]
                     yaw, pitch = np.deg2rad(yaw), np.deg2rad(pitch)
@@ -368,18 +365,18 @@ class BridgeMouseKeyboardWorld(Bridge):
 
                     # calculate associate depth on the screen (because perspective projection)
                     hit_pos = np.array(list(hit_pos) + [1.])
-                    self.depth = self.world_camera.worldToScreen(hit_pos, V, P, Vp)[2]
+                    self.depth = self.world_camera.world_to_screen(hit_pos, V, P, Vp)[2]
 
         elif self.interface.mouse_down and self.interface.mouse_moving and self.robot is not None:
-            V, P, Vp, V_inv, P_inv, Vp_inv = self.world_camera.getMatrices(True)
-            camera = self.world_camera.getDebugVisualizerCamera(convert=False)
+            V, P, Vp, V_inv, P_inv, Vp_inv = self.world_camera.get_matrices(True)
+            camera = self.world_camera.get_debug_visualizer_camera(convert=False)
 
             if self.plane is not None:
                 # project the point on the screen to the world, and check where the line that starts from this point
                 # and is perpendicular to the plane (i.e. parallel to the normal) intersects with the aforementioned
                 # plane
                 x_screen = np.array([self.interface.mouse_x, self.interface.mouse_y, self.depth, 1])
-                x_world = self.world_camera.screenToWorld(x_screen, Vp_inv, P_inv, V_inv)[:3]
+                x_world = self.world_camera.screen_to_world(x_screen, Vp_inv, P_inv, V_inv)[:3]
                 point = self.plane.getIntersectionPoint(x_world)
 
             # # draw some spheres on the plane
@@ -398,9 +395,9 @@ class BridgeMouseKeyboardWorld(Bridge):
             #                                   RGBColor.red, 1., 2.)
 
             # # perform inverse kinematics
-            # q = self.robot.calculateInverseKinematics(self.link, point)
+            # q = self.robot.calculate_inverse_kinematics(self.link, point)
             # for i in range(self.robot.getNumberOfJoints()):
-            #     self.robot.setJointPositions(i, q[i])
+            #     self.robot.set_joint_positions(i, q[i])
 
 
 # Tests
@@ -413,20 +410,20 @@ if __name__ == '__main__':
     # create simulator
     sim = BulletSim()
 
-    # sim.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
-    # sim.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
-    # sim.configureDebugVisualizer(p.COV_ENABLE_TINY_RENDERER, 1)
-    # sim.configureDebugVisualizer(p.COV_ENABLE_WIREFRAME, 1)
-    # sim.configureDebugVisualizer(p.COV_ENABLE_Y_AXIS_UP, 0)
-    # sim.configureDebugVisualizer(p.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
-    # sim.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
-    # sim.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
+    # sim.configure_debug_visualizer(p.COV_ENABLE_GUI, 0)
+    # sim.configure_debug_visualizer(p.COV_ENABLE_RENDERING, 0)
+    # sim.configure_debug_visualizer(p.COV_ENABLE_TINY_RENDERER, 1)
+    # sim.configure_debug_visualizer(p.COV_ENABLE_WIREFRAME, 1)
+    # sim.configure_debug_visualizer(p.COV_ENABLE_Y_AXIS_UP, 0)
+    # sim.configure_debug_visualizer(p.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
+    # sim.configure_debug_visualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
+    # sim.configure_debug_visualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
 
     # create World
     world = BasicWorld(sim)
 
     # load robot
-    robot = world.loadRobot('baxter', useFixedBase=True)
+    robot = world.load_robot('baxter', fixed_base=True)
 
     # create bridge/interface
     bridge = BridgeMouseKeyboardWorld(world, verbose=True)

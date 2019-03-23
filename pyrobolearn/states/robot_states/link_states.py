@@ -6,7 +6,7 @@ This includes notably the link positions and velocities.
 
 from abc import ABCMeta
 
-from pyrobolearn.states.robot_states import RobotState
+from pyrobolearn.states.robot_states.robot_states import RobotState
 
 
 __author__ = "Brian Delhaisse"
@@ -36,7 +36,7 @@ class LinkState(RobotState):
 
         # get links from robot
         if link_ids is None:
-            link_ids = robot.getlink_ids()
+            link_ids = range(robot.num_links)
         self.links = link_ids
 
         # read the data
@@ -52,7 +52,7 @@ class LinkPositionState(LinkState):
         super(LinkPositionState, self).__init__(robot, link_ids)
 
     def _read(self):
-        self._data = self.robot.getLinkPositions(self.links, wrtLinkId=self.wrt_link_id)
+        self.data = self.robot.get_link_positions(self.links, wrt_link_id=self.wrt_link_id)
 
 
 class LinkWorldPositionState(LinkState):
@@ -63,7 +63,7 @@ class LinkWorldPositionState(LinkState):
         super(LinkWorldPositionState, self).__init__(robot, link_ids)
 
     def _read(self):
-        self._data = self.robot.getLinkPositions(self.links)
+        self.data = self.robot.get_link_positions(self.links)
 
 
 class LinkOrientationState(LinkState):
@@ -74,7 +74,7 @@ class LinkOrientationState(LinkState):
         super(LinkOrientationState, self).__init__(robot, link_ids)
 
     def _read(self):  # TODO: convert
-        self._data = self.robot.getLinkOrientations(self.links)
+        self.data = self.robot.get_link_orientations(self.links)
 
 
 class LinkVelocityState(LinkState):
@@ -85,7 +85,7 @@ class LinkVelocityState(LinkState):
         super(LinkVelocityState, self).__init__(robot, link_ids)
 
     def _read(self):
-        self._data = self.robot.getLinkVelocities(self.links)
+        self.data = self.robot.get_link_velocities(self.links)
 
 
 class LinkLinearVelocityState(LinkState):
@@ -96,7 +96,7 @@ class LinkLinearVelocityState(LinkState):
         super(LinkLinearVelocityState, self).__init__(robot, link_ids)
 
     def _read(self):
-        self._data = self.robot.getLinkLinearVelocities(self.links)
+        self.data = self.robot.get_link_linear_velocities(self.links)
 
 
 class LinkAngularVelocityState(LinkState):
@@ -107,4 +107,4 @@ class LinkAngularVelocityState(LinkState):
         super(LinkAngularVelocityState, self).__init__(robot, link_ids)
 
     def _read(self):
-        self._data = self.robot.getLinkAngularVelocities(self.links)
+        self.data = self.robot.get_link_angular_velocities(self.links)

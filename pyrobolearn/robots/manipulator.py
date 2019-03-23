@@ -13,12 +13,12 @@ class ManipulatorRobot(Robot):
 
     def __init__(self,
                  simulator,
-                 urdf_path,
-                 init_pos=(0, 0, 0.),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 urdf,
+                 position=(0, 0, 0.),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.):
-        super(ManipulatorRobot, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(ManipulatorRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
 
         self.arms = []  # list of arms where an arm is a list of links
         self.hands = []  # list of end-effectors/hands
@@ -41,24 +41,12 @@ class ManipulatorRobot(Robot):
     # Methods #
     ###########
 
-    def getNumberOfArms(self):
-        """
-        Return the number of arms/hands.
-
-        Returns:
-            int: the number of arms/hands
-        """
-        return self.num_arms
-
-    # alias (normally this is correct)
-    getNumberOfHands = getNumberOfArms
-
-    def getArmLinkIds(self, armLink=None):
+    def get_arm_ids(self, arms=None):
         """
         Return the arm's link id(s) from the name(s) or index(ices).
 
         Args:
-            armLink (str, int, list of str/int, None): if str, it will get the arm's link id associated to the given
+            arms (str, int, list of str/int, None): if str, it will get the arm's link id associated to the given
                 name. If int, it will get the arm's link id associated to the given index. If it is a list of str
                 and/or int, it will get the corresponding arm's link ids. If None, it will return all the arm's
                 link ids.
@@ -69,49 +57,55 @@ class ManipulatorRobot(Robot):
             if multiple arm's links:
                 int[N]: link ids
         """
-        if armLink is None:
-            return self.arms
+        if arms is not None:
+            if isinstance(arms, int):
+                return self.arms[arms]
+            elif isinstance(arms, str):
+                return self.arms[self.get_link_ids(arms)]
+            elif isinstance(arms, (list, tuple)):
+                arm_ids = []
+                for arm in arms:
+                    if isinstance(arm, int):
+                        arm_ids.append(self.arms[arm])
+                    elif isinstance(arm, str):
+                        arm_ids.append(self.arms[self.get_link_ids(arm)])
+                    else:
+                        raise TypeError("Expecting a str or int for items in arms")
+                return arm_ids
+        return self.arms
 
-        def getIndex(link):
-            if isinstance(link, str):
-                return self.arm_names[link]
-            elif isinstance(link, int):
-                return self.arms[link]
-            else:
-                raise TypeError("Expecting an int or str.")
-
-        # list of links in the arm
-        if isinstance(armLink, collections.Iterable) and not isinstance(armLink, str):
-            return [getIndex(link) for link in armLink]
-
-        # one link in the arm
-        return getIndex(armLink)
-
-    def getArmLinkNames(self, armLinkId=None):
+    def get_hand_ids(self, hands=None):
         """
-        Return the name of the given arm's link(s).
+        Return the hand's link id(s) from the name(s) or index(ices).
 
         Args:
-            armLinkId (int, int[N], None): link id, or list of desired link ids. If None, get the name of all links
-                in the arms.
+            hands (str, int, list of str/int, None): if str, it will get the hand's link id associated to the given
+                name. If int, it will get the hand's link id associated to the given index. If it is a list of str
+                and/or int, it will get the corresponding hand's link ids. If None, it will return all the hand's
+                link ids.
 
         Returns:
-            if 1 arm's link:
-                str: link name
-            if multiple arm's links:
-                str[N]: link names
+            if 1 hand's link:
+                int: link id
+            if multiple hand's links:
+                int[N]: link ids
         """
-        if isinstance(armLinkId, int):
-            return self.sim.getJointInfo(self.id, armLinkId)[12]
-        if armLinkId is None:
-            armLinkId = [link for arm in self.arms for link in arm]
-        return [self.sim.getJointInfo(self.id, link)[12] for link in armLinkId]
-
-    def getHandIds(self):
-        pass
-
-    def getHandNames(self):
-        pass
+        if hands is not None:
+            if isinstance(hands, int):
+                return self.hands[hands]
+            elif isinstance(hands, str):
+                return self.hands[self.get_link_ids(hands)]
+            elif isinstance(hands, (list, tuple)):
+                hand_ids = []
+                for hand in hands:
+                    if isinstance(hand, int):
+                        hand_ids.append(self.hands[hand])
+                    elif isinstance(hand, str):
+                        hand_ids.append(self.hands[self.get_link_ids(hand)])
+                    else:
+                        raise TypeError("Expecting a str or int for items in hands")
+                return hand_ids
+        return self.hands
 
 
 class BiManipulatorRobot(ManipulatorRobot):
@@ -120,9 +114,9 @@ class BiManipulatorRobot(ManipulatorRobot):
     Bi-manipulators are robots that have two manipulators to manipulate objects in the environment.
     """
 
-    def __init__(self, simulator, urdf_path, init_pos=(0, 0, 1.5), init_orient=(0, 0, 0, 1), useFixedBase=False,
+    def __init__(self, simulator, urdf, position=(0, 0, 1.5), orientation=(0, 0, 0, 1), fixed_base=False,
                  scaling=1.):
-        super(BiManipulatorRobot, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(BiManipulatorRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
 
         self.left_arm_id = 0
         self.left_hand_id = 0
@@ -148,23 +142,3 @@ class BiManipulatorRobot(ManipulatorRobot):
     @property
     def right_hand(self):
         return self.hands[self.right_arm_id]
-
-    ###########
-    # Methods #
-    ###########
-
-    def getLeftArmIds(self):
-        """Return the left arm joint ids"""
-        return self.arms[self.left_arm_id]
-
-    def getLeftHandId(self):
-        """Return the left hand id"""
-        return self.hands[self.left_hand_id]
-
-    def getRightArmIds(self):
-        """Return the right arm joint ids"""
-        return self.arms[self.right_arm_id]
-
-    def getRightHandId(self):
-        """Return the right hand id"""
-        return self.hands[self.right_hand_id]

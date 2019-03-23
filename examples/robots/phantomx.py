@@ -17,7 +17,7 @@ world = BasicWorld(sim)
 robot = PhantomX(sim)
 
 # print information about the robot
-robot.printRobotInfo()
+robot.print_info()
 
 # run simulation
 for i in count():

@@ -14,15 +14,15 @@ sim = BulletSim()
 world = BasicWorld(sim)
 
 # create robot
-robot = Aibo(sim)  # , useFixedBase=True)
+robot = Aibo(sim)  # , fixed_base=True)
 
 # print information about the robot
-robot.printRobotInfo()
+robot.print_info()
 
 # # Position control using sliders
-# robot.addJointSlider(robot.getLeftFrontLegIds() + robot.getRightFrontLegIds())
+# robot.add_joint_slider(robot.left_front_leg + robot.right_front_leg)
 
 # run simulator
 for _ in count():
-    # robot.updateJointSlider()
+    # robot.update_joint_slider()
     world.step(sleep_dt=1./240)

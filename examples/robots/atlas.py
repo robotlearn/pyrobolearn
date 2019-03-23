@@ -17,12 +17,12 @@ world = BasicWorld(sim)
 robot = Atlas(sim)
 
 # print information about the robot
-robot.printRobotInfo()
+robot.print_info()
 
 # position control using sliders
-robot.addJointSlider(robot.getLeftLegIds())
+robot.add_joint_slider(robot.left_leg)
 
 # run simulator
 for _ in count():
-    robot.updateJointSlider()
+    robot.update_joint_slider()
     world.step(sleep_dt=1./240)

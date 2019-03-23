@@ -19,7 +19,10 @@ import copy
 import numpy as np
 import torch
 
+from pyrobolearn.robots.robot import Robot
 # from objective import Objective
+import pyrobolearn.states as states
+import pyrobolearn.actions as actions
 from pyrobolearn.rewards.reward import Reward
 
 
@@ -182,7 +185,7 @@ class TorqueCost(Cost):
         self.tau = torque_state
 
     def compute(self):
-        return - np.sum(self.tau.data**2)
+        return - np.sum(self.tau.data[0]**2)
 
 
 class PowerCost(Cost):
@@ -199,7 +202,51 @@ class PowerCost(Cost):
         self.vel = velocity_state
 
     def compute(self):
-        return - np.sum(np.maximum(self.tau.data * self.vel.data, 0))
+        return - np.sum(np.maximum(self.tau.data[0] * self.vel.data[0], 0))
+
+
+class JointPowerConsumptionCost(Cost):
+    r"""Joint Power Consumption Cost
+
+    Return the joint power consumption cost, where the power is computed as the torque times the velocity.
+    """
+
+    def __init__(self, state, joint_ids=None, update_state=False):
+        """
+        Initialize the Joint Power Consumption cost.
+
+        Args:
+            torque (Robot, State): robot instance, or the state. The state must contains the `JointForceTorqueState`
+                and the `JointVelocityState`.
+            joint_ids (None, int, list of int): joint ids. This used if `torque` is a `Robot` instance.
+            update_state (bool): If True, it will update the state.
+        """
+        self.update_state = update_state
+        if isinstance(state, Robot):
+            torque = states.JointForceTorqueState(state, joint_ids=joint_ids)
+            velocity = states.JointVelocityState(state, joint_ids=joint_ids)
+            self.update_state = True
+            # state = torque + velocity
+        elif isinstance(state, states.State):
+            # check if they have the correct state
+            torque = state.lookfor(states.JointForceTorqueState)
+            if torque is None:
+                raise ValueError("Didn't find a `JointForceTorqueState` instance in the given states.")
+            velocity = state.lookfor(states.JointVelocityState)
+            if velocity is None:
+                raise ValueError("Didn't find a `JointVelocityState` instance in the given states.")
+        else:
+            raise TypeError("Expecting the state to be an instance of `State` or `Robot`.")
+        super(JointPowerConsumptionCost, self).__init__()  # state=state)
+        self.tau = torque
+        self.vel = velocity
+        self.update_state = update_state
+
+    def compute(self):
+        if self.update_state:
+            self.tau()
+            self.vel()
+        return - np.sum((self.tau.data[0] * self.vel.data[0])**2)
 
 
 class JointAccelerationCost(Cost):
@@ -369,7 +416,7 @@ class PowerConsumptionCost(Cost):
         super(PowerConsumptionCost, self).__init__()
 
     def loss(self, robot):
-        return np.dot(robot.getJointTorques(), robot.getJointVelocities())
+        return np.dot(robot.get_joint_torques(), robot.get_joint_velocities())
 
 
 class DistanceCost(Cost):

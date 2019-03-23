@@ -18,11 +18,11 @@ world = BasicWorld(sim)
 for i, robot_name in enumerate(implemented_robots):
     if robot_name not in robot_not_working:
         # instantiate the given robot
-        robot = world.loadRobot(robot_name)
+        robot = world.load_robot(robot_name)
 
         # print info about the robot
         print("Robot n{}: {}".format(i+1, robot))
-        # robot.printRobotInfo()
+        # robot.print_info()
 
         # run for few moments in the world
         for t in range(250):
@@ -30,4 +30,4 @@ for i, robot_name in enumerate(implemented_robots):
             world.step(sleep_dt=1./240)
 
         # remove the robot from the world
-        world.removeObject(robot)
+        world.remove(robot)

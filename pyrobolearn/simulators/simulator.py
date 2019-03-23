@@ -48,6 +48,142 @@ class Simulator(object):
         self._render = render
         self.real_time = False
 
+        # TODO: this is really bad to have attributes like that... It doesn't generalize well to other simulators...
+
+        # import pybullet
+        # for attribute in dir(pybullet):
+        #     if attribute[0].isupper():
+        #         print('self.{} = {}'.format(attribute, getattr(pybullet, attribute)))
+
+        self.B3G_ALT = 65308
+        self.B3G_BACKSPACE = 65305
+        self.B3G_CONTROL = 65307
+        self.B3G_DELETE = 65304
+        self.B3G_DOWN_ARROW = 65298
+        self.B3G_END = 65301
+        self.B3G_F1 = 65280
+        self.B3G_F10 = 65289
+        self.B3G_F11 = 65290
+        self.B3G_F12 = 65291
+        self.B3G_F13 = 65292
+        self.B3G_F14 = 65293
+        self.B3G_F15 = 65294
+        self.B3G_F2 = 65281
+        self.B3G_F3 = 65282
+        self.B3G_F4 = 65283
+        self.B3G_F5 = 65284
+        self.B3G_F6 = 65285
+        self.B3G_F7 = 65286
+        self.B3G_F8 = 65287
+        self.B3G_F9 = 65288
+        self.B3G_HOME = 65302
+        self.B3G_INSERT = 65303
+        self.B3G_LEFT_ARROW = 65295
+        self.B3G_PAGE_DOWN = 65300
+        self.B3G_PAGE_UP = 65299
+        self.B3G_RETURN = 65309
+        self.B3G_RIGHT_ARROW = 65296
+        self.B3G_SHIFT = 65306
+        self.B3G_UP_ARROW = 65297
+
+        self.COV_ENABLE_DEPTH_BUFFER_PREVIEW = 14
+        self.COV_ENABLE_GUI = 1
+        self.COV_ENABLE_KEYBOARD_SHORTCUTS = 9
+        self.COV_ENABLE_MOUSE_PICKING = 10
+        self.COV_ENABLE_PLANAR_REFLECTION = 16
+        self.COV_ENABLE_RENDERING = 7
+        self.COV_ENABLE_RGB_BUFFER_PREVIEW = 13
+        self.COV_ENABLE_SEGMENTATION_MARK_PREVIEW = 15
+        self.COV_ENABLE_SHADOWS = 2
+        self.COV_ENABLE_SINGLE_STEP_RENDERING = 17
+        self.COV_ENABLE_TINY_RENDERER = 12
+        self.COV_ENABLE_WIREFRAME = 3
+        self.COV_ENABLE_Y_AXIS_UP = 11
+
+        self.DIRECT = 2
+        self.ER_BULLET_HARDWARE_OPENGL = 131072
+        self.ER_NO_SEGMENTATION_MASK = 4
+        self.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX = 1
+        self.ER_TINY_RENDERER = 65536
+        self.ER_USE_PROJECTIVE_TEXTURE = 2
+
+        self.GEOM_FORCE_CONCAVE_TRIMESH = 1
+        self.GEOM_SPHERE = 2
+        self.GEOM_CONCAVE_INTERNAL_EDGE = 2
+        self.GEOM_BOX = 3
+        self.GEOM_CYLINDER = 4
+        self.GEOM_MESH = 5
+        self.GEOM_PLANE = 6
+        self.GEOM_CAPSULE = 7
+
+        self.GUI = 1
+        self.GUI_MAIN_THREAD = 8
+        self.GUI_SERVER = 7
+        self.IK_DLS = 0
+        self.IK_HAS_JOINT_DAMPING = 128
+        self.IK_HAS_NULL_SPACE_VELOCITY = 64
+        self.IK_HAS_TARGET_ORIENTATION = 32
+        self.IK_HAS_TARGET_POSITION = 16
+        self.IK_SDLS = 1
+
+        self.JOINT_FEEDBACK_IN_JOINT_FRAME = 2
+        self.JOINT_FEEDBACK_IN_WORLD_SPACE = 1
+        self.JOINT_FIXED = 4
+        self.JOINT_GEAR = 6
+        self.JOINT_PLANAR = 3
+        self.JOINT_POINT2POINT = 5
+        self.JOINT_PRISMATIC = 1
+        self.JOINT_REVOLUTE = 0
+        self.JOINT_SPHERICAL = 2
+
+        self.KEY_IS_DOWN = 1
+        self.KEY_WAS_RELEASED = 4
+        self.KEY_WAS_TRIGGERED = 2
+
+        self.LINK_FRAME = 1
+        self.WORLD_FRAME = 2
+
+        self.MAX_RAY_INTERSECTION_BATCH_SIZE = 16384
+
+        self.VELOCITY_CONTROL = 0
+        self.TORQUE_CONTROL = 1
+        self.POSITION_CONTROL = 2
+        self.PD_CONTROL = 3
+
+        self.SENSOR_FORCE_TORQUE = 1
+        self.SHARED_MEMORY = 3
+        self.SHARED_MEMORY_KEY = 12347
+        self.SHARED_MEMORY_KEY2 = 12348
+        self.SHARED_MEMORY_SERVER = 9
+        self.STATE_LOGGING_ALL_COMMANDS = 7
+        self.STATE_LOGGING_CONTACT_POINTS = 5
+        self.STATE_LOGGING_CUSTOM_TIMER = 9
+        self.STATE_LOGGING_GENERIC_ROBOT = 1
+        self.STATE_LOGGING_MINITAUR = 0
+        self.STATE_LOGGING_PROFILE_TIMINGS = 6
+        self.STATE_LOGGING_VIDEO_MP4 = 3
+        self.STATE_LOGGING_VR_CONTROLLERS = 2
+        self.STATE_LOG_JOINT_MOTOR_TORQUES = 1
+        self.STATE_LOG_JOINT_TORQUES = 3
+        self.STATE_LOG_JOINT_USER_TORQUES = 2
+        self.STATE_REPLAY_ALL_COMMANDS = 8
+
+        self.TCP = 5
+        self.UDP = 4
+
+        self.URDF_ENABLE_CACHED_GRAPHICS_SHAPES = 1024
+        self.URDF_ENABLE_SLEEPING = 2048
+        self.URDF_GLOBAL_VELOCITIES_MB = 256
+        self.URDF_INITIALIZE_SAT_FEATURES = 4096
+        self.URDF_USE_IMPLICIT_CYLINDER = 128
+        self.URDF_USE_INERTIA_FROM_FILE = 2
+        self.URDF_USE_MATERIAL_COLORS_FROM_MTL = 32768
+        self.URDF_USE_MATERIAL_TRANSPARANCY_FROM_MTL = 65536
+        self.URDF_USE_SELF_COLLISION = 8
+        self.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS = 32
+        self.URDF_USE_SELF_COLLISION_EXCLUDE_PARENT = 16
+        self.URDF_USE_SELF_COLLISION_INCLUDE_PARENT = 8192
+
     ##############
     # Properties #
     ##############
@@ -249,7 +385,7 @@ class Simulator(object):
         pass
 
     def load_mesh(self, filename, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None,
-                 flags=None, *args, **kwargs):
+                  with_collision=True, flags=None, *args, **kwargs):
         """Load a mesh into the simulator.
 
         Args:
@@ -261,6 +397,7 @@ class Simulator(object):
             mass (float): mass of the mesh (in kg). If mass = 0, it won't move even if there is a collision.
             scale (float[3]): scale the mesh in the (x,y,z) directions
             color (int[4], None): color of the mesh (by default: white and opaque)
+            with_collision (bool): If True, it will also create the collision mesh, and not only a visual mesh.
             flags (int, None): if flag = `sim.GEOM_FORCE_CONCAVE_TRIMESH` (=1), this will create a concave static
                 triangle mesh. This should not be used with dynamic/moving objects, only for static (mass=0) terrain.
 
@@ -271,15 +408,15 @@ class Simulator(object):
 
     # bodies
 
-    def create_body(self, visual_shape_id=-1, collision_shape_id=-1, mass=0, position=(0., 0., 0.),
-                    orientation=(0., 0., 0., 1.)):
+    def create_body(self, visual_shape_id=-1, collision_shape_id=-1, mass=0., position=(0., 0., 0.),
+                    orientation=(0., 0., 0., 1.), *args, **kwargs):
         """Create a body in the simulator.
 
         Args:
             visual_shape_id (int): unique id from createVisualShape or -1. You can reuse the visual shape (instancing)
             collision_shape_id (int): unique id from createCollisionShape or -1. You can re-use the collision shape
                 for multiple multibodies (instancing)
-            mass (int): mass of the base, in kg (if using SI units)
+            mass (float): mass of the base, in kg (if using SI units)
             position (np.float[3]): Cartesian world position of the base
             orientation (np.float[4]): Orientation of base as quaternion [x,y,z,w]
 
@@ -454,7 +591,7 @@ class Simulator(object):
         """
         pass
 
-    def get_center_of_mass(self, body_id, link_ids=None):
+    def get_center_of_mass_position(self, body_id, link_ids=None):
         """
         Return the center of mass position.
 
@@ -465,6 +602,20 @@ class Simulator(object):
 
         Returns:
             np.float[3]: center of mass position in the Cartesian world coordinates
+        """
+        pass
+
+    def get_center_of_mass_velocity(self, body_id, link_ids=None):
+        """
+        Return the center of mass linear velocity.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (list of int): link ids associated with the given body id. If None, it will take all the links
+                of the specified body.
+
+        Returns:
+            np.float[3]: center of mass linear velocity.
         """
         pass
 
@@ -645,6 +796,18 @@ class Simulator(object):
         """
         pass
 
+    def num_actuated_joints(self, body_id):
+        """
+        Return the total number of actuated joints associated with the given body id.
+
+        Args:
+            body_id (int): unique body id.
+
+        Returns:
+            int: number of actuated joints of the specified body.
+        """
+        pass
+
     def num_links(self, body_id):
         """
         Return the total number of links of the specified body. This is the same as calling `num_joints`.
@@ -712,7 +875,7 @@ class Simulator(object):
         """
         pass
 
-    def reset_joint_state(self, body_id, joint_id, target_position, target_velocity=0.):
+    def reset_joint_state(self, body_id, joint_id, position, velocity=0.):
         """
         Reset the state of the joint. It is best only to do this at the start, while not running the simulation:
         `reset_joint_state` overrides all physics simulation.
@@ -720,24 +883,24 @@ class Simulator(object):
         Args:
             body_id (int): unique body id.
             joint_id (int): joint index in range [0..num_joints(body_id)]
-            target_position (float): the joint position (angle in radians [rad] or position [m])
-            target_velocity (float): the joint velocity (angular [rad/s] or linear velocity [m/s])
+            position (float): the joint position (angle in radians [rad] or position [m])
+            velocity (float): the joint velocity (angular [rad/s] or linear velocity [m/s])
         """
         pass
 
-    def enable_joint_force_torque_sensor(self, body_id, joint_id, enable=True):
+    def enable_joint_force_torque_sensor(self, body_id, joint_ids, enable=True):
         """
         You can enable or disable a joint force/torque sensor in each joint.
 
         Args:
             body_id (int): body unique id.
-            joint_id (int): joint index in range [0..num_joints(body_id)]
+            joint_ids (int, int[N]): joint index in range [0..num_joints(body_id)], or list of joint ids.
             enable (bool): True to enable, False to disable the force/torque sensor
         """
         pass
 
-    def set_joint_motor_control(self, body_id, joint_id, control_mode=2, position=None,
-                                velocity=None, force=None, kp=None, kd=None, max_velocity=None):
+    def set_joint_motor_control(self, body_id, joint_ids, control_mode=2, positions=None,
+                                velocities=None, forces=None, kp=None, kd=None, max_velocity=None):
         """
         Set the joint motor control.
 
@@ -751,43 +914,21 @@ class Simulator(object):
 
         Args:
             body_id (int): body unique id.
-            joint_id (int): joint/link id.
+            joint_ids (int): joint/link id, or list of joint ids.
             control_mode (int): POSITION_CONTROL (=2) (which is in fact CONTROL_MODE_POSITION_VELOCITY_PD),
                 VELOCITY_CONTROL (=0), TORQUE_CONTROL (=1) and PD_CONTROL (=3).
-            position (float): target joint position (used in POSITION_CONTROL).
-            velocity (float): target joint velocity. In VELOCITY_CONTROL and POSITION_CONTROL, the target velocity is
-                the desired velocity of the joint. Note that the target velocity is not the maximum joint velocity.
-                In PD_CONTROL and POSITION_CONTROL/CONTROL_MODE_POSITION_VELOCITY_PD, the final target velocity is
-                computed using:
+            positions (float, np.float[N]): target joint position(s) (used in POSITION_CONTROL).
+            velocities (float, np.float[N]): target joint velocity(ies). In VELOCITY_CONTROL and POSITION_CONTROL,
+                the target velocity(ies) is(are) the desired velocity of the joint. Note that the target velocity(ies)
+                is(are) not the maximum joint velocity(ies). In PD_CONTROL and
+                POSITION_CONTROL/CONTROL_MODE_POSITION_VELOCITY_PD, the final target velocities are computed using:
                 `kp*(erp*(desiredPosition-currentPosition)/dt)+currentVelocity+kd*(m_desiredVelocity - currentVelocity)`
-            force (float): in POSITION_CONTROL and VELOCITY_CONTROL, this is the maximum motor force used to reach the
-                target value. In TORQUE_CONTROL this is the force/torque to be applied each simulation step.
-            kp (float): position (stiffness) gain (used in POSITION_CONTROL).
-            kd (float): velocity (damping) gain (used in POSITION_CONTROL).
+            forces (float, list of float): in POSITION_CONTROL and VELOCITY_CONTROL, these are the maximum motor
+                forces used to reach the target values. In TORQUE_CONTROL these are the forces / torques to be applied
+                each simulation step.
+            kp (float, list of float): position (stiffness) gain(s) (used in POSITION_CONTROL).
+            kd (float, list of float): velocity (damping) gain(s) (used in POSITION_CONTROL).
             max_velocity (float): in POSITION_CONTROL this limits the velocity to a maximum.
-        """
-        pass
-
-    def set_joint_motor_control_array(self, body_id, joint_ids, control_mode=2, positions=None,
-                                      velocities=None, forces=None, kps=None, kds=None):
-        """
-        Instead of making individual calls for each joint, you can pass arrays for all inputs to reduce calling
-        overhead dramatically.
-
-        Args:
-            body_id (int): body unique id.
-            joint_ids (list of int): list of joint id.
-            control_mode (int): POSITION_CONTROL (=2) (which is in fact CONTROL_MODE_POSITION_VELOCITY_PD),
-                VELOCITY_CONTROL (=0), TORQUE_CONTROL (=1) and PD_CONTROL (=3).
-            positions (list of float): list of target joint positions (used in POSITION_CONTROL) the target value is
-                target position of the joint.
-            velocities (list of float): list of target joint velocities (used in PD_CONTROL, VELOCITY_CONTROL and
-                POSITION_CONTROL).
-            forces (list of float): list of forces. In POSITION_CONTROL and VELOCITY_CONTROL, these are the maximum
-                motor forces used to reach the target values. In TORQUE_CONTROL these are the forces/torques to be
-                applied each simulation step.
-            kps (list of float): list of position (stiffness) gains (used in POSITION_CONTROL).
-            kds (list of float): list of velocity (damping) gains (used in POSITION_CONTROL).
         """
         pass
 
@@ -965,7 +1106,7 @@ class Simulator(object):
     def get_link_velocities(self, body_id, link_ids):
         pass
 
-    def get_qindex(self, body_id, joint_ids):
+    def get_q_indices(self, body_id, joint_ids):
         """
         Get the corresponding q index of the given joint(s).
 
@@ -984,9 +1125,6 @@ class Simulator(object):
     def get_actuated_joint_ids(self, body_id):
         """
         Get the actuated joint ids associated with the given body id.
-
-        Warnings: this checks through the list of all joints each time it is called. It might be a good idea to call
-        this method one time and cache the actuated joint ids.
 
         Args:
             body_id (int): unique body id.
@@ -1009,6 +1147,36 @@ class Simulator(object):
                 str: name of the joint
             if multiple joints:
                 str[N]: name of each joint
+        """
+        pass
+
+    def get_joint_type_ids(self, body_id, joint_ids):
+        """
+        Get the joint type ids.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list of int): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                int: joint type id.
+            if multiple joints: list of above
+        """
+        pass
+
+    def get_joint_type_names(self, body_id, joint_ids):
+        """
+        Get joint type names.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list of int): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                str: joint type name.
+            if multiple joints: list of above
         """
         pass
 
@@ -1040,7 +1208,7 @@ class Simulator(object):
             if 1 joint:
                 float: friction coefficient of the given joint
             if multiple joints:
-                float[N]: friction coefficient for each specified joint
+                np.float[N]: friction coefficient for each specified joint
         """
         pass
 
@@ -1074,7 +1242,7 @@ class Simulator(object):
             if 1 joint:
                 float: maximum force [N]
             if multiple joints:
-                float[N]: maximum force for each specified joint [N]
+                np.float[N]: maximum force for each specified joint [N]
         """
         pass
 
@@ -1301,24 +1469,25 @@ class Simulator(object):
 
     def get_visual_shape_data(self, object_id, flags=-1):
         """
-        Get the visual shape data associated with the given object id.
+        Get the visual shape data associated with the given object id. It will output a list of visual shape data.
 
         Args:
             object_id (int): object unique id.
             flags (int, None): VISUAL_SHAPE_DATA_TEXTURE_UNIQUE_IDS (=1) will also provide `texture_unique_id`.
 
         Returns:
-            int: object unique id.
-            int: link index or -1 for the base
-            int: visual geometry type (TBD)
-            np.float[3]: dimensions (size, local scale) of the geometry
-            str: path to the triangle mesh, if any. Typically relative to the URDF, SDF or MJCF file location, but
-                could be absolute
-            np.float[3]: position of local visual frame, relative to link/joint frame
-            np.float[4]: orientation of local visual frame relative to link/joint frame
-            list of 4 floats: URDF color (if any specified) in Red / Green / Blue / Alpha
-            int: texture unique id of the shape or -1 if None. This field only exists if using
-                VISUAL_SHAPE_DATA_TEXTURE_UNIQUE_IDS (=1) flag.
+            list:
+                int: object unique id.
+                int: link index or -1 for the base
+                int: visual geometry type (TBD)
+                np.float[3]: dimensions (size, local scale) of the geometry
+                str: path to the triangle mesh, if any. Typically relative to the URDF, SDF or MJCF file location, but
+                    could be absolute
+                np.float[3]: position of local visual frame, relative to link/joint frame
+                np.float[4]: orientation of local visual frame relative to link/joint frame
+                list of 4 floats: URDF color (if any specified) in Red / Green / Blue / Alpha
+                int: texture unique id of the shape or -1 if None. This field only exists if using
+                    VISUAL_SHAPE_DATA_TEXTURE_UNIQUE_IDS (=1) flag.
         """
         pass
 
@@ -1625,16 +1794,16 @@ class Simulator(object):
         """
         pass
 
-    def get_contact_points(self, body_a, body_b, link_id_a=None, link_id_b=None):
+    def get_contact_points(self, body1, body2, link1_id=None, link2_id=None):
         """
         Returns the contact points computed during the most recent call to `step`.
 
         Args:
-            body_a (int): only report contact points that involve body A
-            body_b (int): only report contact points that involve body B. Important: you need to have a valid body A
+            body1 (int): only report contact points that involve body A
+            body2 (int): only report contact points that involve body B. Important: you need to have a valid body A
                 if you provide body B
-            link_id_a (int): only report contact points that involve link index of body A
-            link_id_b (int): only report contact points that involve link index of body B
+            link1_id (int): only report contact points that involve link index of body A
+            link2_id (int): only report contact points that involve link index of body B
 
         Returns:
             list:
@@ -1655,18 +1824,18 @@ class Simulator(object):
         """
         pass
 
-    def get_closest_points(self, body_a, body_b, distance, link_id_a=None, link_id_b=None):
+    def get_closest_points(self, body1, body2, distance, link1_id=None, link2_id=None):
         """
         Computes the closest points, independent from `step`. This also lets you compute closest points of objects
         with an arbitrary separating distance. In this query there will be no normal forces reported.
 
         Args:
-            body_a (int): only report contact points that involve body A
-            body_b (int): only report contact points that involve body B. Important: you need to have a valid body A
+            body1 (int): only report contact points that involve body A
+            body2 (int): only report contact points that involve body B. Important: you need to have a valid body A
                 if you provide body B
             distance (float): If the distance between objects exceeds this maximum distance, no points may be returned.
-            link_id_a (int): only report contact points that involve link index of body A
-            link_id_b (int): only report contact points that involve link index of body B
+            link1_id (int): only report contact points that involve link index of body A
+            link2_id (int): only report contact points that involve link index of body B
 
         Returns:
             list:
@@ -1696,18 +1865,19 @@ class Simulator(object):
             to_position (np.float[3]): end of the ray in world coordinates
 
         Returns:
-            int: object unique id of the hit object
-            int: link index of the hit object, or -1 if none/parent
-            float: hit fraction along the ray in range [0,1] along the ray.
-            np.float[3]: hit position in Cartesian world coordinates
-            np.float[3]: hit normal in Cartesian world coordinates
+            list:
+                int: object unique id of the hit object
+                int: link index of the hit object, or -1 if none/parent
+                float: hit fraction along the ray in range [0,1] along the ray.
+                np.float[3]: hit position in Cartesian world coordinates
+                np.float[3]: hit normal in Cartesian world coordinates
         """
         pass
 
     def ray_test_batch(self, from_positions, to_positions, parent_object_id=None, parent_link_id=None):
         """Perform a batch of raycasts to find the intersection information of the first objects hit.
 
-        This is similar to the rayTest, but allows you to provide an array of rays, for faster execution. The size of
+        This is similar to the ray_test, but allows you to provide an array of rays, for faster execution. The size of
         'rayFromPositions' needs to be equal to the size of 'rayToPositions'. You can one ray result per ray, even if
         there is no intersection: you need to use the objectUniqueId field to check if the ray has hit anything: if
         the objectUniqueId is -1, there is no hit. In that case, the 'hit fraction' is 1.
@@ -1742,15 +1912,15 @@ class Simulator(object):
         """
         pass
 
-    def set_collision_filter_pair(self, body_a, body_b, link_a=-1, link_b=-1, enable=True):
+    def set_collision_filter_pair(self, body1, body2, link1=-1, link2=-1, enable=True):
         """
         Enable/disable collision between two bodies/links.
 
         Args:
-            body_a (int): unique id of body A to be filtered
-            body_b (int): unique id of body B to be filtered, A==B implies self-collision
-            link_a (int): link index of body A
-            link_b (int): link index of body B
+            body1 (int): unique id of body A to be filtered
+            body2 (int): unique id of body B to be filtered, A==B implies self-collision
+            link1 (int): link index of body A
+            link2 (int): link index of body B
             enable (bool): True to enable collision, False to disable collision
         """
         pass
@@ -1891,7 +2061,7 @@ class Simulator(object):
             solver (int): p.IK_DLS (=0) or p.IK_SDLS (=1), Damped Least Squares or Selective Damped Least Squares, as
                 described in the paper by Samuel Buss "Selectively Damped Least Squares for Inverse Kinematics".
             q_curr (np.float[N]): list of joint positions. By default PyBullet uses the joint positions of the body.
-                If provided, the targetPosition and targetOrientation is in local space!
+                If provided, the target_position and targetOrientation is in local space!
             max_iters (int): maximum number of iterations. Refine the IK solution until the distance between target
                 and actual end effector position is below this threshold, or the `max_iters` is reached.
             threshold (float): residual threshold. Refine the IK solution until the distance between target and actual
@@ -1987,7 +2157,7 @@ class Simulator(object):
             torques (np.float[N]): desired joint torques
 
         Returns:
-            float[N]: joint accelerations computed using the rigid-body equation of motion
+            np.float[N]: joint accelerations computed using the rigid-body equation of motion
 
         References:
             [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1

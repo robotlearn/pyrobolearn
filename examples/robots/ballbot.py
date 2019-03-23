@@ -17,10 +17,10 @@ world = BasicWorld(sim)
 robot = Ballbot(sim)
 
 # print information about the robot
-robot.printRobotInfo()
+robot.print_info()
 
 for i in count():
-    # robot.setJointVelocities([0, -1, 0])
+    # robot.set_joint_velocities([0, -1, 0])
 
     # step in simulation
     world.step(sleep_dt=1./240)

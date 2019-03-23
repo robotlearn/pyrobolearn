@@ -55,22 +55,22 @@ class Quadcopter(RotaryWingUAV):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 0.2),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 position=(0, 0, 0.2),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/quadcopter/quadcopter.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/quadcopter/quadcopter.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.2)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.2,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 0.2)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.2,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(Quadcopter, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Quadcopter, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'quadcopter'
 
         self.gravity = 9.81
@@ -134,30 +134,30 @@ class Quadcopter(RotaryWingUAV):
         diameter = (4. * area / np.pi)**0.5
         return air_density * area * (tmp**2 - tmp*v0) * (self.k1 * diameter / propeller_pitch)**self.k2
 
-    def setJointVelocities(self, velocity, jointId=None, maxVelocity=True, maxTorque=True):
+    def set_joint_velocities(self, velocities, joint_ids=None, maxVelocity=True, maxTorque=True):
         """
         Set the joint velocities and apply the thrust force on the propeller link corresponding to the given
         joint id(s).
 
         Args:
-            velocity (float[4]): velocity of each propeller
-            jointId (int[4], None): Not used here
+            velocities (float[4]): velocity of each propeller
+            joint_ids (int[4], None): Not used here
             maxVelocity (bool):
             maxTorque (bool):
 
         Returns:
             None
         """
-        if len(velocity) != 4:
+        if len(velocities) != 4:
             raise ValueError("Expecting a velocity for each propeller")
 
-        jointId = self.joints
+        joint_ids = self.joints
 
         # call parent method
-        super(Quadcopter, self).setJointVelocities(velocity, jointId, maxVelocity, maxTorque)
+        super(Quadcopter, self).set_joint_velocities(velocities, joint_ids, maxVelocity, maxTorque)
 
         # calculate thrust force of the given joints, and apply it on the link
-        for jnt, d, v in zip(jointId, self.turning_directions, velocity):
+        for jnt, d, v in zip(joint_ids, self.turning_directions, velocities):
             if maxVelocity and v > self.max_velocity:
                 v = self.max_velocity
 
@@ -174,7 +174,7 @@ class Quadcopter(RotaryWingUAV):
             # f = self.mass * self.gravity / 4.
 
             # apply force in the simulation
-            self.applyExternalForce([0,0,f], jnt, position=(0.,0.,0.))
+            self.apply_external_force([0, 0, f], jnt, position=(0., 0., 0.))
 
     def getStationaryJointVelocity(self):
         fg = self.mass * self.gravity / 4.
@@ -207,7 +207,7 @@ if __name__ == "__main__":
     robot = Quadcopter(sim)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
     rpm = robot.getStationaryRPM()
     print("Stationary RPM: {}".format(rpm))
@@ -216,6 +216,6 @@ if __name__ == "__main__":
 
     # run simulation
     for i in count():
-        robot.setJointVelocities(v)
+        robot.set_joint_velocities(v)
         # step in simulation
         world.step(sleep_dt=1./240)

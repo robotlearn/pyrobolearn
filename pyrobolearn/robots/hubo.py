@@ -27,42 +27,42 @@ class Hubo(BipedRobot, BiManipulatorRobot, TwoHand):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 1),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 position=(0, 0, 1),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/hubo/hubo.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/hubo/hubo.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 1.)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (1.,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 1.)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (1.,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(Hubo, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Hubo, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'hubo'
 
-        self.neck = [self.getLinkIds(link) for link in ['Body_Neck', 'Body_Head_Empty', 'Body_Head']
+        self.neck = [self.get_link_ids(link) for link in ['Body_Neck', 'Body_Head_Empty', 'Body_Head']
                      if link in self.link_names]
-        self.head = self.getLinkIds('Body_Head') if 'Body_Head' in self.link_names else None
-        self.waist = self.getLinkIds('Body_Hip') if 'Body_Hip' in self.link_names else None
+        self.head = self.get_link_ids('Body_Head') if 'Body_Head' in self.link_names else None
+        self.waist = self.get_link_ids('Body_Hip') if 'Body_Hip' in self.link_names else None
 
-        self.legs = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['Body_LHY', 'Body_LHR', 'Body_LHP', 'Body_LKN', 'Body_LAP', 'Body_LAR'],
                                    ['Body_RHY', 'Body_RHR', 'Body_RHP', 'Body_RKN', 'Body_RAP', 'Body_RAR']]]
 
-        self.feet = [self.getLinkIds(link) for link in ['Body_LAR', 'Body_RAR'] if link in self.link_names]
+        self.feet = [self.get_link_ids(link) for link in ['Body_LAR', 'Body_RAR'] if link in self.link_names]
 
-        self.arms = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.arms = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['Body_LSP', 'Body_LSR', 'Body_LSY', 'Body_LEB', 'Body_LWY', 'Body_LWP'],
                                    ['Body_RSP', 'Body_RSR', 'Body_RSY', 'Body_REB', 'Body_RWY', 'Body_RWP']]]
 
-        self.hands = [self.getLinkIds(link) for link in ['Body_LWP', 'Body_RWP'] if link in self.link_names]
+        self.hands = [self.get_link_ids(link) for link in ['Body_LWP', 'Body_RWP'] if link in self.link_names]
 
-        self.fingers = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.fingers = [[self.get_link_ids(link) for link in links if link in self.link_names]
                         for links in [['leftThumbProximal', 'leftThumbMedial', 'leftThumbDistal'],
                                       ['leftIndexProximal', 'leftIndexMedial', 'leftIndexDistal'],
                                       ['leftMiddleProximal', 'leftMiddleMedial', 'leftMiddleDistal'],
@@ -94,12 +94,12 @@ if __name__ == "__main__":
     robot = Hubo(sim)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
     # Position control using sliders
-    # robot.addJointSlider()
+    # robot.add_joint_slider()
 
     # run simulator
     for _ in count():
-        # robot.updateJointSlider()
+        # robot.update_joint_slider()
         world.step(sleep_dt=1./240)

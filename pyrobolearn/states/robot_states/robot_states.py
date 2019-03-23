@@ -65,7 +65,7 @@ class BasePositionState(RobotState):
         self._read()
 
     def _read(self):
-        self._data = self.robot.getBasePosition()
+        self.data = self.robot.get_base_position()
 
 
 class BaseHeightState(RobotState):
@@ -79,7 +79,7 @@ class BaseHeightState(RobotState):
         self._read()
 
     def _read(self):
-        self._data = np.array([self.robot.getBasePosition()[-1]])
+        self.data = np.array([self.robot.get_base_position()[-1]])
 
 
 class BaseOrientationState(RobotState):
@@ -93,7 +93,7 @@ class BaseOrientationState(RobotState):
         self._read()
 
     def _read(self):
-        self._data = self.robot.getBaseOrientation(convert_to_numpy_quaternion=False)
+        self.data = self.robot.get_base_orientation()
 
 
 class BaseLinearVelocityState(RobotState):
@@ -107,7 +107,7 @@ class BaseLinearVelocityState(RobotState):
         self._read()
 
     def _read(self):
-        self._data = self.robot.getBaseLinearVelocity()
+        self.data = self.robot.get_base_linear_velocity()
 
 
 class BaseAngularVelocityState(RobotState):
@@ -121,4 +121,4 @@ class BaseAngularVelocityState(RobotState):
         self._read()
 
     def _read(self):
-        self._data = self.robot.getBaseAngularVelocity()
+        self.data = self.robot.get_base_angular_velocity()

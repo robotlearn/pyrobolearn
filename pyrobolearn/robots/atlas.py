@@ -20,39 +20,39 @@ class Atlas(BipedRobot, BiManipulatorRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 1.),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 position=(0, 0, 1.),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/atlas/atlas_v4_with_multisense.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/atlas/atlas_v4_with_multisense.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 1.)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (1.,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 1.)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (1.,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(Atlas, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Atlas, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'atlas'
 
-        self.head = self.getLinkIds('head') if 'head' in self.link_names else None
+        self.head = self.get_link_ids('head') if 'head' in self.link_names else None
 
-        self.torso = [self.getLinkIds(link) for link in ['ltorso', 'mtorso', 'utorso'] if link in self.link_names]
+        self.torso = [self.get_link_ids(link) for link in ['ltorso', 'mtorso', 'utorso'] if link in self.link_names]
 
-        self.legs = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['l_uglut', 'l_lglut', 'l_uleg', 'l_lleg', 'l_talus', 'l_foot'],
                                    ['r_uglut', 'r_lglut', 'r_uleg', 'r_lleg', 'r_talus', 'r_foot']]]
 
-        self.feet = [self.getLinkIds(link) for link in ['l_foot', 'r_foot'] if link in self.link_names]
+        self.feet = [self.get_link_ids(link) for link in ['l_foot', 'r_foot'] if link in self.link_names]
 
-        self.arms = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.arms = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['l_clav', 'l_scap', 'l_uarm', 'l_larm', 'l_ufarm', 'l_lfarm', 'l_hand'],
                                    ['r_clav', 'r_scap', 'r_uarm', 'r_larm', 'r_ufarm', 'r_lfarm', 'r_hand']]]
 
-        self.hands = [self.getLinkIds(link) for link in ['l_hand', 'r_hand'] if link in self.link_names]
+        self.hands = [self.get_link_ids(link) for link in ['l_hand', 'r_hand'] if link in self.link_names]
 
 
 # Test
@@ -71,12 +71,12 @@ if __name__ == "__main__":
     robot = Atlas(sim)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
     # position control using sliders
-    robot.addJointSlider(robot.getLeftLegIds())
+    robot.add_joint_slider(robot.getLeftLegIds())
 
     # run simulator
     for _ in count():
-        robot.updateJointSlider()
+        robot.update_joint_slider()
         world.step(sleep_dt=1./240)

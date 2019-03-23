@@ -16,40 +16,40 @@ class Nao(BipedRobot, BiManipulatorRobot, TwoHand):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 0.35),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 position=(0, 0, 0.35),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/nao/nao_v40.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/nao/nao_v40.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.35)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.35,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 0.35)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.35,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(Nao, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Nao, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'nao'
 
-        self.neck = self.getLinkIds('Neck') if 'Neck' in self.link_names else None
-        self.head = self.getLinkIds('Head') if 'Head' in self.link_names else None
+        self.neck = self.get_link_ids('Neck') if 'Neck' in self.link_names else None
+        self.head = self.get_link_ids('Head') if 'Head' in self.link_names else None
 
-        self.legs = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['LPelvis', 'LHip', 'LThigh', 'LTibia', 'LAnklePitch', 'l_ankle'],
                                    ['RPelvis', 'RHip', 'RThigh', 'RTibia', 'RAnklePitch', 'r_ankle']]]
 
-        self.feet = [self.getLinkIds(link) for link in ['l_sole', 'r_sole'] if link in self.link_names]
+        self.feet = [self.get_link_ids(link) for link in ['l_sole', 'r_sole'] if link in self.link_names]
 
-        self.arms = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.arms = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['LShoulder', 'LBicep', 'LElbow', 'LForeArm', 'l_wrist', 'l_gripper'],
                                    ['RShoulder', 'RBicep', 'RElbow', 'RForeArm', 'r_wrist', 'r_gripper']]]
 
-        self.hands = [self.getLinkIds(link) for link in ['l_gripper', 'r_gripper'] if link in self.link_names]
+        self.hands = [self.get_link_ids(link) for link in ['l_gripper', 'r_gripper'] if link in self.link_names]
 
-        self.fingers = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.fingers = [[self.get_link_ids(link) for link in links if link in self.link_names]
                         for links in [['LThumb1_link', 'LThumb2_link'],
                                       ['LFinger11_link', 'LFinger12_link', 'LFinger13_link'],
                                       ['LFinger21_link', 'LFinger22_link', 'LFinger23_link'],
@@ -77,12 +77,12 @@ if __name__ == "__main__":
     robot = Nao(sim)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
     # Position control using sliders
-    # robot.addJointSlider(robot.getLeftArmIds())
+    # robot.add_joint_slider(robot.getLeftArmIds())
 
     # run simulator
     for _ in count():
-        # robot.updateJointSlider()
+        # robot.update_joint_slider()
         world.step(sleep_dt=1./240)

@@ -6,7 +6,7 @@ This includes notably the joint positions, velocities, and force/torque states.
 
 from abc import ABCMeta
 
-from pyrobolearn.states.robot_states import RobotState
+from pyrobolearn.states.robot_states.robot_states import RobotState
 
 
 __author__ = "Brian Delhaisse"
@@ -36,7 +36,7 @@ class JointState(RobotState):
 
         # get the joints of the robot
         if joint_ids is None:
-            joint_ids = robot.getJointIds()
+            joint_ids = robot.get_joint_ids()
         elif isinstance(joint_ids, int):
             joint_ids = [joint_ids]
         self.joints = joint_ids
@@ -55,7 +55,7 @@ class JointPositionState(JointState):
         super(JointPositionState, self).__init__(robot, joint_ids)
 
     def _read(self):
-        self._data = self.robot.getJointPositions(self.joints)
+        self.data = self.robot.get_joint_positions(self.joints)
 
 
 class JointVelocityState(JointState):
@@ -68,7 +68,7 @@ class JointVelocityState(JointState):
         super(JointVelocityState, self).__init__(robot, joint_ids)
 
     def _read(self):
-        self._data = self.robot.getJointVelocities(self.joints)
+        self.data = self.robot.get_joint_velocities(self.joints)
 
 
 class JointForceTorqueState(JointState):
@@ -81,7 +81,7 @@ class JointForceTorqueState(JointState):
         super(JointForceTorqueState, self).__init__(robot, joint_ids)
 
     def _read(self):
-        self._data = self.robot.getJointTorques(self.joints)
+        self.data = self.robot.get_joint_torques(self.joints)
 
 
 class JointAccelerationState(JointState):
@@ -95,4 +95,4 @@ class JointAccelerationState(JointState):
         super(JointAccelerationState, self).__init__(robot, joint_ids)
 
     def _read(self):
-        self._data = self.robot.getJointAccelerations(self.joints)
+        self.data = self.robot.get_joint_accelerations(self.joints)

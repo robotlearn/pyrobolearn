@@ -568,20 +568,32 @@ def get_quaternion_product(q1, q2, convention='xyzw'):
     if isinstance(q1, quaternion.quaternion):
         return q1*q2
     elif isinstance(q1, Iterable):
-        if convention == 'xyzw':
-            x1, y1, z1, w1 = q1
-            x2, y2, z2, w2 = q2
-            v1, v2 = np.array([x1, y1, z1]), np.array([x2, y2, z2])
-            v = w1 * v2 + w2 * v1 + np.cross(v1, v2)
-            w = w1 * w2 - v1.dot(v2)
-            return np.array([v[0], v[1], v[2], w])
-        elif convention == 'wxyz':
-            w1, x1, y1, z1 = q1
-            w2, x2, y2, z2 = q2
-            v1, v2 = np.array([x1, y1, z1]), np.array([x2, y2, z2])
-            v = w1 * v2 + w2 * v1 + np.cross(v1, v2)
-            w = w1 * w2 - v1.dot(v2)
-            return np.array([w, v[0], v[1], v[2]])
+
+        def product(q1, q2, convention):
+            if convention == 'xyzw':
+                x1, y1, z1, w1 = q1
+                x2, y2, z2, w2 = q2
+                v1, v2 = np.array([x1, y1, z1]), np.array([x2, y2, z2])
+                v = w1 * v2 + w2 * v1 + np.cross(v1, v2)
+                w = w1 * w2 - v1.dot(v2)
+                return np.array([v[0], v[1], v[2], w])
+            elif convention == 'wxyz':
+                w1, x1, y1, z1 = q1
+                w2, x2, y2, z2 = q2
+                v1, v2 = np.array([x1, y1, z1]), np.array([x2, y2, z2])
+                v = w1 * v2 + w2 * v1 + np.cross(v1, v2)
+                w = w1 * w2 - v1.dot(v2)
+                return np.array([w, v[0], v[1], v[2]])
+
+        if isinstance(q1, np.ndarray):
+            if len(q1.shape) == 1 and len(q2.shape) == 1:
+                return product(q1, q2, convention)
+            elif len(q1.shape) == 2 and len(q2.shape) == 1:
+                return np.array([product(q, q2, convention) for q in q1])
+            elif len(q1.shape) == 1 and len(q2.shape) == 2:
+                return np.array([product(q1, q, convention) for q in q2])
+            else:
+                return np.array([product(q1_, q2_, convention) for q1_, q2_ in zip(q1, q2)])
         else:
             raise NotImplementedError("Asking for a convention that has not been implemented")
     else:
@@ -657,3 +669,9 @@ if __name__ == "__main__":
     print('Quaternion <- matrix <- RPY: {}'.format(get_quaternion_from_matrix(get_matrix_from_rpy(rpy))))
     print('Using pybullet: {}'.format(pybullet.getQuaternionFromEuler(rpy)))
     print('Using tf.transformations: {}'.format(tft.quaternion_from_euler(*rpy)))
+
+    import quaternion
+    q1 = quaternion.quaternion(q[3], q[0], q[1], q[2])
+    q2 = q1
+    print(q1 * q2)
+    print(get_quaternion_product(q, q, convention='xyzw'))

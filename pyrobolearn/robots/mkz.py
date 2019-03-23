@@ -21,35 +21,35 @@ class MKZ(AckermannWheeledRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, .4),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 position=(0, 0, .4),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/mkz/mkz.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/mkz/mkz.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.4)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.4,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 0.4)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.4,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(MKZ, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(MKZ, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'mkz'
 
-        self.wheels = [self.getLinkIds(link) for link in ['wheel_fl', 'wheel_fr', 'wheel_rl', 'wheel_rr']
+        self.wheels = [self.get_link_ids(link) for link in ['wheel_fl', 'wheel_fr', 'wheel_rl', 'wheel_rr']
                        if link in self.link_names]
         self.wheel_directions = np.ones(len(self.wheels))
 
-        self.steering = [self.getLinkIds(link) for link in ['steer_fl', 'steer_fr']
+        self.steering = [self.get_link_ids(link) for link in ['steer_fl', 'steer_fr']
                          if link in self.link_names]
 
-    def setSteering(self, angle):
+    def set_steering(self, angle):
         """Set steering angle"""
         angle = angle * np.ones(len(self.steering))
-        self.setJointPositions(angle, jointId=self.steering)
+        self.set_joint_positions(angle, joint_ids=self.steering)
 
 
 # Test
@@ -68,13 +68,13 @@ if __name__ == "__main__":
     robot = MKZ(sim)
 
     # print information about the robot
-    robot.printRobotInfo()
+    robot.print_info()
 
     # Position control using sliders
-    # robot.addJointSlider()
+    # robot.add_joint_slider()
 
     # run simulator
     for _ in count():
-        # robot.updateJointSlider()
-        robot.driveForward(2)
+        # robot.update_joint_slider()
+        robot.drive_forward(2)
         world.step(sleep_dt=1./240)

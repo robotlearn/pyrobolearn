@@ -10,8 +10,8 @@ Dependencies:
 
 from abc import ABCMeta
 
-from pyrobolearn.actions.action import Action
-from pyrobolearn.robots.robot import Robot
+from pyrobolearn.actions import Action
+from pyrobolearn.robots import Robot
 
 
 __author__ = "Brian Delhaisse"
@@ -42,8 +42,8 @@ class RobotAction(Action):
     def robot(self):
         return self._robot
 
-    def isDiscrete(self):
+    def is_discrete(self):
         return False
 
-    def isContinuous(self):
+    def is_continuous(self):
         return True

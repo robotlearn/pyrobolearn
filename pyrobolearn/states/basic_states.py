@@ -7,7 +7,7 @@ This includes notably the fixed, functional, and counter states.
 import numpy as np
 
 from pyrobolearn.states.state import State
-from pyrobolearn.actions.action import Action
+from pyrobolearn.actions import Action
 
 
 __author__ = "Brian Delhaisse"
@@ -108,9 +108,9 @@ if __name__ == '__main__':
     print("\nSome dimensions:")
     print("s.shape: {}".format(s.shape))
     print("s.dimension: {}".format(s.dimension))
-    print("s.maxDimension: {}".format(s.maxDimension()))
+    print("s.max_dimension: {}".format(s.max_dimension()))
     print("s.size: {}".format(s.size))
-    print("s.totalSize: {}".format(s.totalSize()))
+    print("s.total_size: {}".format(s.total_size()))
     print("len(s) = {}".format(len(s)))
     print("len(s1) = {}".format(len(s1)))
     # print(s2 + s1)

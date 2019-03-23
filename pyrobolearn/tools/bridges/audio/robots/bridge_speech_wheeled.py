@@ -28,9 +28,9 @@ class BridgeSpeechRecognizerWheeledRobot(Bridge):
         if data == 'stop':
             self.robot.stop()
         elif data == 'move forward':
-            self.robot.driveForward(self.speed)
+            self.robot.drive_forward(self.speed)
         elif data == 'move backward':
-            self.robot.driveBackward(self.speed)
+            self.robot.drive_backward(self.speed)
         elif data == 'turn right':
             pass
         elif data == 'turn left':
@@ -67,13 +67,13 @@ class BridgeSpeechRecognizerAckermannWheeledRobot(Bridge):
         if data == 'stop':
             self.robot.stop()
         elif data == 'move forward':
-            self.robot.driveForward(self.speed)
+            self.robot.drive_forward(self.speed)
         elif data == 'move backward':
-            self.robot.driveBackward(self.speed)
+            self.robot.drive_backward(self.speed)
         elif data == 'turn right':
-            self.robot.setSteering(np.deg2rad(-20))
+            self.robot.set_steering(np.deg2rad(-20))
         elif data == 'turn left':
-            self.robot.setSteering(np.deg2rad(20))
+            self.robot.set_steering(np.deg2rad(20))
         elif data == 'faster':
             self.speed *= 2.
         elif data == 'slower':

@@ -37,7 +37,7 @@ class JointAction(RobotAction):
 
         # get the joints of the robot
         if joint_ids is None:
-            joint_ids = robot.getJointIds()
+            joint_ids = robot.get_joint_ids()
         elif isinstance(joint_ids, int):
             joint_ids = [joint_ids]
         self.joints = joint_ids
@@ -47,7 +47,7 @@ class JointAction(RobotAction):
     #     return len(self.joints)
 
     def bounds(self):
-        return self.robot.getJointLimits(self.joints)
+        return self.robot.get_joint_limits(self.joints)
 
 
 class JointPositionAction(JointAction):
@@ -59,13 +59,13 @@ class JointPositionAction(JointAction):
     def __init__(self, robot, joint_ids=None, kp=None, kd=None, max_force=None):
         self.kp, self.kd, self.max_force = kp, kd, max_force
         super(JointPositionAction, self).__init__(robot, joint_ids)
-        self.data = robot.getJointPositions(self.joints)
+        self.data = robot.get_joint_positions(self.joints)
 
     def _write(self, data=None):
         if data is None:
-            self.robot.setJointPositions(self._data, self.joints, kp=self.kp, kd=self.kd, maxTorque=self.max_force)
+            self.robot.set_joint_positions(self._data, self.joints, kp=self.kp, kd=self.kd, forces=self.max_force)
         else:
-            self.robot.setJointPositions(data, self.joints, kp=self.kp, kd=self.kd, maxTorque=self.max_force)
+            self.robot.set_joint_positions(data, self.joints, kp=self.kp, kd=self.kd, forces=self.max_force)
 
 
 class JointVelocityAction(JointAction):
@@ -76,13 +76,13 @@ class JointVelocityAction(JointAction):
 
     def __init__(self, robot, joint_ids=None):
         super(JointVelocityAction, self).__init__(robot, joint_ids)
-        self.data = robot.getJointVelocities(self.joints)
+        self.data = robot.get_joint_velocities(self.joints)
 
     def _write(self, data=None):
         if data is None:
-            self.robot.setJointVelocities(self._data, self.joints)
+            self.robot.set_joint_velocities(self._data, self.joints)
         else:
-            self.robot.setJointVelocities(data, self.joints)
+            self.robot.set_joint_velocities(data, self.joints)
 
 
 class JointForceAction(JointAction):
@@ -93,16 +93,16 @@ class JointForceAction(JointAction):
 
     def __init__(self, robot, joint_ids=None, f_min=-np.infty, f_max=np.infty):
         super(JointForceAction, self).__init__(robot, joint_ids)
-        self.data = robot.getJointTorques(self.joints)
+        self.data = robot.get_joint_torques(self.joints)
         self.f_min = f_min
         self.f_max = f_max
 
     def _write(self, data=None):
         if data is None:
-            self.robot.setJointTorques(self._data, self.joints)
+            self.robot.set_joint_torques(self._data, self.joints)
         else:
             data = np.clip(data, self.f_min, self.f_max)
-            self.robot.setJointTorques(data, self.joints)
+            self.robot.set_joint_torques(data, self.joints)
 
 
 class JointAccelerationAction(JointAction):
@@ -115,13 +115,13 @@ class JointAccelerationAction(JointAction):
 
     def __init__(self, robot, joint_ids=None, a_min=-np.infty, a_max=np.infty):
         super(JointAccelerationAction, self).__init__(robot, joint_ids)
-        self.data = robot.getJointAccelerations(self.joints)
+        self.data = robot.get_joint_accelerations(self.joints)
         self.a_min = a_min
         self.a_max = a_max
 
     def _write(self, data=None):
         if data is None:
-            self.robot.setJointAccelerations(self._data, self.joints)
+            self.robot.set_joint_accelerations(self._data, self.joints)
         else:
             data = np.clip(data, self.a_min, self.a_max)
-            self.robot.setJointAccelerations(data, self.joints)
+            self.robot.set_joint_accelerations(data, self.joints)

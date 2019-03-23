@@ -216,6 +216,10 @@ class Reward(object):
     def is_maximized():
         return True
 
+    def reset(self):
+        for reward in self.rewards:
+            reward.reset()
+
     def compute(self):
         pass
 
@@ -645,169 +649,7 @@ def trunc(x):
 #                         Rewards                            #
 ##############################################################
 
-class FixedReward(Reward):
-    r"""Fixed reward.
 
-    This is a dummy class which always returns a fixed reward. This is fixed initially.
-    """
-
-    def __init__(self, value):
-        super(FixedReward, self).__init__()
-        if not isinstance(value, (int, float)):
-            raise TypeError("Expecting a number")
-        self.value = value
-
-    def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, str(self.value))
-
-    def compute(self):
-        return self.value
-
-
-class FunctionalReward(Reward):
-    r"""Functional reward.
-
-    This is a reward class which calls a given function/class to compute the reward.
-    """
-    def __init__(self, function):
-        super(FunctionalReward, self).__init__()
-        self.function = function
-
-    def __repr__(self):
-        return self.function.__name__
-
-    def compute(self):
-        return self.function()
-
-
-class ForwardProgressReward(Reward):
-    r"""Forward progress reward
-
-    Compute the forward progress based on a forward direction, a previous and current positions.
-    """
-
-    def __init__(self, state, direction=(1, 0, 0), normalize=False):
-        super(ForwardProgressReward, self).__init__(state=state)
-
-        # if direction is None:
-        #     # takes the robot initial direction
-        #     #direction = ...
-        #     #init_pos
-        #     pass
-        # if isinstance(direction, np.ndarray):
-        #     pass
-        # elif isinstance(direction, Robot):
-        #     # takes the
-        #     pass
-        #
-        # self.direction = direction
-        # #self.init_pos = init_pos
-
-        self.direction = self.normalize(np.array(direction))
-
-        # TODO uncomment
-        # if not isinstance(state, (PositionState, BasePositionState)):
-        #     raise ValueError("Expecting state to be a PositionState or BasePositionState")
-        self.init_pos = np.copy(self.state._data)
-        self.value = 0
-
-    @staticmethod
-    def normalize(x):
-        """
-        Normalize the given vector.
-        """
-        if np.allclose(x, 0):
-            return x
-        return x / np.linalg.norm(x)
-
-    def compute(self):
-        curr_pos = self.state._data
-        delta_pos = curr_pos - self.init_pos
-        self.value = self.direction.dot(delta_pos)
-        # self.value = curr_pos[0] - self.init_pos[0]
-        self.init_pos = np.copy(curr_pos)
-        return self.value
-
-
-class DirectiveReward(Reward):
-    r"""Directive Reward
-
-    Provide reward if the vector state is in the specified direction. Specifically, it computes the dot product
-    between the state vector and the specified direction.
-
-    If normalize, the reward is between -1 and 1.
-    """
-
-    def __init__(self, state, direction=(1, 0, 0), normalize=True):
-        super(DirectiveReward, self).__init__(state=state)
-
-        self.normalize = normalize
-        if self.normalize:
-            self.direction = self.norm(np.array(direction))
-
-        # TODO uncomment
-        # if not isinstance(state, (PositionState, BasePositionState)):
-        #     raise ValueError("Expecting state to be a PositionState or BasePositionState")
-        self.value = 0
-
-    @staticmethod
-    def norm(x):
-        """
-        Normalize the given vector.
-        """
-        if np.allclose(x, 0):
-            return x
-        return x / np.linalg.norm(x)
-
-    def compute(self):
-        pos = self.state._data
-        if self.normalize:
-            pos = self.norm(pos)
-        self.value = self.direction.dot(pos)
-        return self.value
-
-
-class L2SimilarityReward(Reward):
-    """
-    Compute the square of the L2 norm between two vectors.
-    """
-
-    def __init__(self):
-        super(L2SimilarityReward, self).__init__()
-
-    def value(self, vector1, vector2):
-        return np.dot(vector1, vector2)
-
-
-class ImitationReward(Reward):
-
-    def __init__(self, human, robot):
-        super(ImitationReward, self).__init__()
-        self.human = human  # instance of HumanKinematic class
-        self.robot = robot  # instance of Robot class
-
-    def compute(self):
-        # check
-        pass
-
-
-class GymReward(Reward):
-    r"""OpenAI Gym reward
-
-    This provides a wrapper
-    """
-
-    def __init__(self, value):
-        super(GymReward, self).__init__()
-        if not isinstance(value, (int, float)):
-            raise TypeError("Expecting a number")
-        self.value = value
-
-    def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, str(self.value))
-
-    def compute(self):
-        return self.value
 
 
 # Test

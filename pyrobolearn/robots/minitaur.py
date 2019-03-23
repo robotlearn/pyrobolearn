@@ -21,27 +21,28 @@ class Minitaur(QuadrupedRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, .3),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=False,
+                 position=(0, 0, .3),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=False,
                  scaling=1.,
                  couple_legs=True,
                  foot_friction=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/minitaur/minitaur.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/minitaur/minitaur.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.3)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.3,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = False
+        if position is None:
+            position = (0., 0., 0.3)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.3,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = False
 
-        super(Minitaur, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(Minitaur, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'minitaur'
 
-        self.legs = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.base_height = 0.1638
+        self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['motor_front_leftL_link', 'lower_leg_front_leftL_link',
                                     'motor_front_leftR_link', 'lower_leg_front_leftR_link'],
                                    ['motor_front_rightL_link', 'lower_leg_front_rightL_link',
@@ -51,7 +52,7 @@ class Minitaur(QuadrupedRobot):
                                    ['motor_back_rightL_link', 'lower_leg_back_rightL_link',
                                     'motor_back_rightR_link', 'lower_leg_back_rightR_link']]]
 
-        self.feet = [[self.getLinkIds(link) for link in links if link in self.link_names]
+        self.feet = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['lower_leg_front_leftL_link', 'lower_leg_front_leftR_link'],
                                    ['lower_leg_front_rightL_link', 'lower_leg_front_rightR_link'],
                                    ['lower_leg_back_leftL_link', 'lower_leg_back_leftR_link'],
@@ -72,20 +73,19 @@ class Minitaur(QuadrupedRobot):
 
         self.outer_joints = set([joint for leg in self.outer_legs for joint in leg])
 
-        self.init_joint_positions = self.getHomeJointPositions()
+        self.init_joint_positions = self.get_home_joint_positions()
 
         # constraints
         self.couple_legs = couple_legs
         if self.couple_legs:
             for leg in self.legs:
-                self.sim.createConstraint(parentBodyUniqueId=self.id, parentLinkIndex=leg[3],
-                                          childBodyUniqueId=self.id, childLinkIndex=leg[1],
-                                          jointType=self.sim.JOINT_POINT2POINT,
-                                          jointAxis=[0, 0, 0], parentFramePosition=[0, 0.005, 0.2],
-                                          childFramePosition=[0, 0.01, 0.2])
+                self.sim.create_constraint(parent_body_id=self.id, parent_link_id=leg[3],
+                                           child_body_id=self.id, child_link_id=leg[1],
+                                           joint_type=self.sim.JOINT_POINT2POINT, joint_axis=[0, 0, 0],
+                                           parent_frame_position=[0, 0.005, 0.2], child_frame_position=[0, 0.01, 0.2])
 
         # disable motors
-        self.disableMotor(self.knees)
+        self.disable_motor(self.knees)
 
         # kp, kd gains
         self.kp = 1.
@@ -93,10 +93,10 @@ class Minitaur(QuadrupedRobot):
         self.max_force = 3.5
 
         # set feet friction
-        self.setFootFriction(friction=foot_friction, feet_id=self.feet)
+        self.set_foot_friction(frictions=foot_friction, feet_ids=self.feet)
 
         # set joint angles to home position
-        self.setJointHomePositions()
+        self.set_joint_home_positions()
 
     ##############
     # Properties #
@@ -154,7 +154,7 @@ class Minitaur(QuadrupedRobot):
     # Methods #
     ###########
 
-    def getHomeJointPositions(self):
+    def get_home_joint_positions(self):
         """Return the joint positions for the home position"""
         h = np.pi/2  # hip angle from [2]
         k = 2.1834  # knee angle from [2]
@@ -166,46 +166,46 @@ class Minitaur(QuadrupedRobot):
         return np.array(right_front_leg_initial_pos + right_back_leg_initial_pos + left_front_leg_initial_pos +
                         left_back_leg_initial_pos)
 
-    def setJointPositions(self, position, jointId=None, kp=None, kd=None, velocity=None, maxTorque=None):
+    def set_joint_positions(self, positions, joint_ids=None, kp=None, kd=None, velocities=None, forces=None):
         if self.couple_legs:  # assume the joint ids are for the outer legs
 
-            if jointId is None:
+            if joint_ids is None:
                 pass
 
             # if the given joint is just one id
-            elif isinstance(jointId, int):
-                if jointId not in self.outer_joints:
+            elif isinstance(joint_ids, int):
+                if joint_ids not in self.outer_joints:
                     raise ValueError("Expecting the jointId to be an outer joint as the legs of the minitaur are "
                                      "coupled")
-                jointId = [jointId, jointId + 3]
-                if isinstance(position, collections.Iterable):
-                    position = position[0]
+                joint_ids = [joint_ids, joint_ids + 3]
+                if isinstance(positions, collections.Iterable):
+                    positions = positions[0]
 
-                position = np.array([position, -position])
-                position += self.init_joint_positions[self.getQIndex(jointId)]
+                positions = np.array([positions, -positions])
+                positions += self.init_joint_positions[self.get_q_indices(joint_ids)]
 
             # if multiple joint ids
-            elif isinstance(jointId, collections.Iterable):
+            elif isinstance(joint_ids, collections.Iterable):
                 # for each outer joint id, get the corresponding inner joint id
                 joints = []
-                for joint in jointId:
+                for joint in joint_ids:
                     if joint not in self.outer_joints:
                         raise ValueError("One of the jointId is not an outer joint which is a problem as the legs of "
                                          "the minitaur are coupled")
                     joints.append(joint+3)
 
                 # increase the list of joint ids to take into account inner joint ids
-                jointId = list(jointId) + joints
+                joint_ids = list(joint_ids) + joints
 
                 # compute the positions (offset original position, and compute positions for inner joints)
-                position = list(position) + list(-position)
-                position = np.array(position) + self.init_joint_positions[self.getQIndex(jointId)]
+                positions = list(positions) + list(-positions)
+                positions = np.array(positions) + self.init_joint_positions[self.get_q_indices(joint_ids)]
 
             else:
                 raise TypeError("Unknown type of for jointId; expecting a list of int, or an int, got instead :"
-                                "{}".format(type(jointId)))
-        super(Minitaur, self).setJointPositions(position, jointId=jointId, kp=kp, kd=kd, velocity=velocity,
-                                                maxTorque=maxTorque)
+                                "{}".format(type(joint_ids)))
+        super(Minitaur, self).set_joint_positions(positions, joint_ids=joint_ids, kp=kp, kd=kd, velocities=velocities,
+                                                  forces=forces)
 
 
 # Test
@@ -224,20 +224,21 @@ if __name__ == "__main__":
     robot = Minitaur(sim, couple_legs=True)
 
     # print information about the robot
-    robot.printRobotInfo()
-    print("Robot leg ids: {}".format(robot.legs))
-    print("Robot feet ids: {}".format(robot.feet))
+    robot.print_info()
+    # print("Robot leg ids: {}".format(robot.legs))
+    # print("Robot feet ids: {}".format(robot.feet))
 
     # Position control using sliders
-    # robot.addJointSlider(robot.getLeftFrontLegIds())
+    # robot.add_joint_slider(robot.getLeftFrontLegIds())
 
     t = 0
     # run simulator
     for _ in count():
         t += 0.01
         position = np.pi/4 * np.sin(2 * np.pi * t) * np.ones(len(robot.outer_hips))
-        robot.setJointPositions(position, robot.outer_hips)
-        # robot.updateJointSlider()
-        # robot.computeAndDrawCoMPosition()
-        # robot.computeAndDrawProjectedCoMPosition()
+        # print(robot.get_base_position())
+        # robot.set_joint_positions(position, robot.outer_hips)
+        # robot.update_joint_slider()
+        # robot.compute_and_draw_com_position()
+        # robot.compute_and_draw_projected_com_position()
         world.step(sleep_dt=1./240)

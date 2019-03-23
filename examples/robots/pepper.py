@@ -18,14 +18,14 @@ world = BasicWorld(sim)
 robot = Pepper(sim)
 
 # print information about the robot
-robot.printRobotInfo()
+robot.print_info()
 
 # Position control using sliders
-# robot.addJointSlider()
+# robot.add_joint_slider()
 
 # run simulator
 for i in count():
-    # robot.updateJointSlider()
+    # robot.update_joint_slider()
     if i % 20 == 0:
-        robot.cameraTop.getRGBImage()
+        robot.camera_top.get_rgb_image()
     world.step(sleep_dt=1./240)

@@ -35,7 +35,7 @@ sim = BulletSim()
 world = BasicWorld(sim)
 
 # load robot in the world
-robot = world.loadRobot(KukaIIWA)
+robot = world.load_robot(KukaIIWA)
 print("Robot's actuated joint ids: {}".format(robot.joints))
 
 # create state/action

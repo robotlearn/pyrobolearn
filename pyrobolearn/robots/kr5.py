@@ -20,22 +20,22 @@ class KR5(ManipulatorRobot):
 
     def __init__(self,
                  simulator,
-                 init_pos=(0, 0, 0),
-                 init_orient=(0, 0, 0, 1),
-                 useFixedBase=True,
+                 position=(0, 0, 0),
+                 orientation=(0, 0, 0, 1),
+                 fixed_base=True,
                  scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/kuka/kr5/kr5.urdf'):
+                 urdf=os.path.dirname(__file__) + '/urdfs/kuka/kr5/kr5.urdf'):
         # check parameters
-        if init_pos is None:
-            init_pos = (0., 0., 0.)
-        if len(init_pos) == 2:  # assume x, y are given
-            init_pos = tuple(init_pos) + (0.,)
-        if init_orient is None:
-            init_orient = (0, 0, 0, 1)
-        if useFixedBase is None:
-            useFixedBase = True
+        if position is None:
+            position = (0., 0., 0.)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = True
 
-        super(KR5, self).__init__(simulator, urdf_path, init_pos, init_orient, useFixedBase, scaling)
+        super(KR5, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
         self.name = 'kr5'
 
 
@@ -55,8 +55,8 @@ if __name__ == "__main__":
     robot = KR5(sim)
 
     # print information about the robot
-    robot.printRobotInfo()
-    # H = robot.calculateMassMatrix()
+    robot.print_info()
+    # H = robot.get_mass_matrix()
     # print("Inertia matrix: H(q) = {}".format(H))
 
     for i in count():
