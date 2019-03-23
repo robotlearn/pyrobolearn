@@ -9,6 +9,7 @@ on the OpenAI gym library.
 import inspect
 import functools
 import numpy as np
+import torch
 import gym
 from gym import *
 import warnings
@@ -106,6 +107,11 @@ class GymEnvWrapper(gym.Env):
         """perform a step in the environment and set the data for the GymState and GymAction"""
         if isinstance(actions, Action):
             actions = actions.data[0]
+        elif isinstance(actions, torch.Tensor):
+            if actions.requires_grad:
+                actions = actions.detach().numpy()
+            else:
+                actions = actions.numpy()
         if isinstance(self.action_space, gym.spaces.Discrete) and isinstance(actions, np.ndarray):
             actions = actions[0]
         observations, reward, done, info = self.env.step(actions)

@@ -1,11 +1,14 @@
 #!/usr/bin/env python
-"""Define some common terminating condition for the environment.
+"""Define some common terminal conditions for the environment.
 """
 
 import numpy as np
 
 from pyrobolearn.robots import Robot
 from pyrobolearn.states import LinkState
+
+from pyrobolearn.utils.orientation import *
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -17,10 +20,10 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class TerminatingCondition(object):
-    r"""Terminating Condition
+class TerminalCondition(object):
+    r"""Terminal Condition
 
-    This class provides the basic layout for the `TerminatingCondition` class and its child classes.
+    This class provides the basic layout for the `TerminalCondition` class and its child classes.
     This one can be used to check when an environment has fulfilled certain conditions and can be terminated.
 
     This class can be further subdivided into two categories: failed and succeeded conditions.
@@ -49,24 +52,24 @@ class TerminatingCondition(object):
     __nonzero__ = __bool__
 
 
-class FailedCondition(TerminatingCondition):
-    r"""Failed Terminating Condition
+class FailedCondition(TerminalCondition):
+    r"""Failed Terminal Condition
 
     This determines when a policy or multiple ones have failed to perform a certain task.
     """
     pass
 
 
-class SucceededCondition(TerminatingCondition):
-    r"""Succeeded Terminating Condition
+class SucceededCondition(TerminalCondition):
+    r"""Succeeded Terminal Condition
 
     This determines when a policy or multiple ones have succeeded to perform a certain task.
     """
     pass
 
 
-class GymTerminatingCondition(TerminatingCondition):
-    r"""OpenAI Gym Terminating Condition
+class GymTerminalCondition(TerminalCondition):
+    r"""OpenAI Gym Terminal Condition
 
     Returns if the OpenAI Gym environment has terminated. This does not provide any information if the environment
     terminated because the policy succeeded or failed to perform the task.
@@ -85,15 +88,46 @@ class HasFallen(FailedCondition):
     Check if the given robot has fallen, by checking if its base is below a certain threshold.
     """
 
-    def __init__(self, robot, threshold=None):
+    def __init__(self, robot, height_threshold=None, angle_threshold=np.pi/6):
+        """
+        Check if the robot has fallen.
+
+        Args:
+            robot (Robot): robot instance.
+            height_threshold (float, None): height threshold. If the base height of the robot is below this threshold,
+                it will be considered that the robot has fallen. If None, it will use the original robot base height
+                and divided by 3 as the threshold.
+            angle_threshold (float): angle threshold in radians. If the angle between the initial robot base up
+                vector, and the current base up vector is bigger than the threshold, it will be considered that the
+                robot has fallen. Normally, the initial robot base up vector points upward. By default, it is 30
+                degrees (=pi/6 rad).
+        """
         self.robot = robot
-        self.threshold = threshold if threshold is not None else robot.height/4.
+        self.height_threshold = height_threshold if height_threshold is not None else robot.base_height/3.
+        self.angle_threshold = angle_threshold
+
+    def _compute_angle(self):
+        """Compute angle between the initial base up vector and current base up vector."""
+        up_vector = get_matrix_from_quaternion(self.robot.get_base_orientation(False))[:, 2]
+        angle = np.arccos(np.dot(self.robot.base_up_vector, up_vector))
+        return angle
+
+    def _compute_height(self):
+        """Compute the current height."""
+        return self.robot.get_base_position()[2]
 
     def check(self):
-        return self.robot.getBasePosition()[2] < self.threshold
+        height = self._compute_height()
+        height_condition = height < self.height_threshold
+        angle = self._compute_angle()
+        angle_condition = angle > self.angle_threshold
+        return height_condition or angle_condition
 
     def __repr__(self):
-        return self.__class__.__name__ + '(threshold=' + str(self.threshold) + ')'
+        description = '{} (\n\tbase_height={} ?<? height_threshold={}, \n\tangle_up_vector={} ?>? angle_threshold={}' \
+                      '\n)'.format(self.__class__.__name__, self._compute_height(), self.height_threshold,
+                                   self._compute_angle(), self.angle_threshold)
+        return description
 
 
 class HasReached(SucceededCondition):

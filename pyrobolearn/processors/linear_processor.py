@@ -2,10 +2,18 @@
 """Define the Linear Processor class.
 """
 
-import numpy as np
 import torch
 
-from processor import Processor
+from pyrobolearn.processors.processor import Processor, convert_numpy
+
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
 
 
 class LinearProcessor(Processor):
@@ -17,12 +25,12 @@ class LinearProcessor(Processor):
 
     def __init__(self, a, b):
         super(LinearProcessor, self).__init__()
-        self.a = torch.Tensor(a)
-        self.b = torch.Tensor(b)
+        self.a = torch.tensor(a, dtype=torch.float)
+        self.b = torch.tensor(b, dtype=torch.float)
 
+    def reset(self):
+        pass
+
+    @convert_numpy
     def compute(self, x):
-        if isinstance(x, np.ndarray):
-            x = torch.from_numpy(x).float()
-            y = self.a * x + self.b
-            return y.numpy()
         return self.a * x + self.b

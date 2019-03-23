@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Define the `Env` class class which defines the world, states, and possible rewards. This is the main object
+"""Define the `Env` class which defines the world, states, and possible rewards. This is the main object
 a policy interacts with.
 
 Dependencies:
@@ -7,6 +7,7 @@ Dependencies:
 - `pyrobolearn.states`
 - `pyrobolearn.actions`
 - (`pyrobolearn.rewards`)
+- (`pyrobolearn.envs.terminal_condition`)
 """
 
 # import gym
@@ -15,6 +16,9 @@ from pyrobolearn.worlds import World, BasicWorld
 from pyrobolearn.states import State
 from pyrobolearn.actions import Action
 from pyrobolearn.rewards import Reward
+
+from pyrobolearn.terminal_conditions import TerminalCondition
+from pyrobolearn.physics import PhysicsRandomizer
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -48,8 +52,8 @@ class Env(object):  # gym.Env):
 
     """
 
-    def __init__(self, world, states, rewards=None, terminal_condition=None, initial_state_distribution=None,
-                 extra_info=None):
+    def __init__(self, world, states, rewards=None, terminal_conditions=None, initial_state_distribution=None,
+                 physics_randomizer=None, extra_info=None):
         """
         Initialize the environment.
 
@@ -60,24 +64,27 @@ class Env(object):  # gym.Env):
             rewards (None, Reward): The rewards can be None when for instance we are in an imitation learning setting,
                                     instead of a reinforcement learning one. If None, only the state is returned by
                                     the environment.
-            terminal_condition (None, callable): A callable function or object that check if the policy has failed
+            terminal_conditions (None, callable): A callable function or object that check if the policy has failed
                                                  or succeeded the task.
             initial_state_distribution (None, callable): A callable function or object that is called at the beginning
                                                         when resetting the environment to generate the initial state
                                                         distribution.
+            physics_randomizer (None, PhysicsRandomizer, list of PhysicsRandomizer): physics randomizers. This will be
+                called each time you reset the environment.
             extra_info (None, callable): Extra info returned by the environment at each time step.
         """
         # Check and set parameters (see corresponding properties)
         self.world = world
         self.states = states
         self.rewards = rewards
-        self.terminal_condition = terminal_condition
+        self.terminal_conditions = terminal_conditions
+        self.physics_randomizers = physics_randomizer
         self.extra_info = extra_info if extra_info is not None else lambda: False
 
         self.rendering = False  # check with simulator
 
         # save the world state in memory
-        self.world.save()
+        self.initial_world_state = self.world.save()
 
     ##############
     # Properties #
@@ -129,18 +136,48 @@ class Env(object):  # gym.Env):
         self._rewards = rewards
 
     @property
-    def terminal_condition(self):
+    def terminal_conditions(self):
         """Return the terminal condition."""
-        return self._terminal_condition
+        return self._terminal_conditions
 
-    @terminal_condition.setter
-    def terminal_condition(self, condition):
+    @terminal_conditions.setter
+    def terminal_conditions(self, conditions):
         """Set the terminal condition."""
-        if condition is None:
-            condition = lambda: False
-        if not callable(condition):
-            raise TypeError("Expecting the terminal condition to be callable.")
-        self._terminal_condition = condition
+        if conditions is None:
+            conditions = [TerminalCondition()]
+        elif isinstance(conditions, TerminalCondition):
+            conditions = [conditions]
+        elif isinstance(conditions, (list, tuple)):
+            for idx, condition in enumerate(conditions):
+                if not callable(conditions):
+                    raise TypeError("Expecting the {} item in the given terminal conditions to be an instance of "
+                                    "`TerminalCondition`, instead got: {}".format(idx, type(condition)))
+        else:
+            raise TypeError("Expecting the terminal conditions to be an instance of `TerminalCondition`, or a list of "
+                            "`TerminalCondition`, but instead got: {}".format(type(conditions)))
+        self._terminal_conditions = conditions
+
+    @property
+    def physics_randomizers(self):
+        """Return the list of physics randomizers used each time we reset the environment."""
+        return self._physics_randomizers
+
+    @physics_randomizers.setter
+    def physics_randomizers(self, randomizers):
+        """Set the physics randomizers."""
+        if randomizers is None:
+            randomizers = []
+        elif isinstance(randomizers, PhysicsRandomizer):
+            randomizers = [randomizers]
+        elif isinstance(randomizers, (list, tuple)):
+            for randomizer in randomizers:
+                if not isinstance(randomizer, PhysicsRandomizer):
+                    raise TypeError("Expecting the randomizer to be an instance of `PhysicsRandomizer`, instead got "
+                                    "{}".format(randomizer))
+        else:
+            raise TypeError("Expecting the given randomizers to be None, a `PhysicsRandomizer`, or a list of them; "
+                            "instead got: {}".format(type(randomizers)))
+        self._physics_randomizers = randomizers
 
     ###########
     # Methods #
@@ -155,6 +192,10 @@ class Env(object):  # gym.Env):
         """
         # reset world
         self.world.reset()
+
+        # randomize the environment
+        for randomizer in self.physics_randomizers:
+            randomizer.randomize()
 
         # reset states and return first states/observations
         return self.states.reset()
@@ -184,10 +225,13 @@ class Env(object):  # gym.Env):
         # apply each policy's action in the environment
         # for action in actions:
         #    action()
-        if actions is not None:
+        # TODO: calling the actions should be done inside the policy(ies), and not in the environments. The policy
+        #  decided when to execute an action. Think about when there are multiple policies, when using multiprocessing,
+        #  or when the environment runs in real-time.
+        if actions is not None and isinstance(actions, Action):
             actions()
 
-        # perform a step forward in the simulation
+        # perform a step forward in the simulation which computes all the dynamics
         self.world.step()
 
         # compute reward
@@ -196,7 +240,7 @@ class Env(object):  # gym.Env):
 
         # compute terminating condition
         # done = [reward.is_done() for reward in self.rewards]
-        done = self.terminal_condition()
+        done = any([condition() for condition in self.terminal_conditions])
 
         # get next state/obs for each policy
         # states = [state() for state in self.states]
@@ -214,6 +258,12 @@ class Env(object):  # gym.Env):
 
         # Bullet: do nothing
         # if isinstance(self.sim, Bullet): pass
+        # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING, 1)
+        pass
+
+    def hide(self):
+        # hide the GUI
+        # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING, 0)
         pass
 
     def close(self):
@@ -226,7 +276,13 @@ class Env(object):  # gym.Env):
         Args:
             seed (int): seed for the random generator used in the simulator.
         """
-        self.sim.setSeed(seed)
+        # set the simulator seed
+        self.simulator.seed(seed)
+
+        # set the seed for the physics randomizer
+        for randomizer in self.physics_randomizers:
+            randomizer.seed(seed)
+
 
 
 class BasicEnv(Env):

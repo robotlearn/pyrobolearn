@@ -1,13 +1,50 @@
 #!/usr/bin/env python
 """Define the Processor class.
 
-Processors are rules that are applied to the inputs and outputs of a learning model before being processed by the
-model or after. Processors might have parameters but they do not have trainable/optimizable parameters; the parameters
-are fixed and given at the beginning.
+Processors are functions that are applied to the inputs (respectively outputs) of an approximator/learning model
+before (respectively after) being processed by it. Processors might have parameters but they do not have
+trainable/optimizable parameters; the parameters are fixed and given at the beginning.
 """
 
 import numpy as np
 import torch
+
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
+
+# define decorator that converts the given numpy array to a torch tensor and return it back to a numpy array if
+# specified
+def convert_numpy(f):
+    def wrapper(self, x, to_numpy=False):
+        """Process the given argument.
+
+        Args:
+            x (np.array, torch.Tensor): input data.
+            to_numpy (bool): If True, it will convert the processed data into a numpy array.
+        """
+
+        # convert to torch Tensor if numpy array
+        if isinstance(x, np.ndarray):
+            x = torch.from_numpy(x).float()
+
+        # call inner function on the given argument
+        x = f(self, x)
+
+        # reconvert to numpy array if specified, and return it
+        if to_numpy:
+            return x.numpy()
+
+        # return torch Tensor
+        return x
+
+    return wrapper
 
 
 class Processor(object):
@@ -21,70 +58,12 @@ class Processor(object):
     def __init__(self):
         pass
 
+    def reset(self):
+        pass
+
+    @convert_numpy
     def compute(self, x):
         pass
 
-    def __call__(self, x):
-        return self.compute(x)
-
-
-class CenterProcessor(Processor):
-    r"""Center Processor
-
-    Center the data by the given mean; that is, it returned: :math:`\hat{x} = x - \mu` where :math:`\mu` is the mean.
-    """
-
-    def __init__(self, mean):
-        super(CenterProcessor, self).__init__()
-        self.mean = torch.Tensor(mean)
-
-    def compute(self, x):
-        if isinstance(x, np.ndarray):
-            x = torch.from_numpy(x).float()
-            x -= self.mean
-            return x.numpy()
-        return x - self.mean
-
-
-class StandardizerProcessor(Processor):
-    r"""Standardizer Processor
-
-    Processor that standardize the given data; the returned data is centered around 0 with a standard deviation of 1.
-    That is, it returned :math:`\hat{x} = \frac{x - \mu}{\sigma}`, where :math:`\mu` is the mean, and :math:`\sigma`
-    is the standard deviation.
-    """
-
-    def __init__(self, mean, std):
-        super(StandardizerProcessor, self).__init__()
-        self.mean = torch.Tensor(mean)
-        self.std = torch.Tensor(std)
-
-    def compute(self, x):
-        if isinstance(x, np.ndarray):
-            x = torch.from_numpy(x).float()
-            x = (x - self.mean) / (self.std + 1.e-13)
-            return x.numpy()
-        return (x - self.mean) / (self.std + 1.e-13)
-
-
-class NormalizerProcessor(Processor):
-    r"""Normalizer Processor
-
-    Processor that normalize the given data; the returned data will be between 0 and 1.
-    That is, it returned :math:`\hat{x} = \frac{x - x_{min}}{x_{max} - x_{min}}`, where
-    :math:`x \in [x_{min}, x_{max}]`.
-    """
-
-    def __init__(self, xmin, xmax):
-        super(NormalizerProcessor, self).__init__()
-        self.xmin = torch.Tensor(xmin)
-        self.xmax = torch.Tensor(xmax)
-        if torch.allclose(self.xmin, self.xmax):
-            raise ValueError("The given arguments 'xmin' and 'xmax' are the same.")
-
-    def compute(self, x):
-        if isinstance(x, np.ndarray):
-            x = torch.from_numpy(x).float()
-            x = (x - self.xmin) / (self.xmax - self.xmin)
-            return x.numpy()
-        return (x - self.xmin) / (self.xmax - self.xmin)
+    def __call__(self, x, to_numpy=False):
+        return self.compute(x, to_numpy=to_numpy)
