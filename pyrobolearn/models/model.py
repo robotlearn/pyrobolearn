@@ -4,8 +4,9 @@
 Dependencies: None
 """
 
-
 from abc import ABCMeta, abstractmethod
+import copy
+import numpy as np
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -18,26 +19,29 @@ __status__ = "Development"
 
 
 class Model(object):
-    r"""(Learning Base) Model (aka parametrized model)
+    r"""Learning Model (aka parametrized model)
 
     This abstract class must be inherited by any learning models, and provides a common API for all these models.
     It is often a simple wrapper over a specific learning model implemented in a certain library.
 
-    The learning model has no direct knowledge about the inputs and outputs (such as states / actions), and can be
-    used out of the box. In our framework, we refer these learning models as the 'inner models', and the class that
-    connects the inputs/outputs (such as states and actions) with the inner model as the 'outer model'.
-    Outer models are thus learning models that maps states / actions to states / actions, while inner models often
-    maps arrays to arrays (where an array can represent a scalar, a vector, a matrix, a tensor,...). In other words,
-    the outer model is a wrapper around the inner model but knows how to deal with state / action inputs and outputs.
+    The learning model has no direct knowledge about the inputs and outputs (such as `State` / `Action`), and can be
+    used out of the box. In the PyRoboLearn (PRL) framework, we refer these learning models as the 'inner models', and
+    the class that connects the inputs / outputs (such as states and actions) with the inner model as the 'outer model'.
+    Outer models are thus learning models that maps states / actions / arrays to states / actions / arrays, while inner
+    models only maps arrays to arrays (where an array can represent a scalar, a vector, a matrix, a tensor,...). In
+    other words, the outer model is a wrapper around the inner model but knows how to deal with state / action inputs
+    and outputs as well.
 
     For instance, neural networks are a popular kind of inner models which map arrays to arrays. These inner models
-    can be used to represent outer models such as rl (which map states to actions), dynamic models (which map
+    can be used to represent outer models such as policies (which map states to actions), dynamic models (which map
     states and actions to the next states), value estimators (which, for example, map states to a real number),
     transformation mappings (which map states to states, or actions to actions). Transformation mappings can
     for instance be used to map a human kinematic state to a robot kinematic state.
 
-    .. seealso:
-        * https://www.codecademy.com/en/forum_questions/512cd091ffeb9e603b005713
+    The methods are partly inspired by `torch.nn.Module` [1].
+
+    References:
+        [1] `torch.nn`: https://pytorch.org/docs/stable/nn.html
     """
     __metaclass__ = ABCMeta
 
@@ -47,28 +51,73 @@ class Model(object):
         """
         self._models = []  # TODO: should be a directed graph
 
-        self._input_shape = None
-        self._output_shape = None
-
     ##############
     # Properties #
     ##############
 
     @property
     def models(self):
+        """Return the inner models."""
         return self._models
 
     @property
+    def input_size(self):
+        """Return the input size of the model."""
+        shape = self.input_shape
+        if len(shape) > 0:
+            raise np.prod(shape)
+        return 0
+
+    @property
+    def output_size(self):
+        """Return the output size of the model."""
+        shape = self.output_shape
+        if len(shape) > 0:
+            raise np.prod(shape)
+        return 0
+
+    @property
     def input_shape(self):
-        return self._input_shape
+        """Return the input shape of the model."""
+        raise NotImplementedError
 
     @property
     def output_shape(self):
-        return self._output_shape
+        """Return the output shape of the model."""
+        raise NotImplementedError
+
+    @property
+    def input_dim(self):
+        """Return the input dimension of the model; i.e. len(input_shape)."""
+        return len(self.input_shape)
+
+    @property
+    def output_dim(self):
+        """Return the output dimension of the model; i.e. len(output_shape)."""
+        return len(self.output_shape)
+
+    @property
+    def num_parameters(self):
+        """Return the number of parameters."""
+        raise NotImplementedError
+
+    @property
+    def num_hyperparameters(self):
+        """Return the number of hyperparameters."""
+        raise NotImplementedError
 
     ##################
     # Static Methods #
     ##################
+
+    @staticmethod
+    def copy(other, deep=True):
+        """Return another copy of the learning model"""
+        if not isinstance(other, Model):
+            raise TypeError("Trying to copy an object which is not a Linear model")
+        if deep:
+            return copy.deepcopy(other)
+        return copy.copy(other)
 
     @staticmethod
     def is_parametric():
@@ -144,25 +193,85 @@ class Model(object):
         """
         raise NotImplementedError
 
-    # TODO: isClassifier, isRegressive, isSequential
+    # TODO: is_classifier, is_regressive, is_sequential
 
     ###########
     # Methods #
     ###########
 
     def has_models(self):
+        """
+        Return True if the learning model has multiple learning models.
+        """
         return len(self._models) > 0
 
     def add_model(self, model):
+        """
+        Add a model inside the list of inner models.
+        """
         if not isinstance(model, Model):
             raise TypeError("Expecting the model to be an instance of Model.")
         if self.has_models():
             # check that the output size of the last model is equal to the input size of the new model
             last_model = self._models[-1]
-            if last_model.output_dims() != model.input_dims():
+            if last_model.output_size() != model.input_size():
                 # TODO
                 pass
         self._models.append(model)
+
+    @abstractmethod
+    def parameters(self):
+        """Return an iterator over the parameters of the model."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def named_parameters(self):
+        """Return an iterator over the model parameters, yielding both the name and the parameter itself."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def list_parameters(self):
+        """Return the parameters in the form of a list."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def hyperparameters(self):
+        """Return an iterator over the hyperparameters."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def named_hyperparameters(self):
+        """Return an iterator over the model hyperparameters, yielding both the name and the hyperparameter itself."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def list_hyperparameters(self):
+        """Return the hyperparameters in the form of a list."""
+        raise NotImplementedError
+
+    def get_vectorized_parameters(self, to_numpy=True):
+        """Return a vectorized form of the parameters"""
+        raise NotImplementedError
+
+    def set_vectorized_parameters(self, vector):
+        """Set the vector parameters."""
+        raise NotImplementedError
+
+    def reset(self):
+        """Reset the learning model."""
+        pass
+
+    def train(self, *args, **kwargs):
+        """Set the model in training mode."""
+        pass
+
+    def eval(self):
+        """Set the model in evaluation mode."""
+        pass
+
+    def learn(self, *args, **kwargs):
+        """Learn the model (hyper-)parameters on the given data."""
+        pass
 
     @abstractmethod
     def _predict(self, x=None):
@@ -172,59 +281,11 @@ class Model(object):
         """
         raise NotImplementedError
 
-    def predict(self, x):
+    def predict(self, x=None):
+        """Predict the output using the learning model."""
         if self.has_models():
             return [model.predict(x) for model in self.models]
         return self._predict(x)
-
-    @abstractmethod
-    def parameters(self):
-        """
-        Return an iterator over the parameters of the model.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def named_parameters(self):
-        """
-        Return an iterator over the model parameters, yielding both the name and the parameter itself.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_params(self):
-        """
-        Return the parameters in the form of a list or dictionary.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def hyperparameters(self):
-        """
-        Return an iterator over the hyperparameters.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_hyperparams(self):
-        """
-        Return the hyperparameters in the form of a list or dictionary.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_input_dims(self):
-        raise NotImplementedError
-
-    # alias
-    # input_dims = getInputDims
-
-    @abstractmethod
-    def get_output_dims(self):
-        raise NotImplementedError
-
-    # alias
-    # output_dims = getOutputDims
 
     @abstractmethod
     def save(self, filename):
@@ -370,4 +431,3 @@ class Model(object):
 
     def __getitem__(self, key):
         pass
-

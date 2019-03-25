@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-"""Define the PCA model.
+"""Provide the Principal Component Analysis model.
+
+Dependencies: None
 """
 
 import numpy as np
@@ -90,37 +92,37 @@ class PCA(object):
     # TODO: think if PCA can be considered as a model
 
     @staticmethod
-    def isParametric():
+    def is_parametric():
         """PCA is a non-parametric approach"""
         return False
 
     @staticmethod
-    def isLinear():
+    def is_linear():
         """PCA does not have parameters, but it is a linear dimensionality reduction algo"""
         return True
 
     @staticmethod
-    def isRecurrent():
+    def is_recurrent():
         """PCA is not recurrent"""
         return False
 
     @staticmethod
-    def isLatent():
+    def is_latent():
         """PCA gives a latent model"""
         return True
 
     @staticmethod
-    def isProbabilistic():
+    def is_probabilistic():
         """PCA is not a probabilistic approach but a deterministic one"""
         return False
 
     @staticmethod
-    def isDiscriminative():
+    def is_discriminative():
         """PCA is a discriminative model, which projects the given data into a lower space"""
         return True
 
     @staticmethod
-    def isGenerative():
+    def is_generative():
         """PCA is not a generative model from which you can sample from it"""
         return False
 
@@ -128,15 +130,29 @@ class PCA(object):
     # Methods #
     ###########
 
-
     def parameters(self):
+        """Return an iterator over the parameters."""
         raise RuntimeError("PCA doesn't have any parameters.")
 
-    def getParams(self):
+    def named_parameters(self):
+        """Return an iterator over the parameters, yielding both the name and the parameter itself."""
         raise RuntimeError("PCA doesn't have any parameters.")
 
-    def getHyperparams(self):
+    def list_parameters(self):
+        """Return the list of parameters."""
+        return list(self.parameters())
+
+    def hyperparameters(self):
+        """Return an iterator over the hyper-parameters."""
         pass
+
+    def named_hyperparameters(self):
+        """Return an iterator over the hyper-parameters, yielding both the name and the hyper-parameter itself."""
+        pass
+
+    def list_hyperparameters(self):
+        """Return the list of hyper-parameters."""
+        return list(self.hyperparameters())
 
     def train(self, X, normalize=False, copy=True):
         """

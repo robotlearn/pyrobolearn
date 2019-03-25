@@ -5,7 +5,6 @@ This file provides the Gaussian Mixture Model, and uses the Gaussian model defin
 Gaussian Mixture Regression is achieved by conditioning the GMM to some input.
 """
 
-
 import numpy as np
 try:
     import cPickle as pickle
@@ -14,7 +13,7 @@ except ImportError as e:
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 
-# from model import Model
+# from pyrobolearn.models.model import Model
 from pyrobolearn.models.gaussian import Gaussian
 
 

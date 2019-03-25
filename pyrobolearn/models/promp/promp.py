@@ -5,13 +5,12 @@ This file defines the Probabilistic Movement Primitive (ProMP) model, and use th
 in `gaussian.py`
 """
 
-
 from abc import ABCMeta, abstractmethod
 import numpy as np
 from scipy.linalg import block_diag
 import scipy.interpolate
 
-# from pyrobolearn.models.model import Model
+from pyrobolearn.models.model import Model
 from pyrobolearn.models.gaussian import Gaussian
 
 
@@ -23,7 +22,6 @@ __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
-
 
 
 ################### Canonical Systems #######################

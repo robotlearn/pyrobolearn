@@ -23,7 +23,7 @@ import inspect
 import numpy as np
 import torch
 
-from dnn import NN
+from pyrobolearn.models.nn.dnn import NN
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -50,13 +50,17 @@ class VAE(NN):
         self.encoder = None
         self.decoder = None
 
+    ##################
+    # Static methods #
+    ##################
+
     @staticmethod
-    def isDiscriminative():
+    def is_discriminative():
         """A neural network is a discriminative model which given inputs predicts some outputs"""
         return True
 
     @staticmethod
-    def isGenerative():  # unless VAE, GAN,...
+    def is_generative():  # unless VAE, GAN,...
         """Standard neural networks are not generative, and thus we can not sample from it. This is different,
         for instance, for generative adversarial networks (GANs) and variational auto-encoders (VAEs)."""
         return True

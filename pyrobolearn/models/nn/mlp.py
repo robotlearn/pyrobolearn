@@ -59,7 +59,8 @@ class MLP(NN):
         Args:
             num_units (list/tuple of int): number of units in each layer (this includes the input and output layer)
             activation_fct (None, str, or list/tuple of str/None): activation function to be applied after each layer.
-                                                                   If list/tuple, then it has to match the
+                                                                   If list/tuple, then it has to match the number of
+                                                                   hidden layers.
             last_activation_fct (None or str): last activation function to be applied. If not specified, it will check
                                                if it is in the list/tuple of activation functions provided for the
                                                previous argument.
@@ -77,7 +78,8 @@ class MLP(NN):
             raise ValueError("The current frameworks allowed are pytorch and keras")
 
         # instantiate the super class
-        super(MLP, self).__init__(model.model, input_dims=num_units[0], output_dims=num_units[-1], framework=framework)
+        super(MLP, self).__init__(model.model, input_shape=tuple([num_units[0]]), output_shape=tuple([num_units[-1]]),
+                                  framework=framework)
 
         # rewrite methods
         self.save = model.save
@@ -168,12 +170,12 @@ class MLPTorch(NNTorch):
         # create nn model
         model = torch.nn.Sequential(*layers)
 
-        super(MLPTorch, self).__init__(model, input_dims=num_units[0], output_dims=num_units[-1])
+        super(MLPTorch, self).__init__(model, input_shape=num_units[0], output_shape=num_units[-1])
 
 
 # Tests
 if __name__ == '__main__':
 
     # create MLP network
-    mlp = MLPTorch(num_units=(2,10,3), activation_fct='relu')
+    mlp = MLPTorch(num_units=(2, 10, 3), activation_fct='relu')
     print(mlp)

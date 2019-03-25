@@ -54,7 +54,7 @@ class NN(object):  # Model
         import torch.nn as nn
 
         model = nn.Sequential(nn.Conv2d(in_channels=3, out_channels=10, kernel_size=3), Flatten(), nn.Linear(320, 10))
-        model = NN(model, input_dims=..., output_dims=...)
+        model = NN(model, input_size=..., output_size=...)
 
     References:
         [1] "Deep Learning" (http://www.deeplearningbook.org/), Goodfellow et al., 2016
@@ -63,13 +63,13 @@ class NN(object):  # Model
 # - nn.Sequential: https://pytorch.org/docs/master/_modules/torch/nn/modules/container.html#Sequential
     """
 
-    def __init__(self, model, input_dims, output_dims, framework=None):
+    def __init__(self, model, input_shape, output_shape, framework=None):
         r"""Initialize the NN model.
 
         Args:
             model (torch.nn.Module or keras.base_layer.Layer): pytorch/keras model
-            input_dims (int, tuple/list of int): dimensions of the input
-            output_dims (int, tuple/list of int): dimensions of the output
+            input_shape (int, tuple/list of int): dimensions of the input
+            output_shape (int, tuple/list of int): dimensions of the output
         """
         super(NN, self).__init__()
 
@@ -84,8 +84,8 @@ class NN(object):  # Model
 
         # set model (written in the specified framework)
         self.model = model
-        self.input_dims = input_dims
-        self.output_dims = output_dims
+        self._input_shape = input_shape
+        self._output_shape = output_shape
 
         # TODO: infer the framework based on the model
         self.framework = framework
@@ -96,22 +96,56 @@ class NN(object):  # Model
 
     @property
     def model(self):
+        """Return the inner learning model."""
         return self._model
 
     @model.setter
     def model(self, model):
+        """Set the inner learning model."""
         if model is not None:
-            if not (isinstance(model, torch.nn.Module) or isinstance(model, keras.models.Model)):
+            if not (isinstance(model, torch.nn.Module)):  # or isinstance(model, keras.models.Model)):
                 raise TypeError("The model should be an instance of torch.nn.Module or keras.models.Model")
         self._model = model
 
     @property
+    def input_size(self):
+        """Return the input size of the model."""
+        return np.prod(self.input_shape)
+
+    @property
+    def output_size(self):
+        """Return the output size of the model."""
+        return np.prod(self.output_shape)
+
+    @property
     def input_shape(self):  # TODO
-        return self.input_dims
+        """Return the input shape."""
+        return self._input_shape
 
     @property
     def output_shape(self):  # TODO
-        return self.output_dims
+        """Return the output shape."""
+        return self._output_shape
+
+    @property
+    def input_dim(self):
+        """Return the input dimension."""
+        return len(self.input_shape)
+
+    @property
+    def output_dim(self):
+        """Return the output dimension."""
+        return len(self.output_shape)
+
+    @property
+    def num_parameters(self):
+        """Return the total number of trainable parameters."""
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+    @property
+    def num_hyperparameters(self):
+        """Return the number of hyperparameters."""
+        return len(list(self.hyperparameters()))
 
     ##################
     # Static Methods #
@@ -155,29 +189,47 @@ class NN(object):  # Model
     # Methods #
     ###########
 
-    def predict(self, x=None):
-        return self.model(x)
-
-    def get_input_dims(self):
-        return self.input_dims
-
-    def get_output_dims(self):
-        return self.output_dims
-
     def parameters(self):
+        """Return an iterator over the model parameters."""
         return self.model.parameters()
 
-    def get_params(self):
+    def named_parameters(self):
+        """Return an iterator over the model parameters, yielding both the name and the parameter itself."""
+        return self.model.named_parameters()
+
+    def list_parameters(self):
+        """Return a list of parameters."""
         return list(self.parameters())
 
-    def get_hyperparams(self):
-        """
-        Return the number of units per layer, the number of layers, and the type of layers.
-        """
+    def hyperparameters(self):
+        """Return an iterator over the model hyper-parameters; this includes the number of units per layer, the number
+        of layers, the activation functions, etc."""
         raise NotImplementedError
 
-    def hyperparameters(self):
+    def named_hyperparameters(self):
+        """Return an iterator over the model hyper-parameters, yielding both the name and the parameter itself."""
         raise NotImplementedError
+
+    def list_hyperparameters(self):
+        """Return a list of the hyper-parameters; this includes the number of units per layer, the number of layers,
+        the activation functions, etc."""
+        raise NotImplementedError
+
+    def predict(self, x=None, to_numpy=False):
+        """Predict the output given the input."""
+        # convert to torch tensor if necessary
+        if isinstance(x, np.ndarray):
+            x = torch.from_numpy(x).float()
+
+        # predict output given input
+        x = self.model(x)
+
+        # return the output (and convert it to numpy if specified)
+        if to_numpy:
+            if x.requires_grad:
+                return x.detach().numpy()
+            return x.numpy()
+        return x
 
     #############
     # Operators #
@@ -228,8 +280,8 @@ class NNTorch(NN):
     r"""Neural Network written in PyTorch
     """
 
-    def __init__(self, model, input_dims, output_dims):
-        super(NNTorch, self).__init__(model, input_dims, output_dims, framework='pytorch')
+    def __init__(self, model, input_shape, output_shape):
+        super(NNTorch, self).__init__(model, input_shape, output_shape, framework='pytorch')
 
     def save(self, filename):
         """

@@ -23,7 +23,7 @@ import inspect
 import numpy as np
 import torch
 
-from dnn import NN
+from pyrobolearn.models.nn.dnn import NN
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

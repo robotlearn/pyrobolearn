@@ -38,7 +38,9 @@ def convert_numpy(f):
         x = f(self, x)
 
         # reconvert to numpy array if specified, and return it
-        if to_numpy:
+        if to_numpy and isinstance(x, torch.Tensor):
+            if x.requires_grad:
+                return x.detach().numpy()
             return x.numpy()
 
         # return torch Tensor
@@ -56,14 +58,18 @@ class Processor(object):
     """
 
     def __init__(self):
+        """Initialize the processor."""
         pass
 
     def reset(self):
+        """Reset the processor."""
         pass
 
     @convert_numpy
     def compute(self, x):
+        """Compute the output given the input :attr:`x`."""
         pass
 
     def __call__(self, x, to_numpy=False):
+        """Alias: call :func:`compute` to compute the output given the input :attr:`x`."""
         return self.compute(x, to_numpy=to_numpy)

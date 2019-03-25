@@ -24,13 +24,22 @@ class LinearProcessor(Processor):
     """
 
     def __init__(self, a, b):
+        """
+        Initialize the linear processor.
+
+        Args:
+            a (torch.Tensor, np.array): weight
+            b (torch.Tensor, np.array): bias
+        """
         super(LinearProcessor, self).__init__()
         self.a = torch.tensor(a, dtype=torch.float)
         self.b = torch.tensor(b, dtype=torch.float)
 
     def reset(self):
+        """Reset the linear processor."""
         pass
 
     @convert_numpy
     def compute(self, x):
+        """Compute the linear output given the input :attr:`x`."""
         return self.a * x + self.b

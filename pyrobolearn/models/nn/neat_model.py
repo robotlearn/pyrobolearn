@@ -181,10 +181,12 @@ class NEATModel(object):  # Model):
 
     @property
     def genome(self):
+        """Return the genome."""
         return self._genome
 
     @genome.setter
     def genome(self, genome):
+        """Set the genome."""
         if not isinstance(genome, neat.genome.DefaultGenome):
             raise TypeError("Expecting genome to be an instance of neat.genome.DefaultGenome type")
         self._genome = genome
@@ -194,6 +196,7 @@ class NEATModel(object):  # Model):
 
     @property
     def network(self):
+        """Return the network model."""
         return self.model
 
     ##################
@@ -202,26 +205,32 @@ class NEATModel(object):  # Model):
 
     @staticmethod
     def is_parametric():
+        """The NEAT model is a parametric model."""
         return True
 
     @staticmethod
     def is_linear():
+        """The NEAT model is non-linear in general."""
         return False
 
     @staticmethod
     def is_recurrent():
+        """The NEAT model can be recurrent."""
         return True
 
     @staticmethod
     def is_probabilistic():
+        """The NEAT model is a non probabilistic model."""
         return False
 
     @staticmethod
     def is_discriminative():
+        """The NEAT model is a discriminative model."""
         return True
 
     @staticmethod
     def is_generative():
+        """The NEAT model is not a generative model."""
         return False
 
     @staticmethod
@@ -237,6 +246,35 @@ class NEATModel(object):  # Model):
     ###########
     # Methods #
     ###########
+
+    def parameters(self):
+        """Returns an iterator over the model parameters."""
+        return []
+
+    def named_parameters(self):
+        """Returns an iterator over the model parameters, yielding both the name and the parameter itself"""
+        return [], []
+
+    def hyperparameters(self):
+        """Returns an iterator over the model hyper-parameters."""
+        return []
+
+    def named_hyperparameters(self):
+        """Returns an iterator over the model hyper-parameters, yielding both the name and the hyper-parameter
+        itself."""
+        return [], []
+
+    def list_parameters(self):
+        """Return the list of parameters."""
+        return list(self.parameters())
+
+    def list_hyperparameters(self):
+        """Return the list of hyper-parameters."""
+        return list(self.hyperparameters())
+
+    def reset(self):
+        """Reset the learning model."""
+        pass
 
     def _create_config_str(self, config_dict=None):
         """Create string describing the config file from a config dictionary"""
@@ -267,6 +305,7 @@ class NEATModel(object):  # Model):
         return filename
 
     def set_network(self, genome=None, config=None):
+        """Set the network."""
         # check arguments
         if genome is None:
             genome = self.genome
@@ -284,6 +323,7 @@ class NEATModel(object):  # Model):
         return self.model
 
     def update_config(self, config):
+        """Update the configuration."""
         # update config (dict)
         if isinstance(config, dict):
             self.config_dict.update(config)
@@ -302,24 +342,8 @@ class NEATModel(object):  # Model):
         # set new network
         self.model = self.set_network(self.genome, self.config)
 
-    def parameters(self):
-        """Returns an iterator over the model parameters."""
-        return []
-
-    def named_parameters(self):
-        """Returns an iterator over the model parameters, yielding both the name and the parameter itself"""
-        return []
-
-    def hyperparameters(self):
-        pass
-
-    def get_params(self):
-        pass
-
-    def get_hyperparams(self):
-        pass
-
     def predict(self, x=None):
+        """Predict the output of the model given the input."""
         return self.model.activate(x)
 
     def save(self, filename):

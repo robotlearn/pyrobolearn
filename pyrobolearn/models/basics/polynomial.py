@@ -11,6 +11,8 @@ import collections
 import numpy as np
 import torch
 
+# from pyrobolearn.models.model import Model
+
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
@@ -19,6 +21,71 @@ __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
+
+
+class PolynomialFunction(object):
+    r"""Polynomial function
+
+    Polynomial function to be applied on the given inputs.
+    """
+
+    def __init__(self, degree=1):
+        """
+        Initialize the polynomial function.
+
+        Args:
+            degree (int, list of ints): degree(s) of the polynomial. Setting `degree=3`, will return `[1,x,x^2,x^3]`
+                as output, while setting `degree=[1,3]` will return `[x,x^3]` as output.
+        """
+        self.degree = degree
+
+    ##############
+    # Properties #
+    ##############
+
+    @property
+    def degree(self):
+        """Return the degree of the polynomial"""
+        return self._degree
+
+    @degree.setter
+    def degree(self, degree):
+        """Set the degree of the polynomial"""
+        # checks
+        if isinstance(degree, int):
+            degree = range(degree + 1)
+        elif isinstance(degree, collections.Iterable):
+            for d in degree:
+                if not isinstance(d, int):
+                    raise TypeError("Expecting the given degrees to be positive integers, but got {}".format(type(d)))
+                if d < 0:
+                    raise ValueError("Expecting the given degrees to be positive integers, but got {}".format(d))
+        else:
+            raise TypeError("Expecting the degree to be a positive integer or a list of positive integers.")
+        self._degree = degree
+
+    @property
+    def size(self):
+        """Return the number of exponents. The output vector is then of size = size * len(x)"""
+        return len(self.degree)
+
+    ###########
+    # Methods #
+    ###########
+
+    def reset(self):
+        """Reset the polynomial model."""
+        pass
+
+    def predict(self, x):
+        """Return output polynomial vector"""
+        if isinstance(x, np.ndarray):
+            return np.concatenate([x**d for d in self.degree])
+        elif isinstance(x, torch.Tensor):
+            return torch.cat([x**d for d in self.degree])
+
+    def __call__(self, x):
+        return self.predict(x)
 
 
 class Polynomial(object):
@@ -38,9 +105,7 @@ class Polynomial(object):
         Args:
             num_inputs (int): dimension of the input vector x
             num_outputs (int): dimension of the output vector y
-            polynomial_fct (callable, PolynomialFunction): polynomial function to be applied on the input vector x.
-                It has to be callable, returns the output vector :math:`\phi(x)` when called, and has a `size`
-                attribute which returns the number of exponents in the polynomial.
+            polynomial_fct (PolynomialFunction): polynomial function :math:`\phi` to be applied on the input vector x.
         """
         self.phi = polynomial_fct
         num_inputs = num_inputs * self.phi.size
@@ -57,18 +122,12 @@ class Polynomial(object):
         return self._phi
 
     @phi.setter
-    def phi(self, fct):
+    def phi(self, function):
         """Set the polynomial function"""
-        if not callable(fct):
-            raise TypeError("Expecting the polynomial function to be callable.")
-
-        if not hasattr(fct, 'size'):
-            raise ValueError("Expecting the polynomial function to have the 'size' attribute.")
-
-        # if len(inspect.getargspec(fct).args) < 1:
-        #     raise TypeError("Expecting the polynomial function to accept an argument (the state).")
-
-        self._phi = fct
+        if not isinstance(function, PolynomialFunction):
+            raise TypeError("Expecting the given polynomial function to be an instance of `PolynomialFunction`, "
+                            "instead got: {}".format(type(function)))
+        self._phi = function
 
     @property
     def polynomial_function(self):
@@ -76,29 +135,39 @@ class Polynomial(object):
         return self._phi
 
     @polynomial_function.setter
-    def polynomial_function(self, fct):
+    def polynomial_function(self, function):
         """Set the polynomial function"""
-        self.phi = fct
+        self.phi = function
 
     @property
-    def input_dims(self):
+    def input_size(self):
         """Return the input dimension of the model"""
         return self.model.weight.shape[1]
 
     @property
-    def output_dims(self):
+    def output_size(self):
         """Return the output dimension of the model"""
         return self.model.weight.shape[0]
 
     @property
     def input_shape(self):
         """Return the input shape of the model"""
-        return tuple([self.input_dims])
+        return tuple([self.input_size])
 
     @property
     def output_shape(self):
         """Return the output shape of the model"""
-        return tuple([self.output_dims])
+        return tuple([self.output_size])
+
+    @property
+    def input_dim(self):
+        """Return the input dimension of the model; i.e. len(input_shape)."""
+        return len(self.input_shape)
+
+    @property
+    def output_dim(self):
+        """Return the output dimension of the model; i.e. len(output_shape)."""
+        return len(self.output_shape)
 
     @property
     def num_parameters(self):
@@ -167,6 +236,20 @@ class Polynomial(object):
         """Return a list of parameters"""
         return list(self.parameters())
 
+    def hyperparameters(self):
+        """Return an iterator over the hyperparameters."""
+        for degree in self.phi.degree:
+            yield degree
+
+    def named_hyperparameters(self):
+        """Return an iterator over the model hyperparameters, yielding both the name and the hyperparameter itself."""
+        for idx, degree in enumerate(self.phi.degree):
+            yield "degree {}".format(idx), degree
+
+    def list_hyperparameters(self):
+        """Return the hyperparameters in the form of a list."""
+        return list(self.hyperparameters())
+
     def get_vectorized_parameters(self, to_numpy=True):
         """Return a vectorized form (1 dimensional array) of the parameters."""
         parameters = self.parameters()
@@ -214,61 +297,8 @@ class Polynomial(object):
         return y
 
     def __call__(self, x, to_numpy=True):
+        """Predict the output given the input :attr:`x`."""
         return self.predict(x, to_numpy=to_numpy)
-
-
-class PolynomialFunction(object):
-    r"""Polynomial function
-
-    Polynomial function to be applied on the given inputs.
-    """
-
-    def __init__(self, degree=1):
-        """
-        Initialize the polynomial function.
-
-        Args:
-            degree (int, list of ints): degree(s) of the polynomial. Setting `degree=3`, will return `[1,x,x^2,x^3]`
-                as output, while setting `degree=[1,3]` will return `[x,x^3]` as output.
-        """
-        self.degree = degree
-
-    @property
-    def degree(self):
-        """Return the degree of the polynomial"""
-        return self._degree
-
-    @degree.setter
-    def degree(self, degree):
-        """Set the degree of the polynomial"""
-        # checks
-        if isinstance(degree, int):
-            degree = range(degree + 1)
-        elif isinstance(degree, collections.Iterable):
-            for d in degree:
-                if not isinstance(d, int):
-                    raise TypeError("Expecting the given degrees to be positive integers, but got {}".format(type(d)))
-                if d < 0:
-                    raise ValueError("Expecting the given degrees to be positive integers, but got {}".format(d))
-        else:
-            raise TypeError("Expecting the degree to be a positive integer or a list of positive integers.")
-
-        self._degree = degree
-
-    @property
-    def size(self):
-        """Return the number of exponents. The output vector is then of size = size * len(x)"""
-        return len(self.degree)
-
-    def predict(self, x):
-        """Return output polynomial vector"""
-        if isinstance(x, np.ndarray):
-            return np.concatenate([x**d for d in self.degree])
-        elif isinstance(x, torch.Tensor):
-            return torch.cat([x**d for d in self.degree])
-
-    def __call__(self, x):
-        return self.predict(x)
 
 
 # Tests
@@ -277,8 +307,8 @@ if __name__ == '__main__':
     x = np.array(range(3))
     fct = PolynomialFunction(degree=3)
     model = Polynomial(num_inputs=len(x), num_outputs=2, polynomial_fct=fct)
-    print("Polynomial input size: {}".format(model.input_dims))
-    print("Polynomial output size: {}".format(model.output_dims))
+    print("Polynomial input size: {}".format(model.input_size))
+    print("Polynomial output size: {}".format(model.output_size))
     y = model(x)
     print("Polynomial input: {}".format(x))
     print("Polynomial output: {}".format(y))

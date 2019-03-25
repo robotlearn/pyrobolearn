@@ -1323,16 +1323,22 @@ class Bullet(Simulator):
             if max_velocity is not None:
                 kwargs['maxVelocity'] = max_velocity
             self.sim.setJointMotorControl2(body_id, joint_ids, controlMode=control_mode, **kwargs)
-        else:
+        else:  # joint_ids is a list
             if positions is not None:
                 kwargs['targetPositions'] = positions
             if velocities is not None:
                 kwargs['targetVelocities'] = velocities
             if forces is not None:
+                if isinstance(forces, (int, float)):
+                    forces = [forces] * len(joint_ids)
                 kwargs['forces'] = forces
             if kp is not None:
+                if isinstance(kp, (int, float)):
+                    kp = [kp] * len(joint_ids)
                 kwargs['positionGains'] = kp
             if kd is not None:
+                if isinstance(kd, (int, float)):
+                    kd = [kd] * len(joint_ids)
                 kwargs['velocityGains'] = kd
             self.sim.setJointMotorControlArray(body_id, joint_ids, controlMode=control_mode, **kwargs)
 
@@ -2663,16 +2669,16 @@ class Bullet(Simulator):
         aabb_min, aabb_max = self.sim.getAABB(body_id, link_id)
         return np.array(aabb_min), np.array(aabb_max)
 
-    def get_contact_points(self, body1, body2, link1_id=None, link2_id=None):
+    def get_contact_points(self, body1, body2=None, link1_id=None, link2_id=None):
         """
         Returns the contact points computed during the most recent call to `step`.
 
         Args:
             body1 (int): only report contact points that involve body A
-            body2 (int): only report contact points that involve body B. Important: you need to have a valid body A
-                if you provide body B
-            link1_id (int): only report contact points that involve link index of body A
-            link2_id (int): only report contact points that involve link index of body B
+            body2 (int, None): only report contact points that involve body B. Important: you need to have a valid body
+                A if you provide body B
+            link1_id (int, None): only report contact points that involve link index of body A
+            link2_id (int, None): only report contact points that involve link index of body B
 
         Returns:
             list:

@@ -1794,16 +1794,16 @@ class Simulator(object):
         """
         pass
 
-    def get_contact_points(self, body1, body2, link1_id=None, link2_id=None):
+    def get_contact_points(self, body1, body2=None, link1_id=None, link2_id=None):
         """
         Returns the contact points computed during the most recent call to `step`.
 
         Args:
             body1 (int): only report contact points that involve body A
-            body2 (int): only report contact points that involve body B. Important: you need to have a valid body A
-                if you provide body B
-            link1_id (int): only report contact points that involve link index of body A
-            link2_id (int): only report contact points that involve link index of body B
+            body2 (int, None): only report contact points that involve body B. Important: you need to have a valid
+                body A if you provide body B
+            link1_id (int, None): only report contact points that involve link index of body A
+            link2_id (int, None): only report contact points that involve link index of body B
 
         Returns:
             list:

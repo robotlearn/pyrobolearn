@@ -10,17 +10,15 @@ Dependencies:
 - `pyrobolearn.actions`
 """
 
-from abc import ABCMeta, abstractmethod
 import collections
 import numpy as np
 import torch
 
 from pyrobolearn.states import State
 from pyrobolearn.actions import Action
-
 from pyrobolearn.models import Model
-from pyrobolearn.models.linear import Linear
-from pyrobolearn.models.nn import NN, MLP, NEATModel
+from pyrobolearn.processors import Processor
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -36,14 +34,14 @@ class Approximator(object):
     r"""Function Approximator (abstract) class
 
     The function approximator is a wrapper around the inner learning base model, and connects a learning model to
-    its state/action inputs and outputs. That is, this class described how to connect a learning model with
-    states/actions, and thus allows the inner models to be independent from the notions of states and actions.
+    its state / action inputs and outputs. That is, this class described how to connect a learning model with
+    states / actions, and thus allows the inner models to be independent from the notions of states and actions.
 
     This class and all the children inheriting from this one will be used internally by several classes such as
     policies, dynamic models, value estimators, and others. This enables to not duplicate and write the same code
-    for these various different concepts which share similar features.
-    For instance, policies are function approximators where the inputs are states, and the outputs are actions.
-    Dynamic models are extended models where the inputs are states and actions, and the outputs are the next state.
+    for these various different concepts which share similar features. For instance, policies are function
+    approximators where the inputs are states, and the outputs are actions while dynamic transition models are
+    approximators where the inputs are states and actions, and the outputs are the next state.
 
     Often the learning model can be constructed automatically by knowing the input and output dimensions, along with
     few other optional parameters. This is useful if one does not wish to change the learning model but just to scale
@@ -53,27 +51,22 @@ class Approximator(object):
     * Policy: approximator mapping states to actions
     * Value estimator: approximator mapping states (or states and actions) to a value, or mapping states to actions
                        (in the case of discrete actions)
-    * Actor-Critic:
+    * Actor-Critic: combination of policy and value function approximators
     * Dynamic: approximator mapping states and actions to the next states
     * Transformation mappings: approximator mapping states to states
-
-    Example::
-
-        states = JntPosState(robot) + JntVelState(robot)
-        actions = JntPosAction(robot)
-        model = ...
     """
 
     def __init__(self, inputs, outputs, model=None, preprocessors=None, postprocessors=None):
         r"""Initialize the outer model.
 
         Args:
-            inputs (State, Action, array): inputs of the inner models (instance of State/Action)
-            outputs (State, Action, array): outputs of the inner models (instance of Action/State)
+            inputs (State, Action, np.array, torch.Tensor): inputs of the inner models (instance of State/Action)
+            outputs (State, Action, np.array, torch.Tensor): outputs of the inner models (instance of Action/State)
             model (Model, None): inner model which will be wrapped if not an instance of Model
-            preprocessors (None, Processor): the inputs are first given to the preprocessors then to the model.
-            postprocessors (None, Processor): the predicted outputs by the model are given to the processors before
-                                              being returned.
+            preprocessors (None, Processor, list of Processor): the inputs are first given to the preprocessors then
+                to the model.
+            postprocessors (None, Processor, list of Processor): the predicted outputs by the model are given to the
+                processors before being returned.
         """
 
         # Check inputs and outputs, and convert to the correct format
@@ -81,17 +74,8 @@ class Approximator(object):
         self.inputs = inputs
         self.outputs = outputs
 
-        # preprocessors and postprocessors
-        if preprocessors is None:
-            preprocessors = []
-        if not isinstance(preprocessors, collections.Iterable):
-            preprocessors = [preprocessors]
+        # set pre- and post- processors
         self.preprocessors = preprocessors
-
-        if postprocessors is None:
-            postprocessors = []
-        if not isinstance(postprocessors, collections.Iterable):
-            postprocessors = [postprocessors]
         self.postprocessors = postprocessors
 
         # Check the given model: check if correct input/output sizes wrt the previous arguments, and check
@@ -105,10 +89,12 @@ class Approximator(object):
 
     @property
     def inputs(self):
+        """Return the approximator's inputs."""
         return self._inputs
 
     @inputs.setter
     def inputs(self, inputs):
+        """Set the approximator's inputs."""
         if inputs is not None:
             if isinstance(inputs, (int, float)):
                 inputs = np.array([inputs])
@@ -121,10 +107,12 @@ class Approximator(object):
 
     @property
     def outputs(self):
+        """Return the approximator's outputs."""
         return self._outputs
 
     @outputs.setter
     def outputs(self, outputs):
+        """Set the approximator's outputs."""
         if outputs is not None:
             if isinstance(outputs, (int, float)):
                 outputs = np.array([outputs])
@@ -137,10 +125,12 @@ class Approximator(object):
 
     @property
     def model(self):
+        """Return the inner learning model."""
         return self._model
 
     @model.setter
     def model(self, model):
+        """Set the inner learning model."""
         if model is not None:
             # check model type
             # if not isinstance(model, Model):
@@ -161,9 +151,86 @@ class Approximator(object):
         self._model = model
 
     @property
+    def preprocessors(self):
+        """Return the list of pre-processors."""
+        return self._preprocessors
+
+    @preprocessors.setter
+    def preprocessors(self, processors):
+        """Set the list of pre-processors."""
+        if processors is None:
+            processors = []
+        elif callable(processors):
+            processors = [processors]
+        elif isinstance(processors, collections.Iterable):
+            for idx, processor in enumerate(processors):
+                if not callable(processor):
+                    raise ValueError("The {} processor {} is not callable.".format(idx, processor))
+        else:
+            raise TypeError("Expecting the processors to be None, a callable class / function such as `Processor`, "
+                            "or a list of them. Instead got: {}".format(type(processors)))
+        self._preprocessors = processors
+
+    @property
+    def postprocessors(self):
+        """Return the list of post-processors."""
+        return self._postprocessors
+
+    @postprocessors.setter
+    def postprocessors(self, processors):
+        """Set the list of post-processors."""
+        if processors is None:
+            processors = []
+        elif callable(processors):
+            processors = [processors]
+        elif isinstance(processors, collections.Iterable):
+            for idx, processor in enumerate(processors):
+                if not callable(processor):
+                    raise ValueError("The {} processor {} is not callable.".format(idx, processor))
+        else:
+            raise TypeError("Expecting the processors to be None, a callable class / function such as `Processor`, "
+                            "or a list of them. Instead got: {}".format(type(processors)))
+        self._postprocessors = processors
+
+    @property
+    def input_size(self):
+        """Return the approximator input size."""
+        return self.model.input_size
+
+    @property
+    def output_size(self):
+        """Return the approximator output size."""
+        return self.model.output_size
+
+    @property
+    def input_shape(self):
+        """Return the approximator input shape."""
+        return self.model.input_shape
+
+    @property
+    def output_shape(self):
+        """Return the approximator output shape."""
+        return self.model.output_shape
+
+    @property
+    def input_dim(self):
+        """Return the input dimension."""
+        return self.model.input_dim
+
+    @property
+    def output_dim(self):
+        """Return the output dimension."""
+        return self.model.output_dim
+
+    @property
     def num_parameters(self):
-        """Return the total number of parameters"""
+        """Return the total number of parameters of the inner learning model."""
         return self.model.num_parameters
+
+    @property
+    def num_hyperparameters(self):
+        """Return the total number of hyper-parameters of the inner learning model."""
+        return self.model.num_hyperparameters
 
     ###########
     # Methods #
@@ -239,51 +306,113 @@ class Approximator(object):
         """
         return self.model.is_generative()
 
-    def reset(self):
-        """Reset the approximator."""
-        for processor in self.preprocessors:
-            processor.reset()
-        for processor in self.postprocessors:
-            processor.reset()
-        self.model.reset()
-
-    def predict(self, x, to_numpy=True):
-        for processor in self.preprocessors:
-            x = processor(x)
-        x = self.model(x.data[0])
-        for processor in self.postprocessors:
-            x = processor(x)
-        return x
+    def _size(self, x):
+        """Return the total size of a `State`, `Action`, numpy.array, or torch.Tensor."""
+        size = 0
+        if isinstance(x, (State, Action)):
+            if x.is_discrete():
+                size = x.space[0].n
+            else:
+                size = x.total_size()
+        elif isinstance(x, np.ndarray):
+            size = x.size
+        elif isinstance(x, torch.Tensor):
+            size = x.numel()
+        elif isinstance(x, int):
+            size = x
+        return size
 
     def parameters(self):
-        """Return the approximator parameters."""
+        """Return an iterator over the approximator parameters."""
         return self.model.parameters()
 
-    def get_params(self):
+    def named_parameters(self):
+        """Return an iterator over the approximator parameters, yielding both the name and the parameter itself."""
+        return self.model.named_parameters()
+
+    def list_parameters(self):
         """Return the list of parameters."""
         return list(self.parameters())
 
     def hyperparameters(self):
-        """Return the approximator hyper-parameters."""
+        """Return an iterator over the approximator hyper-parameters."""
         return self.model.hyperparameters()
 
-    def get_hyperparams(self):
+    def named_hyperparameters(self):
+        """Return an iterator over the approximator hyper-parameters, yielding both the name and the hyper-parameter
+        itself."""
+        return self.model.named_hyperparameters()
+
+    def list_hyperparameters(self):
         """Return the list of hyper-parameters."""
         return list(self.hyperparameters())
 
     def get_vectorized_parameters(self, to_numpy=True):
+        """Return a vectorized form of the parameters"""
         return self.model.get_vectorized_parameters(to_numpy=to_numpy)
 
     def set_vectorized_parameters(self, vector):
+        """Set the vector parameters."""
         self.model.set_vectorized_parameters(vector=vector)
 
-    def get_input_dims(self):
-        """Return the input dimensions."""
-        return self.model.input_dims
+    def reset(self, reset_processors=False):
+        """Reset the approximators."""
+        if reset_processors:
+            for processor in self.preprocessors:
+                if isinstance(processor, Processor):
+                    processor.reset()
+            for processor in self.postprocessors:
+                if isinstance(processor, Processor):
+                    processor.reset()
+        self.model.reset()
 
-    def get_output_dims(self):
-        """Return the output dimensions."""
-        return self.model.output_dims
+    def predict(self, x=None, to_numpy=True, return_logits=False):
+        """Predict the output given the input."""
+        # if no input is given, take the provided inputs at the beginning
+        if x is None:
+            x = self.inputs
+
+        # if the input is an instance of State or Action, get the inner merged data.
+        if isinstance(x, (State, Action)):
+            x = x.merged_data
+            if len(x) == 1:
+                x = x[0]
+
+        # go through each preprocessor
+        for processor in self.preprocessors:
+            x = processor(x)
+
+        # go through the model
+        x = self.model.predict(x, to_numpy=False)
+
+        # go through each postprocessor
+        for processor in self.postprocessors:
+            x = processor(x)
+
+        # set the output data
+        if isinstance(self.outputs, (State, Action)):  # TODO: think when multiple outputs and to set them
+            if self.outputs.is_discrete() and not return_logits:
+                if isinstance(x, np.ndarray):
+                    x = np.array([np.argmax(x)])
+                elif isinstance(x, torch.Tensor):
+                    x = torch.argmax(x, dim=0, keepdim=True)
+                else:
+                    raise TypeError("Expecting `x` to be a numpy array, torch.Tensor, or a list of them, instead got: "
+                                    "{}".format(type(x)))
+
+            # set the data
+            if isinstance(x, np.ndarray):
+                self.outputs.data = x
+            else:  # isinstance(x, torch.Tensor):
+                self.outputs.torch_data = x
+
+        # return the data
+        # convert to numpy if specified
+        if to_numpy and isinstance(x, torch.Tensor):
+            if x.requires_grad:
+                return x.detach().numpy()
+            return x.numpy()
+        return x
 
     def save(self, filename):
         """save the inner model."""
@@ -298,283 +427,16 @@ class Approximator(object):
     #############
 
     def __call__(self, x):
+        """Predict the output using the inner learning model given the input."""
         return self.predict(x)
 
-    def __str__(self):
+    def __repr__(self):
+        """Return a representation of the model."""
         return self.model.__str__()
 
-
-class RandomApproximator(Approximator):
-    r"""Random Approximator
-    """
-
-    class Random(object):
-
-        def __init__(self, num_outputs, seed=None):
-            self.num_outputs = num_outputs
-            if seed is not None:
-                np.random.seed(seed)
-
-    def __init__(self, outputs, preprocessors=None, postprocessors=None):
-        # call parent class
-        model = self.Random(num_outputs=self._size(outputs), seed=None)
-        super(RandomApproximator, self).__init__(inputs=None, outputs=outputs, model=model,
-                                                 preprocessors=preprocessors, postprocessors=postprocessors)
-
-    def _size(self, x):
-        size = 0
-        if isinstance(x, (State, Action)):
-            if x.is_discrete():
-                size = x.space[0].n
-            else:
-                size = x.total_size()
-        elif isinstance(x, np.ndarray):
-            size = x.size
-        elif isinstance(x, torch.Tensor):
-            size = x.numel()
-        elif isinstance(x, int):
-            size = x
-        return size
-
-    # def predict(self, x):
-    #     if isinstance(self.outputs, (State, Action)):
-    #         # get the space of each output
-    #         spaces = self.outputs.space
-    #
-    #         # sample from each space
-    #         output_data = [space.sample() for space in spaces]
-    #
-    #         # set the data for each action
-    #         self.outputs.data = output_data
-    #
-    #         return self.outputs
-
-    def predict(self, x):
-        # x = self.preprocessors(x)
-        x = self.model.predict(x.data[0])
-        if isinstance(self.outputs, (State, Action)) and self.outputs.is_discrete():
-            x = np.argmax(x)
-        # x = self.postprocessors(x)
-        return x
-
-
-class LinearApproximator(Approximator):
-    r"""Linear Function Approximator
-    """
-
-    def __init__(self, inputs, outputs, preprocessors=None, postprocessors=None):
-        # call parent class
-        model = Linear(num_inputs=self._size(inputs), num_outputs=self._size(outputs), add_bias=True)
-        super(LinearApproximator, self).__init__(inputs, outputs, model=model, preprocessors=preprocessors,
-                                                 postprocessors=postprocessors)
-
-    def _size(self, x):
-        size = 0
-        if isinstance(x, (State, Action)):
-            if x.is_discrete():
-                size = x.space[0].n
-            else:
-                size = x.total_size()
-        elif isinstance(x, np.ndarray):
-            size = x.size
-        elif isinstance(x, torch.Tensor):
-            size = x.numel()
-        elif isinstance(x, int):
-            size = x
-        return size
-
-    def predict(self, x, to_numpy=True, return_logits=False):
-        x = x.data[0]
-        for processor in self.preprocessors:
-            x = processor(x)
-        x = self.model.predict(x, to_numpy=to_numpy)
-        if isinstance(self.outputs, (State, Action)) and self.outputs.is_discrete() and not return_logits:
-            if to_numpy:
-                x = np.array([np.argmax(x)])
-            else:
-                x = torch.argmax(x, dim=0, keepdim=True)
-        # x = self.postprocessors(x)
-        return x
-
-
-class NNApproximator(Approximator):
-    r"""Neural Network Function Approximator
-    """
-
-    def __init__(self, inputs, outputs, model, preprocessors=None, postprocessors=None):
-
-        # call parent class
-        super(NNApproximator, self).__init__(inputs, outputs, model, preprocessors=preprocessors,
-                                             postprocessors=postprocessors)
-
-        # convert/wrap the model
-        if not isinstance(model, NN):
-            model = NN(model, input_dims=inputs.shape, output_dims=outputs.shape)  # TODO
-        self.model = model
-
-
-class MLPApproximator(NNApproximator):
-    r"""Multi-Layer Perceptron Function Approximator
-
-    It creates a feed-forward and fully-connected neural network, where linear layers are followed by non-linear
-    activation functions. The input and output dimensions are inferred from the inputs and outputs.
-    """
-
-    def __init__(self, inputs, outputs, hidden_units=(),
-                 activation_fct='Linear', last_activation_fct=None, dropout_prob=None,
-                 preprocessors=None, postprocessors=None):
-
-        # check that the inputs and ouputs are 1D
-        # if not self._check1D(inputs):
-        #     raise ValueError("Length of input shape should be 1! Instead, got {}".format(inputs.shape))
-        # print(outputs)
-        # print(outputs.shape)
-        # if not self._check1D(outputs):
-        #     raise ValueError("Length of output shape should be 1! Instead, got {}".format(outputs.shape))
-
-        input_size = self._size(inputs)
-        output_size = self._size(outputs)
-
-        # create model
-        num_units = [input_size] + list(hidden_units) + [output_size]
-        model = MLP(num_units=num_units, activation_fct=activation_fct, last_activation_fct=last_activation_fct,
-                    dropout_prob=dropout_prob)
-
-        # call superclass
-        super(MLPApproximator, self).__init__(inputs, outputs, model, preprocessors=preprocessors,
-                                              postprocessors=postprocessors)
-
-    def _size(self, x):
-        if isinstance(x, (State, Action)):
-            size = x.total_size()
-        elif isinstance(x, np.ndarray):
-            size = x.size
-        elif isinstance(x, torch.Tensor):
-            size = x.numel()
-        elif isinstance(x, int):
-            size = x
-        return size
-
-    def _check1D(self, arg):
-        """Check that the given argument is a 1D vector, or simple array"""
-        # if isinstance(arg, np.ndarray):
-        shapes = arg.shape
-        # else:
-        #     shape = arg.shape()
-        for shape in shapes:
-            if not (len(shape) == 1 and isinstance(shape[0], int)):
-                return False
-        return True
-
-    def predict(self, x):
-        # convert given input to torch tensor
-        if isinstance(x, (State, Action)):
-            x = np.concatenate((x. data))
-            x = torch.from_numpy(x).float()
-
-        # feed it to the model and get predicted output
-        x = self.model(x)
-
-        # check output
-        if isinstance(self.outputs, (State, Action)):
-            # data
-            self.outputs.train_data = x
-            # convert back output from torch tensor to np array
-            x = x.detach().numpy()
-            self.outputs.data = x
-
-            return self.outputs
-
-        return x
-
-
-class NEATApproximator(Approximator):
-    r"""NEAT Approximator
-
-    See Also: `neat_model.py`, `neat_policy`, `neat_algo.py`
-    """
-
-    def __init__(self, inputs, outputs, num_hidden=0, activation_fct='relu', network_type='feedforward',
-                 aggregation='sum', weights_limits=(-20, 20), bias_limits=(-20, 20),
-                 preprocessors=None, postprocessors=None):
-
-        # call parent class
-        model = NEATModel(num_inputs=self._size(inputs), num_outputs=self._size(outputs), num_hidden=num_hidden,
-                          activation_fct=activation_fct, network_type=network_type, aggregation=aggregation,
-                          weights_limits=weights_limits, bias_limits=bias_limits)
-        super(NEATApproximator, self).__init__(inputs, outputs, model=model, preprocessors=preprocessors,
-                                               postprocessors=postprocessors)
-
-    ##############
-    # Properties #
-    ##############
-
-    @property
-    def config(self):
-        """Return the config object"""
-        return self.model.config
-
-    @config.setter
-    def config(self, config):
-        """Set the config file (str) or object."""
-        self.model.config = config
-
-    @property
-    def genome(self):
-        return self.model.genome
-
-    @genome.setter
-    def genome(self, genome):
-        self.model.genome = genome
-
-    @property
-    def network(self):
-        return self.model.network
-
-    @property
-    def population(self):
-        return self.model.population
-
-    ###########
-    # Methods #
-    ###########
-
-    def _size(self, x):
-        size = 0
-        if isinstance(x, (State, Action)):
-            if x.is_discrete():
-                size = x.space[0].n
-            else:
-                size = x.total_size()
-        elif isinstance(x, np.ndarray):
-            size = x.size
-        elif isinstance(x, torch.Tensor):
-            size = x.numel()
-        elif isinstance(x, int):
-            size = x
-        return size
-
-    def predict(self, x, to_numpy=True):
-        # x = self.preprocessors(x)
-        x = self.model.predict(x.merged_data[0])
-
-        if isinstance(self.outputs, (State, Action)):
-            if self.outputs.is_discrete():
-                x = np.argmax(x)
-            elif self.outputs.is_continuous():
-                x = 2 * np.array(x) - 1
-            else:
-                raise NotImplementedError("The outputs are not discrete or continuous...")
-            self.outputs.data = x
-        # x = self.postprocessors(x)
-        # return x
-        return self.outputs
-
-    def set_network(self, genome=None, config=None):
-        self.model.set_network(genome, config)
-
-    def update_config(self, config):
-        self.model.update_config(config)
+    def __str__(self):
+        """Return a string describing the model."""
+        return self.model.__str__()
 
 
 # Tests

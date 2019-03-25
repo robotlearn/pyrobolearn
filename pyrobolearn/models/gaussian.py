@@ -6,7 +6,6 @@ the possible operations (that I could think of) that can be performed on it. It 
 Mixture Models, Probabilistic Movement Primitives, Kernelized Movement Primitives, etc.
 """
 
-
 import numpy as np
 import scipy
 from scipy.stats import multivariate_normal as mvn
@@ -19,6 +18,7 @@ from matplotlib.patches import Ellipse
 # import torch
 # import geomstats
 
+# from pyrobolearn.models.model import Model
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

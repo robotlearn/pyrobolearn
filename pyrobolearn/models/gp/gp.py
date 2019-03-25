@@ -10,7 +10,6 @@ differentiation: autograd), GPU capabilities, and more Pythonic approach.
 """
 
 import copy
-
 try:
     import cPickle as pickle
 except ImportError as e:
@@ -20,7 +19,8 @@ import numpy as np
 import torch
 import gpytorch
 # import GPy
-# from model import Model
+
+# from pyrobolearn.models.model import Model
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -84,6 +84,10 @@ class ExactGPModel(gpytorch.models.ExactGP):
         self.mean = mean
         self.kernel = kernel
 
+    ##############
+    # Properties #
+    ##############
+
     @property
     def mean(self):
         r"""Return the GP prior mean; that is :math:`\mu(x)` from :math:`p(f|x) = N(\mu(x), K(x,x))`."""
@@ -114,6 +118,10 @@ class ExactGPModel(gpytorch.models.ExactGP):
             raise TypeError("Expecting the kernel to be an instance of `gpytorch.kernels.Kernel`, got instead "
                             "{}".format(type(kernel)))
         self._kernel = kernel
+
+    ###########
+    # Methods #
+    ###########
 
     def forward(self, x):
         r"""Return the prior probability density function :math:`p(f|x) = \mathcal{N}(. | \mu(x), K(x,x))`."""
@@ -593,7 +601,7 @@ class GPR(GP):
 # TESTS
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    from utils.converter import torch_to_numpy
+    from pyrobolearn.utils.converter import torch_to_numpy
 
     # create input and output data
     x = torch.linspace(0, 1, 100)

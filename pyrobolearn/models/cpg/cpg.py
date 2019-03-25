@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, CheckButtons
 from matplotlib.animation import FuncAnimation
 
+# from pyrobolearn.models.model import Model
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -700,6 +702,36 @@ class CPGNetwork(object):
     ##############
 
     @property
+    def input_size(self):
+        """Return the input size of the model."""
+        return len(self.nodes)
+
+    @property
+    def output_size(self):
+        """Return the output size of the model."""
+        return len(self.nodes)
+
+    @property
+    def input_shape(self):
+        """Return the input shape of the model."""
+        return tuple([self.input_size])
+
+    @property
+    def output_shape(self):
+        """Return the output shape of the model."""
+        return tuple([self.output_size])
+
+    @property
+    def input_dim(self):
+        """Return the input dimension of the model; i.e. len(input_shape)."""
+        return len(self.input_shape)
+
+    @property
+    def output_dim(self):
+        """Return the output dimension of the model; i.e. len(output_shape)."""
+        return len(self.output_shape)
+
+    @property
     def num_parameters(self):
         """Return the total number of parameters in this CPG network."""
         return sum([node.num_parameters for node in self.nodes.values()])
@@ -708,6 +740,7 @@ class CPGNetwork(object):
     # Methods #
     ###########
 
+    # TODO: update parameters to hyperparameters
     def parameters(self):
         """Returns an iterator over the model parameters."""
         for node in self.nodes.values():

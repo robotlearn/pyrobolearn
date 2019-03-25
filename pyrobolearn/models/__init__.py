@@ -4,14 +4,8 @@ from .model import Model
 
 # General Learning models #
 
-# Linear
-from .linear import Linear
-
-# PCA
-from .pca import PCA
-
-# Polynomial
-from .polynomial import Polynomial, PolynomialFunction
+# basics: Linear, Polynomial, PCA
+from .basics import *
 
 # Gaussian
 from .gaussian import Gaussian, MVN      # MVN is an alias

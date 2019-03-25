@@ -13,7 +13,8 @@ except ImportError as e:
 
 import numpy as np
 import torch
-# from model import Model
+
+# from pyrobolearn.models.model import Model
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -52,24 +53,34 @@ class Linear(object):
     ##############
 
     @property
-    def input_dims(self):
-        """Return the input dimension of the model"""
+    def input_size(self):
+        """Return the input size of the model"""
         return self.model.weight.shape[1]
 
     @property
-    def output_dims(self):
-        """Return the output dimension of the model"""
+    def output_size(self):
+        """Return the output size of the model"""
         return self.model.weight.shape[0]
 
     @property
     def input_shape(self):
         """Return the input shape of the model"""
-        return tuple([self.input_dims])
+        return tuple([self.input_size])
 
     @property
     def output_shape(self):
         """Return the output shape of the model"""
-        return tuple([self.output_dims])
+        return tuple([self.output_size])
+
+    @property
+    def input_dim(self):
+        """Return the input dimension; i.e. len(input_shape)."""
+        return len(self.input_shape)
+
+    @property
+    def output_dim(self):
+        """Return the output dimension; i.e. len(output_shape)."""
+        return len(self.output_shape)
 
     @property
     def num_parameters(self):
@@ -217,9 +228,11 @@ class Linear(object):
         pass
 
     def reset(self):
+        """Reset the linear model."""
         pass
 
     def __call__(self, x, to_numpy=True):
+        """Predict the output given the input :attr:`x`."""
         return self.predict(x, to_numpy=to_numpy)
 
     # def concatenate(self, other):
@@ -239,8 +252,8 @@ if __name__ == '__main__':
     # test with numpy
     x = np.array(range(3))
     model = Linear(num_inputs=len(x), num_outputs=2, add_bias=True)
-    print("Linear model's input size: {}".format(model.input_dims))
-    print("Linear model's output size: {}".format(model.output_dims))
+    print("Linear model's input size: {}".format(model.input_size))
+    print("Linear model's output size: {}".format(model.output_size))
     y = model(x)
     print("Linear input: {}".format(x))
     print("Linear output: {}".format(y))
