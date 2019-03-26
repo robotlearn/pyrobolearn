@@ -55,12 +55,36 @@ class NEATPolicy(Policy):
     """
 
     def __init__(self, states, actions, num_hidden=0, activation_fct='relu', network_type='feedforward',
-                 aggregation='sum', weights_limits=(-20, 20), bias_limits=(-20, 20), rate=1, *args, **kwargs):
+                 aggregation='sum', weights_limits=(-20, 20), bias_limits=(-20, 20), rate=1, preprocessors=None,
+                 postprocessors=None, *args, **kwargs):
         r"""Initialize the neural network policy for the NEAT algorithm.
+
+        Args:
+            actions (Action): At each step, by calling `policy.act(state)`, the `actions` are computed by the policy,
+                and should be given to the environment. As with the `states`, the type and size/shape of each action
+                can be inferred and could be used to automatically build a policy. The `action` connects the policy
+                with a controllable object (such as a robot) in the environment.
+            states (State): By giving the `states` to the policy, it can automatically infer the type and size/shape
+                of each state, and thus can be used to automatically build a policy. At each step, the `states`
+                are filled by the environment, and read by the policy. The `state` connects the policy with one or
+                several objects (including robots) in the environment. Note that some policies don't use any state
+                information.
+            num_hidden (int): number of units in the hidden layer
+            activation_fct (str): activation function to use.
+            network_type (str): type of neural network. Select between 'feedforward' and 'recurrent'.
+            aggregation (str): how to aggregate the input signals of a node. Select between 'sum', 'product', 'max',
+                'min', 'maxabs', 'median', and 'mean'.
+            weights_limits (tuple): weight limits / bounds. The tuple contains the lower and upper bounds.
+            bias_limits (tuple): bias limits / bounds. The tuple contains the lower and upper bounds.
+            rate (int, float): rate (float) at which the policy operates if we are operating in real-time. If we are
+                stepping deterministically in the simulator, it represents the number of ticks (int) to sleep before
+                executing the model.
+            preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
+            postprocessors (Processor, list of Processor, None): post-processors to be applied to the output
         """
         model = NEATApproximator(states, actions, num_hidden=num_hidden, activation_fct=activation_fct,
                                  network_type=network_type, aggregation=aggregation, weights_limits=weights_limits,
-                                 bias_limits=bias_limits)
+                                 bias_limits=bias_limits, preprocessors=preprocessors, postprocessors=postprocessors)
         super(NEATPolicy, self).__init__(states, actions, model, rate=rate, *args, **kwargs)
 
     ##############
@@ -79,18 +103,22 @@ class NEATPolicy(Policy):
 
     @property
     def genome(self):
+        """Return the NEAT model's genome."""
         return self.model.genome
 
     @genome.setter
     def genome(self, genome):
+        """Set the genome."""
         self.model.genome = genome
 
     @property
     def network(self):
+        """Return the NEAT model's network."""
         return self.model.network
 
     @property
     def population(self):
+        """Return the population used in NEAT."""
         return self.model.population
 
     ###########
@@ -98,36 +126,38 @@ class NEATPolicy(Policy):
     ###########
 
     def update_config(self, config):
+        """Update the configuration file."""
         self.model.update_config(config)
 
     def set_network(self, genome=None, config=None):
+        """Set the genome network."""
         self.model.set_network(genome, config)
 
-    def act(self, state, deterministic=True):
-        if (self.cnt % self.rate) == 0:
-            self.last_action = self.model.predict(state)
-        self.cnt += 1
-        return self.last_action
-
-    def sample(self, state):
-        pass
-
-
-class NEATFeedForwardPolicy(NEATPolicy):
-    r"""NEAT feed-forward policy
-
-    This creates a feed-forward network policy.
-    """
-
-    def __init__(self, states, actions, genome):
-        super(NEATFeedForwardPolicy, self).__init__(states, actions, genome, network_type='feedforward')
+    # def act(self, state, deterministic=True):
+    #     if (self.cnt % self.rate) == 0:
+    #         self.last_action = self.model.predict(state)
+    #     self.cnt += 1
+    #     return self.last_action
+    #
+    # def sample(self, state):
+    #     pass
 
 
-class NEATRecurrentPolicy(NEATPolicy):
-    r"""NEAT recurrent policy
-
-    This creates a recurrent network policy.
-    """
-
-    def __init__(self, states, actions, genome):
-        super(NEATRecurrentPolicy, self).__init__(states, actions, genome, network_type='recurrent')
+# class NEATFeedForwardPolicy(NEATPolicy):
+#     r"""NEAT feed-forward policy
+#
+#     This creates a feed-forward network policy.
+#     """
+#
+#     def __init__(self, states, actions, genome):
+#         super(NEATFeedForwardPolicy, self).__init__(states, actions, genome, network_type='feedforward')
+#
+#
+# class NEATRecurrentPolicy(NEATPolicy):
+#     r"""NEAT recurrent policy
+#
+#     This creates a recurrent network policy.
+#     """
+#
+#     def __init__(self, states, actions, genome):
+#         super(NEATRecurrentPolicy, self).__init__(states, actions, genome, network_type='recurrent')

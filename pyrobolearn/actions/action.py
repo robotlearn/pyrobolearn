@@ -742,7 +742,7 @@ class Action(object):
         it checks that it is within the bounds.
 
         Args:
-            item (Action, list/tuple of action): check if given action(s) is(are) in the combined action
+            item (Action, list/tuple of action, type): check if given action(s) is(are) in the combined action
 
         Example:
             s1 = JntPositionAction(robot)
@@ -753,12 +753,23 @@ class Action(object):
             print((s1, s2) in s) # output True
         """
         # check type of item
-        if not isinstance(item, (Action, np.ndarray)):
-            raise TypeError("Expecting a action or numpy array.")
+        if not isinstance(item, (Action, np.ndarray, type)):
+            raise TypeError("Expecting an Action, a np.array, or a class type, instead got: {}".format(type(item)))
+
+        # if class type
+        if isinstance(item, type):
+            # if there is one action
+            if self.has_data():
+                return self.__class__ == item
+            # the action has multiple actions, thus we go through each action
+            for action in self.actions:
+                if action.__class__ == item:
+                    return True
+            return False
 
         # check if action item is in the combined action
         if self._data is None and isinstance(item, Action):
-            return (item in self._actions)
+            return item in self._actions
 
         # check if action/data is within the bounds
         if isinstance(item, Action):

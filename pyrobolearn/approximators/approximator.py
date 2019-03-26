@@ -366,8 +366,28 @@ class Approximator(object):
                     processor.reset()
         self.model.reset()
 
-    def predict(self, x=None, to_numpy=True, return_logits=False):
-        """Predict the output given the input."""
+    def __convert_to_numpy(self, x, to_numpy=True):
+        """Convert the given argument to a numpy array if specified."""
+        if to_numpy and isinstance(x, torch.Tensor):
+            if x.requires_grad:
+                return x.detach().numpy()
+            return x.numpy()
+        return x
+
+    def predict(self, x=None, to_numpy=True, return_logits=False, set_output_data=True):
+        """Predict the output given the input.
+
+        Args:
+            x (None, State, Action, (list of) np.array, (list of) torch.Tensor): input data. If None, it will get the
+                data from the inputs that were given at the initialization.
+            to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+            return_logits (bool): If True, in the case of discrete outputs, it will return the logits.
+            set_output_data (bool): If True, it will set the predicted output data to the outputs given at the
+                initialization.
+
+        Returns:
+            (list of) np.array, list of (torch.Tensor): predicted output data.
+        """
         # if no input is given, take the provided inputs at the beginning
         if x is None:
             x = self.inputs
@@ -382,45 +402,67 @@ class Approximator(object):
         for processor in self.preprocessors:
             x = processor(x)
 
-        # go through the model
+        # predict output using the learning model
         x = self.model.predict(x, to_numpy=False)
 
         # go through each postprocessor
         for processor in self.postprocessors:
             x = processor(x)
 
-        # set the output data
-        if isinstance(self.outputs, (State, Action)):  # TODO: think when multiple outputs and to set them
-            if self.outputs.is_discrete() and not return_logits:
-                if isinstance(x, np.ndarray):
-                    x = np.array([np.argmax(x)])
-                elif isinstance(x, torch.Tensor):
-                    x = torch.argmax(x, dim=0, keepdim=True)
+        # set the output data and convert it if specified
+        if isinstance(self.outputs, (State, Action)) and (to_numpy or not return_logits or set_output_data):
+            # if output data `x` is not a list, make it a list as we will iterate through it
+            if not isinstance(x, list):
+                x = [x]
+
+            # go through each output and output data
+            for idx, (output, data) in enumerate(zip(self.outputs, x)):
+                if isinstance(data, np.ndarray):
+                    if output.is_discrete():
+                        discrete_data = np.array([np.argmax(data)])
+                        if set_output_data:
+                            output.data = discrete_data
+                        if not return_logits:
+                            x[idx] = discrete_data
+                    elif set_output_data:
+                        output.data = data
+                elif isinstance(data, torch.Tensor):
+                    if output.is_discrete():
+                        discrete_data = torch.argmax(data, dim=0, keepdim=True)
+                        if set_output_data:
+                            output.torch_data = discrete_data
+                        if return_logits:
+                            x[idx] = self.__convert_to_numpy(data, to_numpy=to_numpy)
+                        else:
+                            x[idx] = self.__convert_to_numpy(discrete_data, to_numpy=to_numpy)
                 else:
-                    raise TypeError("Expecting `x` to be a numpy array, torch.Tensor, or a list of them, instead got: "
-                                    "{}".format(type(x)))
+                    raise TypeError("Expecting `data` output to be a numpy array, torch.Tensor, or a list of them, "
+                                    "instead got: {}".format(type(data)))
 
-            # set the data
-            if isinstance(x, np.ndarray):
-                self.outputs.data = x
-            else:  # isinstance(x, torch.Tensor):
-                self.outputs.torch_data = x
+        # if output is a list and has one element, return just that element
+        if isinstance(x, list) and len(x) == 1:
+            x = x[0]
 
-        # return the data
-        # convert to numpy if specified
-        if to_numpy and isinstance(x, torch.Tensor):
-            if x.requires_grad:
-                return x.detach().numpy()
-            return x.numpy()
+        # return the output data
         return x
 
     def save(self, filename):
-        """save the inner model."""
+        """Save the inner model on the disk.
+
+        Args:
+            filename (str): path to the file to save the model.
+        """
         self.model.save(filename)
 
     def load(self, filename):
-        """load the inner model."""
-        self.model.load(filename)
+        """Load the inner model from the disk.
+
+        Args:
+            filename (str): path to the file which contains the model.
+        """
+        # TODO: check if model is None
+        self.model = self.model.load(filename)
+        return self.model
 
     #############
     # Operators #

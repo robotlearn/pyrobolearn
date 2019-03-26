@@ -1,3 +1,3 @@
 
 # import state generators
-from state_generator import *
+from .state_generator import *

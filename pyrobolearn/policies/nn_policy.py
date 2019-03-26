@@ -21,15 +21,32 @@ __status__ = "Development"
 class NNPolicy(Policy):
     r"""Neural Network Policy
 
-    Defines the neural network policy. If the model is not given,
-
-    Examples:
-        simulator = Bullet()
-        robot = Robot(simulator)
-        policy = NNPolicy(Robot, states=['joint_positions', 'joint_velocities'], actions=['joint_positions'])
+    Defines the neural network policy.
     """
 
-    def __init__(self, states, actions, model=None, *args, **kwargs):
+    def __init__(self, states, actions, model=None, rate=1, preprocessors=None, postprocessors=None, *args, **kwargs):
+        """
+        Initialize the Neural network policy.
+
+        Args:
+            actions (Action): At each step, by calling `policy.act(state)`, the `actions` are computed by the policy,
+                and should be given to the environment. As with the `states`, the type and size/shape of each action
+                can be inferred and could be used to automatically build a policy. The `action` connects the policy
+                with a controllable object (such as a robot) in the environment.
+            states (State): By giving the `states` to the policy, it can automatically infer the type and size/shape
+                of each state, and thus can be used to automatically build a policy. At each step, the `states`
+                are filled by the environment, and read by the policy. The `state` connects the policy with one or
+                several objects (including robots) in the environment. Note that some policies don't use any state
+                information.
+            model (NN, NNApproximator): NN model
+            rate (int, float): rate (float) at which the policy operates if we are operating in real-time. If we are
+                stepping deterministically in the simulator, it represents the number of ticks (int) to sleep before
+                executing the model.
+            preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
+            postprocessors (Processor, list of Processor, None): post-processors to be applied to the output
+            *args (list): list of arguments
+            **kwargs (dict): dictionary of arguments
+        """
         if model is None:
             raise ValueError("Expecting a NN model for the NN policy")
         else:
@@ -37,13 +54,14 @@ class NNPolicy(Policy):
             # checking the output dimension of the model and the dimension of actions
             pass
 
-        super(NNPolicy, self).__init__(states, actions, model, *args, **kwargs)
+        super(NNPolicy, self).__init__(states, actions, model, rate=rate, preprocessors=preprocessors,
+                                       postprocessors=postprocessors, *args, **kwargs)
 
-    def act(self, state, deterministic=True):
-        pass
-
-    def sample(self, state):
-        pass
+    # def act(self, state, deterministic=True):
+    #     pass
+    #
+    # def sample(self, state):
+    #     pass
 
 
 class MLPPolicy(NNPolicy):
@@ -53,9 +71,8 @@ class MLPPolicy(NNPolicy):
     activation functions.
     """
 
-    def __init__(self, states, actions, hidden_units=(),
-                 activation_fct='linear', last_activation_fct=None, dropout_prob=None,
-                 preprocessors=None, postprocessors=None):
+    def __init__(self, states, actions, hidden_units=(), activation_fct='linear', last_activation_fct=None,
+                 dropout_prob=None, rate=1, preprocessors=None, postprocessors=None):
         """Initialize MLP policy.
 
         Args:
@@ -70,11 +87,16 @@ class MLPPolicy(NNPolicy):
                                                if it is in the list/tuple of activation functions provided for the
                                                previous argument.
             dropout_prob (None, float, or list/tuple of float/None): dropout probability.
+            rate (int, float): rate (float) at which the policy operates if we are operating in real-time. If we are
+                stepping deterministically in the simulator, it represents the number of ticks (int) to sleep before
+                executing the model.
+            preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
+            postprocessors (Processor, list of Processor, None): post-processors to be applied to the output
         """
         model = MLPApproximator(states, actions, hidden_units=hidden_units,
                                 activation_fct=activation_fct, last_activation_fct=last_activation_fct,
                                 dropout_prob=dropout_prob, preprocessors=preprocessors, postprocessors=postprocessors)
-        super(MLPPolicy, self).__init__(states, actions, model)
+        super(MLPPolicy, self).__init__(states, actions, model, rate=rate)
 
-    def act(self, state, deterministic=True):
-        return self.model.predict(state)
+    # def act(self, state, deterministic=True):
+    #     return self.model.predict(state)

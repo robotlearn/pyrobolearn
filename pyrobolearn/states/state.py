@@ -763,23 +763,34 @@ class State(object):
         it checks that it is within the bounds.
 
         Args:
-            item (State, list/tuple of state): check if given state(s) is(are) in the combined state
+            item (State, list/tuple of state, type): check if given state(s) is(are) in the combined state
 
         Example:
-            s1 = JntPositionState(robot)
-            s2 = JntVelocityState(robot)
+            s1 = JointPositionState(robot)
+            s2 = JointVelocityState(robot)
             s = s1 + s2
             print(s1 in s) # output True
             print(s2 in s1) # output False
             print((s1, s2) in s) # output True
         """
         # check type of item
-        if not isinstance(item, (State, np.ndarray)):
-            raise TypeError("Expecting a state or numpy array.")
+        if not isinstance(item, (State, np.ndarray, type)):
+            raise TypeError("Expecting a State, np.array, or a class type, instead got: {}".format(type(item)))
+
+        # if class type
+        if isinstance(item, type):
+            # if there is one state
+            if self.has_data():
+                return self.__class__ == item
+            # the state has multiple states, thus we go through each state
+            for state in self.states:
+                if state.__class__ == item:
+                    return True
+            return False
 
         # check if state item is in the combined state
         if self._data is None and isinstance(item, State):
-            return (item in self._states)
+            return item in self._states
 
         # check if state/data is within the bounds
         if isinstance(item, State):

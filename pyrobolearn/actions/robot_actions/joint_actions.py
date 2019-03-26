@@ -85,6 +85,38 @@ class JointVelocityAction(JointAction):
             self.robot.set_joint_velocities(data, self.joints)
 
 
+class JointPositionAndVelocityAction(JointAction):
+    r"""Joint position and velocity action
+
+    Set the joint position using position control using PD control, where the contraint error to be minimized is
+    given by: :math:`error = kp * (q^* - q) - kd * (\dot{q}^* - \dot{q})`.
+    """
+
+    def __init__(self, robot, joint_ids=None, kp=None, kd=None, max_force=None):
+        super(JointPositionAndVelocityAction, self).__init__(robot, joint_ids)
+        self.kp, self.kd, self.max_force = kp, kd, max_force
+        pos, vel = robot.get_joint_positions(self.joints), robot.get_joint_velocities(self.joints)
+        self.data = np.concatenate((pos, vel))
+        self.idx = len(pos)
+
+    def _write(self, data=None):
+        if data is None:
+            self.robot.set_joint_positions(self._data[:self.idx], self.joints, kp=self.kp, kd=self.kd,
+                                           velocities=self._data[self.idx:], forces=self.max_force)
+        else:
+            self.robot.set_joint_positions(data[:self.idx], self.joints, kp=self.kp, kd=self.kd,
+                                           velocities=data[self.idx:], forces=self.max_force)
+
+
+# class JointPositionVelocityAccelerationAction(JointAction):
+#     r"""Set the joint positions, velocities, and accelerations.
+#
+#     Set the joint positions, velocities, and accelerations by computing the necessary torques / forces using inverse
+#     dynamics.
+#     """
+#     pass
+
+
 class JointForceAction(JointAction):
     r"""Joint Force Action
 

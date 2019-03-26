@@ -10,7 +10,8 @@ import torch
 from pyrobolearn.models import DMP, DiscreteDMP, RhythmicDMP, BioDiscreteDMP
 from pyrobolearn.policies.policy import Policy
 from pyrobolearn.states import State
-from pyrobolearn.actions import Action, JointPositionAction, JointVelocityAction, JointAccelerationAction
+from pyrobolearn.actions import Action, JointPositionAction, JointVelocityAction, JointAccelerationAction, \
+    JointPositionAndVelocityAction
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -30,49 +31,55 @@ class DMPPolicy(Policy):
         if not isinstance(model, DMP):
             raise TypeError("Expecting model to be an instance of DMP")
         super(DMPPolicy, self).__init__(states, actions, model, rate=rate, *args, **kwargs)
-        self.y, self.dy, self.ddy = 0, 0, 0
 
-    def _size(self, x):
-        size = 0
-        if isinstance(x, (State, Action)):
-            if x.is_discrete():
-                size = x.space[0].n
-            else:
-                size = x.total_size()
-        elif isinstance(x, np.ndarray):
-            size = x.size
-        elif isinstance(x, torch.Tensor):
-            size = x.numel()
-        elif isinstance(x, int):
-            size = x
-        return size
+        # check actions
+        self.is_joint_position_action = JointPositionAction in actions or JointPositionAndVelocityAction in actions
+        self.is_joint_velocity_action = JointVelocityAction in actions or JointPositionAndVelocityAction in actions
+        self.is_joint_acceleration_action = JointAccelerationAction in actions
+        if not (self.is_joint_position_action or self.is_joint_velocity_action or self.is_joint_acceleration_action):
+            raise ValueError("The actions do not have a joint position, velocity, or acceleration action.")
 
-    def act(self, state, deterministic=True, to_numpy=True):
-        # return self.model.predict(state, to_numpy=to_numpy)
-        if (self.cnt % self.rate) == 0:
-            # print("Policy state value: {}".format(state.data[0][0]))
-            self.y, self.dy, self.ddy = self.model.step(state.data[0][0])
-        self.cnt += 1
-        # y, dy, ddy = self.model.step()
-        # return np.array([y, dy, ddy])
-        if isinstance(self.actions, JointPositionAction):
-            # print("DMP action: {}".format(self.y))
-            self.actions.data = self.y
-        elif isinstance(self.actions, JointVelocityAction):
-            self.actions.data = self.dy
-        elif isinstance(self.actions, JointAccelerationAction):
-            self.actions.data = self.ddy
-        return self.actions
+    def _predict(self, state, to_numpy=False, return_logits=True, set_output_data=False):
+        """Inner prediction step."""
+        if isinstance(state, (np.ndarray, list, tuple)):
+            state = state[0]
+        y, dy, ddy = self.model.step(state)
+        if self.is_joint_position_action:
+            if self.is_joint_velocity_action:
+                return np.concatenate((y, dy))
+            return y
+        elif self.is_joint_velocity_action:
+            return dy
+        else:  # self.is_joint_acceleration_action
+            return ddy
 
-    def sample(self, state):
-        pass
+    # def act(self, state=None, deterministic=True, to_numpy=True, return_logits=False, apply_action=True):
+    #     # return self.model.predict(state, to_numpy=to_numpy)
+    #     if (self.cnt % self.rate) == 0:
+    #         # print("Policy state value: {}".format(state.data[0][0]))
+    #         self.y, self.dy, self.ddy = self.model.step(state.data[0][0])
+    #     self.cnt += 1
+    #     # y, dy, ddy = self.model.step()
+    #     # return np.array([y, dy, ddy])
+    #     if isinstance(self.actions, JointPositionAction):
+    #         # print("DMP action: {}".format(self.y))
+    #         self.actions.data = self.y
+    #     elif isinstance(self.actions, JointVelocityAction):
+    #         self.actions.data = self.dy
+    #     elif isinstance(self.actions, JointAccelerationAction):
+    #         self.actions.data = self.ddy
+    #     return self.actions
+
+    # def sample(self, state):
+    #     pass
 
     def rollout(self):
+        """Perform a rollout with the movement primitive."""
         return self.model.rollout()
 
-    def imitate(self, data):
+    def imitate(self, data):  # TODO: improve this
         if len(data) > 0:
-            print("Imitating with :", data.shape)
+            # print("Imitating with :", data.shape)
             # y, dy, ddy = data
             y = data
             # if len(y.shape) == 1:

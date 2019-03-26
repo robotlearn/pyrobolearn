@@ -33,14 +33,16 @@ class CPGPolicy(Policy):
                  child_coupling_weight=None, child_coupling_bias=0., update_amplitudes=True, update_offsets=True,
                  update_init_phases=True, update_frequencies=True, update_weights=True, update_biases=True,
                  amplitude_bounds=np.pi, offset_bounds=np.pi, phase_bounds=np.pi, frequency_bounds=5.,
-                 weight_bounds=2., bias_bounds=np.pi, *args, **kwargs):
+                 weight_bounds=2., bias_bounds=np.pi, preprocessors=None, postprocessors=None, *args, **kwargs):
         """
         Initialize the CPG Network Policy.
 
         Args:
             states (PhaseState): phase state.
             actions (JointAction): joint action. Normally, it will be JointPositionAction.
-            rate (int): number of steps to wait before going to the next step with the policy.
+            rate (int, float): rate (float) at which the policy operates if we are operating in real-time. If we are
+                stepping deterministically in the simulator, it represents the number of ticks (int) to sleep before
+                executing the model.
             cpg_network (dict, None): dictionary describing the CPG network. The syntax is the following:
                 cpg_network = {<node_id>: {'phi': <phi>, 'offset': <offset>, 'amplitude': <amplitude>, 'freq': <freq>,
                                            'nodes': [{'id': <coupling_node_id>, 'bias': <coupling_bias>,
@@ -90,10 +92,13 @@ class CPGPolicy(Policy):
             frequency_bounds (float, tuple of float): bounds / limits to the frequency parameter (useful when training).
             weight_bounds (float, tuple of float): bounds / limits to the weight parameters (useful when training).
             bias_bounds (float, tuple of float): bounds / limits to the bias parameters (useful when training).
+            preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
+            postprocessors (Processor, list of Processor, None): post-processors to be applied to the output
             *args (list): other arguments given to the CPG network learning model.
             **kwargs (dict): other key + value arguments given to the CPG network learning model.
         """
-        super(CPGPolicy, self).__init__(states, actions, rate=rate, *args, **kwargs)
+        super(CPGPolicy, self).__init__(states, actions, rate=rate, preprocessors=preprocessors,
+                                        postprocessors=postprocessors, *args, **kwargs)
 
         # check actions
         if not isinstance(actions, JointAction):
@@ -191,32 +196,22 @@ class CPGPolicy(Policy):
                                 frequency_bounds=frequency_bounds, weight_bounds=weight_bounds,
                                 bias_bounds=bias_bounds, *args, **kwargs)
 
-    def _size(self, x):
-        size = 0
-        if isinstance(x, (State, Action)):
-            if x.is_discrete():
-                size = x.space[0].n
-            else:
-                size = x.total_size()
-        elif isinstance(x, np.ndarray):
-            size = x.size
-        elif isinstance(x, torch.Tensor):
-            size = x.numel()
-        elif isinstance(x, int):
-            size = x
-        return size
+    def _predict(self, state, to_numpy=False, return_logits=True, set_output_data=False):
+        """Inner prediction step."""
+        action_data = self.model.step()
+        return action_data
 
-    def act(self, state=None, deterministic=True, to_numpy=True, return_logits=False):
-        if (self.cnt % self.rate) == 0:
-            self.last_action = self.model.step()
-        self.cnt += 1
-        # angles = self.model.step()
-        # self.actions.data = angles
-        self.actions.data = self.last_action
-        return self.actions
+    # def act(self, state=None, deterministic=True, to_numpy=True, return_logits=False):
+    #     if (self.cnt % self.rate) == 0:
+    #         self.last_action = self.model.step()
+    #     self.cnt += 1
+    #     # angles = self.model.step()
+    #     # self.actions.data = angles
+    #     self.actions.data = self.last_action
+    #     return self.actions
 
-    def sample(self, state):
-        pass
+    # def sample(self, state):
+    #     pass
 
     def phase_resetting(self):
         self.model.reset()

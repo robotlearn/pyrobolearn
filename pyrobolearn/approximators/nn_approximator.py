@@ -112,26 +112,24 @@ class MLPApproximator(NNApproximator):
                 return False
         return True
 
-    def predict(self, x):
-        # convert given input to torch tensor
-        if isinstance(x, (State, Action)):
-            x = x.merged_data[0]
-            x = torch.from_numpy(x).float()
-
-        # feed it to the model and get predicted output
-        x = self.model(x)
-
-        # check output
-        if isinstance(self.outputs, (State, Action)):
-            # data
-            self.outputs.train_data = x
-            # convert back output from torch tensor to np array
-            x = x.detach().numpy()
-            self.outputs.data = x
-
-            return self.outputs
-
-        return x
+    # def predict(self, x):
+    #     # convert given input to torch tensor
+    #     if isinstance(x, (State, Action)):
+    #         x = x.merged_data[0]
+    #         x = torch.from_numpy(x).float()
+    #
+    #     # feed it to the model and get predicted output
+    #     x = self.model(x)
+    #
+    #     # check output
+    #     if isinstance(self.outputs, (State, Action)):
+    #         # data
+    #         self.outputs.train_data = x
+    #         # convert back output from torch tensor to np array
+    #         x = x.detach().numpy()
+    #         self.outputs.data = x
+    #         return self.outputs
+    #     return x
 
 
 class NEATApproximator(Approximator):
@@ -208,21 +206,23 @@ class NEATApproximator(Approximator):
     # Methods #
     ###########
 
-    def predict(self, x, to_numpy=True):
-        # x = self.preprocessors(x)
-        x = self.model.predict(x.merged_data[0])
-
-        if isinstance(self.outputs, (State, Action)):
-            if self.outputs.is_discrete():
-                x = np.argmax(x)
-            elif self.outputs.is_continuous():
-                x = 2 * np.array(x) - 1
-            else:
-                raise NotImplementedError("The outputs are not discrete or continuous...")
-            self.outputs.data = x
-        # x = self.postprocessors(x)
-        # return x
-        return self.outputs
+    # def predict(self, x, to_numpy=True, return_logits=True, set_output_data=False):
+    #     # x = self.preprocessors(x)
+    #     x = self.model.predict(x)
+    #
+    #     if isinstance(self.outputs, (State, Action)):
+    #         if self.outputs.is_discrete():
+    #             print(x)
+    #             x = np.argmax(x)
+    #             print(x)
+    #         elif self.outputs.is_continuous():
+    #             x = 2 * np.array(x) - 1
+    #         else:
+    #             raise NotImplementedError("The outputs are not discrete or continuous...")
+    #         self.outputs.data = x
+    #     # x = self.postprocessors(x)
+    #     # return x
+    #     return self.outputs
 
     def set_network(self, genome=None, config=None):
         """Set the genome network."""
