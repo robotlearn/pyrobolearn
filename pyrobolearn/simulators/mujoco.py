@@ -16,7 +16,9 @@ References:
     [3] DeepMind Control Suite: https://github.com/deepmind/dm_control/tree/master/dm_control/mujoco
 """
 
-from simulator import Simulator
+# TODO
+
+from pyrobolearn.simulators.simulator import Simulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

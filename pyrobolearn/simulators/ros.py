@@ -17,8 +17,11 @@ References:
     [3] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
 
+# TODO
+
 import rospy
-from simulator import Simulator
+
+from pyrobolearn.simulators.simulator import Simulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -51,13 +54,13 @@ class ROS(Simulator):
         super(ROS, self).__init__()
         self.models = []
 
-    def load_urdf(self, filename, position=None, orientation=None):
-        # load URDF: get ros services and ros topics
-        model = ROSModel(filename)
-
-        # create id and add model to the list of models
-        idx = len(self.models)
-        self.models.append(model)
-
-        # return id
-        return idx
+    # def load_urdf(self, filename, position=None, orientation=None):
+    #     # load URDF: get ros services and ros topics
+    #     model = ROSModel(filename)
+    #
+    #     # create id and add model to the list of models
+    #     idx = len(self.models)
+    #     self.models.append(model)
+    #
+    #     # return id
+    #     return idx

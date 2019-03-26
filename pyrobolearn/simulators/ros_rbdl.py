@@ -16,10 +16,12 @@ References:
     [2] RBDL: https://rbdl.bitbucket.io/
 """
 
+# TODO
+
 import rospy
 import rbdl
 
-from simulator import Simulator
+from pyrobolearn.simulators.simulator import Simulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

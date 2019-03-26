@@ -342,9 +342,9 @@ class NEATModel(object):  # Model):
         # set new network
         self.model = self.set_network(self.genome, self.config)
 
-    def predict(self, x=None):
+    def predict(self, x=None, to_numpy=True):
         """Predict the output of the model given the input."""
-        return self.model.activate(x)
+        return np.array(self.model.activate(x))
 
     def save(self, filename):
         """

@@ -2,7 +2,7 @@
 """Define the miscellaneous tasks.
 """
 
-from pyrobolearn.tasks.tasks import Task, ILTask, RLTask
+from pyrobolearn.tasks import Task, ILTask, RLTask
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -35,7 +35,7 @@ class WalkingTask(RLTask):
 
         # define world
         world = World(simulator)
-        world.setGravity()
+        world.set_gravity()
 
         # define reward
         rewards = [Reward()]

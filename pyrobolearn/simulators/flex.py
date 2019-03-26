@@ -17,7 +17,9 @@ References:
         https://sites.google.com/view/accelerated-gpu-simulation/home
 """
 
-from simulator import Simulator
+# TODO: see Isaac instead...
+
+from pyrobolearn.simulators.simulator import Simulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

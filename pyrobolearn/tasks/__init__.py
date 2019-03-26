@@ -19,3 +19,6 @@ from .inverse_reinforcement import IRLTask
 
 # import curriculum learning task
 from .curriculum import CLTask
+
+# import knowledge distillation task
+from .distillation import DistillationTask

@@ -157,6 +157,8 @@ class Action(object):
             if not isinstance(data, np.ndarray):
                 if isinstance(data, (list, tuple)):
                     data = np.array(data)
+                    if len(data) == 1 and self._data.shape != data.shape:  # TODO: check this line
+                        data = data[0]
                 elif isinstance(data, (int, float, np.integer)):  # np.integer is for Py3.5
                     data = data * np.ones(self._data.shape)
                 else:
@@ -226,6 +228,7 @@ class Action(object):
             else:
                 raise TypeError("Expecting a Torch tensor, numpy array, a list/tuple of int/float, or an int/float for"
                                 " 'data'")
+
             if self._torch_data.shape != data.shape:
                 raise ValueError("The given data does not have the same shape as previously.")
 
@@ -320,8 +323,15 @@ class Action(object):
         Return the shape of each action. Some actions, such as camera actions have more than 1 dimension.
         """
         # if self.has_actions():
-        return [d.shape for d in self.data]
+        return [data.shape for data in self.data]
         # return [self.data.shape]
+
+    @property
+    def merged_shape(self):
+        """
+        Return the shape of each merged action.
+        """
+        return [data.shape for data in self.merged_data]
 
     @property
     def size(self):
@@ -329,15 +339,29 @@ class Action(object):
         Return the size of each action.
         """
         # if self.has_actions():
-        return [d.size for d in self.data]
+        return [data.size for data in self.data]
         # return [len(self.data)]
+
+    @property
+    def merged_size(self):
+        """
+        Return the size of each merged action.
+        """
+        return [data.size for data in self.merged_data]
 
     @property
     def dimension(self):
         """
         Return the dimension (length of shape) of each action.
         """
-        return [len(d.shape) for d in self.data]
+        return [len(data.shape) for data in self.data]
+
+    @property
+    def merged_dimension(self):
+        """
+        Return the dimension (length of shape) of each merged state.
+        """
+        return [len(data.shape) for data in self.merged_data]
 
     @property
     def num_dimensions(self):

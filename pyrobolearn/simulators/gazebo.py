@@ -15,7 +15,9 @@ References:
     [1] Gazebo: http://gazebosim.org/
 """
 
-from simulator import Simulator
+# TODO
+
+from pyrobolearn.simulators.simulator import Simulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

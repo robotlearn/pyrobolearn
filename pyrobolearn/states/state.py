@@ -201,11 +201,15 @@ class State(object):
             if not isinstance(data, np.ndarray):
                 if isinstance(data, (list, tuple)):
                     data = np.array(data)
+                    if len(data) == 1 and self._data.shape != data.shape:  # TODO: check this line
+                        data = data[0]
                 elif isinstance(data, (int, float)):
                     data = data * np.ones(self._data.shape)
                 else:
                     raise TypeError("Expecting a numpy array, a list/tuple of int/float, or an int/float for 'data'")
             if self._data is not None and self._data.shape != data.shape:
+                print(data.shape)
+                print(self._data.shape)
                 raise ValueError("The given data does not have the same shape as previously.")
 
             # clip the value using the space
@@ -362,21 +366,42 @@ class State(object):
         """
         Return the shape of each state. Some states, such as camera states have more than 1 dimension.
         """
-        return [d.shape for d in self.data]
+        return [data.shape for data in self.data]
+
+    @property
+    def merged_shape(self):
+        """
+        Return the shape of each merged state.
+        """
+        return [data.shape for data in self.merged_data]
 
     @property
     def size(self):
         """
         Return the size of each state.
         """
-        return [d.size for d in self.data]
+        return [data.size for data in self.data]
+
+    @property
+    def merged_size(self):
+        """
+        Return the size of each merged state.
+        """
+        return [data.size for data in self.merged_data]
 
     @property
     def dimension(self):
         """
         Return the dimension (length of shape) of each state.
         """
-        return [len(d.shape) for d in self.data]
+        return [len(data.shape) for data in self.data]
+
+    @property
+    def merged_dimension(self):
+        """
+        Return the dimension (length of shape) of each merged state.
+        """
+        return [len(data.shape) for data in self.merged_data]
 
     @property
     def num_dimensions(self):

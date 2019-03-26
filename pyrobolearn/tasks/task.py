@@ -237,6 +237,8 @@ class Task(object):
         """
         if render:
             self.env.render()
+        else:
+            self.env.hide()
 
         # results = []
         rewards = []

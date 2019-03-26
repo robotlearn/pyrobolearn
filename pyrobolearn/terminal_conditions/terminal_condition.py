@@ -108,7 +108,7 @@ class HasFallen(FailedCondition):
 
     def _compute_angle(self):
         """Compute angle between the initial base up vector and current base up vector."""
-        up_vector = get_matrix_from_quaternion(self.robot.get_base_orientation(False))[:, 2]
+        up_vector = get_matrix_from_quaternion(self.robot.get_base_orientation())[:, 2]
         angle = np.arccos(np.dot(self.robot.base_up_vector, up_vector))
         return angle
 

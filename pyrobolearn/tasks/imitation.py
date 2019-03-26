@@ -351,7 +351,9 @@ class ILTask(Task):
             dt = 1. / 240
 
         # run several steps in the environment
+        print('Test: resetting...')
         self.reset()
+        # time.sleep(10)
         for t in count():
             if t >= num_steps or self.end_testing:
                 self.end_testing = False

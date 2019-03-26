@@ -38,7 +38,7 @@ class AbsoluteTimeState(TimeState):
         super(AbsoluteTimeState, self).__init__(data=data)
 
     def _read(self):
-        self.data = time.time()
+        self.data = np.array([time.time()])
 
 
 class RelativeTimeState(TimeState):
@@ -53,7 +53,7 @@ class RelativeTimeState(TimeState):
 
     def _reset(self):
         self.current_time = time.time()
-        self.data = 0.0
+        self.data = np.array([0.0])
 
     def _read(self):
         next_time = time.time()
@@ -72,7 +72,7 @@ class CumulativeTimeState(TimeState):
         super(CumulativeTimeState, self).__init__(data=data)
 
     def _reset(self):
-        self.data = 0.0
+        self.data = np.array([0.0])
         self.current_time = time.time()
 
     def _read(self):
@@ -237,5 +237,24 @@ if __name__ == '__main__':
     print("\nCombined state: {}".format(combined))
     print("\nFused state: {}".format(fused))
     for i in range(4):
-        print(combined.read())
-        print(fused.read())
+        print("combined.read: {}".format(combined.read()))
+        print("fused.read: {}".format(fused.read()))
+
+    print("Fused does not update the data...")
+
+    s1 = CumulativeTimeState()
+    s2 = PhaseState()
+    s3 = AbsoluteTimeState()
+    s_c1 = s1 + s2
+    s_c2 = s2 + s3
+    s = s_c1 + s_c2
+    print("In the following, we just update the s_c1[s1, s2]: \n")
+    for i in range(3):
+        print("s[s_c1, s_c2]: {}".format(s))
+        print("s_c1[s1,s2]: {}".format(s_c1))
+        print("s_c2[s2,s3]: {}".format(s_c2))
+        s_c1()
+        print("")
+        print(s.data)
+        print(s.merged_data)
+        print(s1.merged_data)

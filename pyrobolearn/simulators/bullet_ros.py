@@ -22,9 +22,13 @@ References:
     [4] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
 
-from simulator import Simulator
-from bullet import Bullet
-from ros import ROS
+# TODO
+
+import rospy
+
+from pyrobolearn.simulators.simulator import Simulator
+# from pyrobolearn.simulators.bullet import Bullet
+# from pyrobolearn.simulators.ros import ROS
 
 
 __author__ = "Brian Delhaisse"

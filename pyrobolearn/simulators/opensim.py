@@ -16,7 +16,9 @@ References:
     [3] OpenSim Reinforcement Learning: https://github.com/stanfordnmbl/osim-rl
 """
 
-from simulator import Simulator
+# TODO
+
+from pyrobolearn.simulators.simulator import Simulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

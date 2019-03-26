@@ -2,7 +2,7 @@
 """Define the reinforcement learning task.
 """
 
-# import gym
+import gym
 
 from pyrobolearn.tasks.task import Task
 

@@ -14,6 +14,8 @@ References:
     [3] RBDL: https://rbdl.bitbucket.io/
 """
 
+# TODO: this is not finished
+
 import numpy as np
 import subprocess, os, signal, sys, time
 
@@ -37,7 +39,7 @@ from gazebo_ros import gazebo_interface
 import tf.transformations as tft
 
 # import PRL
-from ros_rbdl import ROS_RBDL
+from pyrobolearn.simulators.ros_rbdl import ROS_RBDL
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
