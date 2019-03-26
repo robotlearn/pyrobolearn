@@ -84,6 +84,7 @@ class BO(object):
         self.num_rollouts = 1
         self.verbose = False
         self.episode = 0
+        self.render = False
 
         self.domain = domain
 
@@ -130,7 +131,8 @@ class BO(object):
         # run a number of rollouts
         reward = []
         for rollout in range(self.num_rollouts):
-            rew = self.task.run(num_steps=self.num_steps, dt=1./240, use_terminating_condition=True, render=False)
+            rew = self.task.run(num_steps=self.num_steps, dt=self.dt, use_terminating_condition=True,
+                                render=self.render)
             reward.append(rew)
         reward = np.mean(reward)
 
@@ -143,13 +145,31 @@ class BO(object):
 
         return reward
 
-    def train(self, num_steps=1000, num_rollouts=1, num_episodes=1, verbose=False, seed=None, max_time=3600):
+    def train(self, num_steps=1000, num_rollouts=1, num_episodes=1, verbose=False, render=False, seed=None,
+              max_time=3600, dt=0):
+        """
+        Train the policy.
+
+        Args:
+            num_steps (int): number of steps per rollout / episode. In one episode, how many steps does the environment
+                proceeds.
+            num_rollouts (int): number of rollouts per episode to average the results.
+            num_episodes (int): number of episodes.
+            verbose (bool): If True, it will print information about the training process.
+            seed (int): random seed.
+
+        Returns:
+            list of float: average rewards per episode.
+            list of float: maximum reward obtained per episode.
+        """
         # set few variables
         self.num_steps = num_steps
         self.num_rollouts = num_rollouts
         self.episode = 0
         self.verbose = verbose
         self.rewards = []
+        self.dt = dt
+        self.render = render
 
         # set seed if specified
         if seed is not None:
@@ -177,7 +197,7 @@ class BO(object):
         # print(opt.model.kernel.name)
 
         # Run the optimization
-        max_iter = num_episodes  # evaluation budget (min=4), nb_eval = 4 + max_iter
+        max_iter = num_episodes if num_episodes < 5 else num_episodes - 5  # evaluation budget (min=5)
         max_time = max_time  # time budget
         eps = 10e-6  # Minimum allows distance between the last two observations
 
@@ -205,6 +225,18 @@ class BO(object):
         return self.rewards
 
     def test(self, num_steps=1000, dt=0, use_terminating_condition=False, render=True):
+        """
+        Test the policy in the environment.
+
+        Args:
+            num_steps (int): number of steps to run the episode.
+            dt (float): time to sleep before the next step.
+            use_terminating_condition (bool): If True, it will use the terminal condition to end the environment.
+            render (bool): If True, it will render the environment.
+
+        Returns:
+            float: obtained reward
+        """
         return self.task.run(num_steps=num_steps, dt=dt, use_terminating_condition=use_terminating_condition,
                              render=render)
 

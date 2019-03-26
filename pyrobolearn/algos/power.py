@@ -5,8 +5,8 @@ This Policy learning by Weighting Exploration with the Returns (PoWER) algorithm
 Expectation-Maximization (EM) algorithm. The exploration is carried out in the parameter space.
 """
 
-# import sys
 import numpy as np
+import sys
 
 from pyrobolearn.envs import Env
 from pyrobolearn.tasks import RLTask
@@ -65,9 +65,9 @@ class PoWER(object):  # EMRLAlgo):
         Initialize the PoWER algorithm.
 
         Args:
-            task (RLTask, Env): RL task/env to run
-            policy (Policy): specify the policy (model) to optimize
-            std_params (float):
+            task (RLTask, Env): RL task/env to run.
+            policy (Policy): specify the policy (model) to optimize.
+            std_params (float): standard deviation of the parameters.
         """
         # create explorer
         # create evaluator
@@ -104,10 +104,12 @@ class PoWER(object):  # EMRLAlgo):
 
     @property
     def std_params(self):
+        """Return the standard deviation of the parameters."""
         return self._std_params
 
     @std_params.setter
     def std_params(self, std_params):
+        """Set the standard deviation of the parameters."""
         if std_params < 0.:
             std_params = 1.
         self._std_params = std_params
@@ -133,6 +135,20 @@ class PoWER(object):  # EMRLAlgo):
 
     # def train(self, num_episodes=1, num_steps=100, std_params=1., task=None, seed=None, debug=False):
     def train(self, num_steps=1000, num_rollouts=1, num_episodes=1, verbose=False, seed=None):
+        """
+        Train the policy.
+
+        Args:
+            num_steps (int): number of steps per rollout / episode. In one episode, how many steps does the environment
+                proceeds.
+            num_rollouts (int): number of rollouts per episode to average the results.
+            num_episodes (int): number of episodes.
+            verbose (bool): If True, it will print information about the training process.
+            seed (int): random seed.
+
+        Returns:
+            list of float: average rewards per episode.
+        """
         # check parameters
         if num_episodes < 1:
             num_episodes = 1
@@ -227,5 +243,17 @@ class PoWER(object):  # EMRLAlgo):
         return rewards
 
     def test(self, num_steps=1000, dt=0, use_terminating_condition=False, render=True):
+        """
+        Test the policy in the environment.
+
+        Args:
+            num_steps (int): number of steps to run the episode.
+            dt (float): time to sleep before the next step.
+            use_terminating_condition (bool): If True, it will use the terminal condition to end the environment.
+            render (bool): If True, it will render the environment.
+
+        Returns:
+            float: obtained reward
+        """
         return self.task.run(num_steps=num_steps, dt=dt, use_terminating_condition=use_terminating_condition,
                              render=render)

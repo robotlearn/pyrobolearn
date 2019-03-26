@@ -19,6 +19,7 @@ except ImportError as e:
 from pyrobolearn.envs import Env
 from pyrobolearn.tasks import RLTask
 
+# from pyrobolearn.algos.rl_algos import *
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -88,10 +89,12 @@ class CMAES(object):  # Algo):
 
     @property
     def population_size(self):
+        """Return the population size."""
         return self._population_size
 
     @population_size.setter
     def population_size(self, size):
+        """Set the population size."""
         # check argument
         if not isinstance(size, int):
             raise TypeError("Expecting the population size to be an integer.")
@@ -120,6 +123,21 @@ class CMAES(object):  # Algo):
         return -reward
 
     def train(self, num_steps=1000, num_rollouts=1, num_episodes=1, verbose=False, seed=None):
+        """
+        Train the policy.
+
+        Args:
+            num_steps (int): number of steps per rollout / episode. In one episode, how many steps does the environment
+                proceeds.
+            num_rollouts (int): number of rollouts per episode to average the results.
+            num_episodes (int): number of episodes.
+            verbose (bool): If True, it will print information about the training process.
+            seed (int): random seed.
+
+        Returns:
+            list of float: average rewards per episode.
+            list of float: maximum reward obtained per episode.
+        """
         # create CMA-ES
         self.es = cma.CMAEvolutionStrategy(self.policy.get_vectorized_parameters(), sigma0=self.sigma,
                                            inopts={'popsize': self.population_size})  # {'bounds': [-np.inf, np.inf]}
@@ -180,5 +198,17 @@ class CMAES(object):  # Algo):
         return avg_rewards, max_rewards
 
     def test(self, num_steps=1000, dt=0, use_terminating_condition=False, render=True):
+        """
+        Test the policy in the environment.
+
+        Args:
+            num_steps (int): number of steps to run the episode.
+            dt (float): time to sleep before the next step.
+            use_terminating_condition (bool): If True, it will use the terminal condition to end the environment.
+            render (bool): If True, it will render the environment.
+
+        Returns:
+            float: obtained reward
+        """
         return self.task.run(num_steps=num_steps, dt=dt, use_terminating_condition=use_terminating_condition,
                              render=render)

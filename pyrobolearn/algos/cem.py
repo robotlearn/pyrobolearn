@@ -6,7 +6,6 @@ This CEM is an evolutionary algorithm that explores in the parameter space of th
 
 import numpy as np
 import torch
-# from pathos.multiprocessing import Pool
 
 from pyrobolearn.envs import Env
 from pyrobolearn.tasks import RLTask
@@ -79,26 +78,47 @@ class CEM(object):  # RLAlgo
         self.best_reward = -np.infty
         self.best_parameters = None
 
-    def get_vectorized_parameters(self, to_numpy=True):
-        parameters = self.policy.parameters
-        vector = torch.cat([parameter.reshape(-1) for parameter in parameters])  # np.concatenate = torch.cat
-        if to_numpy:
-            return vector.detach().numpy()
-        return vector
+    ##############
+    # Properties #
+    ##############
 
-    def set_vectorized_parameters(self, vector):
-        # convert the vector to torch array
-        if isinstance(vector, np.ndarray):
-            vector = torch.from_numpy(vector).float()
+    @property
+    def population_size(self):
+        """Return the population size."""
+        return self._population_size
 
-        # set the parameters from the vectorized one
-        idx = 0
-        for parameter in self.policy.parameters:
-            size = parameter.nelement()
-            parameter.data = vector[idx:idx+size].reshape(parameter.shape)
-            idx += size
+    @population_size.setter
+    def population_size(self, size):
+        """Set the population size."""
+        # check argument
+        if not isinstance(size, int):
+            raise TypeError("Expecting the population size to be an integer.")
+        if size < 1:
+            raise ValueError("Expecting the population size to be an integer bigger than 0.")
+
+        # set population size
+        self._population_size = size
+
+    ###########
+    # Methods #
+    ###########
 
     def train(self, num_steps=1000, num_rollouts=1, num_episodes=1, verbose=False, seed=None):
+        """
+        Train the policy.
+
+        Args:
+            num_steps (int): number of steps per rollout / episode. In one episode, how many steps does the environment
+                proceeds.
+            num_rollouts (int): number of rollouts per episode to average the results.
+            num_episodes (int): number of episodes.
+            verbose (bool): If True, it will print information about the training process.
+            seed (int): random seed.
+
+        Returns:
+            list of float: average rewards per episode.
+            list of float: maximum reward obtained per episode.
+        """
         # set seed
         if seed is not None:
             np.random.seed(seed)
@@ -107,7 +127,7 @@ class CEM(object):  # RLAlgo
         max_rewards, avg_rewards = [], []
 
         # init
-        theta_mean = self.get_vectorized_parameters(to_numpy=True)
+        theta_mean = self.policy.get_vectorized_parameters(to_numpy=True)
         theta_std = np.ones(len(theta_mean))
         # pool = Pool(self.num_workers)
 
@@ -125,7 +145,7 @@ class CEM(object):  # RLAlgo
             rewards = []
             for i, theta in enumerate(thetas):
                 # set policy parameters
-                self.set_vectorized_parameters(theta)
+                self.policy.set_vectorized_parameters(theta)
 
                 # run a number of rollouts
                 reward = []
@@ -171,11 +191,23 @@ class CEM(object):  # RLAlgo
             print("\nBest reward found: {}".format(self.best_reward))
 
         # set the best parameters
-        self.set_vectorized_parameters(self.best_parameters)
+        self.policy.set_vectorized_parameters(self.best_parameters)
 
         return avg_rewards, max_rewards
 
-    def test(self, num_steps=1000, dt=0, use_terminating_condition=False, render=True):
+    def test(self, num_steps=1000, dt=0., use_terminating_condition=False, render=True):
+        """
+        Test the policy in the environment.
+
+        Args:
+            num_steps (int): number of steps to run the episode.
+            dt (float): time to sleep before the next step.
+            use_terminating_condition (bool): If True, it will use the terminal condition to end the environment.
+            render (bool): If True, it will render the environment.
+
+        Returns:
+            float: obtained reward
+        """
         return self.task.run(num_steps=num_steps, dt=dt, use_terminating_condition=use_terminating_condition,
                              render=render)
 
