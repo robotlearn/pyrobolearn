@@ -4,7 +4,7 @@
 Define the environment to perform a locomotion task; it mainly defines the reward function.
 """
 
-from env import Env
+from pyrobolearn.envs.env import Env
 from pyrobolearn.worlds import BasicWorld
 from pyrobolearn.states import State
 from pyrobolearn.policies import Policy

@@ -19,6 +19,8 @@ from pyrobolearn.rewards import Reward
 
 from pyrobolearn.terminal_conditions import TerminalCondition
 from pyrobolearn.physics import PhysicsRandomizer
+from pyrobolearn.states.generators import StateGenerator
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -52,24 +54,22 @@ class Env(object):  # gym.Env):
 
     """
 
-    def __init__(self, world, states, rewards=None, terminal_conditions=None, initial_state_distribution=None,
-                 physics_randomizer=None, extra_info=None):
+    def __init__(self, world, states, rewards=None, terminal_conditions=None, initial_state_generators=None,
+                 physics_randomizers=None, extra_info=None):
         """
         Initialize the environment.
 
         Args:
             world (World): world of the environment. The world contains all the objects (including robots), and has
-                           access to the simulator.
+                access to the simulator.
             states (State): states that are returned by the environment at each time step.
             rewards (None, Reward): The rewards can be None when for instance we are in an imitation learning setting,
-                                    instead of a reinforcement learning one. If None, only the state is returned by
-                                    the environment.
-            terminal_conditions (None, callable): A callable function or object that check if the policy has failed
-                                                 or succeeded the task.
-            initial_state_distribution (None, callable): A callable function or object that is called at the beginning
-                                                        when resetting the environment to generate the initial state
-                                                        distribution.
-            physics_randomizer (None, PhysicsRandomizer, list of PhysicsRandomizer): physics randomizers. This will be
+                instead of a reinforcement learning one. If None, only the state is returned by the environment.
+            terminal_conditions (None, callable, TerminalCondition, list of TerminalCondition): A callable function or
+                object that check if the policy has failed or succeeded the task.
+            initial_state_generators (None, StateGenerator, list of StateGenerator): state generators which are used
+                when resetting the environment to generate the initial states.
+            physics_randomizers (None, PhysicsRandomizer, list of PhysicsRandomizer): physics randomizers. This will be
                 called each time you reset the environment.
             extra_info (None, callable): Extra info returned by the environment at each time step.
         """
@@ -78,7 +78,8 @@ class Env(object):  # gym.Env):
         self.states = states
         self.rewards = rewards
         self.terminal_conditions = terminal_conditions
-        self.physics_randomizers = physics_randomizer
+        self.physics_randomizers = physics_randomizers
+        self.state_generators = initial_state_generators
         self.extra_info = extra_info if extra_info is not None else lambda: False
 
         self.rendering = False  # check with simulator
@@ -114,10 +115,18 @@ class Env(object):  # gym.Env):
         return self._states
 
     @states.setter
-    def states(self, states):
+    def states(self, states):  # TODO: make it a list of states
         """Set the states."""
-        if not isinstance(states, State):
-            raise TypeError("Expecting the 'states' argument to be an instance of State.")
+        if isinstance(states, State):
+            states = [states]
+        elif isinstance(states, (list, tuple)):
+            for idx, state in enumerate(states):
+                if not isinstance(state, State):
+                    raise TypeError("The {} item is not an instance of `State`, but instead: "
+                                    "{}".format(idx, type(state)))
+        else:
+            raise TypeError("Expecting the 'states' argument to be an instance of `State` or a list of `State`, "
+                            "instead got: {}".format(type(states)))
         self._states = states
 
     @property
@@ -179,9 +188,46 @@ class Env(object):  # gym.Env):
                             "instead got: {}".format(type(randomizers)))
         self._physics_randomizers = randomizers
 
+    @property
+    def state_generators(self):
+        """Return the initial state generator instance."""
+        return self._state_generators
+
+    @state_generators.setter
+    def state_generators(self, generators):
+        """Set the initial state generator."""
+        if generators is None:
+            generators = []
+        elif isinstance(generators, StateGenerator):
+            generators = [generators]
+        elif isinstance(generators, (list, tuple)):
+            for generator in generators:
+                if not isinstance(generator, StateGenerator):
+                    raise TypeError("Expecting the generator to be an instance of `StateGenerator`, instead got "
+                                    "{}".format(generator))
+        else:
+            raise TypeError("Expecting the given generators to be None, a `StateGenerator`, or a list of them; "
+                            "instead got: {}".format(type(generators)))
+        self._state_generators = generators
+
     ###########
     # Methods #
     ###########
+
+    def _convert_state_to_data(self, states, convert=True):
+        """Convert a `State` to a list of numpy arrays or a numpy array."""
+        if convert:
+            data = []
+            for state in states:
+                if isinstance(state, State):
+                    state = state.merged_data
+                if isinstance(state, list) and len(state) == 1:
+                    state = state[0]
+                data.append(state)
+            if len(data) == 1:
+                data = data[0]
+            return data
+        return states
 
     def reset(self):
         """
@@ -197,15 +243,19 @@ class Env(object):  # gym.Env):
         for randomizer in self.physics_randomizers:
             randomizer.randomize()
 
+        # generate initial states
+        for generator in self.state_generators:
+            generator()
+
         # reset states and return first states/observations
-        return self.states.reset()
+        states = [state.reset() for state in self.states]
+        return self._convert_state_to_data(states)
 
     def step(self, actions=None):
         """
-        Run one timestep of the environment's dynamics. When end of
-        episode is reached, you are responsible for calling `reset()`
-        to reset this environment's state.
-        Accepts an action and returns a tuple (observation, reward, done, info).
+        Run one timestep of the environment's dynamics. When end of episode is reached, you are responsible for
+        calling `reset()` to reset this environment's state. Accepts an action and returns a tuple (observation,
+        reward, done, info).
 
         Args:
             action (Action, None): an action provided by the policy(ies) to the environment
@@ -219,8 +269,8 @@ class Env(object):  # gym.Env):
         """
         # if not isinstance(actions, (list, tuple)):
         #     actions = [actions]
-        if actions is not None and not isinstance(actions, Action):
-            raise TypeError("Expecting actions to be an instance of Action.")
+        # if actions is not None and not isinstance(actions, Action):
+        #     raise TypeError("Expecting actions to be an instance of Action.")
 
         # apply each policy's action in the environment
         # for action in actions:
@@ -228,8 +278,8 @@ class Env(object):  # gym.Env):
         # TODO: calling the actions should be done inside the policy(ies), and not in the environments. The policy
         #  decided when to execute an action. Think about when there are multiple policies, when using multiprocessing,
         #  or when the environment runs in real-time.
-        if actions is not None and isinstance(actions, Action):
-            actions()
+        # if actions is not None and isinstance(actions, Action):
+        #     actions()
 
         # perform a step forward in the simulation which computes all the dynamics
         self.world.step()
@@ -239,20 +289,20 @@ class Env(object):  # gym.Env):
         rewards = self.rewards()
 
         # compute terminating condition
-        # done = [reward.is_done() for reward in self.rewards]
         done = any([condition() for condition in self.terminal_conditions])
 
         # get next state/obs for each policy
-        # states = [state() for state in self.states]
         # TODO: this should be before computing the rewards as some rewards need the next state
-        self.states()
+        states = [state() for state in self.states]
+        states = self._convert_state_to_data(states, convert=True)
 
         # get extra information
         info = self.extra_info()
 
-        return self.states, rewards, done, info
+        return states, rewards, done, info
 
     def render(self, mode='human'):
+        """Renders the environment (show the GUI)."""
         # This is dependent on the simulator. Some simulators allow to show the GUI at any point in time,
         # while others like pybullet requires to specify it at the beginning (thus see SimuRealInterface).
 
@@ -262,11 +312,12 @@ class Env(object):  # gym.Env):
         pass
 
     def hide(self):
-        # hide the GUI
+        """hide the GUI."""
         # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING, 0)
         pass
 
     def close(self):
+        """Close the environment."""
         pass
 
     def seed(self, seed=None):
@@ -284,16 +335,17 @@ class Env(object):  # gym.Env):
             randomizer.seed(seed)
 
 
-
 class BasicEnv(Env):
     """Basic Environment class.
 
     It creates a basic environment with a basic world (a floor and with gravity), no rewards, and no states.
     """
 
-    def __init__(self, states=None, rewards=None):
-        world = BasicWorld()
-        super(BasicEnv, self).__init__(world, states, rewards)
+    def __init__(self, sim, states=None, rewards=None, terminal_conditions=None, initial_state_generators=None,
+                 physics_randomizers=None, extra_info=None):
+        world = BasicWorld(sim)
+        super(BasicEnv, self).__init__(world, states, rewards, terminal_conditions, initial_state_generators,
+                                       physics_randomizers, extra_info)
 
 
 # Tests
@@ -306,7 +358,7 @@ if __name__ == '__main__':
 
     # create world
     world = BasicWorld(sim)
-    robot = world.loadRobot('coman', useFixedBase=True)
+    robot = world.load_robot('coman', fixed_base=True)
 
     # create states
     states = State()

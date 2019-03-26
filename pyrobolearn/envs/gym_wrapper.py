@@ -129,6 +129,9 @@ class GymEnvWrapper(gym.Env):
     def render(self, mode='human'):
         self.env.render(mode)
 
+    def hide(self):
+        pass
+
     def __repr__(self):
         return self.env.__repr__()
 
