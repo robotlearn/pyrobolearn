@@ -129,6 +129,7 @@ class State(object):
         self._normalizer = None
         self._noiser = None  # for noise
         self._name = name
+        self._training_mode = False
 
         # create ordered set which is useful if this state is a combination of multiple states
         self._states = OrderedSet()
@@ -425,9 +426,22 @@ class State(object):
         # check if distribution is discrete/continuous
         pass
 
+    @property
+    def in_training_mode(self):
+        """Return True if we are in training mode."""
+        return self._training_mode
+
     ###########
     # Methods #
     ###########
+
+    def train(self):
+        """Set the state in training mode."""
+        self._training_mode = True
+
+    def eval(self):
+        """Set the state in evaluation / test mode."""
+        self._training_mode = False
 
     def is_combined_states(self):
         """
