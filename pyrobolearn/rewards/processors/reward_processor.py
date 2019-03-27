@@ -5,7 +5,8 @@ It processes the rewards before returning them; this can be useful to standardiz
 """
 
 import numpy as np
-from reward import Reward
+
+from pyrobolearn.rewards.reward import Reward
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -277,7 +278,6 @@ class ScaleRewardProcessor(RewardProcessor):
         self.y2 = y2
         self.ratio = (self.y2 - self.y1) / (self.x2 - self.x1)
 
-    @convert_numpy
     def compute(self):
         reward = self.reward()
         self.value = self.y1 + (reward - self.x1) * self.ratio
