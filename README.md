@@ -3,11 +3,13 @@
 This repository contains the code for the *PyRoboLearn* (PRL) framework: a Python framework for Robot Learning.
 This framework revolves mainly around 7 axes: simulators, worlds, robots, interfaces, learning tasks (= environment and policy), learning models, and learning algorithms. 
 
-This development of this framework is ongoing.
+**Warning**: The development of this framework is ongoing, and thus some substantial changes might occur. Sorry for the inconvenience.
+
 
 ## Requirements
 
-The framework has been tested with Python 2.7 and Ubuntu 16.04 and 18.04. We also tested parts of it with Python 3.5 on Ubuntu 16.04 and so far so good, but there might be some errors that escaped me.
+The framework has been tested with Python 2.7 and Ubuntu 16.04 and 18.04. We also tested parts of it with Python 3.5 on Ubuntu 16.04 and so far so good, but there might be some errors that escaped my attention.
+
 
 ## Installation
 
@@ -79,3 +81,12 @@ Check the `README.md` file in the `examples` folder.
     year=2019,
 }
 ```
+
+
+## Acknowledgements
+
+Currently, we mainly use the PyBullet simulator. 
+- *PyBullet, a Python module for physcis simulation for games, robotics and machine learning*,
+Erwin Coumans and Yunfei Bai, 2016-2019
+- references for each robot, model, and others can be found in the corresponding class documentation
+
