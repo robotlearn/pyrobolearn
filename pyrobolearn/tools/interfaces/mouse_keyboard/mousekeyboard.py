@@ -16,7 +16,7 @@ from pyrobolearn.simulators import Simulator
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "(c) Brian Delhaisse"
+__license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
@@ -127,15 +127,18 @@ class MouseKeyboardInterface(InputInterface):
 
     @property
     def mouse_pressed(self):
+        """Return True if one of the mouse buttons has been pressed."""
         return self.left_click_pressed or self.right_click_pressed
 
     @mouse_pressed.setter
     def mouse_pressed(self, pressed):
+        """Set if the mouse has been pressed."""
         self.left_click_pressed = pressed
         self.right_click_pressed = pressed
 
     @property
     def mouse_down(self):
+        """Check if one of the mouse buttons is down."""
         return self.left_click_down or self.right_click_down
 
     ###########
@@ -143,6 +146,7 @@ class MouseKeyboardInterface(InputInterface):
     ###########
 
     def check_key_events(self):
+        """Check the key events."""
         # get key events
         events = self.simulator.get_keyboard_events()
 
@@ -161,6 +165,7 @@ class MouseKeyboardInterface(InputInterface):
                 self.key_pressed.append(key)
 
     def check_mouse_events(self):
+        """Check the mouse events."""
         # get mouse events
         events = self.simulator.get_mouse_events()
 

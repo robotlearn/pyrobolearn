@@ -1,7 +1,6 @@
 
-
 # general imports
-from sensor import *
+from .sensor import *
 
 # EMG sensor
-from emg import EMGInterface
+from . import emg

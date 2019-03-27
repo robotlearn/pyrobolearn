@@ -1,3 +1,3 @@
 
 # General import
-from robot import RobotInterface
+from .robot import RobotInterface

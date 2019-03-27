@@ -1,8 +1,20 @@
-# Bridges between audio interface and rotatory wing robots
+#!/usr/bin/env python
+"""Bridges between audio interface and rotatory wing robots
+"""
 
 from pyrobolearn.robots import RotaryWingUAV
-from pyrobolearn.tools.interfaces.audio import SpeechRecognizerInterface
+from pyrobolearn.tools.interfaces.audio.audio import SpeechRecognizerInterface
 from pyrobolearn.tools.bridges.bridge import Bridge
+
+
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
 
 
 class BridgeSpeechRecognizerRotatoryUAV(Bridge):

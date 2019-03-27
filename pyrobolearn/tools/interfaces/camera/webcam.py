@@ -4,11 +4,10 @@
 This provides the main interface to get pictures from the specified webcam.
 """
 
-
-import cv2  # OpenCV to capture image from webcam
 import os
+import cv2  # OpenCV to capture image from webcam
 
-from camera import CameraInterface
+from pyrobolearn.tools.interfaces.camera import CameraInterface
 
 # to close correctly the webcam once we run
 os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
@@ -38,23 +37,48 @@ class WebcamInterface(CameraInterface):
         [1] https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_gui/py_video_display/py_video_display.html
     """
 
-    def __init__(self, webcamId=0, saveVideo=False, filename='output.avi', fps=20, frameSize=(640,480), codec='XVID',
-                 convertTo=cv2.COLOR_BGR2RGB, use_thread=False, sleep_dt=0, verbose=False):
+    def __init__(self, webcam_id=0, filename=None, fps=20, frame_size=(640, 480), codec='XVID',
+                 convert_to=cv2.COLOR_BGR2RGB, use_thread=False, sleep_dt=0, verbose=False):
+        """
+        Initialize the webcam input interface.
+
+        Args:
+            webcam_id (int): webcam id. It allows to select which webcam to use if multiple webcams are present.
+            filename (str, None): If a string is given it will save the video at the specified filename. If None,
+                it won't save any videos.
+            fps (int): if we save a video, number of frames per second to record.
+            frame_size (tuple of int): if we save a video, the size of the frame (width, height).
+            codec (str): if we save a video, codec to be used.
+            convert_to (int, None): what format we should convert the images to (use `cv2.COLOR_*`). If None, it
+                won't convert the input image.
+            use_thread (bool): If True, it will run the interface in a separate thread than the main one.
+                The interface will update its data automatically.
+            sleep_dt (float): If :attr:`use_thread` is True, it will sleep the specified amount before acquiring the
+                next sample.
+            verbose (bool): If True, it will print information about the state of the interface. This is let to the
+                programmer what he / she wishes to print.
+        """
 
         # create video capture object
-        self.capture = cv2.VideoCapture(webcamId)
+        self.capture = cv2.VideoCapture(webcam_id)
 
         # create video writer
-        if saveVideo:
+        if filename is not None:
             # define codec (DIVX, XVID, MJPG, X264, WMV1, WMV2)
             codec = cv2.VideoWriter_fourcc(*codec)
+
+            # check if we need to add an extension to the given filename
+            tmp = filename.split('/')[-1].split('.')
+            if len(tmp) == 1:
+                filename += '.avi'
+
             # define video writer
-            self.writer = cv2.VideoWriter(filename, codec, fps, frameSize)
+            self.writer = cv2.VideoWriter(filename, codec, fps, frame_size)
         else:
             self.writer = None
 
         # variables
-        self.convertTo = convertTo
+        self.convertTo = convert_to
         self.verbose = False
 
         # camera image
@@ -64,6 +88,7 @@ class WebcamInterface(CameraInterface):
         super(WebcamInterface, self).__init__(use_thread=use_thread, sleep_dt=sleep_dt, verbose=verbose)
 
     def run(self):  # , display=True, convertToGray=False):
+        """Run the interface."""
         # get the frame from the webcam
         return_code, frame = self.capture.read()
 
@@ -97,6 +122,7 @@ class WebcamInterface(CameraInterface):
         return frame
 
     def __del__(self):
+        """Delete the interface."""
         self.capture.release()
         if self.writer is not None:
             self.writer.release()

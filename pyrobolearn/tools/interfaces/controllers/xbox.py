@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+"""Provide the Xbox controller interfaces.
+
+This provides the interfaces for the PlayStation controllers (Xbox 360 and Xbox One) using the `inputs` library.
+"""
 
 try:
     from inputs import devices
@@ -11,7 +16,17 @@ try:
 except ImportError as e:
     raise ImportError(repr(e) + '\nTry to install `inputs`: pip install inputs')
 
-from controller import GameControllerInterface
+from pyrobolearn.tools.interfaces.controllers.controller import GameControllerInterface
+
+
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
 
 
 class XboxControllerInterface(GameControllerInterface):
@@ -163,8 +178,8 @@ class XboxControllerInterface(GameControllerInterface):
     ###########
 
     def run(self):
-        #print('running')
-        events = self.gamepad.read() #blocking=False) # get_gamepad()
+        # print('running')
+        events = self.gamepad.read()  # blocking=False) # get_gamepad()
         for event in events:
             event_type, code, state = event.ev_type, event.code, event.state
             self.__setitem(event_type, self.map.get(code), state)
@@ -174,21 +189,21 @@ class XboxControllerInterface(GameControllerInterface):
                 print("Pushed button {} - state = {}".format(self.last_updated_button,
                                                              self.buttons[self.last_updated_button]))
 
-    def setLeftVibration(self, time_msec):
+    def set_left_vibration(self, time_msec):
         """Set the vibration for the left motor"""
         self.gamepad.set_vibration(1, 0, time_msec)
         # display info
         if self.verbose:
             print("Set vibration to the left motor for {} msec".format(time_msec))
 
-    def setRightVibration(self, time_msec):
+    def set_right_vibration(self, time_msec):
         """Set the vibration for the right motor"""
         self.gamepad.set_vibration(0, 1, time_msec)
         # display info
         if self.verbose:
             print("Set vibration to the right motor for {} msec".format(time_msec))
 
-    def setVibration(self, time_msec):
+    def set_vibration(self, time_msec):
         """Set the vibration for both motors"""
         self.gamepad.set_vibration(1, 1, time_msec)
         # display info

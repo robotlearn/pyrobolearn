@@ -1,8 +1,8 @@
 
-## Bridge for camera interfaces ##
+# Bridge for camera interfaces #
 
 # Bridge between camera and robot
-from robots import *
+from . import robots
 
 # Bridge between camera and world
-from world import *
+from . import world

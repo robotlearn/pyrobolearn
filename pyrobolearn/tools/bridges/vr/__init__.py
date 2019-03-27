@@ -1,8 +1,8 @@
 
-## Bridge for VR interfaces ##
+# Bridge for VR interfaces #
 
 # Bridge between VR and robot
-from robots import *
+from . import robots
 
 # Bridge between VR and world
-from world import *
+from . import world

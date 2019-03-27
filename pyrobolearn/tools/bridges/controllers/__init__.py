@@ -1,8 +1,8 @@
 
-## Bridge for controller interfaces ##
+# Bridge for controller interfaces #
 
 # Bridge between controller and robot
-from robots import *
+from . import robots
 
 # Bridge between controller and world
-from world import *
+from . import world

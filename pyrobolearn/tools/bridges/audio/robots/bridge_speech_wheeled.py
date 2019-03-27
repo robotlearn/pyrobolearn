@@ -1,10 +1,21 @@
-# Bridges between audio interface and wheeled robots
+#!/usr/bin/env python
+"""Bridges between audio interface and wheeled robots
+"""
 
 import numpy as np
 
 from pyrobolearn.robots import WheeledRobot, AckermannWheeledRobot
-from pyrobolearn.tools.interfaces.audio import SpeechRecognizerInterface
+from pyrobolearn.tools.interfaces.audio.audio import SpeechRecognizerInterface
 from pyrobolearn.tools.bridges.bridge import Bridge
+
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
 
 
 class BridgeSpeechRecognizerWheeledRobot(Bridge):

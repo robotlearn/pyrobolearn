@@ -1,9 +1,20 @@
-
-# Bridges between controller interface and wheeled robots
+#!/usr/bin/env python
+"""Bridges between controller interface and wheeled robots
+"""
 
 from pyrobolearn.robots import WheeledRobot, AckermannWheeledRobot
-from pyrobolearn.tools.interfaces.controllers import XboxControllerInterface, XboxOneControllerInterface
+from pyrobolearn.tools.interfaces.controllers.xbox import XboxControllerInterface, XboxOneControllerInterface
 from pyrobolearn.tools.bridges.bridge import Bridge
+
+
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
 
 
 class BridgeXboxWheeledRobot(Bridge):
@@ -25,7 +36,7 @@ class BridgeXboxWheeledRobot(Bridge):
         self.speed = 1.
 
     def step(self):
-        x,y = self.interface.LJ
+        x, y = self.interface.LJ
 
 
 class BridgeXboxOneWheeledRobot(Bridge):
@@ -46,7 +57,7 @@ class BridgeXboxOneWheeledRobot(Bridge):
         self.speed = 1.
 
     def step(self):
-        x,y = self.interface.LJ
+        x, y = self.interface.LJ
 
 
 class BridgeXboxOneAckermannWheeledRobot(Bridge):
@@ -65,7 +76,7 @@ class BridgeXboxOneAckermannWheeledRobot(Bridge):
         self.speed = 1.
 
     def step(self):
-        x,y = self.interface.LJ
+        x, y = self.interface.LJ
         self.robot.set_steering(-x / 2.)
         self.robot.drive_forward(y * self.speed)
 

@@ -9,6 +9,8 @@ The code that connects the interfaces to the simulator or elements inside this l
 in `pyrobolearn/tools/bridges`.
 """
 
+# TODO: when using thread makes it in a safe way and in an asynchronous manner
+
 import threading
 import time
 
@@ -54,6 +56,17 @@ class Interface(object):
     """
 
     def __init__(self, use_thread=False, sleep_dt=0, verbose=False):
+        """
+        Initialize the interface.
+
+        Args:
+            use_thread (bool): If True, it will run the interface in a separate thread than the main one.
+                The interface will update its data automatically.
+            sleep_dt (float): If :attr:`use_thread` is True, it will sleep the specified amount before acquiring or
+                setting the next sample.
+            verbose (bool): If True, it will print information about the state of the interface. This is let to the
+                programmer what he / she wishes to print.
+        """
         self.use_thread = use_thread
         self.dt = sleep_dt
         self.data = None
@@ -94,6 +107,16 @@ class Interface(object):
         """
         pass
 
+    #############
+    # Operators #
+    #############
+
+    def __repr__(self):
+        return self.__class__.__name__
+
+    def __str__(self):
+        return self.__class__.__name__
+
     def __call__(self):
         self.step()
 
@@ -109,6 +132,17 @@ class InputInterface(Interface):
     """
 
     def __init__(self, use_thread=False, sleep_dt=0, verbose=False):
+        """
+        Initialize the input interface.
+
+        Args:
+            use_thread (bool): If True, it will run the interface in a separate thread than the main one.
+                The interface will update its data automatically.
+            sleep_dt (float): If :attr:`use_thread` is True, it will sleep the specified amount before acquiring the
+                next sample.
+            verbose (bool): If True, it will print information about the state of the interface. This is let to the
+                programmer what he / she wishes to print.
+        """
         super(InputInterface, self).__init__(use_thread=use_thread, sleep_dt=sleep_dt, verbose=verbose)
 
 
@@ -121,6 +155,17 @@ class OutputInterface(Interface):
     """
 
     def __init__(self, use_thread=False, sleep_dt=0, verbose=False):
+        """
+        Initialize the output interface.
+
+        Args:
+            use_thread (bool): If True, it will run the interface in a separate thread than the main one.
+                The interface will update its data automatically.
+            sleep_dt (float): If :attr:`use_thread` is True, it will sleep the specified amount before setting the
+                next sample.
+            verbose (bool): If True, it will print information about the state of the interface. This is let to the
+                programmer what he / she wishes to print.
+        """
         super(OutputInterface, self).__init__(use_thread=use_thread, sleep_dt=sleep_dt, verbose=verbose)
 
 
@@ -137,4 +182,15 @@ class InputOutputInterface(Interface):
     """
 
     def __init__(self, use_thread=False, sleep_dt=0, verbose=False):
+        """
+        Initialize the input + output interface.
+
+        Args:
+            use_thread (bool): If True, it will run the interface in a separate thread than the main one.
+                The interface will update its data automatically.
+            sleep_dt (float): If :attr:`use_thread` is True, it will sleep the specified amount before acquiring /
+                setting the next sample.
+            verbose (bool): If True, it will print information about the state of the interface. This is let to the
+                programmer what he / she wishes to print.
+        """
         super(InputOutputInterface, self).__init__(use_thread=use_thread, sleep_dt=sleep_dt, verbose=verbose)

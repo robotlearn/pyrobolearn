@@ -1,11 +1,11 @@
 
 # general interface
-from vr import VRInterface
+from .vr import VRInterface
 
-## VR interfaces ##
+# VR interfaces #
 
-# Oculus
-from oculus import OculusInterface
-
-# HTC
-from htc import HTCViveInterface
+# # Oculus
+# from . import oculus
+#
+# # HTC
+# from . import htc

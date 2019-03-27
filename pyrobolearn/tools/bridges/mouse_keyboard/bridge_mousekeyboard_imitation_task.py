@@ -19,6 +19,7 @@ from pyrobolearn.tools.interfaces import MouseKeyboardInterface
 from pyrobolearn.tools.bridges.mouse_keyboard.bridge_mousekeyboard_world import BridgeMouseKeyboardWorld
 # from pyrobolearn.tasks.imitation_task import ILTask  # Warning: circular dependency
 
+
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]

@@ -8,6 +8,7 @@ bridges inherit from.
 
 from pyrobolearn.tools.interfaces import Interface
 
+
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
@@ -43,6 +44,13 @@ class Bridge(object):
     """
 
     def __init__(self, interface, priority=None):
+        """
+        Initialize the bridge.
+
+        Args:
+            interface (Interface): interface instance.
+            priority (None, int): priority number.
+        """
         self.interface = interface
         self.priority = priority
 
@@ -52,20 +60,24 @@ class Bridge(object):
 
     @property
     def interface(self):
+        """Return the interface instance associated to the bridge."""
         return self._interface
 
     @interface.setter
     def interface(self, interface):
+        """Set the interface associated to the bridge."""
         if not isinstance(interface, Interface):
             raise TypeError("Expecting interface to be an instance of Interface, instead got {}".format(interface))
         self._interface = interface
 
     @property
     def priority(self):
+        """Return the priority number."""
         return self._priority
 
     @priority.setter
     def priority(self, priority):
+        """Set the priority number."""
         if priority is not None:
             if not isinstance(priority, int):
                 raise TypeError("Expecting the priority to be an integer, instead got {}".format(priority))

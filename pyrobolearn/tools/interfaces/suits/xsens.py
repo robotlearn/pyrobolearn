@@ -1,5 +1,5 @@
 
-from suit import SuitInterface
+from pyrobolearn.tools.interfaces.suits import SuitInterface
 
 
 class XsensSuitInterface(SuitInterface):

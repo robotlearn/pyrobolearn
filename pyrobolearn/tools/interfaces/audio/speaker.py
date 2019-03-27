@@ -1,5 +1,5 @@
 
-from audio import OutputAudioInterface
+from pyrobolearn.tools.interfaces.audio import OutputAudioInterface
 
 
 class SpeakerInterface(OutputAudioInterface):

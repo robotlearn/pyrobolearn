@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Define the PlayStation controller interface
+"""Provide the PlayStation controller interfaces.
 
 This provides the interfaces for the PlayStation controllers (PS3 and PS4) using the `inputs` library.
 """
@@ -9,7 +9,7 @@ try:
 except ImportError as e:
     raise ImportError(repr(e) + '\nTry to install `inputs`: pip install inputs')
 
-from controller import GameControllerInterface
+from pyrobolearn.tools.interfaces.controllers.controller import GameControllerInterface
 
 
 __author__ = "Brian Delhaisse"
@@ -51,10 +51,10 @@ class PSControllerInterface(GameControllerInterface):
 
         # translation
         buttons = ['BTN_SOUTH', 'BTN_EAST', 'BTN_WEST', 'BTN_NORTH', 'BTN_THUMBL', 'BTN_THUMBR', 'BTN_TL', 'BTN_TL2',
-                   'BTN_TR', 'BTN_TR2', 'BTN_START', 'BTN_SELECT', 'BTN_MODE', 'ABS_HAT0X', 'ABS_HAT0Y', 'ABS_Z', 'ABS_RZ',
-                   'ABS_X', 'ABS_Y', 'ABS_RX', 'ABS_RY']
-        ps4_buttons = ['X', 'O', 'S', 'T', 'LJB', 'RJB', 'L1', 'L2', 'R1', 'R2', 'options', 'share', 'PS', 'L', 'R', 'RT',
-                       'LJX', 'LJY', 'RJX', 'RJY']
+                   'BTN_TR', 'BTN_TR2', 'BTN_START', 'BTN_SELECT', 'BTN_MODE', 'ABS_HAT0X', 'ABS_HAT0Y', 'ABS_Z',
+                   'ABS_RZ', 'ABS_X', 'ABS_Y', 'ABS_RX', 'ABS_RY']
+        ps4_buttons = ['X', 'O', 'S', 'T', 'LJB', 'RJB', 'L1', 'L2', 'R1', 'R2', 'options', 'share', 'PS', 'L', 'R',
+                       'RT', 'LJX', 'LJY', 'RJX', 'RJY']
         self.map = dict(zip(buttons, ps4_buttons))
         self.inv_map = dict(zip(ps4_buttons, buttons))
 
@@ -169,21 +169,21 @@ class PSControllerInterface(GameControllerInterface):
                 print("Pushed button {} - state = {}".format(self.last_updated_button,
                                                              self.buttons[self.last_updated_button]))
 
-    def setLeftVibration(self, time_msec):
+    def set_left_vibration(self, time_msec):
         """Set the vibration for the left motor"""
         self.gamepad.set_vibration(1, 0, time_msec)
         # display info
         if self.verbose:
             print("Set vibration to the left motor for {} msec".format(time_msec))
 
-    def setRightVibration(self, time_msec):
+    def set_right_vibration(self, time_msec):
         """Set the vibration for the right motor"""
         self.gamepad.set_vibration(0, 1, time_msec)
         # display info
         if self.verbose:
             print("Set vibration to the right motor for {} msec".format(time_msec))
 
-    def setVibration(self, time_msec):
+    def set_vibration(self, time_msec):
         """Set the vibration for both motors"""
         self.gamepad.set_vibration(1, 1, time_msec)
         # display info
@@ -257,7 +257,8 @@ class PS4ControllerInterface(PSControllerInterface):
 
     def __init__(self, use_thread=False):
         super(PS4ControllerInterface, self).__init__(use_thread=use_thread,
-                                                     controller_name='Sony Interactive Entertainment Wireless Controller')
+                                                     controller_name='Sony Interactive Entertainment Wireless '
+                                                                     'Controller')
 
 
 # Tests

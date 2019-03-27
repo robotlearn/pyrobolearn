@@ -1,5 +1,5 @@
 
-from sensor import BioSensorInterface
+from pyrobolearn.tools.interfaces.sensors import BioSensorInterface
 
 
 class EMGInterface(BioSensorInterface):

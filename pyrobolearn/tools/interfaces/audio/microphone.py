@@ -1,5 +1,5 @@
 
-from audio import InputAudioInterface
+from pyrobolearn.tools.interfaces.audio import InputAudioInterface
 
 
 class MicrophoneInterface(InputAudioInterface):

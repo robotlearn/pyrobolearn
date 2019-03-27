@@ -6,25 +6,25 @@ from .interface import *
 from .mouse_keyboard import *
 
 # audio
-# from audio import *
+from . import audio
 
 # camera
-# from camera import *
+from . import camera
 
 # controllers
-# from controllers import *
+from . import controllers
 
 # bci
-# from bci import *
+from . import bci
 
 # sensor suits
-# from suits import *
+from . import suits
 
 # sensors (in general, EMG, etc)
-# from sensors import *
+from . import sensors
 
 # VR interfaces
-# from vr import *
+from . import vr
 
 # robot interfaces
-# from robots import *
+from . import robots

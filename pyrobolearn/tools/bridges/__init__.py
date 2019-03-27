@@ -7,13 +7,13 @@ from .bridge import Bridge
 from .mouse_keyboard import *
 
 # Bridge for audio interfaces
-# from audio import *
+from . import audio
 
 # Bridge for camera interfaces
-# from camera import *
+from . import camera
 
 # Bridge for controller interfaces
-# from controllers import *
+from . import controllers
 
 # Bridge for VR interfaces
-# from vr import *
+from . import vr

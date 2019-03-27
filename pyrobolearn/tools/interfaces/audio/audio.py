@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+"""Define the main basic Camera interface
+
+This defines the main basic camera interface from which all other interfaces which uses a camera inherit from.
+"""
+
 import os
 
 from pyrobolearn.tools.interfaces.interface import Interface, InputInterface, OutputInterface, InputOutputInterface
@@ -67,6 +73,16 @@ except ImportError as e:
 #     raise ImportError(e.__str__() + string)
 
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
+
 class AudioInterface(Interface):
     r"""Audio Interface
 
@@ -81,12 +97,14 @@ class AudioInterface(Interface):
     """
 
     def __init__(self):
+        """Initialize the audio interface."""
         super(AudioInterface, self).__init__()
         self.port = pyaudio.PyAudio()
         self.stream = self.port.open(format=pyaudio.paInt16, channels=2, rate=44100, input=True,
-                                     frames_per_buffer=1024) #input_device_index=)
+                                     frames_per_buffer=1024)  # input_device_index=)
 
-    def printInfo(self):
+    def print_info(self):
+        """Print information about the audio interface."""
         for i in range(self.port.get_device_count()):
             info = self.port.get_device_info_by_index(i)
             print("###############################################################")
@@ -96,19 +114,23 @@ class AudioInterface(Interface):
                                                              info['defaultHighInputLatency']))
             print("Output latency (low, high): {}, {}".format(info['defaultLowOutputLatency'],
                                                               info['defaultHighOutputLatency']))
-            print("Is an input device? {}".format(self.isInputDevice(info)))
-            print("Is an output device? {}".format(self.isOutputDevice(info)))
+            print("Is an input device? {}".format(self.is_input_device(info)))
+            print("Is an output device? {}".format(self.is_output_device(info)))
 
-    def isInputDevice(self, info):
-        return (info['maxInputChannels'] != 0)
+    @staticmethod
+    def is_input_device(info):
+        return info['maxInputChannels'] != 0
 
-    def isOutputDevice(self, info):
-        return (info['maxOutputChannels'] != 0)
+    @staticmethod
+    def is_output_device(info):
+        return info['maxOutputChannels'] != 0
 
     def step(self):
+        """Perform a step with the interface."""
         data = self.stream.read()
 
     def __del__(self):
+        """Delete the audio interface."""
         self.stream.stop_stream()
         self.stream.close()
 
@@ -149,6 +171,16 @@ class SpeechRecognizerInterface(InputInterface):
     """
 
     def __init__(self, use_thread=False, lang='english', verbose=False):
+        """
+        Initialize the speech recognizer input interface.
+
+        Args:
+            use_thread (bool): If True, it will run the interface in a separate thread than the main one.
+                The interface will update its data automatically.
+            lang (str): language to recognize
+            verbose (bool): If True, it will print information about the state of the interface. This is let to the
+                programmer what he / she wishes to print.
+        """
         self.recognizer = sr.Recognizer()
         self.microphone = sr.Microphone()  # device_index=-1
 
@@ -165,6 +197,7 @@ class SpeechRecognizerInterface(InputInterface):
         super(SpeechRecognizerInterface, self).__init__(use_thread=use_thread, verbose=verbose)
 
     def run(self):
+        """Run the interface."""
         # listen to speech through the microphone
         with self.microphone as source:
             self.recognizer.adjust_for_ambient_noise(source)
@@ -193,7 +226,16 @@ class SpeechSynthesizerInterface(OutputInterface):
     """
 
     def __init__(self, use_thread=False, lang='english', verbose=False):
+        """
+        Initialize the speech synthesizer output interface.
 
+        Args:
+            use_thread (bool): If True, it will run the interface in a separate thread than the main one.
+                The interface will update its data automatically.
+            lang (str): language to recognize
+            verbose (bool): If True, it will print information about the state of the interface. This is let to the
+                programmer what he / she wishes to print.
+        """
         languages = {'french': 'fr', 'english': 'en', 'american english': 'en-US', 'british english': 'en-GB',
                      'indian english': 'en-IN', 'italian': 'it', 'japanese': 'ja', 'korean': 'ko', 'german': 'de',
                      'dutch': 'nl', 'spanish': 'es', 'spanish (peru)': 'es-PE', 'chinese': 'zh-CN',
@@ -207,6 +249,7 @@ class SpeechSynthesizerInterface(OutputInterface):
         super(SpeechSynthesizerInterface, self).__init__(use_thread=use_thread, verbose=verbose)
 
     def run(self):
+        """Run the interface."""
         if self.updated:
             # tts = text-to-speech
             tts = gTTS(text=self.data, lang=self.lang)
@@ -216,6 +259,7 @@ class SpeechSynthesizerInterface(OutputInterface):
             self.updated = False
 
     def update(self, data):
+        """Update the data."""
         self.data = data
         self.updated = True
 
@@ -224,7 +268,18 @@ class SpeechTranslatorInterface(InputOutputInterface):
     r"""Speech Translator Interface
     """
 
-    def __init__(self, use_thread=False, target_lang='english', from_lang='auto'):
+    def __init__(self, use_thread=False, target_lang='english', from_lang='auto', verbose=False):
+        """
+        Initialize the speech translator input/output interface.
+
+        Args:
+            use_thread (bool): If True, it will run the interface in a separate thread than the main one.
+                The interface will update its data automatically.
+            target_lang (str): language to translate to.
+            from_lang (str): language to translate from.
+            verbose (bool): If True, it will print information about the state of the interface. This is let to the
+                programmer what he / she wishes to print.
+        """
         self.translator = Translator()
 
         languages = {'french': 'fr', 'english': 'en', 'american english': 'en-US', 'british english': 'en-GB',
@@ -240,9 +295,10 @@ class SpeechTranslatorInterface(InputOutputInterface):
         self.input_data = ''
         self.data = ''
 
-        super(SpeechTranslatorInterface, self).__init__(use_thread)
+        super(SpeechTranslatorInterface, self).__init__(use_thread, verbose=verbose)
 
     def run(self):
+        """Run the interface."""
         # translate
         if self.updated and self.target_lang != self.from_lang:
             translated = self.translator.translate(self.input_data, dest=self.target_lang, src=self.from_lang)
@@ -250,6 +306,7 @@ class SpeechTranslatorInterface(InputOutputInterface):
             self.updated = False
 
     def update(self, data):
+        """Update the data."""
         self.input_data = data
         self.updated = True
 
@@ -260,7 +317,18 @@ class SpeechInterface(InputOutputInterface):
     This class performs speech recognition, translation, and synthesization.
     """
 
-    def __init__(self, use_thread=False, target_lang='english', from_lang='english'):
+    def __init__(self, use_thread=False, target_lang='english', from_lang='english', verbose=False):
+        """
+        Initialize the speech (recognizer, translator, and synthesizer) interface.
+
+        Args:
+            use_thread (bool): If True, it will run the interface in a separate thread than the main one.
+                The interface will update its data automatically.
+            target_lang (str): language to translate to.
+            from_lang (str): language to translate from.
+            verbose (bool): If True, it will print information about the state of the interface. This is let to the
+                programmer what he / she wishes to print.
+        """
         self.recognizer = SpeechRecognizerInterface(use_thread=False, lang=from_lang)
         self.translator = None
         if target_lang != from_lang:
@@ -272,19 +340,21 @@ class SpeechInterface(InputOutputInterface):
         self.input_data = ''
         self.output_data = ''
 
-        super(SpeechInterface, self).__init__(use_thread)
+        super(SpeechInterface, self).__init__(use_thread, verbose=verbose)
 
     def run(self):
+        """Run the interface."""
         pass
 
     def update(self, data):
+        """Update the interface."""
         pass
 
 
 # Tests
 if __name__ == '__main__':
     interface = AudioInterface()
-    interface.printInfo()
+    interface.print_info()
 
     # recognize, translate and synthesize speech
     english = set(['en', 'en-US', 'en-GB'])

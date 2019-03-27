@@ -1,6 +1,6 @@
 
 # general import
-from suit import SuitInterface
+from .suit import SuitInterface
 
 # Xsens suit
-from xsens import XsensSuitInterface
+from . import xsens

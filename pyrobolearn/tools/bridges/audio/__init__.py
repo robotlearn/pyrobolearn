@@ -1,8 +1,8 @@
 
-## Bridge for audio interfaces ##
+# Bridge for audio interfaces #
 
 # Bridge between audio and robot
-from robots import *
+from . import robots
 
 # Bridge between audio and world
-from world import *
+from . import world

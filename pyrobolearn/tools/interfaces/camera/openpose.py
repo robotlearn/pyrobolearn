@@ -15,8 +15,8 @@ except ImportError as e:
                                 '`pyrobolearn/scripts/install_openpose.sh` to install the library and the associated '
                                 'python wrapper.')
 
-from camera import CameraInterface
-from webcam import WebcamInterface
+from pyrobolearn.tools.interfaces.camera import CameraInterface
+from pyrobolearn.tools.interfaces.camera.webcam import WebcamInterface
 
 
 __author__ = "Brian Delhaisse"
@@ -44,6 +44,22 @@ class OpenPoseInterface(CameraInterface):
 
     def __init__(self, camera=None, detect_face=False, detect_hands=False, openpose_path=None,
                  use_thread=False, sleep_dt=0, verbose=False):
+        """
+        Initialize the openpose camera input interface.
+
+        Args:
+            camera (None, CameraInterface): camera interface to get the images from.
+            detect_face (bool): if True, it will also detect the face keypoints.
+            detect_hands (bool): if True, it will also detect the hand keypoints.
+            openpose_path (str, None): path to the Openpose folder. If None, it will get the `OPENPOSE_PATH` bash
+                environment variable.
+            use_thread (bool): If True, it will run the interface in a separate thread than the main one.
+                The interface will update its data automatically.
+            sleep_dt (float): If :attr:`use_thread` is True, it will sleep the specified amount before acquiring the
+                next sample.
+            verbose (bool): If True, it will print information about the state of the interface. This is let to the
+                programmer what he / she wishes to print.
+        """
 
         # save variables
         self.detect_face = detect_face
@@ -52,7 +68,7 @@ class OpenPoseInterface(CameraInterface):
         # Check the given camera
         if camera is None:
             # If None, get pictures from a webcam
-            camera = WebcamInterface(use_thread=False, convertTo=None, verbose=False)
+            camera = WebcamInterface(use_thread=False, convert_to=None, verbose=False)
             self.camera_in_openpose = True
         else:
             self.camera_in_openpose = False
@@ -125,6 +141,7 @@ class OpenPoseInterface(CameraInterface):
 
     @property
     def num_bodies(self):
+        """Get the number of detected bodies."""
         return len(self.datum.poseKeypoints)
 
     @property
@@ -134,41 +151,51 @@ class OpenPoseInterface(CameraInterface):
 
     @property
     def left_hand_keypoints(self):
+        """Get the left hand keypoints."""
         return self.datum.handKeypoints[0]
 
     @property
     def right_hand_keypoints(self):
+        """Get the right hand keypoints."""
         return self.datum.handKeypoints[1]
 
     @property
     def hand_keypoints(self):
+        """Get the hand keypoints."""
         return self.left_hand_keypoints, self.right_hand_keypoints
 
     @property
     def face_keypoints(self):
+        """Get the face keypoints."""
         return self.datum.faceKeypoints
 
     @property
     def keypoints(self):
+        """Get the keypoints."""
         return self.body_keypoints, self.face_keypoints, self.left_hand_keypoints, self.right_hand_keypoints
 
     @property
     def heatmap(self):
+        """Get the heatmap."""
         return None
 
     @property
     def input_image(self):
+        """Get the input image."""
         return self.datum.cvInputData
 
     @property
     def output_image(self):
+        """Get the output image."""
         return self.datum.cvOutputData
 
     @property
     def num_gpus(self):
+        """Return the number of GPUs."""
         return pyopenpose.get_gpu_number()
 
     def run(self, input_frame=None):
+        """Run the interface."""
         if input_frame is None:
             # read image
             if self.camera_in_openpose:

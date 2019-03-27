@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+"""Provide the Kinect input interface.
+"""
 
 # import kinect library
 
@@ -17,11 +20,12 @@
 # - https://stackoverflow.com/questions/19181332/libfreenect-vs-openni
 
 import numpy as np
+import cv2
 
 # by default, use `openni` (optionally with the freenect driver) as it seems to be the most complete library
 KINECT_LIBRARY = 'freenect'
 
-if KINECT_LIBRARY[-8:] == 'freenect': # 'libfreenect' or 'freenect'
+if KINECT_LIBRARY[-8:] == 'freenect':  # 'libfreenect' or 'freenect'
     # References:
     # - OpenKinect: https://openkinect.org/wiki/Getting_Started
     # - tuto: naman5.wordpress.com/2014/06/24/experimenting-with-kinect-using-opencv-python-and-open-kinect-libfreenect/
@@ -99,7 +103,17 @@ else:
 
 
 # import interface
-from camera import CameraInterface
+from pyrobolearn.tools.interfaces.camera import CameraInterface
+
+
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
 
 
 class KinectInterface(CameraInterface):
@@ -131,6 +145,17 @@ class KinectInterface(CameraInterface):
     """
 
     def __init__(self, use_thread=False, sleep_dt=0., verbose=False):
+        """
+        Initialize the Kinect input interface.
+
+        Args:
+            use_thread (bool): If True, it will run the interface in a separate thread than the main one.
+                The interface will update its data automatically.
+            sleep_dt (float): If :attr:`use_thread` is True, it will sleep the specified amount before acquiring
+                the next sample.
+            verbose (bool): If True, it will print information about the state of the interface. This is let to the
+                programmer what he / she wishes to print.
+        """
         super(KinectInterface, self).__init__(use_thread=use_thread, sleep_dt=sleep_dt, verbose=verbose)
 
 
@@ -148,25 +173,54 @@ class FreenectKinectInterface(KinectInterface):
     """
 
     def __init__(self, use_thread=False, sleep_dt=0., verbose=False):
+        """
+        Initialize the Kinect input interface using the `freenect` library.
 
+        Args:
+            use_thread (bool): If True, it will run the interface in a separate thread than the main one.
+                The interface will update its data automatically.
+            sleep_dt (float): If :attr:`use_thread` is True, it will sleep the specified amount before acquiring
+                the next sample.
+            verbose (bool): If True, it will print information about the state of the interface. This is let to the
+                programmer what he / she wishes to print.
+        """
         # data
         self.rgb = None
         self.depth = None
 
         super(FreenectKinectInterface, self).__init__(use_thread=use_thread, sleep_dt=sleep_dt, verbose=verbose)
 
-    def get_image(self, convertTo=None):  # cv2.COLOR_RGB2BGR):
+    def get_image(self, convert_to=None):  # cv2.COLOR_RGB2BGR):
+        """Get the RGB image.
+
+        Args:
+            convert_to (int): if the picture must be converted to another format using `cv2.COLOR`
+
+        Returns:
+            np.array[width, height, 3]: RGB image.
+        """
         array, _ = freenect.sync_get_video()
-        if convertTo is not None:
-            array = cv2.cvtColor(array, convertTo)
+        if convert_to is not None:
+            array = cv2.cvtColor(array, convert_to)
         return array
 
     def get_depth(self):
+        """Get the depth image.
+
+        Returns:
+            np.array[width, height]: depth image.
+        """
         array, _ = freenect.sync_get_depth()
         array = array.astype(np.uint8)
         return array
 
     def run(self):
+        """Run the interface; get the RGB and depth images.
+
+        Returns:
+            np.array[width, height, 3]: RGB image
+            np.array[width, height]: depth image
+        """
         self.rgb = self.get_image()
         self.depth = self.get_depth()
 
@@ -185,7 +239,17 @@ class OpenNIKinectInterface(KinectInterface):
     """
 
     def __init__(self, use_thread=False, sleep_dt=0., verbose=False):
+        """
+        Initialize the Kinect input interface using the `openni` library.
 
+        Args:
+            use_thread (bool): If True, it will run the interface in a separate thread than the main one.
+                The interface will update its data automatically.
+            sleep_dt (float): If :attr:`use_thread` is True, it will sleep the specified amount before acquiring
+                the next sample.
+            verbose (bool): If True, it will print information about the state of the interface. This is let to the
+                programmer what he / she wishes to print.
+        """
         # initialize openni2; you can give the path to the library as an argument. Otherwise, it will look for
         # OPENNI2_REDIST and OPENNI2_REDIST64 environment variables.
         openni2.initialize()
@@ -224,6 +288,12 @@ class OpenNIKinectInterface(KinectInterface):
         super(OpenNIKinectInterface, self).__init__(use_thread=use_thread, sleep_dt=sleep_dt, verbose=verbose)
 
     def run(self):
+        """Run the interface; get the RGB and depth images.
+
+        Returns:
+            np.array[width, height, 3]: RGB image
+            np.array[width, height]: depth image
+        """
         # read frames
         rgb_frame = self.rgb_stream.read_frame()
         depth_frame = self.depth_stream.read_frame()
@@ -243,6 +313,7 @@ class OpenNIKinectInterface(KinectInterface):
         return self.rgb, self.depth
 
     def __del__(self):
+        """Delete the Kinect interface."""
         # close all the streams
         self.rgb_stream.close()
         self.depth_stream.close()
@@ -262,7 +333,18 @@ class KinectSkeletonTrackingInterface(KinectInterface):
     """
 
     def __init__(self, use_thread=False, sleep_dt=0., verbose=False, track_hand=False):
+        """
+        Initialize the Kinect input interface using the `openni` library.
 
+        Args:
+            use_thread (bool): If True, it will run the interface in a separate thread than the main one.
+                The interface will update its data automatically.
+            sleep_dt (float): If :attr:`use_thread` is True, it will sleep the specified amount before acquiring
+                the next sample.
+            verbose (bool): If True, it will print information about the state of the interface. This is let to the
+                programmer what he / she wishes to print.
+            track_hand (bool): If True, it will track the hands.
+        """
         # initialize openni2 and nite2; you can give the path to the library as an argument.
         # Otherwise, it will look for OPENNI2_REDIST / OPENNI2_REDIST64 and NITE2_REDIST / NITE2_REDIST64 environment
         # variables.
@@ -311,6 +393,11 @@ class KinectSkeletonTrackingInterface(KinectInterface):
                                                               verbose=verbose)
 
     def run(self):
+        """Run the interface; get the skeleton data.
+
+        Returns:
+            dict: skeleton data
+        """
         # read frame
         frame = self.tracker.read_frame()
 
@@ -338,12 +425,13 @@ class KinectSkeletonTrackingInterface(KinectInterface):
         return self.data
 
     def __del__(self):
+        """Delete the Kinect interface."""
         # unload nite2 and openni2
         nite2.unload()
         openni2.unload()
 
 
-class ROSKinectInterface(CameraInterface):
+class ROSKinectInterface(KinectInterface):
     r"""ROS Kinect Interface
 
     References:

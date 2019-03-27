@@ -1,10 +1,26 @@
+#!/usr/bin/env python
+"""Provide the abstract game controller interface class.
+
+All the game controller interfaces inherit from the `GameControllerInterface` class defined here.
+
+Dependencies:
+- `pyrobolearn.tools.interfaces.InputInterface`
+"""
 
 from pyrobolearn.tools.interfaces.interface import InputOutputInterface
+
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
 
 
 class GameControllerInterface(InputOutputInterface):
     r"""Game Controller Interface
-
     """
 
     def __init__(self, use_thread=False, sleep_dt=0, verbose=False):
