@@ -87,6 +87,8 @@ class NN(object):  # Model
         self._input_shape = input_shape
         self._output_shape = output_shape
 
+        self.base_output = None
+
         # TODO: infer the framework based on the model
         self.framework = framework
 
@@ -105,6 +107,14 @@ class NN(object):  # Model
         if model is not None:
             if not (isinstance(model, torch.nn.Module)):  # or isinstance(model, keras.models.Model)):
                 raise TypeError("The model should be an instance of torch.nn.Module or keras.models.Model")
+
+            # everytime this model is called it will save the base output, that is the output of the second to last
+            # layer.
+            def hook(module, inputs, outputs):
+                self.base_output = inputs
+
+            model[-1].register_forward_hook(hook)
+
         self._model = model
 
     @property
@@ -188,6 +198,18 @@ class NN(object):  # Model
     ###########
     # Methods #
     ###########
+
+    def train(self):
+        """Set into training mode."""
+        self.model.train()
+        # for param in self.model.parameters():
+        #     param.requires_grad = True
+
+    def eval(self):
+        """Set into eval mode."""
+        self.model.eval()
+        # for param in self.model.parameters():
+        #     param.requires_grad = False
 
     def parameters(self):
         """Return an iterator over the model parameters."""

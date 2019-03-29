@@ -60,7 +60,8 @@ class Approximator(object):
         r"""Initialize the outer model.
 
         Args:
-            inputs (State, Action, np.array, torch.Tensor): inputs of the inner models (instance of State/Action)
+            inputs ((list of) State, Action, np.array, torch.Tensor): inputs of the inner models (instance of
+                State / Action)
             outputs (State, Action, np.array, torch.Tensor): outputs of the inner models (instance of Action/State)
             model (Model, None): inner model which will be wrapped if not an instance of Model
             preprocessors (None, Processor, list of Processor): the inputs are first given to the preprocessors then
@@ -98,8 +99,14 @@ class Approximator(object):
         if inputs is not None:
             if isinstance(inputs, (int, float)):
                 inputs = np.array([inputs])
+            elif isinstance(inputs, list):
+                for x in inputs:
+                    if not isinstance(x, (State, Action, torch.Tensor, np.ndarray)):
+                        raise TypeError("Expecting the given input to be an instance of `State`, `Action`, "
+                                        "`torch.Tensor`, `np.ndarray`, instead got: {}".format(type(x)))
             elif not isinstance(inputs, (State, Action, torch.Tensor, np.ndarray)):
-                raise TypeError("Expecting the inputs to be a State, Action, torch.Tensor, or np.ndarray.")
+                raise TypeError("Expecting the inputs to be a State, Action, torch.Tensor, np.ndarray, or a list "
+                                "of them.")
             if self._model is not None:
                 pass  # TODO: check that the dimensions agree with the model
         # set inputs
@@ -373,6 +380,22 @@ class Approximator(object):
                 return x.detach().numpy()
             return x.numpy()
         return x
+
+    def merge_inputs(self, x=None, to_numpy=True):
+        """
+        Merge the inputs of the approximator.
+
+        Args:
+            x (None, (list of) State / Action / np.array / torch.Tensor): input data. If None, it will get the
+                data from the inputs that were given at the initialization.
+            to_numpy (bool): If True, it will convert to numpy arrays.
+
+        Returns:
+            list of np.array / torch.Tensor: input data
+        """
+        # if no input is given, take the provided inputs at the beginning
+        if x is None:
+            pass
 
     def predict(self, x=None, to_numpy=True, return_logits=False, set_output_data=True):
         """Predict the output given the input.
