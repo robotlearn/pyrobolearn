@@ -1,6 +1,6 @@
-## Estimators
+## Estimators / Returns
 
-This folder provides the various estimators used in reinforcement learning (in the evaluation step of RL algorithms), such as:
+This folder provides the various estimators / returns used in reinforcement learning (in the evaluation step of RL algorithms), such as:
 - Total reward estimator
 - Action reward estimator
 - Baseline reward estimator
