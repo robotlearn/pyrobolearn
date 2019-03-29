@@ -39,7 +39,7 @@ __status__ = "Development"
 #         pass
 
 
-class Adam(object):
+class Adam(Optimizer):
     r"""Adam Optimizer
 
     References:
@@ -47,7 +47,8 @@ class Adam(object):
     """
 
     def __init__(self, learning_rate=1e-3, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False,
-                 max_grad_norm=None):  # 0.5
+                 max_grad_norm=None, *args, **kwargs):  # 0.5
+        super(Adam, self).__init__(*args, **kwargs)
         self.optimizer = None
         self.learning_rate = learning_rate
         self.betas = betas
@@ -73,14 +74,15 @@ class Adam(object):
         self.optimizer.step()
 
 
-class Adadelta(object):
+class Adadelta(Optimizer):
     r"""Adadelta Optimizer
 
     References:
         [1] "ADADELTA: An Adaptive Learning Rate Method", Zeiler, 2012
     """
 
-    def __init__(self, learning_rate=1., rho=0.9, eps=1e-6, weight_decay=0, max_grad_norm=None): #0.5
+    def __init__(self, learning_rate=1., rho=0.9, eps=1e-6, weight_decay=0, max_grad_norm=None, *args, **kwargs):  # 0.5
+        super(Adadelta, self).__init__(*args, **kwargs)
         self.optimizer = None
         self.learning_rate = learning_rate
         self.rho = rho
@@ -101,7 +103,7 @@ class Adadelta(object):
         self.optimizer.step()
 
 
-class Adagrad(object):
+class Adagrad(Optimizer):
     r"""Adagrad Optimizer
 
     References:
@@ -109,7 +111,8 @@ class Adagrad(object):
     """
 
     def __init__(self, learning_rate=0.01, learning_rate_decay=0, weight_decay=0, initial_accumumaltor_value=0,
-                 max_grad_norm=None):  # 0.5
+                 max_grad_norm=None, *args, **kwargs):  # 0.5
+        super(Adagrad, self).__init__(*args, **kwargs)
         self.optimizer = None
         self.learning_rate = learning_rate
         self.learning_rate_decay = learning_rate_decay
@@ -131,7 +134,7 @@ class Adagrad(object):
         self.optimizer.step()
 
 
-class RMSprop(object):
+class RMSprop(Optimizer):
     r"""RMSprop
 
     References:
@@ -141,7 +144,8 @@ class RMSprop(object):
     """
 
     def __init__(self, learning_rate=1e-2, alpha=0.99, eps=1e-8, weight_decay=0, momentum=0, centered=False,
-                 max_grad_norm=None):  # 0.5
+                 max_grad_norm=None, *args, **kwargs):  # 0.5
+        super(RMSprop, self).__init__(*args, **kwargs)
         self.optimizer = None
         self.learning_rate = learning_rate
         self.alpha = alpha
@@ -165,7 +169,7 @@ class RMSprop(object):
         self.optimizer.step()
 
 
-class SGD(object):
+class SGD(Optimizer):
     r"""Stochastic Gradient Descent
 
     References:
@@ -173,8 +177,9 @@ class SGD(object):
         [2] "On the importance of initialization and momentum in deep learning", Sutskever et al., 2013
     """
 
-    def __init__(self, learning_rate=1e-3, momentum=0, dampening=0, weight_decay=0, nesterov=False,
-                 max_grad_norm=None): #0.5
+    def __init__(self, learning_rate=1e-3, momentum=0, dampening=0, weight_decay=0, nesterov=False, max_grad_norm=None,
+                 *args, **kwargs):  # 0.5
+        super(SGD, self).__init__(*args, **kwargs)
         self.optimizer = None
         self.learning_rate = learning_rate
         self.momentum = momentum

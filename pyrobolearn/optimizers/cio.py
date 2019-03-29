@@ -1,6 +1,12 @@
-# This file implements the 'Contact Invariant Optimization' framework developed by Igor Mordatch.
-# Ref: "Automated Discovery and Learning of Complex Movement Behaviors" (PhD thesis), Mordatch, 2015
-# See also: presentation given CS294
+#!/usr/bin/env python
+"""This file implements the 'Contact Invariant Optimization' framework developed by Igor Mordatch.
+
+References:
+    [1] "Automated Discovery and Learning of Complex Movement Behaviors" (PhD thesis), Mordatch, 2015
+    [2] Mordatch's presentation given in CS294
+"""
+# TODO: this is not an optimizer, but more an optimization process. It should be in another directory, maybe in
+#  `trajectory_optimization`??
 
 import numpy as np
 from scipy.interpolate as interp1d
@@ -56,8 +62,8 @@ class CIO(object):
         return self.phase(t)
 
     def compute_state(self):
-        base_pos = self.robot.getBasePosition()
-        base_quat = self.robot.getBaseOrientation()
+        base_pos = self.robot.get_base_position()
+        base_quat = self.robot.get_base_orientation()
         end_effector_pos = self.robot.getEndEffectorPositions()
         end_effector_quat = self.robot.getEndEffectorOrientations()
 
