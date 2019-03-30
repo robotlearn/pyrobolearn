@@ -234,13 +234,13 @@ class Gaussian(object):
     @staticmethod
     def is_parametric():
         """The Gaussian distribution is a nonparametric model; the mean and covariance summarized the data"""
-        return True
+        return False
 
     @staticmethod
     def is_linear():
         """The Gaussian doesn't have parameters. Even if the mean and covariance are considered as parameters,
         the model is not linear wrt them"""
-        return True
+        return False
 
     @staticmethod
     def is_recurrent():
@@ -250,17 +250,17 @@ class Gaussian(object):
     @staticmethod
     def is_probabilistic():
         """The Gaussian distribution is by definition a probabilistic model"""
-        return False
+        return True
 
     @staticmethod
     def is_discriminative():
         """The Gaussian is not a discriminative model; no inputs are involved"""
-        return True
+        return False
 
     @staticmethod
     def is_generative():
         """The Gaussian is a generative model, and thus we can sample from it"""
-        return False
+        return True
 
     @staticmethod
     def compute_mean(X, axis=0):
@@ -1227,21 +1227,21 @@ MVN = Gaussian
 # Plotting functions #
 ######################
 
-def plot3D(ax, X, Y, pdf, title=None, xlabel='x1', ylabel='x2', zlabel='x3'):
+def plot_3d(ax, X, Y, pdf, title=None, xlabel='x1', ylabel='x2', zlabel='x3'):
     if isinstance(pdf, (tuple, list)):
         pdf = np.max(np.dstack(pdf), axis=-1)
     ax.set(title=title, xlabel=xlabel, ylabel=ylabel, zlabel=zlabel)
     ax.plot_surface(X, Y, pdf, cmap='viridis', linewidth=0)
 
 
-def plot2DContour(ax, x, y, pdf, title=None, xlabel='x1', ylabel='x2'):
+def plot_2d_contour(ax, x, y, pdf, title=None, xlabel='x1', ylabel='x2'):
     if isinstance(pdf, (tuple, list)):
         pdf = np.max(np.dstack(pdf), axis=-1)
     ax.set(title=title, xlabel=xlabel, ylabel=ylabel)
     ax.contourf(x, y, pdf)
 
 
-def plot3DAnd2DCountour(gaussians, step=500, bound=10, fig=None, title='', block=True):
+def plot_3d_and_2d_countour(gaussians, step=500, bound=10, fig=None, title='', block=True):
     if not isinstance(gaussians, (list, tuple)):
         gaussians = [gaussians]
 
@@ -1265,18 +1265,18 @@ def plot3DAnd2DCountour(gaussians, step=500, bound=10, fig=None, title='', block
 
     # 1st subplot (3D)
     ax = fig.add_subplot(1, 2, 1, projection='3d')
-    plot3D(ax, X, Y, pdf, title='p(x1, x2)', xlabel='x1', ylabel='x2', zlabel='p')
+    plot_3d(ax, X, Y, pdf, title='p(x1, x2)', xlabel='x1', ylabel='x2', zlabel='p')
 
     # 2nd subplot (2D)
     ax = fig.add_subplot(1, 2, 2)
-    plot2DContour(ax, x, y, pdf, title='p(x1, x2)', xlabel='x1', ylabel='x2')
+    plot_2d_contour(ax, x, y, pdf, title='p(x1, x2)', xlabel='x1', ylabel='x2')
 
     # show plot
     fig.tight_layout()
     plt.show(block=block)
 
 
-def plot2DEllipse(ax, gaussian, color='g', fill=False, plot_2devs=False, plot_arrows=True):
+def plot_2d_ellipse(ax, gaussian, color='g', fill=False, plot_2devs=False, plot_arrows=True):
     # alias
     g = gaussian
 
@@ -1313,7 +1313,7 @@ def plot2DEllipse(ax, gaussian, color='g', fill=False, plot_2devs=False, plot_ar
     return ellipse_2std
 
 
-def plot3DAnd2DConditional(joint_gaussian, cond_gaussian, x1_value = 0, step=500, bound=10, block=True):
+def plot_3d_and_2d_conditional(joint_gaussian, cond_gaussian, x1_value=0., step=500, bound=10, block=True):
 
     # Create grid and multivariate normal
     x = np.linspace(-bound, bound, step)
@@ -1331,7 +1331,7 @@ def plot3DAnd2DConditional(joint_gaussian, cond_gaussian, x1_value = 0, step=500
 
     # 1st subplot (3D)
     ax = fig.add_subplot(1, 2, 1, projection='3d')
-    plot3D(ax, X, Y, joint_pdf, title='p(x1,x2)', xlabel='x1', ylabel='x2', zlabel='p')
+    plot_3d(ax, X, Y, joint_pdf, title='p(x1,x2)', xlabel='x1', ylabel='x2', zlabel='p')
 
     # draw plane that cut the gaussian
     y1 = np.linspace(-bound, bound, 2)
@@ -1373,7 +1373,7 @@ if __name__ == '__main__':
     plt.show()
 
     # 3D and 2D plots of the Gaussian distributions
-    plot3DAnd2DCountour([g1, g2])
+    plot_3d_and_2d_countour([g1, g2])
 
     # Use 1 Gaussian #
 
@@ -1402,13 +1402,13 @@ if __name__ == '__main__':
     fig, ax = plt.subplots(1,1)
     ax.set(title='Sampling from one Gaussian', aspect='equal')
     ax.scatter(samples[:, 0], samples[:, 1], color='b')
-    plot2DEllipse(ax, g2, fill=True, plot_2devs=True, plot_arrows=True)
+    plot_2d_ellipse(ax, g2, fill=True, plot_2devs=True, plot_arrows=True)
     plt.show()
 
     # conditional distribution of the Gaussian p(y|x)
-    x_value = 0
+    x_value = 0.
     g_cond = g2.condition(input_value=x_value, output_idx=1)
-    plot3DAnd2DConditional(g2, g_cond, x_value)
+    plot_3d_and_2d_conditional(g2, g_cond, x_value)
 
     # marginalization of the Gaussian by summing and using the normal distribution
     # by summing
@@ -1437,7 +1437,7 @@ if __name__ == '__main__':
     fig, ax = plt.subplots(1, 1)
     ax.set(title='Gaussian under affine transformation', aspect='equal')
     ax.scatter(samples[:, 0], samples[:, 1], color='b')
-    plot2DEllipse(ax, g_aff)
+    plot_2d_ellipse(ax, g_aff)
     plt.show()
 
     # use 2 Gaussians #
@@ -1446,9 +1446,9 @@ if __name__ == '__main__':
     g_sum = g1 + g2
     fig, ax = plt.subplots(1,1)
     ax.set(title='addition', xlim=[-5, 5], ylim=[-5, 5], aspect='equal')
-    e1 = plot2DEllipse(ax, g1, color='g', plot_arrows=False)
-    e2 = plot2DEllipse(ax, g2, color='b', plot_arrows=False)
-    e3 = plot2DEllipse(ax, g_sum, color='r', plot_arrows=False)
+    e1 = plot_2d_ellipse(ax, g1, color='g', plot_arrows=False)
+    e2 = plot_2d_ellipse(ax, g2, color='b', plot_arrows=False)
+    e3 = plot_2d_ellipse(ax, g_sum, color='r', plot_arrows=False)
     ax.legend([e1, e2, e3], ['G1', 'G2', 'G1+G2'], loc=2)
     plt.show()
 
@@ -1456,9 +1456,9 @@ if __name__ == '__main__':
     g_mul = g1 * g2
     fig, ax = plt.subplots(1, 1)
     ax.set(title='multiplication', xlim=[-5, 5], ylim=[-5, 5], aspect='equal')
-    e1 = plot2DEllipse(ax, g1, color='g', plot_arrows=False)
-    e2 = plot2DEllipse(ax, g2, color='b', plot_arrows=False)
-    e3 = plot2DEllipse(ax, g_mul, color='r', plot_arrows=False)
+    e1 = plot_2d_ellipse(ax, g1, color='g', plot_arrows=False)
+    e2 = plot_2d_ellipse(ax, g2, color='b', plot_arrows=False)
+    e3 = plot_2d_ellipse(ax, g_mul, color='r', plot_arrows=False)
     ax.legend([e1, e2, e3], ['G1', 'G2', 'G1*G2'], loc=2)
     plt.show()
 
@@ -1471,8 +1471,8 @@ if __name__ == '__main__':
     # fit one Gaussian and plot it along the data
     g = Gaussian()
     g.fit(samples)
-    plot3DAnd2DCountour(g_data, title='Gaussian that generated the data', block=False)
-    plot3DAnd2DCountour(g, title='fitted Gaussian')
+    plot_3d_and_2d_countour(g_data, title='Gaussian that generated the data', block=False)
+    plot_3d_and_2d_countour(g, title='fitted Gaussian')
 
     # TODO
     # fit Gaussian on different manifolds #

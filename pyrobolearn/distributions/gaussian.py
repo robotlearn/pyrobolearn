@@ -4,6 +4,10 @@
 This distribution is so important in the field of Machine Learning that we extended the functionalities of the basic
 `torch.distributions.MultivariateNormal`. This distribution will notably be used for Gaussian Mixture Models,
 Probabilistic Movement Primitives, Kernelized Movement Primitives, etc.
+
+References:
+    [1] torch.distributions: https://pytorch.org/docs/stable/distributions.html
+    [2] Gaussian distribution: pyrobolearn/models/gaussian
 """
 
 import torch

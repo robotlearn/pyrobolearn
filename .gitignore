@@ -109,4 +109,3 @@ venv.bak/
 .ipynb_checkpoints/
 .idea/
 0_VRDemoSettings.txt
-tests/
