@@ -16,6 +16,8 @@ import numpy as np
 import torch
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
+from pyrobolearn import logger
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -114,7 +116,7 @@ class PyTorchStorage(Storage):
     def _to(self, item, device=None, dtype=None):
         """Send the item to the specified device and convert it to the specified data type."""
         if isinstance(item, torch.Tensor):
-            print('setting {} to {} with dtype={}'.format(item, device, dtype))
+            logger.debug('setting tensor of size {} to {} with dtype={}'.format(item.size(), device, dtype))
             item = item.to(device=device, dtype=dtype)
         elif isinstance(item, dict):
             for key, value in item.items():
@@ -328,10 +330,10 @@ class DictStorage(dict, PyTorchStorage):
         """Get the attribute using the key name. That is, instead of `D['name']`, you can do `D.name`."""
         return self[name]
 
-    def __setattr__(self, key, value):
-        """Set the attribute using the given key and value. That is, instead of `D[key] = value`, you can do
-        `D.key = value`"""
-        self[key] = value
+    # def __setattr__(self, key, value):
+    #     """Set the attribute using the given key and value. That is, instead of `D[key] = value`, you can do
+    #     `D.key = value`"""
+    #     self[key] = value
 
 
 # alias
@@ -382,13 +384,12 @@ class RolloutStorage(DictStorage):
         # recurrent_hidden_state_size (int): size of the internal state
         print("\nStorage: observation shape: {}".format(observation_shapes))
         print("Storage: action shape: {}".format(action_shapes))
-
+        super(RolloutStorage, self).__init__()
         self._step = 0
         self._num_steps = int(num_steps)
         self._num_processes = int(num_processes)
         self._shifts = {}  # dictionary that maps the key to the time shift; this is add to the current time step
         self.init(self.num_steps, observation_shapes, action_shapes, self.num_processes)
-        super(RolloutStorage, self).__init__()
 
     ##############
     # Properties #
@@ -502,20 +503,25 @@ class RolloutStorage(DictStorage):
         self._num_processes = int(num_processes)
 
         # allocate space for observations / states
+        logger.debug('creating space for observations of shapes: {}'.format(observation_shapes))
         if not isinstance(observation_shapes, list):
             observation_shapes = [observation_shapes]
         self.create_new_entry('observations', shapes=observation_shapes, num_steps=self.num_steps+1)
 
         # allocate space for actions
+        logger.debug('creating space for actions of shapes: {}'.format(action_shapes))
         if not isinstance(action_shapes, list):
             action_shapes = [action_shapes]
         self.create_new_entry('actions', shapes=action_shapes, num_steps=self.num_steps)
 
         # allocate space for rewards
+        logger.debug('creating space for rewards')
         self.create_new_entry('rewards', shapes=1, num_steps=self.num_steps)
 
         # allocate space for the returns and masks
+        logger.debug('creating space for returns')
         self.create_new_entry('returns', shapes=1, num_steps=self.num_steps + 1)
+        logger.debug('creating space for masks')
         self.create_new_entry('masks', shapes=1, num_steps=self.num_steps + 1)
 
         # space for log probabilities on policy, distributions, scalar values from value functions,
@@ -680,13 +686,13 @@ class RolloutStorage(DictStorage):
                             "{}".format(key, type(key)))
         super(RolloutStorage, self).__setitem__(key, value)
 
-    def __setattr__(self, key, value):
-        """Set the attribute using the given key and value. That is, instead of `D[key] = value`, you can do
-        `D.key = value`. By default, this creates a tensor with shape (num_steps + 1, self.num_processes, 1).
-
-        Warnings: avoid to use this.
-        """
-        self.create_new_entry(key, shapes=1, num_steps=self.num_steps + 1)
+    # def __setattr__(self, key, value):
+    #     """Set the attribute using the given key and value. That is, instead of `D[key] = value`, you can do
+    #     `D.key = value`. By default, this creates a tensor with shape (num_steps + 1, self.num_processes, 1).
+    #
+    #     Warnings: avoid to use this.
+    #     """
+    #     self.create_new_entry(key, shapes=1, num_steps=self.num_steps + 1)
 
 
 # Tests

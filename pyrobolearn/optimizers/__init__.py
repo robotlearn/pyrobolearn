@@ -1,6 +1,6 @@
 
 # import optimizer
-from optimizer import Optimizer
+from .optimizer import Optimizer
 
 # import scipy optimizer
 # from scipy_optimizer import Scipy
@@ -21,7 +21,7 @@ from optimizer import Optimizer
 # from gpyopt_optimizer import BayesianOptimizer
 
 # import torch optimizers
-from torch_optimizer import *
+from .torch_optimizer import *
 
 # import Contact-Invariant Optimizer
 # from cio import CIO

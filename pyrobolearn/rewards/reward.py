@@ -169,30 +169,36 @@ class Reward(object):
 
     @property
     def state(self):
+        """Return the state instance."""
         return self._state
 
     @state.setter
     def state(self, state):
+        """Set the state."""
         if state is not None and not isinstance(state, State):
             raise TypeError("Expecting state to be None or an instance of State.")
         self._state = state
 
     @property
     def action(self):
+        """Return the action instance."""
         return self._action
 
     @action.setter
     def action(self, action):
+        """Set the action."""
         if action is not None and not isinstance(action, Action):
             raise TypeError("Expecting action to be None or an instance of Action.")
         self._action = action
 
     @property
     def rewards(self):
+        """Return the inner rewards."""
         return self._rewards
 
     @rewards.setter
     def rewards(self, rewards):
+        """Set the inner rewards."""
         if rewards is None:
             rewards = []
         elif isinstance(rewards, collections.Iterable):
@@ -210,17 +216,29 @@ class Reward(object):
     ###########
 
     def has_rewards(self):
+        """Check if there are inner rewards."""
         return len(self._rewards) > 0
 
     @staticmethod
     def is_maximized():
+        """Check if it is maximized."""
         return True
 
     def reset(self):
+        """Reset the rewards."""
         for reward in self.rewards:
             reward.reset()
 
-    def compute(self):
+    def compute(self):  # **kwargs):
+        """Compute the reward and return the scalar value
+
+        Warnings: by default, *args and **kwargs are disabled as it could lead to several problems:
+        1. As more and more rewards will become available, there might share the same argument name if the programmer
+        is not careful, which could lead to bugs that are difficult to detect.
+        2. It is better to provide the arguments during the initialization of the reward class. If the user has
+        a variable that might change, create a class for that variable and in the corresponding reward's compute
+        method, check what is its value.
+        """
         pass
 
     #############
@@ -234,8 +252,8 @@ class Reward(object):
             lst = [reward.__repr__() for reward in self.rewards]
             return ' + '.join(lst)
 
-    def __call__(self, *args, **kwargs):
-        return self.compute()
+    def __call__(self):  # **kwargs):
+        return self.compute()  # **kwargs)
 
     # for unary and binary operators, see `__init__()` method.
 

@@ -512,12 +512,18 @@ class Policy(object):
 
     def train(self, mode=True):
         """
-        Set the policy to train mode.
+        Set the policy in training mode.
 
         Args:
             mode (bool): if True, set the policy in train mode.
         """
         self.train_mode = mode
+
+    def eval(self):
+        """
+        Set the policy in evaluation mode.
+        """
+        self.train(mode=False)
 
     def reset(self, reset_processors=False, *args, **kwargs):
         """

@@ -12,7 +12,7 @@ References:
 import torch.nn as nn
 import torch.optim as optim
 
-from optimizer import Optimizer
+from pyrobolearn.optimizers.optimizer import Optimizer
 
 
 __author__ = "Brian Delhaisse"

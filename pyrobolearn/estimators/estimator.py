@@ -142,7 +142,7 @@ class Estimator(object):
 
 
 class TotalRewardEstimator(Estimator):
-    r"""Total reward Estimator (aka finite-horizon undiscounted return)
+    r"""Total reward Estimator (aka (finite-horizon) discounted return)
 
     Return the total reward of the trajectory given by:
 

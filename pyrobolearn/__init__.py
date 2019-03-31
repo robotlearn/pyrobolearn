@@ -1,6 +1,17 @@
 
 import sys
 
+# logging
+import logging
+
+# create logger
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(name)s (%(levelname)s): %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 # import simulators
 from . import simulators
 
@@ -9,6 +20,9 @@ from . import robots
 
 # import worlds
 from . import worlds
+
+# import physics randomizer
+from . import physics
 
 # import states
 from . import states
@@ -32,21 +46,31 @@ from . import approximators
 from . import policies
 
 # import values
+from . import values
 
 # import actor-critics
+from . import actorcritics
 
 # import dynamical models
+from . import dynamics
 
 # import tools (interfaces and bridges)
-# from . import tools  # uncommenting this will oblige the user to install a bunch of libraries which are not straightforward to install...
+from . import tools
+
+# import recorders
+from . import recorders
 
 # import tasks
 from . import tasks
 
 # import metrics
+from . import metrics
+
+# import losses
+from . import losses
 
 # import optimizers
-# from . import optimizers
+from . import optimizers
 
 # import algos
 from . import algos
