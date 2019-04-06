@@ -6,9 +6,11 @@ instantiating them, here we can pass the parameters at a later stage.
 
 References:
     [1] https://pytorch.org/docs/stable/optim.html
+    [2] https://github.com/sbarratt/torch_cg/tree/master
 """
 
 # Pytorch optimizers
+import torch
 import torch.nn as nn
 import torch.optim as optim
 
@@ -200,3 +202,68 @@ class SGD(Optimizer):
         if self.max_grad_norm is not None:
             nn.utils.clip_grad_norm_(params, self.max_grad_norm)
         self.optimizer.step()
+
+
+class CG(Optimizer):
+    r"""Conjugate Gradient
+
+    "In mathematics, the conjugate gradient method is an algorithm for the numerical solution of particular systems
+    of linear equations, namely those whose matrix is symmetric and positive-definite. The conjugate gradient method
+    is often implemented as an iterative algorithm, applicable to sparse systems that are too large to be handled by
+    a direct implementation or other direct methods such as the Cholesky decomposition. Large sparse systems often
+    arise when numerically solving partial differential equations or optimization problems.
+
+    Suppose we want to solve the system of linear equations :math:`\mathbf{A} \mathbf{x} = \mathbf{b}`, for the vector
+    :math:`\mathbf{x}`, where the known n x n matrix :math:`\mathbf{A}` is symmetric (i.e.,
+    :math:`\mathbf{A}^\top = \mathbf{A}`), positive-definite (i.e. :math:`\mathbf{x}^\top \mathbf{Ax} > 0` for all
+    non-zero vectors :math:`x \in \mathbb{R}^n`), and real, and :math:`\mathbf{b}` is known as well. We denote the
+    unique solution of this system by :math:`\mathbf{x}^*`." [1]
+
+    Notably, this can be used to solve :math:`\mathbf{Hx} = \mathbf{g}` where :math:`\mathbf{H}` is the Hessian
+    matrix, and :math:`g` is the gradient.
+
+    References:
+        [1] Conjugate Gradient (Wikipedia): https://en.wikipedia.org/wiki/Conjugate_gradient_method
+        [2] Hessian matrix (Wikipedia): https://en.wikipedia.org/wiki/Hessian_matrix#Use_in_optimization
+        [3] Hessian-Vector products: https://justindomke.wordpress.com/2009/01/17/hessian-vector-products/
+        [4] Torch CG: https://github.com/sbarratt/torch_cg
+    """
+
+    def __init__(self, threshold=1.e-8, max_iters=10, *args, **kwargs):
+        super(CG, self).__init__(*args, **kwargs)
+        self._threshold = threshold
+        self._max_iters = int(max_iters)
+
+    def optimize(self, A, b, x=None):
+        """
+        Return the solution :math:`x` to the system of linear equations :math:`Ax=b`.
+
+        Notably, this can be used
+
+        Args:
+            A (torch.Tensor): square real symmetric and positive-definite matrix.
+            b (torch.Tensor): known vector.
+            x (torch.Tensor, None): initial solution. If None, it will be the zero vector.
+
+        Returns:
+            torch.Tensor: return the solution x to Ax=b.
+        """
+        if x is None:
+            x = torch.zeros_like(b)
+
+        r = b - A.matmul(x)
+        p = r
+        rr_old = r.t().matmul(r)
+
+        for k in range(self._max_iters):
+            Ap = A.matmul(p)
+            alpha = rr_old / p.t().matmul(Ap)
+            x = x + alpha * p
+            r = r - alpha * Ap
+            rr_new = r.t().matmul(r)
+            if torch.sqrt(rr_new) < self._threshold:
+                break
+            p = r + rr_new / rr_old * p
+            rr_old = rr_new
+
+        return x

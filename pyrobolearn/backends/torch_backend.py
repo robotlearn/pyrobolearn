@@ -97,6 +97,8 @@ def concatenate(data, axis=0, out=None):
 # missing torch.dstack
 # missing torch.vstack
 # missing torch.hstack
+# np.ndim --> torch.dim()
+# np.reshape --> torch.view()
 
 
 # Tests

@@ -197,6 +197,23 @@ class QueueStateGenerator(StateGenerator):
         """Return the size of the queue."""
         return self.qsize()
 
+    def __iter__(self):
+        """Return the iterator object itself."""
+        self.cnt = 0
+        return self
+
+    def __next__(self):  # only valid in Python 3
+        """Return the next item in the sequence."""
+        if self.cnt < self.qsize():
+            self.cnt += 1
+            return self.queue[self.cnt-1]
+        else:
+            raise StopIteration
+
+    def next(self):  # for Python 2
+        """Return the next item in the sequence."""
+        return self.__next__()
+
 
 class FIFOQueueStateGenerator(QueueStateGenerator):
     r"""FIFO Queue Initial State Generator
