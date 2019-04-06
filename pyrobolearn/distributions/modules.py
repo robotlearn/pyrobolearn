@@ -14,11 +14,14 @@ References:
 
 from abc import ABCMeta
 
+import collections
 import numpy as np
 import torch
-from gaussian import Gaussian as GaussianDistribution
-from categorical import Categorical as CategoricalDistribution
-from bernoulli import Bernoulli as BernoulliDistribution
+
+from pyrobolearn.distributions.categorical import Categorical as CategoricalDistribution
+from pyrobolearn.distributions.bernoulli import Bernoulli as BernoulliDistribution
+from pyrobolearn.distributions.gaussian import Gaussian as GaussianDistribution
+from pyrobolearn.distributions.gmm import GMM as GaussianMixtureDistribution
 
 
 __author__ = "Brian Delhaisse"
@@ -512,85 +515,6 @@ LogitsModule = VectorModule
 ProbsModule = VectorModule
 
 
-class GaussianModule(torch.nn.Module):
-    r"""Gaussian Module
-
-    Type: continuous
-
-    The Gaussian module accepts as inputs the mean and covariance modules (i.e. that inherit from `torch.nn.Modules`),
-    and returns the multivariate Gaussian distribution (that inherits from `torch.distributions.MultivariateNormal`).
-    For more information about this distribution, see the documentation of `pyrobolearn/distributions/gaussian.py`.
-
-    Examples:
-        >>> # fixed gaussian (that has a fixed mean and diagonal covariance)
-        >>> mean = FixedMeanModule(mean=torch.zeros(5))
-        >>> covariance = FixedDiagonalCovarianceModule(variances=torch.ones(5))
-        >>> fixed_gaussian = GaussianModule(mean=mean, covariance=covariance)
-        >>> probs = fixed_gaussian(base_output)  # or fixed_gaussian(output)
-        >>> # most flexible gaussian (that learns the mean and the full covariance)
-        >>> mean = MeanModule(num_inputs=10, num_outputs=5)
-        >>> covariance = FullCovarianceModule(num_inputs=10, num_outputs=5)
-        >>> full_gaussian = GaussianModule(mean=mean, covariance=covariance)
-        >>> probs = full_gaussian(base_output)
-        >>> # if the mean is already computed elsewhere
-        >>> mean = IdentityModule()
-        >>> covariance = FullCovarianceModule(num_inputs=5, num_outputs=5)
-        >>> gaussian = GaussianModule(mean=mean, covariance=covariance)
-        >>> probs = gaussian(output, base_output)  # inputs for the mean and covariance
-    """
-
-    def __init__(self, mean, covariance):
-        """
-        Initialize the Gaussian module.
-
-        Args:
-            mean (torch.nn.Module): mean module.
-            covariance (torch.nn.Module): covariance module.
-        """
-        super(GaussianModule, self).__init__()
-        self.mean = mean
-        self.covariance = covariance
-
-    @property
-    def mean(self):
-        """Return the mean module."""
-        return self._mean
-
-    @mean.setter
-    def mean(self, mean):
-        """Set the mean module."""
-        if not isinstance(mean, torch.nn.Module):
-            raise TypeError("Expecting the mean to be an instance of `torch.nn.Module`, instead got: "
-                            "{}".format(type(mean)))
-        self._mean = mean
-
-    @property
-    def covariance(self):
-        """Return the covariance module."""
-        return self._covariance
-
-    @covariance.setter
-    def covariance(self, covariance):
-        """Set the covariance module."""
-        """Set the covariance."""
-        if not isinstance(covariance, torch.nn.Module):
-            raise TypeError("Expecting the covariance to be an instance of `torch.nn.Module`, instead got: "
-                            "{}".format(type(covariance)))
-        self._covariance = covariance
-
-    def forward(self, *x):
-        """Forward the given inputs :attr:`x`."""
-        if len(x) == 1:
-            x1, x2 = x[0], x[0]
-        elif len(x) == 2:
-            x1, x2 = x[0], x[1]
-        else:
-            raise ValueError("Expecting 1 or 2 inputs.")
-        mean = self.mean(x1)
-        covariance = self.covariance(x2)
-        return GaussianDistribution(mean=mean, covariance=covariance)
-
-
 class DiscreteModule(torch.nn.Module):
     r"""Discrete probability module.
 
@@ -729,3 +653,193 @@ class BernoulliModule(DiscreteModule):
     def forward(self, x):
         """Forward the given inputs :attr:`x`."""
         return BernoulliDistribution(probs=self.probs(x), logits=self.logits(x))
+
+
+class GaussianModule(torch.nn.Module):
+    r"""Gaussian Module
+
+    Type: continuous
+
+    The Gaussian module accepts as inputs the mean and covariance modules (i.e. that inherit from `torch.nn.Modules`),
+    and returns the multivariate Gaussian distribution (that inherits from `torch.distributions.MultivariateNormal`).
+    For more information about this distribution, see the documentation of `pyrobolearn/distributions/gaussian.py`.
+
+    Examples:
+        >>> # fixed gaussian (that has a fixed mean and diagonal covariance)
+        >>> mean = FixedMeanModule(mean=torch.zeros(5))
+        >>> covariance = FixedDiagonalCovarianceModule(variances=torch.ones(5))
+        >>> fixed_gaussian = GaussianModule(mean=mean, covariance=covariance)
+        >>> probs = fixed_gaussian(base_output)  # or fixed_gaussian(output)
+        >>> # most flexible gaussian (that learns the mean and the full covariance)
+        >>> mean = MeanModule(num_inputs=10, num_outputs=5)
+        >>> covariance = FullCovarianceModule(num_inputs=10, num_outputs=5)
+        >>> full_gaussian = GaussianModule(mean=mean, covariance=covariance)
+        >>> probs = full_gaussian(base_output)
+        >>> # if the mean is already computed elsewhere
+        >>> mean = IdentityModule()
+        >>> covariance = FullCovarianceModule(num_inputs=5, num_outputs=5)
+        >>> gaussian = GaussianModule(mean=mean, covariance=covariance)
+        >>> probs = gaussian(output, base_output)  # inputs for the mean and covariance
+    """
+
+    def __init__(self, mean, covariance):
+        """
+        Initialize the Gaussian module.
+
+        Args:
+            mean (torch.nn.Module): mean module.
+            covariance (torch.nn.Module): covariance module.
+        """
+        super(GaussianModule, self).__init__()
+        self.mean = mean
+        self.covariance = covariance
+
+    @property
+    def mean(self):
+        """Return the mean module."""
+        return self._mean
+
+    @mean.setter
+    def mean(self, mean):
+        """Set the mean module."""
+        if not isinstance(mean, torch.nn.Module):
+            raise TypeError("Expecting the mean to be an instance of `torch.nn.Module`, instead got: "
+                            "{}".format(type(mean)))
+        self._mean = mean
+
+    @property
+    def covariance(self):
+        """Return the covariance module."""
+        return self._covariance
+
+    @covariance.setter
+    def covariance(self, covariance):
+        """Set the covariance module."""
+        if not isinstance(covariance, torch.nn.Module):
+            raise TypeError("Expecting the covariance to be an instance of `torch.nn.Module`, instead got: "
+                            "{}".format(type(covariance)))
+        self._covariance = covariance
+
+    def forward(self, *x):
+        """Forward the given inputs :attr:`x`."""
+        if len(x) == 1:
+            x1, x2 = x[0], x[0]
+        elif len(x) == 2:
+            x1, x2 = x[0], x[1]
+        else:
+            raise ValueError("Expecting 1 or 2 inputs.")
+        mean = self.mean(x1)
+        covariance = self.covariance(x2)
+        return GaussianDistribution(mean=mean, covariance=covariance)
+
+
+class GaussianMixtureModule(torch.nn.Module):
+    r"""Gaussian Mixture Module
+
+    Type: continuous
+
+    The Gaussian mixture module accepts as inputs the priors, means and covariances modules (i.e. that inherit from
+    `torch.nn.Modules`), and returns the Gaussian mixture distribution
+    (that inherits from `torch.distributions.Distribution`).
+    For more information about this distribution, see the documentation of `pyrobolearn/distributions/gmm.py`.
+
+    Examples:
+       >>> # fixed gmm (that has fixed priors, means and diagonal covariances)
+       >>> mean1 = FixedMeanModule(mean=torch.zeros(5))
+       >>> mean2 = FixedMeanModule(mean=torch.ones(5))
+       >>> cov1 = FixedDiagonalCovarianceModule(variances=torch.ones(5))
+       >>> cov2 = FixedDiagonalCovarianceModule(variances=0.5 * torch.ones(5))
+       >>> priors = FixedProbsModule(torch.tensor([0.3, 0.7]))  # because 2 gaussians
+       >>> fixed_gmm = GaussianMixtureModule(priors=priors, means=[mean1, mean2], covariances=[cov1, cov2])
+       >>> probs = fixed_gmm(base_output)  # or fixed_gmm(output)
+       >>> # most flexible gaussian (that learns the priors, means and full covariances)
+       >>> mean1 = MeanModule(num_inputs=10, num_outputs=5)
+       >>> mean2 = MeanModule(num_inputs=10, num_outputs=5)
+       >>> cov1 = FullCovarianceModule(num_inputs=10, num_outputs=5)
+       >>> cov2 = FullCovarianceModule(num_inputs=10, num_outputs=5)
+       >>> priors = VectorModule(num_inputs=10, num_outputs=2)  # because 2 gaussians
+       >>> full_gmm = GaussianMixtureModule(priors=priors, means=[mean1, mean2], covariances=[cov1, cov2])
+       >>> probs = full_gmm(base_output)
+       >>> # if one of the means is already computed elsewhere
+       >>> mean1 = IdentityModule()
+       >>> mean2 = MeanModule(num_inputs=10, num_outputs=5)
+       >>> cov1 = FullCovarianceModule(num_inputs=5, num_outputs=5)
+       >>> cov2 = FullCovarianceModule(num_inputs=5, num_outputs=5)
+       >>> priors = VectorModule(num_inputs=10, num_outputs=2)  # because 2 gaussians
+       >>> gmm = GaussianMixtureModule(priors=priors, means=[mean1, mean2], covariances=[cov1, cov2])
+       >>> probs = gmm(output, base_output)  # inputs for the mean and covariance
+    """
+
+    def __init__(self, means, covariances, priors=None):
+        """
+        Initialize the Gaussian mixture module.
+
+        Args:
+            priors (torch.nn.Module): prior module.
+            means ((list of) torch.nn.Module): mean modules.
+            covariances ((list of) torch.nn.Module): covariance modules.
+        """
+        super(GaussianMixtureModule, self).__init__()
+        self.priors = priors
+        self.means = means
+        self.covariances = covariances
+
+    @property
+    def priors(self):
+        """Returns the prior module."""
+        return self._priors
+
+    @priors.setter
+    def priors(self, priors):
+        """Set the priors."""
+        if not isinstance(priors, torch.nn.Module):
+            raise TypeError("Expecting the priors to be an instance of `torch.nn.Module`, instead got: "
+                            "{}".format(type(priors)))
+        self._priors = priors
+
+    @property
+    def means(self):
+        """Return a list of mean modules."""
+        return self._means
+
+    @means.setter
+    def means(self, means):
+        """Set the mean modules."""
+        if not isinstance(means, collections.Iterable):
+            means = [means]
+        for mean in means:
+            if not isinstance(mean, torch.nn.Module):
+                raise TypeError("Expecting the mean to be an instance of `torch.nn.Module`, instead got: "
+                                "{}".format(type(mean)))
+        self._means = means
+
+    @property
+    def covariances(self):
+        """Return a list of covariance modules."""
+        return self._covariances
+
+    @covariances.setter
+    def covariances(self, covariances):
+        """Set the covariance modules."""
+        if not isinstance(covariances, collections.Iterable):
+            covariances = [covariances]
+        for covariance in covariances:
+            if not isinstance(covariance, torch.nn.Module):
+                raise TypeError("Expecting the covariance to be an instance of `torch.nn.Module`, instead got: "
+                                "{}".format(type(covariance)))
+        self._covariances = covariances
+
+    def forward(self, *x):
+        """Forward the given inputs :attr:`x`."""
+        if len(x) == 1:
+            x1, x2 = x[0], x[0]
+        elif len(x) == 2:
+            x1, x2 = x[0], x[1]  # output and base_output
+        else:
+            raise ValueError("Expecting 1 or 2 inputs.")
+
+        # TODO: the for-loop is not really efficient...
+        means = [mean(x1) if isinstance(mean, IdentityModule) else mean(x2) for mean in self.means]
+        covariances = [covariance(x2) for covariance in self.covariances]
+        priors = self.priors(x2)
+        return GaussianMixtureDistribution(priors=priors, means=means, covariances=covariances)
