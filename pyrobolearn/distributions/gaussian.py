@@ -348,7 +348,7 @@ class Gaussian(torch.distributions.MultivariateNormal):
         """
         if self.manifold == 'euclidean':
             diff = x - self.mean
-            return torch.sqrt(diff.mm(self.precision).mm(diff))
+            return torch.sqrt(diff.matmul(self.precision).matmul(diff))
 
     def condition(self, input_value, output_idx, input_idx=None):
         r"""
@@ -404,12 +404,12 @@ class Gaussian(torch.distributions.MultivariateNormal):
         assert len(i) == len(value), "The value array and the idx2 array have different lengths"
 
         # compute conditional
-        c = self.covariance[np.ix_(o, i)].mm(torch.inverse(self.covariance[np.ix_(i, i)]))
-        mu = self.mean[o] + c.mm((value - self.mean[i]).view(-1, 1))[:, 0]
+        c = self.covariance[np.ix_(o, i)].matmul(torch.inverse(self.covariance[np.ix_(i, i)]))
+        mu = self.mean[o] + c.matmul(value - self.mean[i])
         cov = self.covariance[i, o]
         if len(cov.size()):
             cov = cov.view(-1, 1)
-        cov = self.covariance[np.ix_(o, o)] - c.mm(cov)
+        cov = self.covariance[np.ix_(o, o)] - c.matmul(cov)
         return Gaussian(mean=mu, covariance=cov)
 
     def marginalize(self, idx):
@@ -472,26 +472,12 @@ class Gaussian(torch.distributions.MultivariateNormal):
             # coefficient = Gaussian(other.mean, self.covariance + other.covariance)(self.mean) * self.coefficient
             prec1, prec2 = self.precision, other.precision
             cov = torch.inverse(prec1 + prec2)
-
-            size = self.mean.size()
-            if len(size) == 1:
-                mean1 = self.mean.view(-1, 1)
-                mean2 = other.mean.view(-1, 1)
-            else:
-                mean1 = self.mean
-                mean2 = other.mean
-    
-            mu = (cov.mm(prec1.mm(mean1) + prec2.mm(mean2))).view(size)
+            mu = cov.matmul(prec1.matmul(self.mean) + prec2.matmul(other.mean))
             return Gaussian(mean=mu, covariance=cov)  # , coefficient=coefficient)
 
         # if other == square matrix
         elif isinstance(other, torch.Tensor):
-            size = self.mean.size()
-            if len(size) == 1:
-                mean = self.mean.view(-1, 1)
-            else:
-                mean = self.mean
-            return Gaussian(mean=(other.mm(mean)).view(size), covariance=other.mm(self.covariance).mm(other.t()))
+            return Gaussian(mean=other.matmul(self.mean), covariance=other.matmul(self.covariance).matmul(other.t()))
 
         # if other == number
         elif isinstance(other, (int, float)):
@@ -601,15 +587,9 @@ class Gaussian(torch.distributions.MultivariateNormal):
         Returns:
             Gaussian: resulting Gaussian PDF
         """
-        size = self.mean.size()
-        if len(size) == 1:
-            mean = self.mean.view(-1, 1)
-        else:
-            mean = self.mean
-
         if b is None:
-            return Gaussian(mean=A.mm(mean).view(size), covariance=A.mm(self.covariance).mm(A.t()))
-        return Gaussian(mean=A.mm(mean).view(size) + b, covariance=A.mm(self.covariance).mm(A.t()))
+            return Gaussian(mean=A.matmul(self.mean), covariance=A.matmul(self.covariance).matmul(A.t()))
+        return Gaussian(mean=A.matmul(self.mean) + b, covariance=A.matmul(self.covariance).matmul(A.t()))
 
     def integrate(self, lower=None, upper=None):
         r"""
@@ -671,13 +651,13 @@ class Gaussian(torch.distributions.MultivariateNormal):
         # TODO: check when x is a matrix
         wrt = wrt.lower()
         if wrt == 'x':
-            return - self.pdf(x) * self.precision.mm(x - self.mean)
+            return - self.pdf(x) * self.precision.matmul(x - self.mean)
         elif wrt == 'mu' or wrt == 'mean':
-            return self.pdf(x) * self.precision.mm(x - self.mean)
+            return self.pdf(x) * self.precision.matmul(x - self.mean)
         elif wrt == 'sigma' or wrt[:3] == 'cov':
             mu, L = self.mean, self.precision
             diff = x - mu
-            return 0.5 * self.pdf(x) * (L.mm(torch.ger(diff, diff)).mm(L) - L)
+            return 0.5 * self.pdf(x) * (L.matmul(torch.ger(diff, diff)).matmul(L) - L)
         elif wrt == 'lambda' or wrt == 'precision':
             diff = x - self.mean
             return 0.5 * self.pdf(x) * (self.covariance - torch.ger(diff, diff))
@@ -717,20 +697,20 @@ class Gaussian(torch.distributions.MultivariateNormal):
         if wrt == 'x':
             def wrap(pdf, mu, L):
                 def grad(x):
-                    return - pdf(x) * L.mm(x - mu)
+                    return - pdf(x) * L.matmul(x - mu)
 
                 return grad
         elif wrt == 'mu' or wrt == 'mean':
             def wrap(pdf, mu, L):
                 def grad(x):
-                    return pdf(x) * L.mm(x - mu)
+                    return pdf(x) * L.matmul(x - mu)
 
                 return grad
         elif wrt == 'sigma' or wrt[:3] == 'cov':
             def wrap(pdf, mu, L):
                 def grad(x):
                     diff = x - mu
-                    return 0.5 * pdf(x) * (L.mm(torch.ger(diff, diff)).mm(L) - L)
+                    return 0.5 * pdf(x) * (L.matmul(torch.ger(diff, diff)).matmul(L) - L)
 
                 return grad
         elif wrt == 'lambda' or wrt == 'precision':
@@ -774,7 +754,7 @@ class Gaussian(torch.distributions.MultivariateNormal):
         if wrt == 'x' or wrt == 'mu' or wrt == 'mean':
             mu, L = self.mean, self.precision
             diff = x - mu
-            return self.pdf(x) * (L.mm(torch.ger(diff, diff)).mm(L) - L)
+            return self.pdf(x) * (L.matmul(torch.ger(diff, diff)).matmul(L) - L)
         else:
             raise ValueError("The given 'wrt' argument is not valid (see documentation)")
 
@@ -806,7 +786,7 @@ class Gaussian(torch.distributions.MultivariateNormal):
             def wrap(pdf, mu, L):
                 def grad(x):
                     diff = x - mu
-                    return self.pdf(x) * (L.mm(torch.ger(diff, diff)).mm(L) - L)
+                    return self.pdf(x) * (L.matmul(torch.ger(diff, diff)).matmul(L) - L)
 
                 return grad
         else:
@@ -1082,6 +1062,7 @@ def plot_2d_ellipse(ax, gaussian, color='g', fill=False, plot_2devs=False, plot_
     facecolor = color if fill else 'none'
 
     # 2 ellipses (one std dev and two std dev)
+    from matplotlib.patches import Ellipse
     ellipse_2std = Ellipse(xy=g.mean, width=2 * width, height=2 * height, angle=angle, edgecolor=color, lw=2,
                            facecolor=facecolor, alpha=0.5)
     ax.add_artist(ellipse_2std)
