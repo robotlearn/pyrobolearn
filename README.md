@@ -14,7 +14,7 @@ The framework has been tested with Python 2.7 and Ubuntu 16.04 and 18.04. We als
 ## Installation
 
 1. First download the `pip` Python package manager and create a virtual environment for Python as described in the following link: https://packaging.python.org/guides/installing-using-pip-and-virtualenv/
-On Ubuntu, in the terminal, you can type to download and install `pip` and `virtualenv`: 
+On Ubuntu, you can install `pip` and `virtualenv` by typing in the terminal: 
 
 - In Python 2.7:
 ```bash
@@ -34,14 +34,14 @@ virtualenv -p /usr/bin/python<version> <virtualenv_name>
 # activate the virtual environment
 source <virtualenv_name>/bin/activate
 ```
-where `<version>` is the python version you want to use (select between `2.7` or `3.5`), and `<virtualenv_name>` is a name of your choice for the virtual environment. For instance, it can be `py2.7` or `py3.7`.
+where `<version>` is the python version you want to use (select between `2.7` or `3.5`), and `<virtualenv_name>` is a name of your choice for the virtual environment. For instance, it can be `py2.7` or `py3.5`.
 
 To deactivate the virtual environment, just type:
 ```bash
 deactivate
 ```
 
-2. clone this repository and install the requirements and the setup.py
+2. clone this repository and install the requirements by executing the setup.py
 
 In Python 2.7:
 ```bash
@@ -63,8 +63,8 @@ pip install -e .  # this will install pyrobolearn as well as the required packag
 
 Depending on your computer configuration and the python version you use, you might need to install also the following packages through `apt-get`:
 ```bash
-sudo apt-get install python-tk  # if python 2.7
-sudo apt-get install pytho3-tk  # if python 3.5
+sudo apt install python-tk  # if python 2.7
+sudo apt install python3-tk  # if python 3.5
 ```
 
 ## How to use it?

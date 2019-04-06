@@ -1,3 +1,3 @@
 
 # import memory
-from storage import *
+from .storage import *

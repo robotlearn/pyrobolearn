@@ -12,9 +12,9 @@ See Also:
 import collections
 import copy
 import pickle
+import queue
 import numpy as np
 import torch
-from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 from pyrobolearn import logger
 
@@ -118,6 +118,11 @@ class PyTorchStorage(Storage):
         if isinstance(item, torch.Tensor):
             logger.debug('setting tensor of size {} to {} with dtype={}'.format(item.size(), device, dtype))
             item = item.to(device=device, dtype=dtype)
+        elif isinstance(item, np.ndarray):
+            if item.dtype != object:  # double, float, float16, int64, int32, and uint8
+                item = torch.from_numpy(item).to(device=device, dtype=dtype)
+        elif isinstance(item, (float, int, np.generic)):
+            item = torch.tensor(item).to(device=device, dtype=dtype)
         elif isinstance(item, dict):
             for key, value in item.items():
                 item[key] = self._to(value, device=device, dtype=dtype)
@@ -127,8 +132,9 @@ class PyTorchStorage(Storage):
                 value = self._to(value, device=device, dtype=dtype)
                 item.add(value)
         elif isinstance(item, collections.Iterable):
-            for idx, value in enumerate(item):
-                item[idx] = self._to(value, device=device, dtype=dtype)
+            item = [self._to(value, device=device, dtype=dtype) for value in item]
+            # for idx, value in enumerate(item):
+            #     item[idx] = self._to(value, device=device, dtype=dtype)
         return item
 
     @staticmethod
@@ -231,6 +237,211 @@ class ListStorage(list, PyTorchStorage):
             raise TypeError("Expecting an iterable.")
         iterable = self._to(iterable, device=self.device, dtype=self.dtype)
         super(ListStorage, self).append(iterable)
+
+    def __setitem__(self, key, value):
+        """Set the specified value at the specified key."""
+        super(ListStorage, self).__setitem__(key, self._to(value, device=self.device, dtype=self.dtype))
+
+
+class FIFOQueueStorage(queue.Queue, PyTorchStorage):
+    r"""FIFO Queue Storage
+
+    FIFO queue storage (data structure) which allocates the given tensor(s) to the specified device.
+    """
+
+    def __init__(self, maxsize=0):
+        """Initialize the FIFO Queue storage.
+
+        Args:
+            maxsize (int): maximum size of the queue. If :attr:`maxsize` is <= 0, the queue size is infinite.
+        """
+        super(FIFOQueueStorage, self).__init__(maxsize)
+
+    def put(self, item, block=False, timeout=None):
+        """Put an item into the queue.
+
+        If optional args 'block' is true and 'timeout' is None (the default), block if necessary until a free slot
+        is available. If 'timeout' is a non-negative number, it blocks at most 'timeout' seconds and raises
+        the Full exception if no free slot was available within that time.
+        Otherwise ('block' is false), put an item on the queue if a free slot is immediately available, else raise
+        the Full exception ('timeout' is ignored in that case).
+        """
+        if not self.full():
+            item = self._to(item, device=self.device, dtype=self.dtype)
+            super(FIFOQueueStorage, self).put(item, block=block, timeout=timeout)
+
+    def put_nowait(self, item):
+        """
+        Put an item into the queue without blocking. Only enqueue the item if a free slot is immediately available.
+        Otherwise raise the Full exception.
+        """
+        item = self._to(item, device=self.device, dtype=self.dtype)
+        super(FIFOQueueStorage, self).put_nowait(item)
+
+    def __len__(self):
+        """Return the size of the Queue."""
+        return self.qsize()
+
+    def __iter__(self):
+        """Return the iterator object itself."""
+        self.cnt = 0
+        return self
+
+    def __next__(self):  # only valid in Python 3
+        """Return the next item in the sequence."""
+        if self.cnt < self.qsize():
+            self.cnt += 1
+            return self.queue[self.cnt-1]
+        else:
+            raise StopIteration
+
+    def next(self):  # for Python 2
+        """Return the next item in the sequence."""
+        return self.__next__()
+
+
+class LIFOQueueStorage(queue.LifoQueue, PyTorchStorage):
+    r"""LIFO Queue Storage
+
+    LIFO queue storage (data structure) which allocates the given tensor(s) to the specified device.
+    """
+
+    def __init__(self, maxsize=0):
+        """Initialize the LIFO Queue storage.
+
+        Args:
+            maxsize (int): maximum size of the queue. If :attr:`maxsize` is <= 0, the queue size is infinite.
+        """
+        super(LIFOQueueStorage, self).__init__(maxsize)
+
+    def put(self, item, block=False, timeout=None):
+        """Put an item into the queue.
+
+        If optional args 'block' is true and 'timeout' is None (the default), block if necessary until a free slot
+        is available. If 'timeout' is a non-negative number, it blocks at most 'timeout' seconds and raises
+        the Full exception if no free slot was available within that time.
+        Otherwise ('block' is false), put an item on the queue if a free slot is immediately available, else raise
+        the Full exception ('timeout' is ignored in that case).
+        """
+        if not self.full():
+            item = self._to(item, device=self.device, dtype=self.dtype)
+            super(LIFOQueueStorage, self).put(item, block=block, timeout=timeout)
+
+    def put_nowait(self, item):
+        """
+        Put an item into the queue without blocking. Only enqueue the item if a free slot is immediately available.
+        Otherwise raise the Full exception.
+        """
+        item = self._to(item, device=self.device, dtype=self.dtype)
+        super(LIFOQueueStorage, self).put_nowait(item)
+
+    def __len__(self):
+        """Return the size of the Queue."""
+        return self.qsize()
+
+    def __iter__(self):
+        """Return the iterator object itself."""
+        self.cnt = 0
+        return self
+
+    def __next__(self):  # only valid in Python 3
+        """Return the next item in the sequence."""
+        if self.cnt < self.qsize():
+            self.cnt += 1
+            return self.queue[self.cnt-1]
+        else:
+            raise StopIteration
+
+    def next(self):  # for Python 2
+        """Return the next item in the sequence."""
+        return self.__next__()
+
+
+class PriorityQueueStorage(queue.PriorityQueue, PyTorchStorage):
+    r"""Priority Queue Storage
+
+    Priority queue storage (data structure) which allocates the given tensor(s) to the specified device.
+
+    Note that `queue.PriorityQueue` is a thread-safe class that use the `heapq` module (which is initially not thread
+    safe) under the hood.
+    """
+
+    def __init__(self, maxsize=0, ascending=True):
+        """Initialize the LIFO Queue storage.
+
+        Args:
+            maxsize (int): maximum size of the queue. If :attr:`maxsize` is <= 0, the queue size is infinite.
+            ascending (bool): if True, the item with the lowest priority will be the first one to be retrieved.
+        """
+        super(PriorityQueueStorage, self).__init__(maxsize)
+        self.ascending = ascending
+
+    def put(self, item, block=False, timeout=None):
+        """Put an item into the queue.
+
+        If optional args 'block' is true and 'timeout' is None (the default), block if necessary until a free slot
+        is available. If 'timeout' is a non-negative number, it blocks at most 'timeout' seconds and raises
+        the Full exception if no free slot was available within that time.
+        Otherwise ('block' is false), put an item on the queue if a free slot is immediately available, else raise
+        the Full exception ('timeout' is ignored in that case).
+        """
+        if not self.full():
+            if not isinstance(item, tuple) or len(item) != 2:
+                raise TypeError("Expecting the item to be a tuple of length 2 with (priority number, data), instead "
+                                "got: {}".format(item))
+            if self.ascending:
+                item = (item[0], self._to(item[1], device=self.device, dtype=self.dtype))
+            else:
+                item = (-item[0], self._to(item[1], device=self.device, dtype=self.dtype))
+            super(PriorityQueueStorage, self).put(item, block=block, timeout=timeout)
+
+    def put_nowait(self, item):
+        """
+        Put an item into the queue without blocking. Only enqueue the item if a free slot is immediately available.
+        Otherwise raise the Full exception.
+        """
+        if not isinstance(item, tuple) or len(item) != 2:
+            raise TypeError("Expecting the item to be a tuple of length 2 with (priority number, data), instead "
+                            "got: {}".format(item))
+        if self.ascending:
+            item = (item[0], self._to(item[1], device=self.device, dtype=self.dtype))
+        else:
+            item = (-item[0], self._to(item[1], device=self.device, dtype=self.dtype))
+        super(PriorityQueueStorage, self).put_nowait(item)
+
+    def get(self, block=True, timeout=None):
+        """Remove and return an item from the queue.
+
+        If optional args 'block' is true and 'timeout' is None (the default), block if necessary until an item is
+        available. If 'timeout' is a non-negative number, it blocks at most 'timeout' seconds and raises the Empty
+        exception if no item was available within that time. Otherwise ('block' is false), return an item if one is
+        immediately available, else raise the Empty exception ('timeout' is ignored in that case).
+        """
+        item = super(PriorityQueueStorage, self).get(block=block, timeout=timeout)
+        if not self.ascending:
+            item = (-item[0], item[1])
+        return item
+
+    def __len__(self):
+        """Return the size of the Queue."""
+        return self.qsize()
+
+    def __iter__(self):
+        """Return the iterator object itself."""
+        self.cnt = 0
+        return self
+
+    def __next__(self):  # only valid in Python 3
+        """Return the next item in the sequence."""
+        if self.cnt < self.qsize():
+            self.cnt += 1
+            return self.queue[self.cnt-1]
+        else:
+            raise StopIteration
+
+    def next(self):  # for Python 2
+        """Return the next item in the sequence."""
+        return self.__next__()
 
 
 class SetStorage(set, PyTorchStorage):
