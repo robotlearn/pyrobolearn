@@ -94,7 +94,7 @@ def init_orthogonal_weights_and_constant_biases(module, gain=1., val=0.):
     """
     weight_init = wrap_init_tensor(torch.nn.init.orthogonal_, gain=gain)
     weight_bias = wrap_init_tensor(torch.nn.init.constant_, val=val)
-    module = init_module(module, wrap_init_tensor(module, weight_init, weight_bias))
+    module = init_module(module, weight_init, weight_bias)
     return module
 
 
@@ -162,6 +162,8 @@ class FixedVectorModule(torch.nn.Module):
         Returns:
             torch.Tensor: vector / matrix of shape (N, D)
         """
+        if len(x.shape) == 1:
+            return self._vector
         return self._vector.repeat(x.size(0), 1)
 
 
@@ -239,6 +241,8 @@ class FixedMeanModule(torch.nn.Module):  # this is the same as FixedVector (but 
         Returns:
             torch.Tensor: mean vector / matrix of shape (N, D)
         """
+        if len(x.shape) == 1:
+            return self._mean
         return self._mean.repeat(x.size(0), 1)
 
 
@@ -271,6 +275,97 @@ class MeanModule(torch.nn.Module):  # this is the same as VectorModule (but with
             torch.Tensor: mean vector / matrix of shape (N, D)
         """
         return self._model(x)
+
+
+class FixedStandardDeviationModule(torch.nn.Module):
+    r"""Fixed Standard Deviation Module
+
+    Generate the standard deviations of the Normal distributions. This generates a fixed standard deviations everytime
+    it is called.
+    If N samples are given at the input such that it has a shape (N,I), it returns N copy of the mean of shape (N,M).
+    """
+
+    def __init__(self, stddev=None, variances=None):
+        """
+        Initialize the fixed standard deviation generator.
+
+        Args:
+            stddev (torch.Tensor, None): vector of standard deviations. If the variances is None, the standard
+                deviations will be considered.
+            variances (torch.Tensor, None): vector of variances. If None, the standard deviations have to be defined.
+        """
+        super(FixedStandardDeviationModule, self).__init__()
+        if stddev is None:
+            if variances is None:
+                raise ValueError("The variances or the standard deviations have to be specified")
+            # check if negative elements in variances
+            if torch.any(variances < 0.):
+                raise ValueError("Expecting the variances to be strictly positive, found some negative variances: "
+                                 "{}".format(type(variances)))
+            stddev = variances.sqrt()
+
+        # check if negative elements in standard deviations
+        if torch.any(stddev < 0.):
+            raise ValueError("Expecting the standard deviations to be strictly positive, found some negative "
+                             "deviations: {}".format(type(stddev)))
+
+        # if standard deviations are very close to zero
+        if torch.any(stddev.isclose(torch.tensor(0.))):
+            # add small offset
+            stddev += 1.e-4
+
+        self._stddev = stddev
+
+    def forward(self, x):
+        """Take as input the base output vector / matrix and return the standard deviation vector / matrix.
+
+        Args:
+            x (torch.Tensor): base output vector / matrix of shape (N, B)
+
+        Returns:
+            torch.Tensor: standard deviation vector / matrix of shape (N, D)
+        """
+        if len(x.shape) == 1:
+            return self._stddev
+        return self._stddev.repeat(x.size(0), 1)
+
+
+class StandardDeviationModule(torch.nn.Module):
+    r"""Standard Deviation Module
+
+    Generate the standard deviations of the Normal distribution.
+    """
+
+    def __init__(self, num_inputs, num_outputs):
+        """
+        Initialize the mean generator.
+
+        Args:
+            num_inputs (int): size of the base output vector
+            num_outputs (int): size of the action mean vector
+        """
+        super(StandardDeviationModule, self).__init__()
+        # linear mapping between the base output vector / matrix and the mean output vector / matrix
+        model = torch.nn.Linear(in_features=num_inputs, out_features=num_outputs)
+        self._model = init_orthogonal_weights_and_constant_biases(model)
+
+    def forward(self, x):
+        """Take as input the base output vector / matrix and return the standard deviation vector / matrix.
+
+        Args:
+            x (torch.Tensor): base output vector / matrix of shape (N, B)
+
+        Returns:
+            torch.Tensor: standard deviation vector / matrix of shape (N, D)
+        """
+        # compute standard deviations
+        x = self._model(x)  # shape (N,D) or (D,)
+
+        # get standard deviation by taking the exponential (which is always positive)
+        x = torch.exp(x)  # shape (N,D) or (D,)
+
+        # return the standard deviation
+        return x
 
 
 class FixedDiagonalCovarianceModule(torch.nn.Module):
@@ -320,11 +415,11 @@ class FixedDiagonalCovarianceModule(torch.nn.Module):
         Returns:
             torch.Tensor: covariance matrices (one covariance matrix for each sample) of shape (N, D, D)
         """
-        # stack N times the covariance
-        covariance = self._covariance.repeat(x.size(0), 1, 1)
-
         # return the fixed diagonal covariance
-        return covariance
+        if len(x.shape) == 1:
+            return self._covariance
+        # stack N times the covariance
+        return self._covariance.repeat(x.size(0), 1, 1)
 
 
 class FixedCovarianceModule(torch.nn.Module):
@@ -371,9 +466,10 @@ class FixedCovarianceModule(torch.nn.Module):
         Returns:
             torch.Tensor: covariance matrices (one covariance matrix for each sample) of shape (N, D, D)
         """
+        if len(x.shape) == 1:
+            return self._covariance(x)
         # stack N times the covariance
-        covariance = self._covariance.repeat(x.size(0), 1, 1)
-        return covariance
+        return self._covariance.repeat(x.size(0), 1, 1)
 
 
 class DiagonalCovarianceModule(torch.nn.Module):
@@ -419,17 +515,20 @@ class DiagonalCovarianceModule(torch.nn.Module):
             torch.Tensor: covariance matrices (one covariance matrix for each sample) of shape (N, D, D)
         """
         # from base outputs to vector representing the log var
-        x = self._model(x)  # shape (N,D)
+        x = self._model(x)  # shape (N,D) or (D,)
 
         # get variance by taking the exponential (which is always positive)
-        x = torch.exp(x)  # shape (N,D)
+        x = torch.exp(x)  # shape (N,D) or (D,)
 
-        # create covariance matrix of shape (N,D,D)
-        covariance = torch.zeros(x.size(0), self._dim, self._dim)  # shape (N,D,D)
+        # create covariance matrix of shape (N,D,D) or (D,D)
+        if len(x.shape) > 1:
+            covariance = torch.zeros(x.size(0), self._dim, self._dim)  # shape (N,D,D)
 
-        # set the elements in the covariance matrix  # TODO: remove this for-loop
-        for i in range(len(covariance)):
-            covariance[i] = torch.diag(x[i]) + self._offset
+            # set the elements in the covariance matrix  # TODO: remove this for-loop
+            for i in range(len(covariance)):
+                covariance[i] = torch.diag(x[i]) + self._offset
+        else:
+            covariance = torch.diag(x) + self._offset  # shape (D,D)
 
         # return the diagonal covariance matrix
         return covariance
@@ -491,18 +590,21 @@ class FullCovarianceModule(torch.nn.Module):
             torch.Tensor: covariance matrices (one covariance matrix for each sample) of shape (N, D, D)
         """
         # from base outputs to vector representing the elements of a triangular matrix
-        x = self._model(x)  # shape (N,L)  where L=(D^2+D)/2
+        x = self._model(x)  # shape (N,L) or (L,) where L=(D^2+D)/2
 
         # create lower triangular matrix
-        covariance = torch.zeros(x.size(0), self._dim, self._dim)  # shape (N,D,D)
+        if len(x.shape) > 1:
+            covariance = torch.zeros(x.size(0), self._dim, self._dim)  # shape (N,D,D)
 
-        # set the elements in the covariance matrix  # TODO: find a better way than a for-loop
-        for i in range(len(covariance)):
-            covariance[i][self._idx] = x[i]
-            covariance[i] = torch.dot(covariance[i], covariance[i].T) + self._offset
+            # set the elements in the covariance matrix  # TODO: find a better way than a for-loop
+            for i in range(len(covariance)):
+                covariance[i][self._idx] = x[i]
+                covariance[i] = torch.matmul(covariance[i], covariance[i].t()) + self._offset
 
-        # add a small noise to the diagonal terms to be positive definite
-        # covariance = covariance + self.threshold * torch.diag(torch.ones(self.dim))  # shape (N,D,D)
+            # add a small noise to the diagonal terms to be positive definite
+            # covariance = covariance + self.threshold * torch.diag(torch.ones(self.dim))  # shape (N,D,D)
+        else:
+            covariance = torch.matmul(x, x.t()) + self._offset  # shape (D,D)
 
         # return the full covariance matrix
         return covariance
@@ -655,12 +757,87 @@ class BernoulliModule(DiscreteModule):
         return BernoulliDistribution(probs=self.probs(x), logits=self.logits(x))
 
 
+class NormalModule(torch.nn.Module):
+    r"""Normal Module
+
+    Type: continuous
+
+    The Normal module accepts as inputs the mean and standard deviation modules (i.e. that inherit from
+    `torch.nn.Module`, and returns the Normal distribution (i.e. `torch.distributions.Normal`). For more information
+    about this distribution, see the documentation of `torch.distributions.Normal`.
+
+    Examples:
+        >>> # fixed normal
+        >>> mean = FixedMeanModule(mean=torch.zeros(5))
+        >>> stddev = FixedStandardDeviationModule(stddev=torch.ones(5))
+        >>> normal = NormalModule(mean=mean, stddev=stddev)
+        >>> # most flexible normal
+        >>> mean = MeanModule(num_inputs=10, num_outputs=5)
+        >>> stddev = StandardDeviationModule(num_inputs=10, num_outputs=5)
+        >>> normal = NormalModule(mean=mean, stddev=stddev)
+        >>> # if the mean is already computed
+        >>> mean = IdentityModule()
+        >>> stddev = StandardDeviationModule(num_inputs=10, num_outputs=5)
+        >>> normal = NormalModule(mean=mean, stddev=stddev)
+    """
+
+    def __init__(self, mean, stddev):
+        """
+        Initialize the Normal module.
+
+        Args:
+            mean (torch.nn.Module): mean module.
+            stddev (torch.nn.Module): standard deviation module.
+        """
+        super(NormalModule, self).__init__()
+        self.mean = mean
+        self.stddev = stddev
+
+    @property
+    def mean(self):
+        """Return the mean module."""
+        return self._mean
+
+    @mean.setter
+    def mean(self, mean):
+        """Set the mean module."""
+        if not isinstance(mean, torch.nn.Module):
+            raise TypeError("Expecting the mean to be an instance of `torch.nn.Module`, instead got: "
+                            "{}".format(type(mean)))
+        self._mean = mean
+
+    @property
+    def stddev(self):
+        """Return the stddev module."""
+        return self._stddev
+
+    @stddev.setter
+    def stddev(self, stddev):
+        """Set the stddev module."""
+        if not isinstance(stddev, torch.nn.Module):
+            raise TypeError("Expecting the stddev to be an instance of `torch.nn.Module`, instead got: "
+                            "{}".format(type(stddev)))
+        self._stddev = stddev
+
+    def forward(self, *x):
+        """Forward the given inputs :attr:`x`."""
+        if len(x) == 1:
+            x1, x2 = x[0], x[0]
+        elif len(x) == 2:
+            x1, x2 = x[0], x[1]
+        else:
+            raise ValueError("Expecting 1 or 2 inputs.")
+        mean = self.mean(x1)
+        stddev = self.stddev(x2)
+        return torch.distributions.Normal(loc=mean, scale=stddev)
+
+
 class GaussianModule(torch.nn.Module):
     r"""Gaussian Module
 
     Type: continuous
 
-    The Gaussian module accepts as inputs the mean and covariance modules (i.e. that inherit from `torch.nn.Modules`),
+    The Gaussian module accepts as inputs the mean and covariance modules (i.e. that inherit from `torch.nn.Module`),
     and returns the multivariate Gaussian distribution (that inherits from `torch.distributions.MultivariateNormal`).
     For more information about this distribution, see the documentation of `pyrobolearn/distributions/gaussian.py`.
 
@@ -739,7 +916,7 @@ class GaussianMixtureModule(torch.nn.Module):
     Type: continuous
 
     The Gaussian mixture module accepts as inputs the priors, means and covariances modules (i.e. that inherit from
-    `torch.nn.Modules`), and returns the Gaussian mixture distribution
+    `torch.nn.Module`), and returns the Gaussian mixture distribution
     (that inherits from `torch.distributions.Distribution`).
     For more information about this distribution, see the documentation of `pyrobolearn/distributions/gmm.py`.
 
