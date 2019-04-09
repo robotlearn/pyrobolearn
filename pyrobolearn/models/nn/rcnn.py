@@ -19,9 +19,6 @@ References:
     [2] PyTorch: https://pytorch.org/
 """
 
-import copy
-import inspect
-import numpy as np
 import torch
 
 from pyrobolearn.models.nn.dnn import NN
@@ -37,11 +34,14 @@ __status__ = "Development"
 
 
 class RCNN(NN):
-    r"""Recurrent CNN
-    """
-    pass
+    r"""Recurrent Convolutional Neural Network
 
-class RCNN(NNTorch):
-    r"""Recurrent CNN in PyTorch
+    The Recurrent Convolutional Neural Network (RCNN) is a neural network model used for data that have features that
+    have a temporal and spatial relationship between them. This includes for instance the processing of videos.
+
+    References:
+        [1] "Recurrent Convolutional Neural Networks for Scene Labeling", Pinheiro et al., 2014
+        [2] "Recurrent Convolutional Neural Networks for Text Classification", Lai et al., 2015
+        [3] "Recurrent Convolutional Neural Networks for Object Recognition", Liang et al., 2015
     """
     pass

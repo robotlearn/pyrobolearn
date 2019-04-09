@@ -17,12 +17,9 @@ References:
     [2] PyTorch: https://pytorch.org/
 """
 
-import copy
-import inspect
-import numpy as np
 import torch
 
-from pyrobolearn.models.nn.dnn import NN, NNTorch
+from pyrobolearn.models.nn.dnn import NN
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -51,79 +48,23 @@ class MLP(NN):
     The parameters of the neural networks are all the weight matrices and bias vectors.
     """
 
-    def __init__(self, num_units=(), activation_fct='Linear', last_activation_fct=None, dropout_prob=None,
-                 framework='pytorch'):
+    def __init__(self, units=(), activation=None, last_activation=None, dropout=None):
         """
         Initialize a MLP network.
 
         Args:
-            num_units (list/tuple of int): number of units in each layer (this includes the input and output layer)
-            activation_fct (None, str, or list/tuple of str/None): activation function to be applied after each layer.
+            units (list/tuple of int): number of units in each layer (this includes the input and output layer)
+            activation (None, str, or list/tuple of str/None): activation function to be applied after each layer.
                                                                    If list/tuple, then it has to match the number of
-                                                                   hidden layers.
-            last_activation_fct (None or str): last activation function to be applied. If not specified, it will check
+                                                                   hidden layers. If None, it is a linear layer.
+            last_activation (None or str): last activation function to be applied. If not specified, it will check
                                                if it is in the list/tuple of activation functions provided for the
                                                previous argument.
-            dropout_prob (None, float, or list/tuple of float/None): dropout probability.
-            framework (str): specifies which framework we want to use between 'pytorch' and 'keras' (default: 'pytorch')
-        """
-
-        # check framework
-        framework = framework.lower()
-        if framework == 'pytorch':
-            model = MLPTorch(num_units, activation_fct, last_activation_fct, dropout_prob)
-        elif framework == 'keras':
-            model = MLPKeras(num_units, activation_fct, last_activation_fct, dropout_prob)
-        else:
-            raise ValueError("The current frameworks allowed are pytorch and keras")
-
-        # instantiate the super class
-        super(MLP, self).__init__(model.model, input_shape=tuple([num_units[0]]), output_shape=tuple([num_units[-1]]),
-                                  framework=framework)
-
-        # rewrite methods
-        self.save = model.save
-        self.load = model.load
-        self.__str__ = model.__str__
-
-
-class MLPTorch(NNTorch):
-    r"""Multi-Layer Perceptron in PyTorch
-
-    Feed-forward and fully-connected neural network, where linear layers are followed by non-linear activation
-    functions.
-
-    .. math::
-
-        h_{l} = f_{l}(W_{l} h_{l-1} + b_{l})
-
-    where :math:`l \in [1,...,L]` with :math:`L` is the total number of layers,
-    :math:`W_{l}` and :math:`b_{l}` are the weight matrix and bias vector at layer :math:`l`, :math:`f_{l}` is
-    the nonlinear activation function, and :math:`h_{0} = x` and :math:`y = h_{L}` are the input and output vectors.
-
-    The parameters of the neural networks are all the weight matrices and bias vectors.
-    """
-
-    def __init__(self, num_units=(), activation_fct='Linear', last_activation_fct=None, dropout_prob=None):
-        """
-        Initialize a MLP network.
-
-        Args:
-            num_units (list/tuple of int): number of units in each layer (this includes the input and output layer)
-            activation_fct (None, str, or list/tuple of str/None): activation function to be applied after each layer.
-                                                                   If list/tuple, then it has to match the
-            last_activation_fct (None or str): last activation function to be applied. If not specified, it will check
-                                               if it is in the list/tuple of activation functions provided for the
-                                               previous argument.
-            dropout_prob (None, float, or list/tuple of float/None): dropout probability.
+            dropout (None, float, or list/tuple of float/None): dropout probability.
         """
         # check number of units
-        if len(num_units) < 2:
+        if len(units) < 2:
             raise ValueError("The num_units list/tuple needs to have at least the input and output layers")
-
-        # set the dimensions of the input and output
-        self.input_dims = num_units[0]
-        self.output_dims = num_units[-1]
 
         # check for activation fcts
         activations = dir(torch.nn.modules.activation)
@@ -139,43 +80,52 @@ class MLPTorch(NNTorch):
                 activation = getattr(torch.nn, activations[activation])
             return activation
 
-        activation_fct = check_activation(activation_fct)
-        last_activation_fct = check_activation(last_activation_fct)
+        activation = check_activation(activation)
+        last_activation = check_activation(last_activation)
 
         # check dropout
         dropout_layer = None
-        if dropout_prob is not None:
-            dropout_layer = torch.nn.Dropout(dropout_prob)
+        if dropout is not None:
+            dropout_layer = torch.nn.Dropout(dropout)
 
         # build pytorch network
         layers = []
-        for i in range(len(num_units[:-2])):
+        for i in range(len(units[:-2])):
             # add linear layer
-            layer = torch.nn.Linear(num_units[i], num_units[i + 1])
+            layer = torch.nn.Linear(units[i], units[i + 1])
             layers.append(layer)
 
             # add activation layer
-            if activation_fct is not None:
-                layers.append(activation_fct())
+            if activation is not None:
+                layers.append(activation())
 
             # add dropout layer
             if dropout_layer is not None:
                 layers.append(dropout_layer)
 
         # last output layer
-        layers.append(torch.nn.Linear(num_units[-2], num_units[-1]))
-        if last_activation_fct is not None:
-            layers.append(last_activation_fct)
+        layers.append(torch.nn.Linear(units[-2], units[-1]))
+        if last_activation is not None:
+            layers.append(last_activation)
 
         # create nn model
         model = torch.nn.Sequential(*layers)
 
-        super(MLPTorch, self).__init__(model, input_shape=num_units[0], output_shape=num_units[-1])
+        super(MLP, self).__init__(model, input_shape=tuple([units[0]]), output_shape=tuple([units[-1]]))
+
+        # rewrite methods
+        # self.save = model.save
+        # self.load = model.load
+        # self.__str__ = model.__str__
 
 
 # Tests
 if __name__ == '__main__':
 
     # create MLP network
-    mlp = MLPTorch(num_units=(2, 10, 3), activation_fct='relu')
+    mlp = MLP(units=(2, 10, 3), activation='relu')
     print(mlp)
+
+    x = torch.rand(2)
+    y = mlp(x)
+    print("Input: {} - Output: {}".format(x, y))

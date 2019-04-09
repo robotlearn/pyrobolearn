@@ -18,7 +18,8 @@ References:
 """
 
 import copy
-import inspect
+import types
+import collections
 import numpy as np
 import torch
 
@@ -63,7 +64,7 @@ class NN(object):  # Model
 # - nn.Sequential: https://pytorch.org/docs/master/_modules/torch/nn/modules/container.html#Sequential
     """
 
-    def __init__(self, model, input_shape, output_shape, framework=None):
+    def __init__(self, model, input_shape, output_shape):  # framework=None):
         r"""Initialize the NN model.
 
         Args:
@@ -90,7 +91,7 @@ class NN(object):  # Model
         self.base_output = None
 
         # TODO: infer the framework based on the model
-        self.framework = framework
+        self.framework = 'pytorch'  # framework
 
     ##############
     # Properties #
@@ -162,6 +163,15 @@ class NN(object):  # Model
     ##################
 
     @staticmethod
+    def copy(other, deep=True):
+        """Return another copy of the learning model"""
+        if not isinstance(other, Model):
+            raise TypeError("Trying to copy an object which is not a Linear model")
+        if deep:
+            return copy.deepcopy(other)
+        return copy.copy(other)
+
+    @staticmethod
     def is_parametric():
         """A neural network is a parametric model"""
         return True
@@ -195,6 +205,11 @@ class NN(object):  # Model
         for instance, for generative adversarial networks (GANs) and variational auto-encoders (VAEs)."""
         return False
 
+    @staticmethod
+    def is_latent():  # unless AE, VAE,...
+        """Standard neural networks are not latent models but they can be like (variational) auto-encoders."""
+        return False
+
     ###########
     # Methods #
     ###########
@@ -210,6 +225,23 @@ class NN(object):  # Model
         self.model.eval()
         # for param in self.model.parameters():
         #     param.requires_grad = False
+
+    def copy_parameters(self, parameters):
+        """Copy the given parameters.
+
+        Args:
+            parameters (NN, torch.nn.Module, generator, iterable): the other model's parameters to copy.
+        """
+        if isinstance(parameters, self.__class__):
+            self.model.load_state_dict(parameters.model.state_dict())
+        elif isinstance(parameters, torch.nn.Module):
+            self.model.load_state_dict(parameters.state_dict())
+        elif isinstance(parameters, (types.GeneratorType, collections.Iterable)):
+            for model_params, other_params in zip(self.parameters(), parameters):
+                model_params.data.copy_(other_params.data)
+        else:
+            raise TypeError("Expecting the given parameters to be an instance of `NN`, `torch.nn.Module`, `generator`"
+                            ", or an iterable object, instead got: {}".format(type(parameters)))
 
     def parameters(self):
         """Return an iterator over the model parameters."""
@@ -237,21 +269,51 @@ class NN(object):  # Model
         the activation functions, etc."""
         raise NotImplementedError
 
-    def predict(self, x=None, to_numpy=False):
-        """Predict the output given the input."""
+    def predict(self, inputs, to_numpy=False):
+        """Predict the output given the input :attr:`inputs`.
+
+        Args:
+            inputs (np.ndarray, torch.Tensor): input vector/matrix
+            to_numpy (bool): if True, return a np.array
+
+        Returns:
+            np.ndarray, torch.Tensor: output vector/matrix
+        """
         # convert to torch tensor if necessary
-        if isinstance(x, np.ndarray):
-            x = torch.from_numpy(x).float()
+        if isinstance(inputs, np.ndarray):
+            inputs = torch.from_numpy(inputs).float()
 
         # predict output given input
-        x = self.model(x)
+        inputs = self.model(inputs)
 
         # return the output (and convert it to numpy if specified)
         if to_numpy:
-            if x.requires_grad:
-                return x.detach().numpy()
-            return x.numpy()
-        return x
+            if inputs.requires_grad:
+                return inputs.detach().numpy()
+            return inputs.numpy()
+        return inputs
+
+    def forward(self, inputs):
+        return self.predict(inputs, to_numpy=False)
+
+    def save(self, filename):
+        """
+        Save the neural network to the specified file.
+
+        Args:
+            filename (str): filename to save the neural network
+        """
+        torch.save(self.model, filename)
+
+    def load(self, filename):
+        """
+        Load the neural network from the specified file.
+
+        Args:
+            filename (str): filename from which to load the neural network
+        """
+        self.model = torch.load(filename)
+        # check input and output dimensions
 
     #############
     # Operators #
@@ -276,6 +338,10 @@ class NN(object):  # Model
         """
         return self.model[key]
 
+    def __call__(self, inputs, to_numpy=True):
+        """Predict the output given the input :attr:`inputs`."""
+        return self.predict(inputs, to_numpy=to_numpy)
+
     def __rshift__(self, other):
         """
         Concatenate two NN models in sequence, and return the sequenced model.
@@ -296,36 +362,3 @@ class NN(object):  # Model
 
         # return the concatenation
         return NN(model)
-
-
-class NNTorch(NN):
-    r"""Neural Network written in PyTorch
-    """
-
-    def __init__(self, model, input_shape, output_shape):
-        super(NNTorch, self).__init__(model, input_shape, output_shape, framework='pytorch')
-
-    def save(self, filename):
-        """
-        Save the neural network to the specified file.
-
-        Args:
-            filename (str): filename to save the neural network
-        """
-        torch.save(self.model, filename)
-
-    def load(self, filename):
-        """
-        Load the neural network from the specified file.
-
-        Args:
-            filename (str): filename from which to load the neural network
-        """
-        self.model = torch.load(filename)
-        # check input and output dimensions
-
-    def __str__(self):
-        """
-        Return string describing the NN model.
-        """
-        return str(self.model)
