@@ -635,36 +635,34 @@ class DiscreteModule(torch.nn.Module):
             logits (torch.nn.Module): event logits module.
         """
         super(DiscreteModule, self).__init__()
-        self.logits = logits
-        self.probs = probs
+        if probs is None and logits is None:
+            raise ValueError("Expectingt the given 'probs' xor 'logits' to be different than None.")
+        if probs is not None and logits is not None:
+            raise ValueError("Expecting the given 'probs' xor 'logits' to be None.")
+
+        if probs is not None:
+            if not isinstance(probs, torch.nn.Module):
+                raise TypeError("Expecting the probs to be an instance of `torch.nn.Module`, instead got: "
+                                "{}".format(type(probs)))
+            self._probs = probs
+            self._logits = lambda x: None
+
+        if logits is not None:
+            if not isinstance(logits, torch.nn.Module):
+                raise TypeError("Expecting the logits to be an instance of `torch.nn.Module`, instead got: "
+                                "{}".format(type(logits)))
+            self._logits = logits
+            self._probs = lambda x: None
 
     @property
     def logits(self):
         """Return the logits module."""
         return self._logits
 
-    @logits.setter
-    def logits(self, logits):
-        """Set the logits module."""
-        if logits is not None and not isinstance(logits, torch.nn.Module):
-            raise TypeError("Expecting the logits to be an instance of `torch.nn.Module`, instead got: "
-                            "{}".format(type(logits)))
-        self._logits = logits
-        self._probs = lambda x: None
-
     @property
     def probs(self):
         """Return the probabilities module."""
         return self._probs
-
-    @probs.setter
-    def probs(self, probs):
-        """Set the probabilities module."""
-        if probs is not None and not isinstance(probs, torch.nn.Module):
-            raise TypeError("Expecting the probs to be an instance of `torch.nn.Module`, instead got: "
-                            "{}".format(type(probs)))
-        self._probs = probs
-        self._logits = lambda x: None
 
 
 class CategoricalModule(DiscreteModule):

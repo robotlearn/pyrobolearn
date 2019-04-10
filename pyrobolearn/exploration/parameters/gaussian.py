@@ -50,19 +50,27 @@ class GaussianParameterExploration(ParameterExploration):
             module = Gaussian(mean=mean, covariance=covariance)
 
         # check that the module is a Gaussian Module
-        if not isinstance(module, GaussianModule):
-            raise TypeError("Expecting the given 'module' to be an instance of `GaussianModule`, instead got: "
-                            "{}".format(type(module)))
+        if not isinstance(module, (torch.distributions.Normal, torch.distributions.MultivariateNormal)):
+            raise TypeError("Expecting the given 'module' to be an instance of `torch.distributions.Normal` or "
+                            "`torch.distributions.MultivariateNormal`, instead got: {}".format(type(module)))
 
         self._module = module
+
+    ##############
+    # Properties #
+    ##############
 
     @property
     def module(self):
         """Return the module instance."""
         return self._module
 
+    ###########
+    # Methods #
+    ###########
+
     def sample(self):
         """Sample the parameters from the """
         parameters = self.module.rsample((1,))  # rsample allows to get the gradients
-        self.policy.set_vectorized_parameters(vector=parameters)
+        return parameters
 

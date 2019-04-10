@@ -48,3 +48,19 @@ class BoltzmannActionExploration(DiscreteActionExploration):
         # create Categorical module
         logits = IdentityModule()
         self._module = CategoricalModule(logits=logits)
+
+    def explore(self, outputs):
+        r"""
+        Explore in the action space. Note that this does not run the policy; it is assumed that it has been called
+        outside.
+
+        Args:
+            outputs (torch.Tensor): action outputs (=logits) returned by the model.
+
+        Returns:
+            torch.Tensor: action
+            torch.distributions.Distribution: distribution on the action :math:`\pi_{\theta}(.|s)`
+        """
+        distribution = self._module(outputs)
+        action = distribution.sample((1,))
+        return action, distribution

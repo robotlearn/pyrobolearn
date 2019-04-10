@@ -144,7 +144,6 @@ class Policy(object):
         self.states = states
         self.actions = actions
         self.model = model
-        self.train_mode = False
         self.rate = rate
         self.cnt = 0
         self.action_data = None
@@ -391,13 +390,136 @@ class Policy(object):
             return x.numpy()
         return x
 
-    def _predict(self, state, to_numpy=False, return_logits=True, set_output_data=False):
-        """Inner prediction step."""
+    def get_state_data(self, state=None):
+        """Get the state data to be feed to the preprocessors and to the inner model / approximator.
+
+        Args:
+            state (State, None, (list of) torch.Tensor, (list of) np.array): state
+
+        Returns:
+            (list of) torch.Tensor, (list of) np.array: state data
+        """
+        # if no input is given, take the provided inputs at the beginning
+        if state is None:
+            state = self.states
+
+        # if the input is an instance of State, get the inner merged data.
+        if isinstance(state, State):
+            state = state.merged_data
+            if len(state) == 1:
+                state = state[0]
+
+        return state
+
+    def preprocess(self, state_data):
+        """Pre-process the given state data.
+
+        Args:
+            state_data ((list of) torch.Tensor, (list of) np.array): state data.
+
+        Returns:
+            (list of) torch.Tensor, (list of) np.array: preprocessed state data
+        """
+        # go through each preprocessor
+        for processor in self.preprocessors:
+            state_data = processor(state_data)
+        return state_data
+
+    def inner_predict(self, state_data, deterministic=True, to_numpy=False, return_logits=True, set_output_data=False):
+        """Inner prediction step.
+
+        Args:
+            state_data ((list of) torch.Tensor, (list of) np.array): state data.
+            deterministic (bool): True by default. It can only be set to False, if the policy is stochastic.
+            to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+            return_logits (bool): If True, in the case of discrete outputs, it will return the logits.
+            set_output_data (bool): If True, it will set the predicted output data to the outputs given to the
+                approximator.
+
+        Returns:
+            (list of) torch.Tensor, (list of) np.array: predicted action data.
+        """
         if isinstance(self.model, Approximator):  # inner model is an approximator
-            return self.model.predict(state, to_numpy=to_numpy, return_logits=return_logits,
+            return self.model.predict(state_data, to_numpy=to_numpy, return_logits=return_logits,
                                       set_output_data=set_output_data)
         # inner model is a learning model
-        return self.model.predict(state, to_numpy=to_numpy)
+        return self.model.predict(state_data, to_numpy=to_numpy)
+
+    def postprocess(self, action_data):
+        """Post-process the given action data.
+
+        Args:
+            action_data ((list of) torch.Tensor, (list of) np.array): action data.
+
+        Returns:
+            (list of) torch.Tensor, (list of) np.array: post-processed action data.
+        """
+        # go through each postprocessor
+        for processor in self.postprocessors:
+            action_data = processor(action_data)
+        return action_data
+
+    def set_action_data(self, action_data, to_numpy=True, return_logits=False):
+        """Set the given action data.
+
+        Args:
+            action_data ((list of) torch.Tensor, (list of) np.array): action data.
+            to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+            return_logits (bool): If True, in the case of discrete outputs, it will return the logits.
+
+        Returns:
+            (list of) torch.Tensor, (list of) np.array: action data
+        """
+        # set the action data
+        if action_data is None:
+            action_data = self.action_data
+
+        # if action data is not a list, make it a list as we will iterate through it
+        if not isinstance(action_data, list):
+            action_data = [action_data]
+
+        # go through each action and data
+        for idx, (action, data) in enumerate(zip(self.actions, action_data)):
+            if action.is_discrete():  # discrete action
+                if isinstance(data, np.ndarray):  # data action is a numpy array
+                    discrete_data = np.array([np.argmax(data)])
+                    action.data = discrete_data
+                    if not return_logits:
+                        action_data[idx] = discrete_data
+                elif isinstance(data, torch.Tensor):  # data action is a torch.Tensor
+                    discrete_data = torch.argmax(data, dim=0, keepdim=True)
+                    action.torch_data = discrete_data
+                    if not return_logits:
+                        action_data[idx] = self.__convert_to_numpy(discrete_data, to_numpy=to_numpy)
+                    else:
+                        action_data[idx] = self.__convert_to_numpy(data, to_numpy=to_numpy)
+                # elif isinstance(data, (float, int)):
+                #     discrete_data = np.argmax(data)
+                #     action.data = discrete_data
+                #     if not return_logits:
+                #         action_data[idx] = discrete_data
+                else:
+                    raise TypeError(
+                        "Expecting the `data` action to be a numpy array or torch.Tensor, instead got: "
+                        "{}".format(type(data)))
+            else:  # continuous action
+                if isinstance(data, np.ndarray):
+                    action.data = data
+                elif isinstance(data, torch.Tensor):
+                    action.torch_data = data
+                    action_data[idx] = self.__convert_to_numpy(data, to_numpy=to_numpy)
+                # elif isinstance(data, (float, int)):
+                #     pass
+                else:
+                    raise TypeError(
+                        "Expecting `data` to be a numpy array or torch.Tensor, instead got: "
+                        "{}".format(type(data)))
+
+        # if action_data is a list and has one element, return just that element
+        if isinstance(action_data, list) and len(action_data) == 1:
+            action_data = action_data[0]
+
+        return action_data
 
     def act(self, state=None, deterministic=True, to_numpy=True, return_logits=False, apply_action=True):
         """Perform the action given the state.
@@ -414,79 +536,25 @@ class Policy(object):
         """
         # if we should predict
         if (self.cnt % self.rate) == 0:
+            # get the state data
+            state_data = self.get_state_data(state=state)
 
-            # if no input is given, take the provided inputs at the beginning
-            if state is None:
-                state = self.states
-
-            # if the input is an instance of State, get the inner merged data.
-            if isinstance(state, State):
-                state = state.merged_data
-                if len(state) == 1:
-                    state = state[0]
-
-            # go through each preprocessor
-            for processor in self.preprocessors:
-                state = processor(state)
+            # pre-process the state data
+            state_data = self.preprocess(state_data)
 
             # predict the output using the inner model
-            self.action_data = self._predict(state, to_numpy=False, return_logits=True, set_output_data=False)
+            action_data = self.inner_predict(state_data, to_numpy=False, return_logits=True, set_output_data=False)
             # if isinstance(self.model, Approximator):  # inner model is an approximator
             #     self.action_data = self.model.predict(state, to_numpy=False, return_logits=True,
             #                                           set_output_data=False)
             # else:  # inner model is a learning model
             #     self.action_data = self.model.predict(state, to_numpy=to_numpy)
 
-            # go through each postprocessor
-            for processor in self.postprocessors:
-                self.action_data = processor(self.action_data)
+            # post-process the action data
+            action_data = self.postprocess(action_data)
 
             # set the action data
-
-            # if action data is not a list, make it a list as we will iterate through it
-            if not isinstance(self.action_data, list):
-                self.action_data = [self.action_data]
-
-            # go through each action and data
-            for idx, (action, data) in enumerate(zip(self.actions, self.action_data)):
-                if action.is_discrete():  # discrete action
-                    if isinstance(data, np.ndarray):  # data action is a numpy array
-                        discrete_data = np.array([np.argmax(data)])
-                        action.data = discrete_data
-                        if not return_logits:
-                            self.action_data[idx] = discrete_data
-                    elif isinstance(data, torch.Tensor):  # data action is a torch.Tensor
-                        discrete_data = torch.argmax(data, dim=0, keepdim=True)
-                        action.torch_data = discrete_data
-                        if not return_logits:
-                            self.action_data[idx] = self.__convert_to_numpy(discrete_data, to_numpy=to_numpy)
-                        else:
-                            self.action_data[idx] = self.__convert_to_numpy(data, to_numpy=to_numpy)
-                    # elif isinstance(data, (float, int)):
-                    #     discrete_data = np.argmax(data)
-                    #     action.data = discrete_data
-                    #     if not return_logits:
-                    #         self.action_data[idx] = discrete_data
-                    else:
-                        raise TypeError(
-                            "Expecting the `data` action to be a numpy array or torch.Tensor, instead got: "
-                            "{}".format(type(data)))
-                else:  # continuous action
-                    if isinstance(data, np.ndarray):
-                        action.data = data
-                    elif isinstance(data, torch.Tensor):
-                        action.torch_data = data
-                        self.action_data[idx] = self.__convert_to_numpy(data, to_numpy=to_numpy)
-                    # elif isinstance(data, (float, int)):
-                    #     pass
-                    else:
-                        raise TypeError(
-                            "Expecting `data` to be a numpy array or torch.Tensor, instead got: "
-                            "{}".format(type(data)))
-
-            # if action_data is a list and has one element, return just that element
-            if isinstance(self.action_data, list) and len(self.action_data) == 1:
-                self.action_data = self.action_data[0]
+            self.action_data = self.set_action_data(action_data, to_numpy=to_numpy, return_logits=return_logits)
 
         # apply action
         if apply_action:
@@ -510,20 +578,17 @@ class Policy(object):
         """
         pass
 
-    def train(self, mode=True):
+    def train(self):
         """
         Set the policy in training mode.
-
-        Args:
-            mode (bool): if True, set the policy in train mode.
         """
-        self.train_mode = mode
+        self.model.train()
 
     def eval(self):
         """
         Set the policy in evaluation mode.
         """
-        self.train(mode=False)
+        self.model.eval()
 
     def reset(self, reset_processors=False, *args, **kwargs):
         """

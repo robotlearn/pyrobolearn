@@ -115,6 +115,8 @@ class ActionExploration(Exploration):
 
         # set the exploration strategies
         self._explorations = explorations
+        self.action_data = None
+        self.action_distribution = None
 
     ##############
     # Properties #
@@ -134,7 +136,21 @@ class ActionExploration(Exploration):
     # Methods #
     ###########
 
-    def act(self,  state=None, deterministic=True, to_numpy=True, return_logits=False, apply_action=True):
+    def explore(self, outputs):
+        r"""
+        Explore in the action space. Note that this does not run the policy; it is assumed that it has been called
+        outside.
+
+        Args:
+            outputs (torch.Tensor): action outputs (=logits) returned by the model.
+
+        Returns:
+            torch.Tensor: action
+            torch.distributions.Distribution: distribution on the action :math:`\pi_{\theta}(.|s)`
+        """
+        raise NotImplementedError
+
+    def act(self,  state=None, deterministic=False, to_numpy=False, return_logits=False, apply_action=True):
         r"""
         Act/Explore in the environment given the states.
 
@@ -149,47 +165,79 @@ class ActionExploration(Exploration):
             (list of) torch.Tensor: action(s)
             (list of) torch.distributions.Distribution: policy distribution(s) :math:`\pi_{\theta}(\cdot | s)`
         """
-        # TODO: finish to clean
-        print(state)
-        actions = self.policy.act(state, to_numpy=False, return_logits=True)
-
+        # if deterministic outcome, i.e. we don't explore just run the policy
         if deterministic:
-            return actions, None
+            self.action_data = self.policy.act(state, deterministic=True, to_numpy=to_numpy,
+                                               return_logits=return_logits, apply_action=apply_action)
 
-        # From deterministic output into stochastic outputs
-        # print("Actions before dist: {}").format(actions.train_data)
-        print("Exploration strategy - actions: {}".format(actions))
-        self.dist = self.distribution(actions)
-        actions = self.dist.sample()
-        print("Exploration strategy - sampled action: {}".format(actions))
-        if isinstance(actions, torch.Tensor):
-            if actions.requires_grad:
-                self.policy.actions.data = actions.detach().numpy()
-            else:
-                self.policy.actions.data = actions.numpy()
+            self.action_distribution = None
+
+        # if we should explore
         else:
-            self.policy.actions.data = actions
+            # if we should predict
+            if (self.policy.cnt % self.policy.rate) == 0:
+                # get the state data
+                state_data = self.policy.get_state_data(state=state)
 
-        return actions, self.dist
+                # pre-process the state data
+                state_data = self.policy.preprocess(state_data)
+
+                # predict the actions using the inner model
+                action_data = self.policy.inner_predict(state_data, deterministic=True, to_numpy=False,
+                                                        return_logits=True, set_output_data=False)
+
+                # exploration phase
+
+                # if exploration is a combination of multiple exploration
+                if self._explorations:
+                    # explore for each action
+                    actions = [explorer.explore(action_data) for explorer in self.explorations]
+                    action_data, action_distribution = [a[0] for a in actions], [a[1] for a in actions]
+
+                else:  # there is only one action
+                    action_data, action_distribution = self.explore(action_data)
+
+                # post-process the action data
+                self.policy.postprocess(action_data)
+
+                # set the action data
+                self.action_data = self.policy.set_action_data(action_data, to_numpy=to_numpy,
+                                                               return_logits=return_logits)
+                self.action_distribution = action_distribution
+
+            # apply action
+            if apply_action:
+                self.policy.actions()
+
+            # increment policy's tick counter
+            self.policy.cnt = self.policy.cnt + 1
+
+        return self.action_data, self.action_distribution
 
     def mode(self):
         """Return the mode of the distributions."""
-        actions = self.dist.mode()
-        return actions
+        if self.action_distribution is not None:
+            if isinstance(self.action_distribution, list):
+                return [dist.mode() for dist in self.action_distribution]
+            return self.action_distribution.mode()
+        return self.action_data
 
     def sample(self):
         """Sample an action from the distribution."""
-        actions = self.dist.sample()
-        return actions
+        if self.action_distribution is None:
+            raise NotImplementedError("The action distribution has not been set.")
+        if isinstance(self.action_distribution, list):
+            return [dist.sample() for dist in self.action_distribution]
+        return self.action_distribution.sample()
 
     def action_log_prob(self, actions):
         """Return the log probability evaluated at the given actions."""
-        return self.dist.log_probs(actions)
+        return self.action_distribution.log_probs(actions)
 
     def action_prob(self, actions):
         """Return the probability evaluated at the given actions."""
-        return torch.exp(self.dist.log_probs(actions))
+        return torch.exp(self.action_distribution.log_probs(actions))
 
     def entropy(self):
         """Return the entropy of the distribution."""
-        return self.dist.entropy().mean()
+        return self.action_distribution.entropy().mean()

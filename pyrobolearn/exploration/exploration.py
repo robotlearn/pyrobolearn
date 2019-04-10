@@ -76,11 +76,11 @@ class Exploration(object):
         """Reset the exploration strategy, which can be useful at the beginning of an episode."""
         self.policy.reset()
 
-    def _act(self, state=None, to_numpy=True, return_logits=False, apply_action=True):
-        """Perform the exploratory action."""
-        raise NotImplementedError
+    # def explore(self, *args, **kwargs):
+    #     """Perform the exploratory action."""
+    #     pass
 
-    def act(self, state=None, deterministic=False, to_numpy=True, return_logits=False, apply_action=True):
+    def act(self, state=None, deterministic=False, to_numpy=False, return_logits=False, apply_action=True):
         """Perform the action given the state.
 
         Args:
@@ -93,11 +93,7 @@ class Exploration(object):
         Returns:
             (list of) np.array / torch.Tensor: action data
         """
-        if deterministic:
-            return self.policy.act(state, deterministic=True, to_numpy=to_numpy, return_logits=return_logits,
-                                   apply_action=apply_action)
-        else:  # explore using the distribution
-            return self._act(state, to_numpy=to_numpy, return_logits=return_logits, apply_action=apply_action)
+        pass
 
     # def step(self, states):
     #     """Perform one step using the policy with the corresponding exploration strategy."""

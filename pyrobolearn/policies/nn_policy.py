@@ -71,8 +71,8 @@ class MLPPolicy(NNPolicy):
     activation functions.
     """
 
-    def __init__(self, states, actions, hidden_units=(), activation_fct='linear', last_activation_fct=None,
-                 dropout_prob=None, rate=1, preprocessors=None, postprocessors=None):
+    def __init__(self, states, actions, hidden_units=(), activation='linear', last_activation=None,
+                 dropout=None, rate=1, preprocessors=None, postprocessors=None):
         """Initialize MLP policy.
 
         Args:
@@ -81,12 +81,12 @@ class MLPPolicy(NNPolicy):
             actions (Action): 1D-actions outputted by the policy and will be applied in the simulator (the output
                               dimensions will be inferred from the actions)
             hidden_units (list/tuple of int): number of hidden units in the corresponding layer
-            activation_fct (None, str, or list/tuple of str/None): activation function to be applied after each layer.
+            activation (None, str, or list/tuple of str/None): activation function to be applied after each layer.
                                                                    If list/tuple, then it has to match the
-            last_activation_fct (None or str): last activation function to be applied. If not specified, it will check
+            last_activation (None or str): last activation function to be applied. If not specified, it will check
                                                if it is in the list/tuple of activation functions provided for the
                                                previous argument.
-            dropout_prob (None, float, or list/tuple of float/None): dropout probability.
+            dropout (None, float, or list/tuple of float/None): dropout probability.
             rate (int, float): rate (float) at which the policy operates if we are operating in real-time. If we are
                 stepping deterministically in the simulator, it represents the number of ticks (int) to sleep before
                 executing the model.
@@ -94,8 +94,8 @@ class MLPPolicy(NNPolicy):
             postprocessors (Processor, list of Processor, None): post-processors to be applied to the output
         """
         model = MLPApproximator(states, actions, hidden_units=hidden_units,
-                                activation_fct=activation_fct, last_activation_fct=last_activation_fct,
-                                dropout_prob=dropout_prob, preprocessors=preprocessors, postprocessors=postprocessors)
+                                activation=activation, last_activation=last_activation,
+                                dropout=dropout, preprocessors=preprocessors, postprocessors=postprocessors)
         super(MLPPolicy, self).__init__(states, actions, model, rate=rate)
 
     # def act(self, state, deterministic=True):

@@ -107,8 +107,8 @@ class LinearPolicy(Policy):
         super(LinearPolicy, self).__init__(states, actions, model, rate=rate, *args, **kwargs)
 
 
-class PolicyFromValue(Policy):
-    r"""Policy From state-action value function approximator
+class PolicyFromQValue(Policy):
+    r"""Policy from state-action value function approximator
 
     This computes the optimal discrete action :math:`a` using the underlying value function approximator
     :math:`Q(s,a)` which given the state as input computes the Q-value for each discrete action. The policy select
@@ -134,9 +134,9 @@ class PolicyFromValue(Policy):
             **kwargs (dict): dictionary of arguments
         """
         self.value = value
-        super(PolicyFromValue, self).__init__(value.state, value.action, model=value, rate=rate,
-                                              preprocessors=preprocessors, postprocessors=postprocessors,
-                                              *args, **kwargs)
+        super(PolicyFromQValue, self).__init__(value.state, value.action, model=value, rate=rate,
+                                               preprocessors=preprocessors, postprocessors=postprocessors,
+                                               *args, **kwargs)
 
     ##############
     # Properties #
@@ -161,9 +161,20 @@ class PolicyFromValue(Policy):
     # Methods #
     ###########
 
-    def _predict(self, state, to_numpy=False, return_logits=True, set_output_data=False):
-        """Inner prediction step."""
-        action = self.model.compute(state, to_numpy=to_numpy)
+    def inner_predict(self, state, to_numpy=False, return_logits=True, set_output_data=False):
+        """Inner prediction step.
+
+        Args:
+            state ((list of) torch.Tensor, (list of) np.array): state data.
+            to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+            return_logits (bool): If True, in the case of discrete outputs, it will return the logits.
+            set_output_data (bool): If True, it will set the predicted output data to the outputs given to the
+                approximator.
+
+        Returns:
+            (list of) torch.Tensor, (list of) np.array: predicted action data.
+        """
+        action = self.model.evaluate(state, to_numpy=to_numpy)
         if to_numpy:
             return np.argmax(action)
         return torch.argmax(action, dim=0, keepdim=True)

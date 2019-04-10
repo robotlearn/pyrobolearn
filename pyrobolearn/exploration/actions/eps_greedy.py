@@ -8,6 +8,7 @@ it selects the best action :math:`a*` with probability :math:`p = (1 - \epsilon)
 
 import torch
 
+from pyrobolearn.distributions.categorical import Categorical
 from pyrobolearn.exploration.actions.discrete import DiscreteActionExploration
 
 
@@ -29,12 +30,33 @@ class EpsilonGreedyActionExploration(DiscreteActionExploration):
     :math:`a \in A\{a*}` randomly (based on uniform distribution) with probability :math:`p = \frac{\epsilon}{|A|-1}`.
     """
 
-    def __init__(self, policy, action):
+    def __init__(self, policy, action, epsilon=0.1):
         """
         Initialize the epsilon-greedy action exploration strategy.
 
         Args:
             policy (Policy): policy to wrap.
             action (Action): discrete actions.
+            epsilon (float): epsilon probability.
         """
         super(EpsilonGreedyActionExploration, self).__init__(policy, action=action)
+        self.epsilon = epsilon
+
+    def explore(self, outputs):
+        r"""
+        Explore in the action space. Note that this does not run the policy; it is assumed that it has been called
+        outside.
+
+        Args:
+            outputs (torch.Tensor): action outputs (=logits) returned by the model.
+
+        Returns:
+            torch.Tensor: action
+            torch.distributions.Distribution: distribution on the action :math:`\pi_{\theta}(.|s)`
+        """
+        idx = torch.argmax(outputs)
+        probs = self.epsilon/(outputs.size()[-1] - 1) * torch.ones_like(outputs)
+        probs[idx] = (1. - self.epsilon)
+        distribution = Categorical(probs=probs)
+        action = distribution.sample((1,))
+        return action, distribution

@@ -58,43 +58,54 @@ class ParameterExploration(Exploration):
 
     def __init__(self, policy):
         super(ParameterExploration, self).__init__(policy)
+        # initial parameters
         self._parameters = policy.get_vectorized_parameters(to_numpy=False)
 
     ##############
     # Properties #
     ##############
 
-    @property
-    def parameters(self):
-        """Returns the parameters."""
-        return self._parameters
+    # @property
+    # def parameters(self):
+    #     """Returns the parameters."""
+    #     return self._parameters
 
     @property
     def size(self):
         """Returns the dimension of the parameters."""
-        return self.parameters.size(-1)
+        return self._parameters.size(-1)
 
     ###########
     # Methods #
     ###########
 
-    def reset(self):
-        # sample new set of parameters for policy
+    def sample(self):
+        """Sample a new set of parameters. To be overridden in the child class."""
         pass
 
-    def act(self, state=None, deterministic=True, to_numpy=True, return_logits=False, apply_action=True):
-        """Perform the action given the state."""
-        actions = self.policy.act(state)
+    def reset(self):
+        """Reset the parameter explorer: it samples a new set of parameters for the policy."""
+        # sample new set of parameters for policy
+        parameters = self.sample()
+        # set the parameters
+        self.policy.set_vectorized_parameters(vector=parameters)
 
+    def act(self, state=None, deterministic=True, to_numpy=False, return_logits=False, apply_action=True):
+        r"""
+        Act/Explore in the environment given the states.
 
-# class ModelUncertaintyExploration(Exploration):
-#     r"""Model Uncertainty Exploration
-#
-#     Exploration based on the uncertainty of a learned dynamic model.
-#
-#     References:
-#     [1]
-#     """
-#
-#     def __init__(self, policy):
-#         super(ModelUncertaintyExploration, self).__init__(policy)
+        Args:
+            state (State): current state
+            deterministic (bool): True by default. It can only be set to False, if the policy is stochastic.
+            to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+            return_logits (bool): If True, in the case of discrete outputs, it will return the logits.
+            apply_action (bool): If True, it will call and execute the action.
+
+        Returns:
+            (list of) torch.Tensor: action(s)
+            (list of) torch.distributions.Distribution: policy distribution(s) :math:`\pi_{\theta}(\cdot | s)`
+        """
+        actions = self.policy.act(state=state, deterministic=deterministic, to_numpy=to_numpy,
+                                  return_logits=return_logits, apply_action=apply_action)
+        # return distribution
+        return actions, None

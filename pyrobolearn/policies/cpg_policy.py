@@ -139,7 +139,7 @@ class CPGPolicy(Policy):
             # create the CPG network based on the robot kinematic structures
             cpg_network = {}
             for leg_idx, leg in enumerate(legs):
-                # compute parent/child leg coupling weight
+                # evaluate parent/child leg coupling weight
                 if len(leg) != 0:
                     if parent_coupling and init_parent_coupling_weight is None:
                         parent_coupling_weight = 1. / len(leg)
@@ -196,8 +196,19 @@ class CPGPolicy(Policy):
                                 frequency_bounds=frequency_bounds, weight_bounds=weight_bounds,
                                 bias_bounds=bias_bounds, *args, **kwargs)
 
-    def _predict(self, state, to_numpy=False, return_logits=True, set_output_data=False):
-        """Inner prediction step."""
+    def inner_predict(self, state, to_numpy=False, return_logits=True, set_output_data=False):
+        """Inner prediction step.
+
+        Args:
+            state ((list of) torch.Tensor, (list of) np.array): state data.
+            to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+            return_logits (bool): If True, in the case of discrete outputs, it will return the logits.
+            set_output_data (bool): If True, it will set the predicted output data to the outputs given to the
+                approximator.
+
+        Returns:
+            (list of) torch.Tensor, (list of) np.array: predicted action data.
+        """
         action_data = self.model.step()
         return action_data
 

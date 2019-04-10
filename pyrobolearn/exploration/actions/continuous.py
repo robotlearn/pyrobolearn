@@ -17,6 +17,8 @@ References:
     [1] "Reinforcement Learning: An Introduction", Sutton and Barto, 2018
 """
 
+from abc import ABCMeta
+
 from pyrobolearn.exploration.actions.action_exploration import ActionExploration
 
 __author__ = "Brian Delhaisse"
@@ -34,6 +36,8 @@ class ContinuousActionExploration(ActionExploration):
 
     Continuous action exploration strategies use continuous probability distributions on the (continuous) actions.
     """
+
+    __metaclass__ = ABCMeta
 
     def __init__(self, policy, action):
         """
