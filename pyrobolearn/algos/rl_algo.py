@@ -319,10 +319,10 @@ class RLAlgo(object):  # Algo):
         history = {}
 
         # set the policy in training mode
-        self.policy.train(mode=True)
+        self.policy.train()
 
         # for each episode
-        for ep in range(num_episodes):
+        for episode in range(num_episodes):
 
             # for each rollout
             for rollout in range(num_rollouts):
@@ -337,7 +337,7 @@ class RLAlgo(object):  # Algo):
                 history.setdefault('loss', []).append(loss)
 
         # set the policy in test mode
-        self.policy.train(mode=False)
+        self.policy.eval()
 
         return history
 

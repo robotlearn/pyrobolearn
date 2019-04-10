@@ -735,10 +735,14 @@ class RolloutStorage(DictStorage):
         logger.debug('creating space for masks')
         self.create_new_entry('masks', shapes=1, num_steps=self.num_steps + 1)
 
+        # allocate space for action distribution
+        self.create_new_entry('distributions', shapes=[() for _ in action_shapes], num_steps=self.num_steps,
+                              dtype=object)
+
         # space for log probabilities on policy, distributions, scalar values from value functions,
         # recurrent hidden states, and others have to be allocated outside the class
 
-    def reset(self):
+    def reset(self, init_observations=None):
         """Reset the storage by copying the last value and setting it to the first value."""
         # for key, value in self.iteritems():
         #     if isinstance(value, list):
@@ -747,8 +751,14 @@ class RolloutStorage(DictStorage):
         #                 item[0].copy_(item[-1])
         #     elif isinstance(value, torch.Tensor) and len(value) == self.num_steps + 1:
         #             self[key][0].copy_(self[key][-1])
-        for observation in self.observations:
-            observation[0].copy_(observation[-1])
+        if init_observations is None:
+            for observation in self.observations:
+                observation[0].copy_(observation[-1])
+        else:
+            if not isinstance(init_observations, list):
+                init_observations = [init_observations]
+            for observation, value in zip(self.observations, init_observations):
+                observation[0].copy_(self._convert_to_tensor(value))
         self.masks[0].copy_(self.masks[-1])
         # self.recurrent_hidden_states[0].copy_(self.recurrent_hidden_states[-1])
 
@@ -804,7 +814,7 @@ class RolloutStorage(DictStorage):
             else:
                 set_tensor(self[key], step, values, copy=copy)
 
-    def insert(self, observations, actions, rewards, masks=None, update_step=True, **kwargs):
+    def insert(self, observations, actions, rewards, masks, distributions=None, update_step=True, **kwargs):
         # distributions, values=None):
         # recurrent_hidden_state, action_log_prob):
         """
@@ -815,6 +825,7 @@ class RolloutStorage(DictStorage):
             actions (torch.Tensor, list of torch.Tensor): (list of) action(s)
             rewards (float, int, torch.Tensor): reward value
             masks (float, int, torch.Tensor): masks. They are set to zeros after an episode has terminated.
+            distributions (torch.distributions.Distribution, None): action distribution.
             update_step (bool): if True, it will update the current time step. If False, the user needs to call
                 `step()` in order to update it.
             **kwargs (dict): dictionary containing other parameters to update in the storage. The other parameters
@@ -828,6 +839,8 @@ class RolloutStorage(DictStorage):
             observations = [observations]
         if not isinstance(actions, list):
             actions = [actions]
+        if not isinstance(distributions, list):
+            distributions = [distributions]
 
         # insert each observation / action
         for observation, storage in zip(observations, self.observations):
@@ -840,6 +853,10 @@ class RolloutStorage(DictStorage):
         if masks is None:
             masks = torch.tensor(1.)
         self.masks[self._step + 1].copy_(self._convert_to_tensor(masks))
+
+        # insert distributions
+        for distribution, storage in zip(distributions, self.distributions):
+            storage[self._step] = distribution
 
         # add other elements
         for key, value in kwargs:

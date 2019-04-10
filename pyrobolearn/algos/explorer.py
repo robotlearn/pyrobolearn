@@ -137,26 +137,32 @@ class Explorer(object):
         obs = self.env.reset()
         print("\nExplorer - initial state: {}".format(obs))
 
+        # reset storage
+        self.storage.reset(init_observations=obs)
+
         # reset explorer
         self.explorer.reset()
 
         # run RL task for T steps
         for step in range(num_steps):
             # get action and corresponding distribution from policy
-            act, dist = self.explorer.act(obs, deterministic)
+            act, dist = self.explorer.act(obs, deterministic=deterministic)
 
             # perform one step in the environment
             next_obs, reward, done, info = self.env.step(act)
 
             # insert in storage
-            # print("\nExplorer:")
-            # print("1. Observation data: {}".format(obs.merged_torch_data))
-            # print("2. Action data: {}".format(act))
-            # print("3. Next observation data: {}".format(next_obs.merged_torch_data))
-            # print("4. Reward: {}".format(reward))
-            # print("5. \\pi(.|s): {}".format(dist))
-            # print("6. log \\pi(a|s): {}".format(dist.log_prob(act)))
-            self.storage.insert(obs.merged_torch_data, act.merged_torch_data, next_obs.data, reward, dist)
+            print("\nExplorer:")
+            print("1. Observation data: {}".format(obs))  # .merged_torch_data))
+            print("2. Action data: {}".format(act))
+            print("3. Next observation data: {}".format(next_obs))  # merged_torch_data))
+            print("4. Reward: {}".format(reward))
+            print("5. \\pi(.|s): {}".format(dist))
+            print("6. log \\pi(a|s): {}".format([d.log_prob(act) for d in dist]))
+
+            self.storage.insert(next_obs, act, reward, masks=done, distributions=dist)
+
+            raw_input('enter')
 
             obs = next_obs
             if done:
