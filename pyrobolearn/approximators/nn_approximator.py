@@ -63,7 +63,7 @@ class MLPApproximator(NNApproximator):
     """
 
     def __init__(self, inputs, outputs, hidden_units=(),
-                 activation_fct='Linear', last_activation_fct=None, dropout_prob=None,
+                 activation='Linear', last_activation=None, dropout=None,
                  preprocessors=None, postprocessors=None):
         """
         Initialize the Multi-Layer Perceptron approximator.
@@ -72,9 +72,9 @@ class MLPApproximator(NNApproximator):
             inputs (State, Action, np.array, torch.Tensor): inputs of the inner models (instance of State/Action)
             outputs (State, Action, np.array, torch.Tensor): outputs of the inner models (instance of Action/State)
             hidden_units (tuple, list of int): number of hidden units in each layer
-            activation_fct (str): activation function to apply on each layer
-            last_activation_fct (str, None): activation function to apply on the last layer
-            dropout_prob (None, float): dropout probability
+            activation (str): activation function to apply on each layer
+            last_activation (str, None): activation function to apply on the last layer
+            dropout (None, float): dropout probability
             preprocessors (None, Processor, list of Processor): the inputs are first given to the preprocessors then
                 to the model.
             postprocessors (None, Processor, list of Processor): the predicted outputs by the model are given to the
@@ -93,9 +93,8 @@ class MLPApproximator(NNApproximator):
         output_size = self._size(outputs)
 
         # create model
-        num_units = [input_size] + list(hidden_units) + [output_size]
-        model = MLP(num_units=num_units, activation_fct=activation_fct, last_activation_fct=last_activation_fct,
-                    dropout_prob=dropout_prob)
+        units = [input_size] + list(hidden_units) + [output_size]
+        model = MLP(units=units, activation=activation, last_activation=last_activation, dropout=dropout)
 
         # call superclass
         super(MLPApproximator, self).__init__(inputs, outputs, model, preprocessors=preprocessors,

@@ -329,6 +329,14 @@ class Approximator(object):
             size = x
         return size
 
+    def train(self):
+        """Set the inner model into training mode."""
+        self.model.train()
+
+    def eval(self):
+        """Set the inner model into testing mode."""
+        self.model.eval()
+
     def parameters(self):
         """Return an iterator over the approximator parameters."""
         return self.model.parameters()

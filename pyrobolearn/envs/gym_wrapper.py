@@ -11,13 +11,16 @@ import functools
 import numpy as np
 import torch
 import gym
+import baselines
 from gym import *
 import warnings
 warnings.simplefilter("ignore")
 
-from pyrobolearn.states.gym_states import GymState
+from pyrobolearn.states.gym_states import GymState, State
 from pyrobolearn.actions.gym_actions import GymAction, Action
-# from pyrobolearn.rewards import GymReward
+from pyrobolearn.states.processors import StateProcessor
+from pyrobolearn.rewards.processors import RewardProcessor
+from pyrobolearn.rewards import GymReward
 # from terminating_condition import GymTerminatingCondition
 
 
@@ -31,17 +34,38 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-def make(env_id):
-    """Create the OpenAI Gym environment and return a wrapped version of it."""
-    env = gym.make(env_id)
-    env = GymEnvWrapper(env)
+def from_gym(env, state_processors=None, reward_processors=None):
+    """wraps a gym environment.
+
+    Args:
+        env (gym.Env): gym environment.
+        state_processors ((a list of) StateProcessor types/classes, None): State processors.
+        reward_processors ((a list of) RewardProcessor types/classes, None): Reward processors.
+    """
+    env = GymEnvWrapper(env, state_processors, reward_processors)
     return env
 
 
-def create(env_id):
-    """Create the OpenAI Gym environment and return a wrapped version of it with the associated state and action."""
-    env = gym.make(env_id)
-    env = GymEnvWrapper(env)
+def make(env_id, state_processors=None, reward_processors=None):
+    """Create the OpenAI Gym environment and return a wrapped version of it.
+
+    Args:
+        env_id (str): gym environment string.
+        state_processors ((a list of) StateProcessor types/classes, None): State processors.
+        reward_processors ((a list of) RewardProcessor types/classes, None): Reward processors.
+    """
+    return from_gym(gym.make(env_id), state_processors, reward_processors)
+
+
+def create(env_id, state_processors=None, reward_processors=None):
+    """Create the OpenAI Gym environment and return a wrapped version of it with the associated state and action.
+
+    Args:
+        env_id (str): gym environment string.
+        state_processors ((a list of) StateProcessor types/classes, None): State processors.
+        reward_processors ((a list of) RewardProcessor types/classes, None): Reward processors.
+    """
+    env = from_gym(gym.make(env_id), state_processors, reward_processors)
     return env, env.state, env.action
 
 
@@ -51,50 +75,202 @@ class GymEnvWrapper(gym.Env):
     This update the data of the GymState, GymAction, and GymReward when performing a step in a gym environment.
     """
 
-    def __init__(self, env, state=None, action=None):
+    def __init__(self, env, state_processors=None, reward_processors=None):
+        """
+        Initialize the gym Env wrapper.
+
+        Args:
+            env (gym.Env): gym environment.
+            state_processors ((a list of) StateProcessor types/classes): State processors.
+            reward_processors ((a list of) RewardProcessor types/classes): Reward processors.
+        """
         # set environment
         self.env = env
 
-        # set state and action
-        self.state = state
-        self.action = action
+        # set state, action, and reward
+        self._state = GymState(self.env)
+        self._action = GymAction(self.env)
+        self._reward = GymReward(0.)
+        # self.done = GymTerminatingCondition(done=False)
 
         # define the observation and action space
         self.observation_space = self.env.observation_space
         self.action_space = self.env.action_space
 
-        # self.reward = GymReward(1)
-        # self.done = GymTerminatingCondition(done=False)
+        # set the processors
+        self.state_processors = state_processors
+        self.reward_processors = reward_processors
+
+    ##############
+    # Properties #
+    ##############
 
     @property
     def env(self):
+        """Return the environment instance."""
         return self._env
 
     @env.setter
     def env(self, environment):
-        if not isinstance(environment, gym.Env):
+        """Set the environment instance."""
+        if not isinstance(environment, gym.Env):  # , baselines.common.vec_env.VecEnv)):
             raise TypeError("Expecting the given environment to be an instance of `gym.Env`")
         self._env = environment
+        self._state = GymState(self.env)
+        self._action = GymAction(self.env)
 
     @property
     def state(self):
+        """Return the state instance."""
         return self._state
 
-    @state.setter
-    def state(self, s):
-        if s is None:
-            s = GymState(self.env)
-        self._state = s
+    # @state.setter
+    # def state(self, s):
+    #     """Set the state; if None, wraps the `gym.Env` to get the state."""
+    #     if s is None:
+    #         s =
+    #     elif not isinstance(s, GymState):
+    #         raise TypeError("Expecting the given state to be None or an instance of `GymState`, instead got: "
+    #                         "{}".format(type(s)))
+    #     self._state = s
 
     @property
     def action(self):
+        """Return the action instance."""
         return self._action
 
-    @action.setter
-    def action(self, a):
-        if a is None:
-            a = GymAction(self.env)
-        self._action = a
+    # @action.setter
+    # def action(self, a):
+    #     """Set the action; wraps the `gym.Env` to get the original action."""
+    #     if a is None:
+    #         a = GymAction(self.env)
+    #     elif not isinstance(a, GymAction):
+    #         raise TypeError("Expecting the given action to be None or an instance of `GymAction`, instead got: "
+    #                         "{}".format(type(s)))
+    #     self._action = a
+
+    @property
+    def reward(self):
+        """Return the reward instance."""
+        return self._reward
+
+    @property
+    def state_processors(self):
+        """Return the processors that have to be applied on the state."""
+        return self._state_processors
+
+    @state_processors.setter
+    def state_processors(self, processors):
+        """Set the state processors."""
+        if processors is None:
+            processors = []
+        elif issubclass(processors, StateProcessor):
+            processors = [processors]
+        elif isinstance(processors, (list, tuple, set)):
+            for idx, processor in enumerate(processors):
+                if not issubclass(processor, StateProcessor):
+                    raise TypeError("Expecting the {} item to be a subclass of `StateProcessor`, instead got: "
+                                    "{}".format(idx, type(processor)))
+        else:
+            raise TypeError("Expecting the given state processors to be None, or a (list of) subclass of "
+                            "`StateProcessor`, instead got: {}".format(type(processors)))
+
+        state = self.state
+        for processor in processors:
+            state = processor(state)
+        self._state_processors = state
+
+    @property
+    def reward_processors(self):
+        """Return the processors that have to be applied on the reward."""
+        return self._reward_processors
+
+    @reward_processors.setter
+    def reward_processors(self, processors):
+        """Set the reward processors."""
+        if processors is None:
+            processors = []
+        elif issubclass(processors, RewardProcessor):
+            processors = [processors]
+        elif isinstance(processors, (list, tuple, set)):
+            for idx, processor in enumerate(processors):
+                if not issubclass(processor, RewardProcessor):
+                    raise TypeError("Expecting the {} item to be a subclass of `RewardProcessor`, instead got: "
+                                    "{}".format(idx, type(processor)))
+        else:
+            raise TypeError("Expecting the given reward processors to be None, or a (list of) subclass of "
+                            "`RewardProcessor`, instead got: {}".format(type(processors)))
+
+        reward = self.reward
+        for processor in processors:
+            reward = processor(reward)
+        self._reward_processors = reward
+
+    ###########
+    # Methods #
+    ###########
+
+    @staticmethod
+    def _convert_state_to_data(states, convert=True):
+        """Convert a `State` to a list of numpy arrays or a numpy array."""
+        if convert:
+            data = []
+            for state in states:
+                if isinstance(state, State):
+                    state = state.merged_data
+                if isinstance(state, list) and len(state) == 1:
+                    state = state[0]
+                data.append(state)
+            if len(data) == 1:
+                data = data[0]
+            return data
+        return states
+
+    def reset(self):
+        observation = self.env.reset()
+        self.state.data = observation
+        self.reward_processors.reset()
+        return self._convert_state_to_data(self.state)
+
+    def step(self, actions):
+        """perform a step in the environment and set the data for the GymState and GymAction"""
+        if isinstance(actions, Action):  # convert from `Action` to numpy
+            actions = actions.merged_data[0]
+        elif isinstance(actions, torch.Tensor):  # convert from torch to numpy
+            if actions.requires_grad:
+                actions = actions.detach().numpy()
+            else:
+                actions = actions.numpy()
+        if isinstance(self.action_space, gym.spaces.Discrete) and isinstance(actions, np.ndarray):
+            actions = actions[0]  # float
+
+        # perform a step with the original gym environment
+        observations, reward, done, info = self.env.step(actions)
+
+        # set the data
+        self.state.data = observations
+        self.action.data = actions
+        self.reward.value = reward
+        # self.done.done = done
+
+        # process the data
+        observations = self.state_processors()
+        reward = self.reward_processors()
+
+        observations = self._convert_state_to_data(observations)
+
+        # return the data
+        return observations, reward, done, info
+
+    def render(self, mode='human'):
+        self.env.render(mode)
+
+    def hide(self):
+        pass
+
+    #############
+    # Operators #
+    #############
 
     def __getattr__(self, name):
         """Get the functions from the Gym Environment"""
@@ -103,39 +279,12 @@ class GymEnvWrapper(gym.Env):
             attribute = functools.partial(attribute)
         return attribute
 
-    def step(self, actions):
-        """perform a step in the environment and set the data for the GymState and GymAction"""
-        if isinstance(actions, Action):
-            actions = actions.data[0]
-        elif isinstance(actions, torch.Tensor):
-            if actions.requires_grad:
-                actions = actions.detach().numpy()
-            else:
-                actions = actions.numpy()
-        if isinstance(self.action_space, gym.spaces.Discrete) and isinstance(actions, np.ndarray):
-            actions = actions[0]
-        observations, reward, done, info = self.env.step(actions)
-        self.state.data = observations
-        self.action.data = actions
-        # self.reward.value = reward
-        # self.done.done = done
-        return self.state, reward, done, info
-
-    def reset(self):
-        observation = self.env.reset()
-        self.state.data = observation
-        return self.state
-
-    def render(self, mode='human'):
-        self.env.render(mode)
-
-    def hide(self):
-        pass
-
     def __repr__(self):
+        """Return a representing object."""
         return self.env.__repr__()
 
     def __str__(self):
+        """Return a string describing the class."""
         return self.env.__str__()
 
 

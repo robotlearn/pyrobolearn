@@ -1,4 +1,4 @@
-## Optimizers
+## Optimizers / Solvers
 
 This folder provides the various optimizers. It mostly wraps already existing optimizers but provides a common API.
 

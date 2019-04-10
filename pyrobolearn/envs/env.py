@@ -214,7 +214,8 @@ class Env(object):  # gym.Env):
     # Methods #
     ###########
 
-    def _convert_state_to_data(self, states, convert=True):
+    @staticmethod
+    def _convert_state_to_data(states, convert=True):
         """Convert a `State` to a list of numpy arrays or a numpy array."""
         if convert:
             data = []

@@ -150,6 +150,14 @@ class Linear(object):
     # Methods #
     ###########
 
+    def train(self):
+        """Set into training mode."""
+        self.model.train()
+
+    def eval(self):
+        """Set into eval mode."""
+        self.model.eval()
+
     def copy_parameters(self, parameters):
         """Copy the given parameters.
 
