@@ -7,6 +7,7 @@ Losses are evaluated on model parameters, data batches / storages, or transition
 import torch
 
 from pyrobolearn.losses.loss import Loss
+from pyrobolearn.estimators.estimator import TDReturn
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -55,6 +56,24 @@ class ValueLoss(Loss):
         returns = batch['returns']
         values = batch.current['values']
         return 0.5 * (returns - values).pow(2).mean()
+
+
+class QLoss(Loss):
+    r"""QLoss
+
+    This computes :math:`\frac{1}{|B|} \sum_{s \in B} Q_{s, \mu_{\theta}(s)}}`, where :math:`\mu_\theta` is the policy.
+    """
+
+    def __init__(self, q_value, policy):
+        super(QLoss, self).__init__()
+        # TODO: check that the Q-Value accepts as inputs the actions
+        self.q_value = q_value
+        self.policy = policy
+
+    def compute(self, batch):
+        actions = self.policy.predict(batch['observations'])
+        q_values = self.q_value(batch['observations'], actions)
+        return -q_values.mean()
 
 
 class HuberLoss(Loss):
@@ -300,11 +319,30 @@ class MSBELoss(Loss):
         [2] "Reinforcement Learning: An Introduction", Sutton and Barto, 2018
     """
 
-    def __init__(self):
+    def __init__(self, td_return):
+        """
+        Initialize the mean-squared Bellman error (MSBE).
+
+        Args:
+            td_return (TDReturn): Temporal difference return.
+        """
         super(MSBELoss, self).__init__()
+        if not isinstance(td_return, TDReturn):
+            raise TypeError("Expecting the given 'td_return' to be an instance of `TDReturn`, instead got: "
+                            "{}".format(type(td_return)))
+        self._td = td_return
 
     def compute(self, batch):
-        pass
+        """
+        Compute the mean-squared TD return.
+
+        Args:
+            batch:
+
+        Returns:
+            torch.Tensor: loss value.
+        """
+        return batch[self._td].pow(2).mean()
 
 
 # Tests
