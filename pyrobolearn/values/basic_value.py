@@ -7,8 +7,8 @@ import torch
 
 # from pyrobolearn.models import Linear
 from pyrobolearn.approximators import LinearApproximator
-from pyrobolearn.values.value import ValueApproximator, ParametrizedValue, ParametrizedStateActionValue, \
-    ParametrizedStateOutputActionValue
+from pyrobolearn.values.value import ValueApproximator, ParametrizedValue, ParametrizedQValue, \
+    ParametrizedQValueOutput
 
 
 __author__ = "Brian Delhaisse"
@@ -33,7 +33,7 @@ class ValueTable(ValueApproximator):
         super(ValueTable, self).__init__(state)
 
 
-class LinearStateValue(ParametrizedValue):
+class LinearValue(ParametrizedValue):
     r"""Linear State Value Function Approximator
 
     State value function :math:`V_{\phi}(s)` approximated by a linear model, where :math:`\phi` represents
@@ -50,11 +50,11 @@ class LinearStateValue(ParametrizedValue):
                 the inner model / function approximator.
         """
         model = LinearApproximator(inputs=state, outputs=torch.Tensor([1]), preprocessors=preprocessors)
-        super(LinearStateValue, self).__init__(state, model=model)
+        super(LinearValue, self).__init__(state, model=model)
 
 
-class LinearStateInputActionValue(ParametrizedStateActionValue):
-    r"""Linear state - input action value function approximator
+class LinearQValue(ParametrizedQValue):
+    r"""Linear Q-value function approximator (which accepts as inputs the states and actions)
 
     State-action value function :math:`Q_{\phi}(s, a)` approximated by a linear model, where :math:`\phi` represents
     the parameters of that model. This approximator accepts as inputs the states :math:`s` and actions :math:`a`,
@@ -72,11 +72,12 @@ class LinearStateInputActionValue(ParametrizedStateActionValue):
                 the inner model / function approximator.
         """
         model = LinearApproximator(inputs=[state, action], outputs=torch.Tensor([1]), preprocessors=preprocessors)
-        super(LinearStateInputActionValue, self).__init__(state, action, model=model)
+        super(LinearQValue, self).__init__(state, action, model=model)
 
 
-class LinearStateOutputActionValue(ParametrizedStateOutputActionValue):
-    r"""Linear state - output action value function approximator
+class LinearQValueOutput(ParametrizedQValueOutput):
+    r"""Linear Q-value function approximator (which accepts as inputs the states and outputs a Q-value for each
+    discrete action)
 
     State-action value function :math:`Q_{\phi}(s, a)` approximated by a linear model, where :math:`\phi` represents
     the parameters of that model. This approximator accepts as inputs the states :math:`s` and outputs the value
@@ -94,4 +95,4 @@ class LinearStateOutputActionValue(ParametrizedStateOutputActionValue):
                 the inner model / function approximator.
         """
         model = LinearApproximator(inputs=state, outputs=action, preprocessors=preprocessors)
-        super(LinearStateOutputActionValue, self).__init__(state, action, model=model)
+        super(LinearQValueOutput, self).__init__(state, action, model=model)

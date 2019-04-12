@@ -18,6 +18,7 @@ from pyrobolearn.states import State
 from pyrobolearn.actions import Action
 from pyrobolearn.approximators import Approximator
 
+
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
@@ -43,6 +44,8 @@ class ValueApproximator(object):
        starting at state :math:`s`.
     2. (state-)action value function denoted by :math:`Q(s,a)`, which represents the expected reward when
        starting at state :math:`s`, and performing action :math:`a`.
+
+    In both cases, they use the state. This class computes :math:`V(s)`.
     """
     __metaclass__ = ABCMeta
 
@@ -78,36 +81,40 @@ class ValueApproximator(object):
     # Methods #
     ###########
 
-    def compute(self, *args, **kwargs):
+    def evaluate(self, *args, **kwargs):
         """Predict the value."""
         pass
 
     def __call__(self, *args, **kwargs):
         """Predict the value."""
-        return self.compute(*args, **kwargs)
+        return self.evaluate(*args, **kwargs)
 
 
-class StateValueApproximator(ValueApproximator):
-    r"""State Value Approximator
-
-    Compute :math:`V(s)`.
-    """
-    __metaclass__ = ABCMeta
-
-    def __init__(self, state):
-        super(StateValueApproximator, self).__init__(state)
-
-
-class ActionValueApproximator(ValueApproximator):
-    r"""Action Value Approximator
+class QValueApproximator(ValueApproximator):
+    r"""Q-Value Approximator
 
     Compute :math:`Q(s,a)`.
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, state, actions):
-        super(ActionValueApproximator, self).__init__(state)
-        self.actions = actions
+    def __init__(self, state, action):
+        # super(QValueApproximator, self).__init__(state)
+        ValueApproximator.__init__(self, state)
+        self.action = action
+
+    @property
+    def action(self):
+        """Return the action instance."""
+        return self._action
+
+    @action.setter
+    def action(self, action):
+        """Set the action input."""
+        if isinstance(action, (int, float)):
+            action = np.array([action])
+        elif not isinstance(action, (Action, torch.Tensor, np.ndarray)):
+            raise TypeError("Expecting the action to be an Action, torch.Tensor, or np.ndarray.")
+        self._action = action
 
 
 class ParametrizedValue(ValueApproximator):
@@ -124,6 +131,7 @@ class ParametrizedValue(ValueApproximator):
             state (State): input state.
             model (Approximator): value function approximator.
         """
+        # ValueApproximator.__init__(self, state)
         super(ParametrizedValue, self).__init__(state)
         self.model = model
 
@@ -238,7 +246,7 @@ class ParametrizedValue(ValueApproximator):
         """
         self.model.set_vectorized_parameters(vector=vector)
 
-    def compute(self, state=None, to_numpy=True):
+    def evaluate(self, state=None, to_numpy=False):
         """Compute the output of the value function.
 
         Args:
@@ -246,16 +254,30 @@ class ParametrizedValue(ValueApproximator):
                 the data from the inputs that were given at the initialization.
             to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
         """
+        # if no input is given, take the provided inputs at the beginning
+        if state is None:
+            state = self.state
+
+        # if the input is an instance of State, get the inner merged data.
+        if isinstance(state, State):
+            state = state.merged_data
+            if len(state) == 1:
+                state = state[0]
+
         self.value = self.model.predict(state, to_numpy=to_numpy, return_logits=True, set_output_data=False)
         return self.value
 
-    def __call__(self, state=None, to_numpy=True):
+    def __call__(self, state=None, to_numpy=False):
         """Predict the value."""
-        return self.compute(state=state, to_numpy=to_numpy)
+        return self.evaluate(state=state, to_numpy=to_numpy)
 
 
-class ParametrizedStateActionValue(ParametrizedValue):
-    r"""Parametrized State Action Value Function Approximator
+# alias
+Value = ParametrizedValue
+
+
+class ParametrizedQValue(QValueApproximator):  # ParametrizedValue, QValueApproximator):
+    r"""Parametrized Q-Value Function Approximator (which accepts as inputs the states and actions)
 
     This value function approximator predicts the state-action value :math:`Q_{\phi}(s,a)`. Two different kind of
     state-action value function approximators can be defined:
@@ -276,30 +298,155 @@ class ParametrizedStateActionValue(ParametrizedValue):
             action (Action): input / output action.
             model (Approximator): value function approximator.
         """
-        super(ParametrizedStateActionValue, self).__init__(state, model)
-        self.action = action
+        # ParametrizedValue.__init__(self, state, model)
+        # QValueApproximator.__init__(self, state, action)
+        super(ParametrizedQValue, self).__init__(state, action)
+        self.model = model
 
     ##############
     # Properties #
     ##############
 
     @property
-    def action(self):
-        """Return the action instance."""
-        return self._action
+    def model(self):
+        """Return the model instance."""
+        return self._model
 
-    @action.setter
-    def action(self, action):
-        """Set the action input."""
-        if isinstance(action, (int, float)):
-            action = np.array([action])
-        elif not isinstance(action, (Action, torch.Tensor, np.ndarray)):
-            raise TypeError("Expecting the action to be an Action, torch.Tensor, or np.ndarray.")
-        self._action = action
+    @model.setter
+    def model(self, model):
+        """Set the model / approximator instance."""
+        if not isinstance(model, Approximator):
+            raise TypeError("Expecting the model to be an instance of `Approximator`, instead got: "
+                            "{}".format(type(model)))
+        self._model = model
+
+    @property
+    def input_size(self):
+        """Return the policy input size."""
+        return self.model.input_size
+
+    @property
+    def output_size(self):
+        """Return the policy output size."""
+        return self.model.output_size
+
+    @property
+    def input_shape(self):
+        """Return the policy input shape."""
+        return self.model.input_shape
+
+    @property
+    def output_shape(self):
+        """Return the policy output shape."""
+        return self.model.output_shape
+
+    @property
+    def input_dim(self):
+        """Return the input dimension of the policy; i.e. len(input_shape)."""
+        return self.model.input_dim
+
+    @property
+    def output_dim(self):
+        """Return the output dimension of the policy; i.e. len(output_shape)."""
+        return self.model.output_dim
+
+    @property
+    def num_parameters(self):
+        """Return the total number of parameters"""
+        return self.model.num_parameters
+
+    ###########
+    # Methods #
+    ###########
+
+    def parameters(self):
+        """
+        Return an iterator over the learning model parameters.
+        """
+        return self.model.parameters()
+
+    def named_parameters(self):
+        """
+        Return an iterator over the learning model parameters; yielding both the name and the parameter itself.
+        """
+        return self.model.named_parameters()
+
+    def list_parameters(self):
+        """
+        Return the learning model parameters.
+        """
+        return self.model.list_parameters()
+
+    def hyperparameters(self):
+        """
+        Return an iterator over the learning model hyper-parameters.
+        """
+        return self.model.hyperparameters()
+
+    def named_hyperparameters(self):
+        """
+        Return an iterator over the learning model hyper-parameters; yielding both the name and the hyper-parameter
+        itself.
+        """
+        return self.model.named_hyperparameters()
+
+    def list_hyperparameters(self):
+        """
+        Return the learning model hyper-parameters
+        """
+        return self.model.list_hyperparameters()
+
+    def get_vectorized_parameters(self, to_numpy=True):
+        """
+        Get the parameters in a vectorized form.
+
+        Args:
+            to_numpy (bool): if True, it will convert the 1D parameter vector into a numpy array.
+        """
+        return self.model.get_vectorized_parameters(to_numpy=to_numpy)
+
+    def set_vectorized_parameters(self, vector):
+        """
+        Set the vectorized parameters.
+
+        Args:
+            np.array, torch.Tensor: 1D parameter vector.
+        """
+        self.model.set_vectorized_parameters(vector=vector)
+
+    def evaluate(self, state=None, to_numpy=False):
+        """Compute the output of the value function.
+
+        Args:
+            state (None, State, (list of) np.array, (list of) torch.Tensor): state input data. If None, it will get
+                the data from the inputs that were given at the initialization.
+            to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+        """
+        # if no input is given, take the provided inputs at the beginning
+        if state is None:
+            state = self.state
+
+        # if the input is an instance of State, get the inner merged data.
+        if isinstance(state, State):
+            state = state.merged_data
+            if len(state) == 1:
+                state = state[0]
+
+        self.value = self.model.predict(state, to_numpy=to_numpy, return_logits=True, set_output_data=False)
+        return self.value
+
+    def __call__(self, state=None, to_numpy=False):
+        """Predict the value."""
+        return self.evaluate(state=state, to_numpy=to_numpy)
 
 
-class ParametrizedStateOutputActionValue(ParametrizedValue):
-    r"""Parametrized State Output Action Value Function Approximator
+# alias
+QValue = ParametrizedQValue
+
+
+class ParametrizedQValueOutput(ParametrizedQValue):
+    r"""Parametrized Q-Value Function Approximator (which accepts as inputs the states and outputs a Q-value for each
+    discrete action)
 
     This value function approximator predicts the state-action value :math:`Q_{\phi}(s,a)` for each discrete action.
     """
@@ -313,8 +460,7 @@ class ParametrizedStateOutputActionValue(ParametrizedValue):
             action (Action): output DISCRETE state.
             model (Approximator): value function approximator.
         """
-        super(ParametrizedStateOutputActionValue, self).__init__(state, model)
-        self.action = action
+        super(ParametrizedQValueOutput, self).__init__(state, action, model)
 
     ##############
     # Properties #
@@ -336,3 +482,7 @@ class ParametrizedStateOutputActionValue(ParametrizedValue):
         elif not isinstance(action, (torch.Tensor, np.ndarray)):
             raise TypeError("Expecting the action to be an int, float, Action, torch.Tensor, or np.ndarray.")
         self._action = action
+
+
+# alias
+QValueOutput = ParametrizedQValueOutput

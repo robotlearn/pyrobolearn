@@ -9,7 +9,7 @@ import torch
 
 from pyrobolearn.models import NN
 from pyrobolearn.approximators import NNApproximator, MLPApproximator
-from pyrobolearn.values.value import ParametrizedValue, ParametrizedStateActionValue, ParametrizedStateOutputActionValue
+from pyrobolearn.values.value import ParametrizedValue, ParametrizedQValue, ParametrizedQValueOutput
 
 
 __author__ = "Brian Delhaisse"
@@ -47,8 +47,8 @@ __status__ = "Development"
 #         self.model = model
 
 
-class StateValueNetwork(ParametrizedValue):
-    r"""Stave Value Network
+class ValueNetwork(ParametrizedValue):
+    r"""State Value Network
 
     This is defined by :math:`V_{\psi}(s_t)` where :math:`\psi` represents the network parameters.
     """
@@ -61,11 +61,11 @@ class StateValueNetwork(ParametrizedValue):
             state (State): input state.
             model (NN, NNApproximator): Neural Network model / approximator.
         """
-        super(StateValueNetwork, self).__init__(state, model)
+        super(ValueNetwork, self).__init__(state, model)
 
 
-class StateInputActionValueNetwork(ParametrizedStateActionValue):
-    r"""State Input Action Value Network
+class QValueNetwork(ParametrizedQValue):
+    r"""Q-Value Network (which accepts as inputs the states and actions)
 
     State-action value function :math:`Q_{\phi}(s, a)` approximated by a neural network, where :math:`\phi` represents
     the parameters of that model. This approximator accepts as inputs the states :math:`s` and actions :math:`a`,
@@ -81,11 +81,11 @@ class StateInputActionValueNetwork(ParametrizedStateActionValue):
             action (Action): input action.
             model (NN, NNApproximator): Neural Network model / approximator.
         """
-        super(StateInputActionValueNetwork, self).__init__(state, action, model)
+        super(QValueNetwork, self).__init__(state, action, model)
 
 
-class StateOutputActionValueNetwork(ParametrizedStateOutputActionValue):
-    r"""State Output Action Value Network
+class QValueOutputNetwork(ParametrizedQValueOutput):
+    r"""Q-Value Output Network (which accepts as inputs the states and outputs a Q-value for each discrete action)
 
     State-action value function :math:`Q_{\phi}(s, a)` approximated by a neural network, where :math:`\phi` represents
     the parameters of that model. This approximator accepts as inputs the states :math:`s` and outputs the value
@@ -101,10 +101,10 @@ class StateOutputActionValueNetwork(ParametrizedStateOutputActionValue):
             action (Action): output action.
             model (NN, NNApproximator): Neural Network model / approximator.
         """
-        super(StateOutputActionValueNetwork, self).__init__(state, action, model)
+        super(QValueOutputNetwork, self).__init__(state, action, model)
 
 
-class MLPStateValue(ParametrizedValue):  # StateValueNetwork):
+class MLPValue(ValueNetwork):
     r"""Multi-Layer Perceptron (MLP) State Value Function Approximator
 
     This is defined by :math:`V_{\psi}(s_t)` where the function :math:`V` is approximated by a multilayer perceptron.
@@ -128,14 +128,14 @@ class MLPStateValue(ParametrizedValue):  # StateValueNetwork):
                 the inner model / function approximator.
         """
         output = torch.Tensor([1.])  # torch.Tensor([[1.]])
-        model = MLPApproximator(state, output, hidden_units=hidden_units, activation_fct=activation_fct,
-                                last_activation_fct=last_activation_fct, dropout_prob=dropout_prob,
+        model = MLPApproximator(state, output, hidden_units=hidden_units, activation=activation_fct,
+                                last_activation=last_activation_fct, dropout=dropout_prob,
                                 preprocessors=preprocessors)
-        super(MLPStateValue, self).__init__(state, model)
+        super(MLPValue, self).__init__(state, model)
 
 
-class MLPStateInputActionValue(ParametrizedStateActionValue):
-    r"""MLP state - input action value function approximator
+class MLPQValue(QValueNetwork):
+    r"""MLP Q-value function approximator (which accepts as inputs the states and actions)
 
     State-action value function :math:`Q_{\phi}(s, a)` approximated by a MLP model, where :math:`\phi` represents
     the parameters of that model. This approximator accepts as inputs the states :math:`s` and actions :math:`a`,
@@ -161,13 +161,14 @@ class MLPStateInputActionValue(ParametrizedStateActionValue):
                 the inner model / function approximator.
         """
         model = MLPApproximator(inputs=[state, action], outputs=torch.Tensor([1]), hidden_units=hidden_units,
-                                activation_fct=activation_fct, last_activation_fct=last_activation_fct,
-                                dropout_prob=dropout_prob, preprocessors=preprocessors)
-        super(MLPStateInputActionValue, self).__init__(state, action, model=model)
+                                activation=activation_fct, last_activation=last_activation_fct,
+                                dropout=dropout_prob, preprocessors=preprocessors)
+        super(MLPQValue, self).__init__(state, action, model=model)
 
 
-class MLPStateOutputActionValue(ParametrizedStateOutputActionValue):
-    r"""MLP state - output action value function approximator
+class MLPQValueOutput(ParametrizedQValueOutput):
+    r"""MLP Q-value function approximator (which accepts as inputs the states and outputs a Q-value for each discrete
+    action)
 
     State-action value function :math:`Q_{\phi}(s, a)` approximated by a MLP model, where :math:`\phi` represents
     the parameters of that model. This approximator accepts as inputs the states :math:`s` and outputs the value
@@ -193,6 +194,6 @@ class MLPStateOutputActionValue(ParametrizedStateOutputActionValue):
                 the inner model / function approximator.
         """
         model = MLPApproximator(inputs=state, outputs=action, hidden_units=hidden_units,
-                                activation_fct=activation_fct, last_activation_fct=last_activation_fct,
-                                dropout_prob=dropout_prob, preprocessors=preprocessors)
-        super(MLPStateOutputActionValue, self).__init__(state, action, model=model)
+                                activation=activation_fct, last_activation=last_activation_fct,
+                                dropout=dropout_prob, preprocessors=preprocessors)
+        super(MLPQValueOutput, self).__init__(state, action, model=model)
