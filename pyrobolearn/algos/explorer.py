@@ -160,7 +160,7 @@ class Explorer(object):
             print("5. \\pi(.|s): {}".format(dist))
             print("6. log \\pi(a|s): {}".format([d.log_prob(act) for d in dist]))
 
-            self.storage.insert(next_obs, act, reward, masks=done, distributions=dist)
+            self.storage.insert(next_obs, act, reward, mask=done, distributions=dist)
 
             raw_input('enter')
 
