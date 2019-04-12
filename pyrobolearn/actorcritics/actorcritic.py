@@ -99,17 +99,49 @@ class ActorCritic(object):
         """Compute the action."""
         return self.act(x)
 
-    def act(self, states=None, deterministic=True):
-        """Evaluate the given input states."""
-        return self.actor.act(states, deterministic=deterministic)
+    def act(self, state=None, deterministic=True, to_numpy=True, return_logits=False, apply_action=True):
+        """Evaluate the given input states.
 
-    def evaluate(self, states=None):
-        """Evaluate the given input states."""
-        return self.critic.compute(states)
+        Args:
+            state (State): current state
+            deterministic (bool): True by default. It can only be set to False, if the policy is stochastic.
+            to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+            return_logits (bool): If True, in the case of discrete outputs, it will return the logits.
+            apply_action (bool): If True, it will call and execute the action.
 
-    def act_and_evaluate(self, states=None):
-        """Act and evaluate the given input states."""
-        return self.act(states), self.evaluate(states)
+        Returns:
+            (list of) np.array / torch.Tensor: action data
+        """
+        return self.actor.act(state, deterministic=deterministic, to_numpy=to_numpy, return_logits=return_logits,
+                              apply_action=apply_action)
+
+    def evaluate(self, state=None, to_numpy=False):
+        """Evaluate the given input state.
+
+        Args:
+            state (None, State, (list of) np.array, (list of) torch.Tensor): state input data. If None, it will get
+                the data from the inputs that were given at the initialization.
+            to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+        """
+        return self.critic.evaluate(state, to_numpy=to_numpy)
+
+    def act_and_evaluate(self, state=None, deterministic=True, to_numpy=True, return_logits=False, apply_action=True):
+        """Act and evaluate the given input states.
+
+        Args:
+            state (State): current state
+            deterministic (bool): True by default. It can only be set to False, if the policy is stochastic.
+            to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+            return_logits (bool): If True, in the case of discrete outputs, it will return the logits.
+            apply_action (bool): If True, it will call and execute the action.
+
+        Returns:
+            (list of) np.array / torch.Tensor: action data
+        """
+        action = self.act(state, deterministic=deterministic, to_numpy=to_numpy, return_logits=return_logits,
+                          apply_action=apply_action)
+        value = self.evaluate(state, to_numpy=to_numpy)
+        return action, value
 
 
 class SharedActorCritic(object):

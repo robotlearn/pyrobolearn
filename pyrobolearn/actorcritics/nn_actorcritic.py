@@ -12,7 +12,7 @@ import itertools
 import torch
 
 from pyrobolearn.policies import MLPPolicy
-from pyrobolearn.values import MLPStateValue
+from pyrobolearn.values import MLPValue
 from pyrobolearn.actorcritics import ActorCritic, SharedActorCritic
 
 __author__ = "Brian Delhaisse"
@@ -51,12 +51,12 @@ class MLPActorCritic(ActorCritic):
             preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
             postprocessors (Processor, list of Processor, None): post-processors to be applied to the policy's output
         """
-        policy = MLPPolicy(states, actions, hidden_units=hidden_units, activation_fct=activation_fct,
-                           last_activation_fct=last_activation_fct, dropout_prob=dropout_prob, rate=rate,
+        policy = MLPPolicy(states, actions, hidden_units=hidden_units, activation=activation_fct,
+                           last_activation=last_activation_fct, dropout=dropout_prob, rate=rate,
                            preprocessors=preprocessors, postprocessors=postprocessors)
-        value = MLPStateValue(states, hidden_units=hidden_units, activation_fct=activation_fct,
-                              last_activation_fct=last_activation_fct, dropout_prob=dropout_prob,
-                              preprocessors=preprocessors)
+        value = MLPValue(states, hidden_units=hidden_units, activation_fct=activation_fct,
+                         last_activation_fct=last_activation_fct, dropout_prob=dropout_prob,
+                         preprocessors=preprocessors)
         super(MLPActorCritic, self).__init__(policy, value)
 
 

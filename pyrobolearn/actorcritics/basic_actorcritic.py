@@ -10,7 +10,7 @@ import itertools
 import torch
 
 from pyrobolearn.policies import LinearPolicy
-from pyrobolearn.values import LinearStateValue
+from pyrobolearn.values import LinearValue
 from pyrobolearn.actorcritics import ActorCritic, SharedActorCritic
 
 __author__ = "Brian Delhaisse"
@@ -42,7 +42,7 @@ class LinearActorCritic(ActorCritic):
             postprocessors (Processor, list of Processor, None): post-processors to be applied to the policy's output
         """
         policy = LinearPolicy(states, actions, rate=rate, preprocessors=preprocessors, postprocessors=postprocessors)
-        value = LinearStateValue(states, preprocessors=preprocessors)
+        value = LinearValue(states, preprocessors=preprocessors)
         super(LinearActorCritic, self).__init__(policy, value)
 
 
