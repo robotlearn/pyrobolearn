@@ -641,7 +641,7 @@ class RolloutStorage(DictStorage):
         The tensor will also have the same type than the other tensors and will be sent to the correct device.
 
         Args:
-            key (str): key of the dictionary.
+            key (str, object): key of the dictionary.
             shapes (list of tuple of int, tuple of int, int): (list of) shape(s) of the tensor(s).
             num_steps (int, None): the number of time steps. This value can not be smaller than `self.num_steps`.
                 If None, `self.num_steps` will be used.
@@ -649,8 +649,8 @@ class RolloutStorage(DictStorage):
                 If dtype == torch.dtype, then it will be set to dtype = self.dtype.
         """
         # check the key
-        if not isinstance(key, str):
-            raise TypeError("Expecting the key to be a string, instead got: {} with type {}".format(key, type(key)))
+        # if not isinstance(key, str):
+        #     raise TypeError("Expecting the key to be a string, instead got: {} with type {}".format(key, type(key)))
 
         # check the number of time steps
         if num_steps is None:
@@ -814,7 +814,7 @@ class RolloutStorage(DictStorage):
             else:
                 set_tensor(self[key], step, values, copy=copy)
 
-    def insert(self, observations, actions, rewards, masks, distributions=None, update_step=True, **kwargs):
+    def insert(self, observations, actions, reward, mask, distributions=None, update_step=True, **kwargs):
         # distributions, values=None):
         # recurrent_hidden_state, action_log_prob):
         """
@@ -823,8 +823,8 @@ class RolloutStorage(DictStorage):
         Args:
             observations (torch.Tensor, list of torch.Tensor): (list of) state(s) / observation(s).
             actions (torch.Tensor, list of torch.Tensor): (list of) action(s)
-            rewards (float, int, torch.Tensor): reward value
-            masks (float, int, torch.Tensor): masks. They are set to zeros after an episode has terminated.
+            reward (float, int, torch.Tensor): reward value
+            mask (float, int, torch.Tensor): masks. They are set to zeros after an episode has terminated.
             distributions (torch.distributions.Distribution, None): action distribution.
             update_step (bool): if True, it will update the current time step. If False, the user needs to call
                 `step()` in order to update it.
@@ -849,10 +849,10 @@ class RolloutStorage(DictStorage):
             storage[self._step].copy_(self._convert_to_tensor(action))
 
         # insert rewards and masks
-        self.rewards[self._step].copy_(self._convert_to_tensor(rewards))
-        if masks is None:
-            masks = torch.tensor(1.)
-        self.masks[self._step + 1].copy_(self._convert_to_tensor(masks))
+        self.rewards[self._step].copy_(self._convert_to_tensor(reward))
+        if mask is None:
+            mask = torch.tensor(1.)
+        self.masks[self._step + 1].copy_(self._convert_to_tensor(mask))
 
         # insert distributions
         for distribution, storage in zip(distributions, self.distributions):
@@ -908,10 +908,10 @@ class RolloutStorage(DictStorage):
     #############
 
     def __setitem__(self, key, value):
-        """Add the new value in the dictionary. Key must be strings."""
-        if not isinstance(key, str):
-            raise TypeError("The rollout storage only accepts key as strings! Instead got: {} with type "
-                            "{}".format(key, type(key)))
+        """Add the new value in the dictionary. Key must be strings or objects."""
+        # if not isinstance(key, str):
+        #     raise TypeError("The rollout storage only accepts key as strings! Instead got: {} with type "
+        #                     "{}".format(key, type(key)))
         super(RolloutStorage, self).__setitem__(key, value)
 
     # def __setattr__(self, key, value):
