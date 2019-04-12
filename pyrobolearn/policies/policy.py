@@ -521,6 +521,36 @@ class Policy(object):
 
         return action_data
 
+    def predict(self, state=None, deterministic=True, to_numpy=False, return_logits=True):
+        """Predict the action given the state.
+
+        This does not set the action data in the action instances, nor apply the actions in the simulator. Instead,
+        it gets the state data, preprocess it, predict using the actions using the inner model, then post-process
+        the actions, and return the resulting action data.
+
+        Args:
+            state (State): current state
+            deterministic (bool): True by default. It can only be set to False, if the policy is stochastic.
+            to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+            return_logits (bool): If True, in the case of discrete outputs, it will return the logits.
+
+        Returns:
+            (list of) torch.Tensor: action data
+        """
+        # get the state data
+        state_data = self.get_state_data(state=state)
+
+        # pre-process the state data
+        state_data = self.preprocess(state_data)
+
+        # predict the output using the inner model
+        action_data = self.inner_predict(state_data, to_numpy=False, return_logits=True, set_output_data=False)
+
+        # post-process the action data
+        action_data = self.postprocess(action_data)
+
+        return action_data
+
     def act(self, state=None, deterministic=True, to_numpy=True, return_logits=False, apply_action=True):
         """Perform the action given the state.
 

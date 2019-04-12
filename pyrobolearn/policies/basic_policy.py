@@ -8,8 +8,8 @@ import numpy as np
 import torch
 
 from pyrobolearn.policies.policy import Policy
-from pyrobolearn.values.value import ParametrizedStateOutputActionValue
 from pyrobolearn.approximators import LinearApproximator
+from pyrobolearn.values.value import ParametrizedQValueOutput
 
 
 __author__ = "Brian Delhaisse"
@@ -108,7 +108,7 @@ class LinearPolicy(Policy):
 
 
 class PolicyFromQValue(Policy):
-    r"""Policy from state-action value function approximator
+    r"""Policy from Q-value function approximator
 
     This computes the optimal discrete action :math:`a` using the underlying value function approximator
     :math:`Q(s,a)` which given the state as input computes the Q-value for each discrete action. The policy select
@@ -124,7 +124,7 @@ class PolicyFromQValue(Policy):
         Initialize the Policy from the value function approximator.
 
         Args:
-            value (ParametrizedStateOutputActionValue): trainable value function approximator.
+            value (ParametrizedQValueOutput): trainable value function approximator.
             rate (int, float): rate (float) at which the policy operates if we are operating in real-time. If we are
                 stepping deterministically in the simulator, it represents the number of ticks (int) to sleep before
                 executing the model.
@@ -134,7 +134,7 @@ class PolicyFromQValue(Policy):
             **kwargs (dict): dictionary of arguments
         """
         self.value = value
-        super(PolicyFromQValue, self).__init__(value.state, value.action, model=value, rate=rate,
+        super(PolicyFromQValue, self).__init__(states=value.state, actions=value.action, model=value, rate=rate,
                                                preprocessors=preprocessors, postprocessors=postprocessors,
                                                *args, **kwargs)
 
@@ -152,20 +152,21 @@ class PolicyFromQValue(Policy):
         """Set the value function approximator."""
         # TODO: need to check that input and output dimensions of the new value function approximator match the ones
         #  from the previous model.
-        if not isinstance(value, ParametrizedStateOutputActionValue):
+        if not isinstance(value, ParametrizedQValueOutput):
             raise TypeError("Expecting the given `value` function approximator to be an instance of "
-                            "`ParametrizedStateOutputActionValue`, instead got: {}".format(type(value)))
+                            "`ParametrizedQValueOutput`, instead got: {}".format(type(value)))
         self._value = value
 
     ###########
     # Methods #
     ###########
 
-    def inner_predict(self, state, to_numpy=False, return_logits=True, set_output_data=False):
+    def inner_predict(self, state, deterministic=True, to_numpy=False, return_logits=True, set_output_data=False):
         """Inner prediction step.
 
         Args:
             state ((list of) torch.Tensor, (list of) np.array): state data.
+            deterministic (bool): True by default. It can only be set to False, if the policy is stochastic.
             to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
             return_logits (bool): If True, in the case of discrete outputs, it will return the logits.
             set_output_data (bool): If True, it will set the predicted output data to the outputs given to the
@@ -174,10 +175,27 @@ class PolicyFromQValue(Policy):
         Returns:
             (list of) torch.Tensor, (list of) np.array: predicted action data.
         """
-        action = self.model.evaluate(state, to_numpy=to_numpy)
+        values = self.value.evaluate(state, to_numpy=to_numpy)
+        if return_logits:
+            return values
         if to_numpy:
-            return np.argmax(action)
-        return torch.argmax(action, dim=0, keepdim=True)
+            return np.argmax(values)
+        return torch.argmax(values, dim=0, keepdim=True)
+
+    # def evaluate(self, state, to_numpy=False):
+    #     """
+    #     Evaluate the state.
+    #
+    #     Args:
+    #         state (None, State, (list of) np.array, (list of) torch.Tensor): state input data. If None, it will get
+    #             the data from the inputs that were given at the initialization.
+    #         to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+    #
+    #     Returns:
+    #         torch.Tensor, np.array:
+    #     """
+    #     values = self.value.evaluate(state, to_numpy=to_numpy)
+    #     return values
 
     # def act(self, state=None, deterministic=True, to_numpy=True, return_logits=False, apply_action=True):
     #     pass
