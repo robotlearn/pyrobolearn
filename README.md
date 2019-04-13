@@ -75,18 +75,21 @@ Check the `README.md` file in the `examples` folder.
 
 ```
 @misc{delhaisse2019pyrobolearn,
-    author = {Delhaisse, Brian and Rozo, Leonel, and Caldwell, Darwin},
+    author = {Delhaisse, Brian and Xin, Songyan and Rozo, Leonel, and Caldwell, Darwin},
     title = {PyRoboLearn: A Python Framework for Robot Learning Practitioners},
     howpublished = {\url{https://github.com/robotlearn/pyrobolearn}},
     year=2019,
 }
 ```
 
+If you use a specific learning model, algorithm, robot, controller, and so on, please cite the corresponding paper. The reference(s) can usually be found in the class documentation (at the end), and sometimes in the README file in the corresponding folder.
+
 
 ## Acknowledgements
 
 Currently, we mainly use the PyBullet simulator. 
-- *PyBullet, a Python module for physcis simulation for games, robotics and machine learning*,
+- *PyBullet, a Python module for physics simulation for games, robotics and machine learning*,
 Erwin Coumans and Yunfei Bai, 2016-2019
 - references for each robot, model, and others can be found in the corresponding class documentation
+- Locomotion controllers were provided by Songyan Xin (see `pyrobolearn/controllers/locomotion`).
 
