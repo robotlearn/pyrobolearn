@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+"""Provide heightmap generators.
+
+The various functions defined here generate
+"""
+
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF
@@ -9,7 +15,17 @@ except ImportError as e:
     raise ImportError(repr(e) + '\nTry to install gdal: pip install gdal')
 
 
-def diamond_square_algorithm(N=128, init_values=None, noise=0, lower_bound=0, upper_bound=255, dtype=np.int, seed=None):
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
+
+def diamond_square_algorithm(n=8, init_values=None, noise=0, lower_bound=0, upper_bound=255, dtype=np.int, seed=None):
     r"""Diamond-Square Algorithm
 
     This function implements the diamond-square algorithm [1], to generate random terrains given an initial value
@@ -18,8 +34,8 @@ def diamond_square_algorithm(N=128, init_values=None, noise=0, lower_bound=0, up
     Warnings: the diamond-square algo assumes that the heightmap is a 2D square array.
 
     Args:
-        N (int): number of points (must be a power of 2). From this, the width and the height will automatically be
-            computed, such that width = height = 2*N+1.
+        n (int): number of points (must be a power of 2). From this, the width and the height will automatically be
+            computed, such that width = height = 2**n + 1.
         init_values (np.array[4], None): the four initial values for the corners. If None, it will generate 4 values
             randomly such that they are between the lower_bound and upper_bound.
         noise (int,float): noise level to add. This corresponds to the standard deviation of the normal distribution.
@@ -29,7 +45,7 @@ def diamond_square_algorithm(N=128, init_values=None, noise=0, lower_bound=0, up
         seed (int, None): random seed
 
     Returns:
-        np.array[2*N+1,2*N+1]: resulting 2D square heightmap
+        np.array[2**n+1, 2**n+1]: resulting 2D square heightmap
 
     References:
         [1] Wikipedia: https://en.wikipedia.org/wiki/Diamond-square_algorithm
@@ -40,7 +56,7 @@ def diamond_square_algorithm(N=128, init_values=None, noise=0, lower_bound=0, up
         np.random.seed(seed)
 
     # create initial heightmap
-    width, height = 2 * N + 1, 2 * N + 1
+    width, height = 2**n + 1, 2**n + 1
     heightmap = -1 * np.ones((height, width), dtype=dtype)
     if not init_values:
         if dtype == np.int:
@@ -72,7 +88,7 @@ def diamond_square_algorithm(N=128, init_values=None, noise=0, lower_bound=0, up
         # DIAMOND STEP
         center = np.array([xmin + dx / 2, ymin + dy / 2])
         yc, xc = center
-        heightmap[xc, yc] = np.mean([heightmap[x, y] for (y, x) in square]) #+ np.random.normal(scale=noise)
+        heightmap[xc, yc] = np.mean([heightmap[x, y] for (y, x) in square])  # + np.random.normal(scale=noise)
         heightmap[xc, yc] = min(max(lower_bound, heightmap[xc, yc]), upper_bound)  # lower and upper bound
 
         # SQUARE STEP
@@ -98,7 +114,7 @@ def diamond_square_algorithm(N=128, init_values=None, noise=0, lower_bound=0, up
                 square = np.array([center, [xmax, center[1]], [xmax, ymax], [xmin, ymax]])  # left lower square
 
             yc, xc = center
-            heightmap[xc, yc] = np.mean([heightmap[x, y] for (y, x) in triangle]) #+ np.random.normal(scale=noise)
+            heightmap[xc, yc] = np.mean([heightmap[x, y] for (y, x) in triangle])  # + np.random.normal(scale=noise)
             heightmap[xc, yc] = min(max(lower_bound, heightmap[xc, yc]), upper_bound)  # lower and upper bound
 
             # a square is defined by 4 points
@@ -111,7 +127,6 @@ def diamond_square_algorithm(N=128, init_values=None, noise=0, lower_bound=0, up
     # start diamond-square algorithm (recursively)
     diamond_square_step(heightmap, noise=noise, lower_bound=lower_bound, upper_bound=upper_bound)
     return heightmap
-
 
 
 def heightmap_gpr(init_values, x, y, kernel=None, alpha=1e-10, lower_bound=0, upper_bound=255, dtype=np.int):
@@ -154,7 +169,7 @@ def heightmap_gpr(init_values, x, y, kernel=None, alpha=1e-10, lower_bound=0, up
     """
     # check given x and y
     if len(x.shape) == 1 and len(y.shape) == 1:
-        x,y = np.meshgrid(x,y)
+        x, y = np.meshgrid(x, y)
     if x.shape != y.shape:
         raise ValueError("Expecting x and y to have the same shape, which should be the case if it is a meshgrid")
 
@@ -162,8 +177,8 @@ def heightmap_gpr(init_values, x, y, kernel=None, alpha=1e-10, lower_bound=0, up
     N = len(init_values)
     min_dist = np.inf
     for i in range(N):
-        for j in range(i+1,N):
-            dist = np.linalg.norm(init_values[i,:2] - init_values[j,:2])
+        for j in range(i+1, N):
+            dist = np.linalg.norm(init_values[i, :2] - init_values[j, :2])
             if dist < min_dist:
                 min_dist = dist
     print("Min dist: {}".format(min_dist))
@@ -177,10 +192,10 @@ def heightmap_gpr(init_values, x, y, kernel=None, alpha=1e-10, lower_bound=0, up
     # create gaussian process and fit on the given initial values
     kernel = RBF(length_scale=np.sqrt(min_dist))
     gpr = GaussianProcessRegressor(kernel=kernel, alpha=alpha, normalize_y=True)
-    gpr.fit(init_values[:,:2], init_values[:,2])
+    gpr.fit(init_values[:, :2], init_values[:, 2])
 
     # predict the heightmap using GPR
-    X = np.dstack((x,y)).reshape(-1,2)
+    X = np.dstack((x, y)).reshape(-1, 2)
     heightmap = gpr.predict(X)
     heightmap = heightmap.reshape(x.shape)
 
@@ -191,7 +206,6 @@ def heightmap_gpr(init_values, x, y, kernel=None, alpha=1e-10, lower_bound=0, up
     heightmap.astype(dtype)
 
     return heightmap
-
 
 
 def heightmap_rbf(init_values, x, y, function='multiquadric', lower_bound=0, upper_bound=255, dtype=np.int):
@@ -235,7 +249,7 @@ def heightmap_rbf(init_values, x, y, function='multiquadric', lower_bound=0, upp
         raise ValueError("Expecting x and y to have the same shape, which should be the case if it is a meshgrid")
     origin_shape = x.shape
 
-    rbf = Rbf(init_values[:,0], init_values[:,1], init_values[:,2], function=function)
+    rbf = Rbf(init_values[:, 0], init_values[:, 1], init_values[:, 2], function=function)
     heightmap = rbf(x.reshape(-1), y.reshape(-1))
     heightmap = heightmap.reshape(origin_shape)
 
@@ -276,7 +290,7 @@ def heighmap_equation(x, y, z, lower_bound=0, upper_bound=255, dtype=np.int):
     origin_shape = x.shape
 
     # call z function: z=f(x,y)
-    heightmap = z(x,y)
+    heightmap = z(x, y)
 
     # make sure the values of the heightmap are between the bounds (in-place), and is the correct type
     np.clip(heightmap, lower_bound, upper_bound, heightmap)
@@ -327,11 +341,11 @@ def heightmap_gdal(filename, subsample=None, interpolate_fct='multiquadric', low
         idx_x = np.linspace(0, height-1, subsample, dtype=np.int)
         idx_y = np.linspace(0, width-1, subsample, dtype=np.int)
         idx_x, idx_y = np.meshgrid(idx_x, idx_y)
-        x,y = np.arange(width), np.arange(height)
-        x,y = np.meshgrid(x,y)
+        x, y = np.arange(width), np.arange(height)
+        x, y = np.meshgrid(x, y)
         rbf = Rbf(x[idx_x, idx_y], y[idx_x, idx_y], heightmap[idx_x, idx_y], function=interpolate_fct)
-        #Nx, Ny = x.shape[0] / subsample, x.shape[1] / subsample
-        #rbf = Rbf(x[::Nx, ::Ny], y[::Nx, ::Ny], heightmap[::Nx, ::Ny], function=interpolate_fct)
+        # Nx, Ny = x.shape[0] / subsample, x.shape[1] / subsample
+        # rbf = Rbf(x[::Nx, ::Ny], y[::Nx, ::Ny], heightmap[::Nx, ::Ny], function=interpolate_fct)
         heightmap = rbf(x, y)
 
     # make sure the values of the heightmap are between the bounds (in-place), and is the correct type
@@ -349,7 +363,6 @@ def heightmap_gdal(filename, subsample=None, interpolate_fct='multiquadric', low
 
 # alias
 heigtmap_from_image = heightmap_gdal
-
 
 
 # Tests
@@ -382,10 +395,9 @@ if __name__ == '__main__':
 
 
     # # generate heightmap using the diamond-square algorithm
-    # N = 128       # shape of map: 2N+1, 2N+1
+    # N = 8       # shape of map: 2**N+1, 2**N+1
     # heightmap = diamond_square_algorithm(N)
     # plot_figure(heightmap, title='Diamond-Square algorithm')
-
 
     # # generate heightmap using gaussian process regression
     # x = np.array(range(256))
@@ -399,7 +411,6 @@ if __name__ == '__main__':
     # #init_values = np.array([[182, 48, 89], [182, 20, 150], [167, 247, 131]])
     # heightmap = heightmap_gpr(init_values=init_values, x=x, y=y)
     # plot_figure(heightmap, title='Gaussian Process Regression')
-
 
     # generate heightmap using RBF interpolations
     x = np.array(range(256))
@@ -416,9 +427,8 @@ if __name__ == '__main__':
     heightmap = heightmap_rbf(init_values=init_values, x=x, y=y, function='gaussian') # 'linear', 'multiquadric'
     plot_figure(heightmap, title='RBF interpolation')
 
-
-    # generate heigthmap from an image or tif file
-    #dem = heightmap_gdal('../tests/canyon-geo.tif')
-    #dem = heightmap_gdal('../tests/dem.jpg')
+    # # generate heigthmap from an image or tif file
+    # dem = heightmap_gdal('../tests/canyon-geo.tif')
+    # dem = heightmap_gdal('../tests/dem.jpg')
     dem = heightmap_gdal('../tests/heightmap.png')
     plot_figure(dem, block=True)
