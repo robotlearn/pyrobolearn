@@ -6,7 +6,7 @@ import numpy as np
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__credits__ = ["Brian Delhaisse", "OpenSoT (Enrico Mingo Hoffman and Alessio Rocchi)", "Songyan Xin"]
+__credits__ = ["OpenSoT (Enrico Mingo Hoffman and Alessio Rocchi)", "Songyan Xin"]
 __license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
