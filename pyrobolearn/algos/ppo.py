@@ -15,7 +15,7 @@ from pyrobolearn.actorcritics import ActorCritic
 from pyrobolearn.exploration import ActionExploration
 
 from pyrobolearn.storages import RolloutStorage
-from pyrobolearn.samplers import StorageSampler
+from pyrobolearn.samplers import BatchRandomSampler
 from pyrobolearn.estimators import GAE
 from pyrobolearn.losses import CLIPLoss, ValueLoss, EntropyLoss
 from pyrobolearn.optimizers import Adam
@@ -44,6 +44,28 @@ class PPO(GradientRLAlgo):
     outside the PPO class, and providing them as input to the constructor and thus privileging composition over
     inheritance.
 
+    Most of the rest of the documentation has been copied-pasted from [3], and is reproduced here for completeness.
+    If you use this algorithm, please acknowledge / cite [1, 2, 3].
+
+    Background
+    ----------
+
+    "PPO is motivated by the same question as TRPO: how can we take the biggest possible improvement step on a policy
+    using the data we currently have, without stepping so far that we accidentally cause performance collapse? Where
+    TRPO tries to solve this problem with a complex second-order method, PPO is a family of first-order methods that
+    use a few other tricks to keep new policies close to old. PPO methods are significantly simpler to implement, and
+    empirically seem to perform at least as well as TRPO.
+
+    There are two primary variants of PPO: PPO-Penalty and PPO-Clip.
+
+    * PPO-Penalty approximately solves a KL-constrained update like TRPO, but penalizes the KL-divergence in the
+    objective function instead of making it a hard constraint, and automatically adjusts the penalty coefficient over
+    the course of training so that it's scaled appropriately.
+
+    * PPO-Clip doesn't have a KL-divergence term in the objective and doesn't have a constraint at all. Instead
+    relies on specialized clipping in the objective function to remove incentives for the new policy to get far
+    from the old policy." [3]
+
 
     Mathematics
     -----------
@@ -60,6 +82,16 @@ class PPO(GradientRLAlgo):
     and where :math:`c_1` and :math:`c_2` are coefficients.
 
     This algorithm uses an actor-critic model, and a GAE estimator.
+
+
+    Exploration vs Exploitation
+    ---------------------------
+
+    "PPO trains a stochastic policy in an on-policy way. This means that it explores by sampling actions according to
+    the latest version of its stochastic policy. The amount of randomness in action selection depends on both initial
+    conditions and the training procedure. Over the course of training, the policy typically becomes progressively
+    less random, as the update rule encourages it to exploit rewards that it has already found. This may cause the
+    policy to get trapped in local optima." [3]
 
 
     Properties
@@ -156,7 +188,7 @@ class PPO(GradientRLAlgo):
         logger.debug('create return estimator (GAE)')
         estimator = GAE(storage, gamma=gamma, tau=tau)
         logger.debug('create storage sampler')
-        sampler = StorageSampler(storage)
+        sampler = BatchRandomSampler(storage)
 
         # create loss
         logger.debug('create loss')

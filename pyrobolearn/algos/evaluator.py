@@ -34,7 +34,7 @@ class Evaluator(object):
         Initialize the Evaluation phase.
 
         Args:
-            estimator (Estimator): estimator used to evaluate the actions performed by the policy.
+            estimator (Estimator, None): estimator used to evaluate the actions performed by the policy.
         """
         self.estimator = estimator
 
@@ -50,8 +50,8 @@ class Evaluator(object):
     @estimator.setter
     def estimator(self, estimator):
         """Set the estimator."""
-        if not isinstance(estimator, Estimator):
-            raise TypeError("Expecting estimator to be an instance of `Estimator`, instead got: "
+        if not None and not isinstance(estimator, Estimator):
+            raise TypeError("Expecting estimator to be an instance of `Estimator` or None, instead got: "
                             "{}".format(type(estimator)))
         self._estimator = estimator
 
@@ -64,11 +64,12 @@ class Evaluator(object):
     # Methods #
     ###########
 
-    def evaluate(self):  # , storage):
+    def evaluate(self):
         """
         Evaluate the actions.
         """
-        self.estimator.evaluate(self.storage)
+        if self.estimator is not None:
+            self.estimator.evaluate(self.storage)
 
     #############
     # Operators #

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-"""Provide the  Deep Deterministic Policy Gradient (DDPG) and the Twin Delayed DDPG algorithm.
+"""Provide the  Deep Deterministic Policy Gradient (DDPG).
+
+For the Twin Delayed DDPG algorithm, see `pyrobolearn/algos/td3.py`
 """
 
 import copy
@@ -11,6 +13,7 @@ from pyrobolearn.values import QValue
 from pyrobolearn.exploration import ActionExploration, GaussianActionExploration
 
 from pyrobolearn.storages import ExperienceReplay
+from pyrobolearn.samplers import BatchRandomSampler
 from pyrobolearn.estimators import TDQValueReturn
 from pyrobolearn.losses import MSBELoss, QLoss
 from pyrobolearn.optimizers import Adam
@@ -261,7 +264,7 @@ class DDPG(GradientRLAlgo):
         if not actions.is_continuous():
             raise ValueError("The DDPG assumes that the actions are continuous, however got an action which is not.")
 
-        # evaluate target Q-value fct by copying Q-value function approximator
+        # Set target parameters equal to main parameters
         q_target = copy.deepcopy(q_value)
         policy_target = copy.deepcopy(policy)
 
@@ -270,6 +273,7 @@ class DDPG(GradientRLAlgo):
 
         # create experience replay
         storage = ExperienceReplay(observation_shapes=policy.states, action_shapes=policy.actions, capacity=capacity)
+        sampler = BatchRandomSampler(storage)
 
         # create target return estimator
         estimator = TDQValueReturn(q_value=q_value, policy=policy_target, target_qvalue=q_target, gamma=gamma)

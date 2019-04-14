@@ -11,7 +11,7 @@ from pyrobolearn.tasks import RLTask
 from pyrobolearn.envs import Env
 from pyrobolearn.policies import Policy
 from pyrobolearn.exploration import Exploration
-from pyrobolearn.storages import RolloutStorage
+from pyrobolearn.storages import DictStorage  # RolloutStorage
 
 from pyrobolearn import logger
 
@@ -113,8 +113,8 @@ class Explorer(object):
     @storage.setter
     def storage(self, storage):
         """Set the storage unit."""
-        if not isinstance(storage, RolloutStorage):
-            raise TypeError("Expecting the storage to be an instance of `RolloutStorage`, instead got: "
+        if not isinstance(storage, DictStorage):
+            raise TypeError("Expecting the storage to be an instance of `DictStorage`, instead got: "
                             "{}".format(type(storage)))
         self._storage = storage
 
