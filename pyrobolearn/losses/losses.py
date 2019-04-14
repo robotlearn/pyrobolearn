@@ -7,7 +7,6 @@ Losses are evaluated on model parameters, data batches / storages, or transition
 import torch
 
 from pyrobolearn.losses.loss import Loss
-from pyrobolearn.estimators.estimator import TDReturn
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -46,36 +45,6 @@ class L2Loss(Loss):
         return 0.5 * (self.target(batch) - self.approximator(batch)).pow(2).mean()
 
 
-class ValueLoss(Loss):
-    r"""L2 loss for values
-    """
-    def __init__(self):
-        super(ValueLoss, self).__init__()
-
-    def compute(self, batch):
-        returns = batch['returns']
-        values = batch.current['values']
-        return 0.5 * (returns - values).pow(2).mean()
-
-
-class QLoss(Loss):
-    r"""QLoss
-
-    This computes :math:`\frac{1}{|B|} \sum_{s \in B} Q_{s, \mu_{\theta}(s)}}`, where :math:`\mu_\theta` is the policy.
-    """
-
-    def __init__(self, q_value, policy):
-        super(QLoss, self).__init__()
-        # TODO: check that the Q-Value accepts as inputs the actions
-        self.q_value = q_value
-        self.policy = policy
-
-    def compute(self, batch):
-        actions = self.policy.predict(batch['observations'])
-        q_values = self.q_value(batch['observations'], actions)
-        return -q_values.mean()
-
-
 class HuberLoss(Loss):
     r"""Huber Loss
 
@@ -110,132 +79,17 @@ class HuberLoss(Loss):
         return self.delta * (torch.abs(a) - 0.5 * self.delta)
 
 
-class PGLoss(Loss):
-    r"""Policy Gradient Loss
-
-    Compute the policy gradient loss which is maximized and given by:
-
-    .. math:: L^{PG} = \mathbb{E}[ \log \pi_{\theta}(a_t | s_t) \psi_t ]
-
-     where :math:`\psi_t` is the associated return estimator, which can be for instance, the total reward estimator
-     :math:`\psi_t = R(\tau)` (where :math:`\tau` represents the whole trajectory), the state action value estimator
-     :math:`\psi_t = Q(s_t, a_t)`, or the advantage estimator :math:`\psi_t = A_t = Q(s_t, a_t) - V(s_t)`. Other
-     estimators are also possible.
-
-    The gradient with respect to the parameters :math:`\theta` is then given by:
-
-    .. math:: g = \mathbb{E}[ \nabla_\theta \log \pi_{\theta}(a_t | s_t)
-
-    References:
-        [1] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
-        [2] "High-Dimensional Continuous Control using Generalized Advantage Estimation", Schulman et al., 2016
-    """
-
-    def __init__(self):
-        super(PGLoss, self).__init__()
-
-    def compute(self, batch):
-        log_curr_pi = batch.current['action_distributions']
-        log_curr_pi = log_curr_pi.log_probs(batch.current['actions'])
-        estimator = batch['estimator']
-        loss = torch.exp(log_curr_pi) * estimator
-        return -loss.mean()
-
-    def latex(self):
-        return "\\mathbb{E}[ r_t(\\theta) A_t ]"
-
-
-class CPILoss(Loss):
-    r"""CPI Loss
-
-    Conservative Policy Iteration objective which is maximized and defined in [1]:
-
-    .. math:: L^{CPI}(\theta) = \mathbb{E}[ r_t(\theta) A_t ]
-
-    where the expectation is taken over a finite batch of samples, :math:`A_t` is an estimator of the advantage fct at
-    time step :math:`t`, :math:`r_t(\theta)` is the probability ratio given by
-    :math:`r_t(\theta) = \frac{ \pi_{\theta}(a_t|s_t) }{ \pi_{\theta_{old}}(a_t|s_t) }`.
-
-    References:
-        [1] "Approximately optimal approximate reinforcement learning", Kakade et al., 2002
-        [2] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
-    """
-
-    def __init__(self):
-        """
-        Initialize the CPI Loss.
-        """
-        super(CPILoss, self).__init__()
-
-    def compute(self, batch):  # policy_distribution, old_policy_distribution, estimator):
-        # ratio = policy_distribution / old_policy_distribution
-        log_curr_pi = batch.current['action_distributions']
-        log_curr_pi = log_curr_pi.log_probs(batch.current['actions'])
-        log_prev_pi = batch['action_distributions']
-        log_prev_pi = log_prev_pi.log_probs(batch['actions'])
-
-        ratio = torch.exp(log_curr_pi - log_prev_pi)
-        estimator = batch['estimator']
-
-        loss = ratio * estimator
-        return -loss.mean()
-
-    def latex(self):
-        return "\\mathbb{E}[ r_t(\\theta) A_t ]"
-
-
-class CLIPLoss(Loss):
-    r"""CLIP Loss
-
-    Loss defined in [1] which is maximized and given by:
-
-    .. math:: L^{CLIP}(\theta) = \mathbb{E}[ \min(r_t(\theta) A_t, clip(r_t(\theta), 1-\epsilon, 1+\epsilon) A_t) ]
-
-    where the expectation is taken over a finite batch of samples, :math:`A_t` is an estimator of the advantage fct at
-    time step :math:`t`, :math:`r_t(\theta)` is the probability ratio given by
-    :math:`r_t(\theta) = \frac{ \pi_{\theta}(a_t|s_t) }{ \pi_{\theta_{old}}(a_t|s_t) }`.
-
-    References:
-        [1] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
-    """
-
-    def __init__(self, clip=0.2):
-        """
-        Initialize the loss.
-
-        Args:
-            epsilon (float): clip parameter
-        """
-        super(CLIPLoss, self).__init__()
-        self.eps = clip
-
-    def compute(self, batch):  # , policy_distribution, old_policy_distribution, estimator):
-        log_curr_pi = batch.current['action_distributions']
-        log_curr_pi = log_curr_pi.log_probs(batch.current['actions'])
-        log_prev_pi = batch['action_distributions']
-        log_prev_pi = log_prev_pi.log_probs(batch['actions'])
-
-        ratio = torch.exp(log_curr_pi - log_prev_pi)
-        estimator = batch['estimator']
-
-        loss = torch.min(ratio * estimator, torch.clamp(ratio, 1.0-self.eps, 1.0+self.eps) * estimator)
-        return -loss.mean()
-
-    def latex(self):
-        return "\\mathbb{E}[ \\min(r_t(\\theta) A_t, clip(r_t(\\theta), 1-\\epsilon, 1+\\epsilon) A_t) ]"
-
-
-class KLPenaltyLoss(Loss):
+class KLLoss(Loss):
     r"""KL Penalty Loss
 
     KL Penalty to minimize:
 
-    .. math:: L^{KL}(\theta) = \mathbb{E}[ KL( \pi_{\theta_{old}}(a_t | s_t) || \pi_{\theta}(a_t | s_t) ) ]
+    .. math:: L^{KL}(\theta) = \mathbb{E}[ KL( p || q) ]
 
     where :math:`KL(.||.)` is the KL-divergence between two probability distributions.
     """
 
-    def __init__(self):  # p, q):
+    def __init__(self, p, q):
         """
         Initialize the KL Penalty loss.
 
@@ -243,21 +97,19 @@ class KLPenaltyLoss(Loss):
             p (torch.distributions.Distribution): 1st distribution
             q (torch.distributions.Distribution): 2nd distribution
         """
-        super(KLPenaltyLoss, self).__init__()
-        # self.p = p
-        # self.q = q
+        super(KLLoss, self).__init__()
+        self.p = p
+        self.q = q
 
     def compute(self, batch):
         """
         Compute :math:`KL(p||q)`.
         """
-        curr_pi = batch.current['action_distributions']
-        prev_pi = batch['action_distributions']
-
-        return torch.distributions.kl.kl_divergence(prev_pi, curr_pi)
+        # TODO use the batch
+        return torch.distributions.kl.kl_divergence(self.p, self.q)
 
     def latex(self):
-        return "\\mathbb{E}[ KL( \\pi_{\\theta_{old}}(a_t | s_t) || \\pi_{\\theta}(a_t | s_t) ) ]"
+        return r"\mathbb{E}[ KL( p || q ) ]"
 
 
 # class ForwardKLPenaltyLoss(KLPenaltyLoss):
@@ -270,79 +122,23 @@ class KLPenaltyLoss(Loss):
 #     pass
 
 
-class EntropyLoss(Loss):
+class HLoss(Loss):
     r"""Entropy Loss
 
-    Entropy loss, which is used to ensure sufficient exploration when maximized [1,2,3]:
+    Entropy loss of a distribution:
 
-    .. math:: L^{Entropy}(\theta) = H[ \pi_{\theta} ]
+    .. math:: L^{Entropy}(\theta) = H[ p ]
 
     where :math:`H[.]` is the Shannon entropy of the given probability distribution.
-
-    References:
-        [1] "Simple Statistical Gradient-following Algorithms for Connectionist Reinforcement Learning", Williams, 1992
-        [2] "Asynchronous Methods for Deep Reinforcement Learning", Mnih et al., 2016
-        [3] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
     """
 
-    def __init__(self):  # approximator):
-        super(EntropyLoss, self).__init__()
+    def __init__(self, distribution):
+        super(HLoss, self).__init__()
+        self.p = distribution
 
     def compute(self, batch):
-        distribution = batch.current['action_distributions']
-        entropy = distribution.entropy().mean()
+        entropy = self.p.entropy().mean()
         return entropy
-
-
-class MSBELoss(Loss):
-    r"""Mean-squared Bellman error
-
-    The mean-squared Bellman error (MSBE) computes the Bellman error, also known as the one-step temporal difference
-    (TD).
-
-    This is given by, in the case of the off-policy Q-learning TD algorithm:
-    .. math:: (r + \gamma (1-d) max_{a'} Q_{\phi}(s',a')) - Q_{\phi}(s,a),
-
-    or in the case of the on-policy Sarsa TD algorithm:
-    .. math:: (r + \gamma (1-d) Q_{\phi}(s',a')) - Q_{\phi}(s,a)
-
-    or in the case of the TD(0):
-    .. math:: (r + \gamma (1-d) V_{\phi}(s')) - V_{\phi}(s)
-
-    where (r + \gamma (1-d) f(s,a)) is called (one-step return) the target. The target could also be, instead of the
-    one step return, the n-step return or the lambda-return value. [2]
-    These losses roughly tell us how closely the value functions satisfy the Bellman equation. Thus, by trying to
-    minimize them, we try to enforce the Bellman equations.
-
-    References:
-        [1] https://spinningup.openai.com/en/latest/algorithms/ddpg.html
-        [2] "Reinforcement Learning: An Introduction", Sutton and Barto, 2018
-    """
-
-    def __init__(self, td_return):
-        """
-        Initialize the mean-squared Bellman error (MSBE).
-
-        Args:
-            td_return (TDReturn): Temporal difference return.
-        """
-        super(MSBELoss, self).__init__()
-        if not isinstance(td_return, TDReturn):
-            raise TypeError("Expecting the given 'td_return' to be an instance of `TDReturn`, instead got: "
-                            "{}".format(type(td_return)))
-        self._td = td_return
-
-    def compute(self, batch):
-        """
-        Compute the mean-squared TD return.
-
-        Args:
-            batch:
-
-        Returns:
-            torch.Tensor: loss value.
-        """
-        return batch[self._td].pow(2).mean()
 
 
 # Tests
