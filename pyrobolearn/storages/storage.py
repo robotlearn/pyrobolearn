@@ -41,6 +41,22 @@ class Storage(object):
         """Load the storage from the disk."""
         return pickle.load(open(filename, 'r'))
 
+    @property
+    def size(self):
+        """Return the size of the storage. Need to be implemented in the child class."""
+        return 0
+
+    def get_batch(self, indices):
+        """Return a batch of the storage as a `Storage` type.
+
+        Args:
+            indices (list of int): indices. Each index must be between 0 and the size of the storage.
+
+        Returns:
+            Storage: batch containing a part of the storage.
+        """
+        pass
+
     # def __repr__(self):
     #     """Return a string representing the class."""
     #     return self.__class__.__name__
@@ -221,6 +237,11 @@ class ListStorage(list, PyTorchStorage):
         args = self._to(args, device=self.device, dtype=self.dtype)
         super(ListStorage, self).__init__(args)
 
+    @property
+    def size(self):
+        """Return the size of the storage."""
+        return len(self)
+
     def insert(self, index, item):
         """Insert item before index."""
         item = self._to(item, device=self.device, dtype=self.dtype)
@@ -256,6 +277,11 @@ class FIFOQueueStorage(queue.Queue, PyTorchStorage):
             maxsize (int): maximum size of the queue. If :attr:`maxsize` is <= 0, the queue size is infinite.
         """
         super(FIFOQueueStorage, self).__init__(maxsize)
+
+    @property
+    def size(self):
+        """Return the size of the storage."""
+        return len(self)
 
     def put(self, item, block=False, timeout=None):
         """Put an item into the queue.
@@ -313,6 +339,11 @@ class LIFOQueueStorage(queue.LifoQueue, PyTorchStorage):
             maxsize (int): maximum size of the queue. If :attr:`maxsize` is <= 0, the queue size is infinite.
         """
         super(LIFOQueueStorage, self).__init__(maxsize)
+
+    @property
+    def size(self):
+        """Return the size of the storage."""
+        return len(self)
 
     def put(self, item, block=False, timeout=None):
         """Put an item into the queue.
@@ -375,6 +406,11 @@ class PriorityQueueStorage(queue.PriorityQueue, PyTorchStorage):
         """
         super(PriorityQueueStorage, self).__init__(maxsize)
         self.ascending = ascending
+
+    @property
+    def size(self):
+        """Return the size of the storage."""
+        return len(self)
 
     def put(self, item, block=False, timeout=None):
         """Put an item into the queue.
@@ -472,6 +508,11 @@ class SetStorage(set, PyTorchStorage):
         args = self._to(args, device=self.device, dtype=self.dtype)
         super(SetStorage, self).__init__(args)
 
+    @property
+    def size(self):
+        """Return the size of the storage."""
+        return len(self)
+
     def add(self, item):
         """Add new item in the set."""
         item = self._to(item, device=self.device, dtype=self.dtype)
@@ -511,6 +552,19 @@ class DictStorage(dict, PyTorchStorage):
         if update:
             kwargs = self._to(kwargs, device=self.device, dtype=self.dtype)
         super(DictStorage, self).__init__(kwargs)
+
+    ##############
+    # Properties #
+    ##############
+
+    @property
+    def size(self):
+        """Return the size of the storage."""
+        return len(self)
+
+    ###########
+    # Methods #
+    ###########
 
     def update(self, dictionary, **kwargs):
         """Update the current dictionary from the other given dictionary / iterable.

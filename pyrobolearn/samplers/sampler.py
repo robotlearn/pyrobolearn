@@ -21,7 +21,7 @@ References:
 import torch.utils.data.sampler as torch_sampler
 import torch.utils.data.dataset as torch_dataset
 
-from pyrobolearn.storages import RolloutStorage
+from pyrobolearn.storages import Storage
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -34,7 +34,11 @@ __status__ = "Development"
 
 
 class Sampler(object):
-    pass
+
+    @property
+    def batch_size(self):
+        """Return the batch size."""
+        return 0
 
 
 class RandomSampler(Sampler):
@@ -82,8 +86,8 @@ class StorageSampler(Sampler):
     @storage.setter
     def storage(self, storage):
         """Set the storage instance."""
-        if not isinstance(storage, RolloutStorage):
-            raise TypeError("Expecting the storage to be an instance of `RolloutStorage`, instead got: "
+        if not isinstance(storage, Storage):
+            raise TypeError("Expecting the storage to be an instance of `Storage`, instead got: "
                             "{}".format(type(storage)))
         self._storage = storage
 
@@ -147,3 +151,19 @@ class StorageSampler(Sampler):
         """Iterate over the storage."""
         for indices in self.sampler:
             yield self.storage.get_batch(indices)
+
+
+class BatchRandomSampler(StorageSampler):
+    r"""Batch Random Sampler
+
+    """
+
+    def __init__(self, storage, num_batches=10):
+        """
+        Initialize the storage sampler.
+
+        Args:
+            storage (RolloutStorage): rollout storage.
+            num_batches (int): number of batches
+        """
+        super(BatchRandomSampler, self).__init__(storage, num_batches=num_batches)
