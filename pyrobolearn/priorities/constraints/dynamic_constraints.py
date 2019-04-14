@@ -27,6 +27,7 @@ __status__ = "Development"
 class DynamicConstraint(Constraint):
     r"""Dynamic Constraints
 
+    Dynamic constraint using Equation of Motion (by using inertia and the non-linear terms).
     """
     pass
 
@@ -57,8 +58,29 @@ class FrictionCones(DynamicConstraint):
     pass
 
 
+class FrictionPyramide(DynamicConstraint):
+    r"""Friction pyramide constraint (using contact force optimization)
+    
+    """
+    pass
+
+
+class UnilateralContact(DynamicConstraint):
+    r"""Unilateral Contact constraint.
+
+    Mechanical constraint which prevents penetration between two bodies.
+    """
+
+
 class WrenchLimits(DynamicConstraint):
     r"""Wrench Limits (using contact force optimization).
+
+    """
+    pass
+
+
+class ZMP(DynamicConstraint):
+    r"""ZMP constraint.
 
     """
     pass

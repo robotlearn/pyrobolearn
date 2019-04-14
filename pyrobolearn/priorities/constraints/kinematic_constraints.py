@@ -70,3 +70,11 @@ class SelfCollisionAvoidance(KinematicConstraint):
     r"""Self-collision avoidance constraint.
 
     """
+    pass
+
+
+class ConvexHull(Constraint):
+    r"""Convex Hull constraint
+
+    """
+    pass

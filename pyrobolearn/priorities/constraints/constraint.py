@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-r"""Provide the various constraints used in QP.
+r"""Provide the various constraints and bounds used in QP.
 
 Provide the various optimization constraints (:math:`G, h, F, c` in the upcoming formulation) used in QP.
 

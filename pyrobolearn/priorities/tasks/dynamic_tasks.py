@@ -34,6 +34,7 @@ class DynamicTask(Task):
 class MinAcceleration(DynamicTask):
     r"""Min acceleration task.
 
+    Minimize joint accelerations.
     """
     pass
 
@@ -41,6 +42,7 @@ class MinAcceleration(DynamicTask):
 class MinEffort(DynamicTask):
     r"""Min effort task.
 
+    Minimize joint torques / forces.
     """
     pass
 
@@ -60,7 +62,27 @@ class ForceManipulability(DynamicTask):
 
 
 class CentroidalDynamics(DynamicTask):
-    r"""Centroidal dynamics task (u
+    r"""Centroidal dynamics task.
+    """
+    pass
+
+
+class LinearMomentum(DynamicTask):
+    r"""Linear Momentum task.
+
+    """
+    pass
+
+
+class AngularMomentum(DynamicTask):
+    r"""Angular Momentum Task.
+
+    """
+    pass
+
+
+class MinGroundReactionForce(DynamicTask):
+    r"""Min Ground Reaction Force task.
 
     """
     pass

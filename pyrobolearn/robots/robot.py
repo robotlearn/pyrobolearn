@@ -879,7 +879,7 @@ class Robot(ControllableBody):
         self.sim.set_joint_motor_control(self.id, joint_ids, self.sim.TORQUE_CONTROL, forces=torque)
 
     def set_joint_motor_control(self, joint_ids, control_mode, **kwargs):
-        """
+        r"""
         Set joint motor control.
 
         In position control:
@@ -1110,7 +1110,7 @@ class Robot(ControllableBody):
                                         compute_forward_kinematics=compute_forward_kinematics)
 
     def get_link_names(self, link_ids=None):
-        """
+        r"""
         Return the name of the given link(s).
 
         Args:
@@ -1130,7 +1130,7 @@ class Robot(ControllableBody):
         return [self.sim.get_joint_info(self.id, link)[12] for link in link_ids]
 
     def get_link_masses(self, link_ids=None):
-        """
+        r"""
         Return the mass of the given link(s).
 
         Args:
@@ -1150,7 +1150,7 @@ class Robot(ControllableBody):
         return np.array([self.sim.get_dynamics_info(self.id, link)[0] for link in link_ids])
 
     def get_link_frames(self, link_ids=None, flatten=False):
-        """
+        r"""
         Return the link frame position and orientation (expressed in the world space).
 
         Args:
@@ -1171,7 +1171,7 @@ class Robot(ControllableBody):
                                                                                                               flatten)
 
     def get_link_frame_world_positions(self, link_ids=None, flatten=False):
-        """
+        r"""
         Return the frame position (in the Cartesian world space coordinates) of the given link(s).
 
         Args:
@@ -1195,7 +1195,7 @@ class Robot(ControllableBody):
         return pos  # 2D array
 
     def get_link_frame_world_orientations(self, link_ids=None, flatten=False):
-        """
+        r"""
         Return the frame orientation (in the Cartesian world space) of the given link(s).
 
         Args:
@@ -1219,7 +1219,7 @@ class Robot(ControllableBody):
         return orientation  # 2D array
 
     def get_link_world_positions(self, link_ids=None, flatten=True):
-        """
+        r"""
         Return the CoM position (in the Cartesian world space coordinates) of the given link(s).
 
         Args:
@@ -1245,7 +1245,7 @@ class Robot(ControllableBody):
         return pos  # 2D array
 
     def get_link_positions(self, link_ids=None, wrt_link_id=None, flatten=True):
-        """
+        r"""
         Return the link CoM position wrt the position of another link. By default, it is the base.
 
         Args:
@@ -1269,12 +1269,12 @@ class Robot(ControllableBody):
         return p
 
     def get_link_world_orientations(self, link_ids=None, flatten=True):
-        """
+        r"""
         Return the CoM orientation (in the Cartesian world space) of the given link(s).
 
         Args:
-            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the orientation of all links
-                associated to actuated joints.
+            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the orientation of all
+                links associated to actuated joints.
             flatten (bool): if True, it will return a 1D array of float numbers instead of an array of quaternion
 
         Returns:
@@ -1293,12 +1293,12 @@ class Robot(ControllableBody):
         return orientation  # 2D array
 
     def get_link_orientations(self, link_ids=None, wrt_link_id=None, flatten=True):
-        """
+        r"""
         Return the link CoM orientation wrt the orientation of another link. By default, it is the base.
 
         Args:
-            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the orientation of all links
-                associated to actuated joints.
+            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the orientation of all
+                links associated to actuated joints.
             wrt_link_id (int, int[N], None): the other link id(s). If None, returns the orientation wrt to the base.
             flatten (bool): if True, it will return a 1D array instead of a 2D array
 
@@ -1323,7 +1323,7 @@ class Robot(ControllableBody):
         return q
 
     def get_link_world_linear_velocities(self, link_ids=None, flatten=True):
-        """
+        r"""
         Return the linear velocity of the link(s) expressed in the Cartesian world space coordinates.
 
         Args:
@@ -1347,7 +1347,7 @@ class Robot(ControllableBody):
         return vel  # 2D array
 
     def get_link_world_angular_velocities(self, link_ids=None, flatten=True):
-        """
+        r"""
         Return the angular velocity of the link(s) in the Cartesian world space coordinates.
 
         Args:
@@ -1371,7 +1371,7 @@ class Robot(ControllableBody):
         return vel  # 2D array
 
     def get_link_world_velocities(self, link_ids=None, flatten=True):
-        """
+        r"""
         Return the linear and angular velocities (expressed in the Cartesian world space coordinates) for the given
         link(s).
 
@@ -1401,7 +1401,7 @@ class Robot(ControllableBody):
         return vel  # 2D array
 
     def get_link_linear_velocities(self, link_ids=None, wrt_link_id=None, flatten=True):
-        """
+        r"""
         Return the linear velocity of the given link(s) wrt the other specified link(s).
 
         Args:
@@ -1425,13 +1425,14 @@ class Robot(ControllableBody):
         return v
 
     def get_link_angular_velocities(self, link_ids=None, wrt_link_id=None, flatten=True):
-        """
+        r"""
         Return the angular velocity of the given link(s) wrt to the other specified link(s).
 
         Args:
             link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the angular velocity of
                 all links associated to actuated joints.
-            wrt_link_id (int, int[N], None): the other link id(s). If None, returns the angular velocity wrt to the base.
+            wrt_link_id (int, int[N], None): the other link id(s). If None, returns the angular velocity wrt to the
+                base.
             flatten (bool): if True, it will return a 1D array instead of a 2D array
 
         Returns:
@@ -1449,13 +1450,14 @@ class Robot(ControllableBody):
         return w
 
     def get_link_velocities(self, link_ids=None, wrt_link_id=None, flatten=True):
-        """
+        r"""
         Return the linear and angular velocity of the given link(s) wrt to the other specified link(s).
 
         Args:
             link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the angular velocity of
                 all links associated to actuated joints.
-            wrt_link_id (int, int[N], None): the other link id(s). If None, returns the angular velocity wrt to the base.
+            wrt_link_id (int, int[N], None): the other link id(s). If None, returns the angular velocity wrt to the
+                base.
             flatten (bool): if True, it will return a 1D array instead of a 2D array
 
         Returns:
@@ -1602,8 +1604,9 @@ class Robot(ControllableBody):
     # Transforms #
     ##############
 
-    def get_homogeneous_transform(self, position, orientation):
-        """
+    @staticmethod
+    def get_homogeneous_transform(position, orientation):
+        r"""
         Return the Homogeneous transform matrix given the position vector and the orientation.
 
         Args:
@@ -1635,7 +1638,7 @@ class Robot(ControllableBody):
 
     # TODO: allow to slice the Jacobian to only get what interests the user
     def get_jacobian(self, link_id, q=None, local_position=None):
-        """
+        r"""
         Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q), J_{ang}(q)]^T`, such that:
 
         .. math:: v = [\dot{p}, \omega]^T = J(q) \dot{q}
@@ -1675,7 +1678,7 @@ class Robot(ControllableBody):
         return self.sim.calculate_jacobian(self.id, link_id, local_position=local_position, q=q, dq=dq, des_ddq=dq)
 
     def get_linear_jacobian(self, link_id, q=None, local_position=None):
-        """
+        r"""
         Return the full linear (geometric) Jacobian matrix :math:`J_{lin}(q)`, such that:
 
         .. math:: \dot{p} = J_{lin}(q) \dot{q}
@@ -1699,7 +1702,7 @@ class Robot(ControllableBody):
         return self.get_jacobian(link_id, q, local_position)[:3]
 
     def get_angular_jacobian(self, link_id, q=None, local_position=None):
-        """
+        r"""
         Return the full angular (geometric) Jacobian matrix :math:`J_{ang}(q)`, such that:
 
         .. math:: \omega = J_{ang}(q) \dot{q}
@@ -1722,17 +1725,18 @@ class Robot(ControllableBody):
         """
         return self.get_jacobian(link_id, q, local_position)[3:]
 
-    def get_jacobian_derivative_rpy_to_angular_velocity(self, rpy_angle):
-        """
+    @staticmethod
+    def get_jacobian_derivative_rpy_to_angular_velocity(rpy_angle):
+        r"""
         Return the Jacobian that maps RPY angle rates to angular velocities, i.e. :math:`\omega = T(\phi) \dot{\phi}`.
 
         Warnings: :math:`T` is singular when the pitch angle :math:`\theta_p = \pm \frac{\pi}{2}`
 
         Args:
-            rpy_angle (float[3]): RPY Euler angles [rad]
+            rpy_angle (np.float[3]): RPY Euler angles [rad]
 
         Returns:
-            float[3,3]: Jacobian matrix that maps RPY angle rates to angular velocities.
+            np.float[3,3]: Jacobian matrix that maps RPY angle rates to angular velocities.
         """
         r, p, y = rpy_angle
         T = np.array([[1., 0., np.sin(p)],
@@ -1740,17 +1744,18 @@ class Robot(ControllableBody):
                       [0., np.sin(r), np.cos(p) * np.cos(r)]])
         return T
 
-    def get_jacobian_derivative_zyz_to_angular_velocity(self, zyzAngle):
-        """
+    @staticmethod
+    def get_jacobian_derivative_zyz_to_angular_velocity(zyzAngle):
+        r"""
         Return the Jacobian that maps ZYZ angle rates to angular velocities, i.e. :math:`\omega = T(\phi) \dot{\phi}`.
 
         Warnings: :math:`T` is singular when the angle associated with `Y` is :math:`0` or :math:`\pi`.
 
         Args:
-            rpyAngle (float[3]): ZYZ Euler angles [rad]
+            rpyAngle (np.float[3]): ZYZ Euler angles [rad]
 
         Returns:
-            float[3,3]: Jacobian matrix that maps ZYZ angle rates to angular velocities.
+            np.float[3,3]: Jacobian matrix that maps ZYZ angle rates to angular velocities.
         """
         z, y = zyzAngle[:2]
         T = np.array([[0., -np.sin(z), np.cos(z) * np.sin(y)],
@@ -1759,7 +1764,7 @@ class Robot(ControllableBody):
         return T
 
     def get_analytical_jacobian(self, jacobian, rpy_angle):
-        """
+        r"""
         Return the analytical Jacobian :math:`J_{a}(q) = [J_{lin}(q), J_{\phi}(q)]^T`, which respects:
 
         .. math:: \dot{x} = [\dot{p}, \dot{\phi}]^T = J_{a}(q) \dot{q}
@@ -1785,12 +1790,12 @@ class Robot(ControllableBody):
                 Euler angles then T is singular when the pitch angle :math:`\theta_p = \pm \frac{\pi}{2}.
 
         Args:
-            jacobian (float[6,N], float[6,6+N]): full geometric Jacobian.
-            rpy_angle (float[3]): RPY Euler angles
+            jacobian (np.float[6,N], np.float[6,6+N]): full geometric Jacobian.
+            rpy_angle (np.float[3]): RPY Euler angles
 
         Returns:
-            float[6,N], foat[6,(6+N)]: the full analytical Jacobian. The number of columns depends if the base is fixed
-                or floating.
+            np.float[6,N], np.foat[6,(6+N)]: the full analytical Jacobian. The number of columns depends if the base
+                is fixed or floating.
         """
         T = self.get_jacobian_derivative_rpy_to_angular_velocity(rpy_angle)
         Tinv = np.linalg.inv(T)
@@ -1799,7 +1804,7 @@ class Robot(ControllableBody):
         return Ja
 
     def get_angular_velocities_from_derivative_rpy(self, rpy_angle, dRPY):
-        """
+        r"""
         Return the angular velocities :math:`\omega` from the derivative of RPY Euler angles \math:`\dot{\phi}`.
         These 2 quantities are related by the following equation:
 
@@ -1818,17 +1823,17 @@ class Robot(ControllableBody):
         Note that :math:`T` is singular when the pitch angle :math:`\theta_p = \pm \frac{\pi}{2}`.
 
         Args:
-            rpy_angle (float[3]): RPY Euler angles [rad]
-            dRPY (float[3]): time derivative of RPY Euler angles [rad/s]
+            rpy_angle (np.float[3]): RPY Euler angles [rad]
+            dRPY (np.float[3]): time derivative of RPY Euler angles [rad/s]
 
         Returns:
-            float[3]: angular velocities [rad/s]
+            np.float[3]: angular velocities [rad/s]
         """
         T = self.get_jacobian_derivative_rpy_to_angular_velocity(rpy_angle)
         return T.dot(dRPY)
 
     def get_derivative_rpy_from_angular_velocities(self, rpy_angle, angular_velocity):
-        """
+        r"""
         Return the time derivative of RPY Euler angles :math:`\dot{\phi}` given the angular velocities :math:`\omega`.
 
         . .math:: \dot{\phi} = T^{-1}(\phi) \omega
@@ -1837,11 +1842,11 @@ class Robot(ControllableBody):
         corresponding angular velocities :math:`\omega` are not defined.
 
         Args:
-            rpy_angle (float[3]): RPY Euler angles [rad]
-            angular_velocity (float[3]): angular velocities [rad/s]
+            rpy_angle (np.float[3]): RPY Euler angles [rad]
+            angular_velocity (np.float[3]): angular velocities [rad/s]
 
         Returns:
-            float[3]: time derivative of RPY Euler angles [rad/s]
+            np.float[3]: time derivative of RPY Euler angles [rad/s]
 
         Raises:
             LinAlgError: if singular configuration.
@@ -1850,20 +1855,22 @@ class Robot(ControllableBody):
         Tinv = np.linalg.inv(T)
         return Tinv.dot(angular_velocity)
 
-    def get_JJT(self, jacobian):
-        """
+    @staticmethod
+    def get_JJT(jacobian):
+        r"""
         Given the Jacobian, it returns :math:`JJ^T`. This relation is used in many places in robotics.
 
         Args:
-            jacobian (float[D,N]): Jacobian matrix
+            jacobian (np.float[D,N]): Jacobian matrix
 
         Returns:
-            float[D,D]: :math:`JJ^T`
+            np.float[D,D]: :math:`JJ^T`
         """
         return jacobian.dot(jacobian.T)
 
-    def get_damped_least_squares_inverse(self, jacobian, damping_factor=0.01):
-        """
+    @staticmethod
+    def get_damped_least_squares_inverse(jacobian, damping_factor=0.01):
+        r"""
         Return the damped least-squares (DLS) inverse, given by:
 
         .. math:: \hat{J} = J^T (JJ^T + k^2 I)^{-1}
@@ -1872,11 +1879,11 @@ class Robot(ControllableBody):
         :math:`\dot{q} = \hat{J} v`.
 
         Args:
-            jacobian (float[D,N]): Jacobian matrix
+            jacobian (np.float[D,N]): Jacobian matrix
             damping_factor (float): damping factor
 
         Returns:
-            float[N,D]: DLS inverse matrix
+            np.float[N,D]: DLS inverse matrix
         """
         J, k = jacobian, damping_factor
         return (J.T).dot(np.linalg.inv(J.dot(J.T) + k**2 * np.identity(J.shape[0])))
@@ -1884,30 +1891,31 @@ class Robot(ControllableBody):
     # alias
     getDLSInverse = get_damped_least_squares_inverse
 
-    def get_pinv_jacobian(self, jacobian):
-        """
+    @staticmethod
+    def get_pinv_jacobian(jacobian):
+        r"""
         Return the right pseudo-inverse of the jacobian, i.e. :math:`J^\dagger = J^T(JJ^T)^{-1}`.
 
         Args:
-            jacobian (float[D,N]): Jacobian matrix
+            jacobian (np.float[D,N]): Jacobian matrix
 
         Returns:
-            float[N,N]: right pseudo-inverse of the Jacobian
+            np.float[N,N]: right pseudo-inverse of the Jacobian
         """
         return np.linalg.pinv(jacobian)
 
     def get_null_space_projector(self, jacobian):
-        """
+        r"""
         The null space projector :math:`P` is the matrix that projects any vectors to the null space of :math:`J`.
         This is given by: :math:`P = (I - J^\dagger J)`, where :math:`J^\dagger = J^T(JJ^T)^{-1}` is the right
         pseudo-inverse of the jacobian :math:`J`. This is notably used to perform inverse kinematics, where
         :math:`\dot{q} = J^\dagger v + P \dot{q}_0` with :math:`\dot{q}_0` representing arbitrary joint velocities.
 
         Args:
-            jacobian (float[D,N]): Jacobian matrix
+            jacobian (np.float[D,N]): Jacobian matrix
 
         Returns:
-            float[N,N]: null space projector matrix
+            np.float[N,N]: null space projector matrix
         """
         J = jacobian
         JJT = self.get_JJT(jacobian)
@@ -1915,13 +1923,13 @@ class Robot(ControllableBody):
         return I - self.get_pinv_jacobian(J=J).dot(J)
 
     def compute_manipulability_measure(self, jacobian):
-        """
+        r"""
         Compute the manipulability measure `w(q) = sqrt( det(J(q)J(q)^T) )`. This is useful to get a general sense
         about the manipulation ability of the manipulator. This term, for instance, vanishes at singular
         configurations (see [1]).
 
         Args:
-            jacobian (float[D,N]): Jacobian matrix
+            jacobian (np.float[D,N]): Jacobian matrix
 
         Returns:
             float: manipulability measure :math:`w(q)`
@@ -1931,8 +1939,9 @@ class Robot(ControllableBody):
         """
         return np.sqrt(np.linalg.det(self.get_JJT(jacobian)))
 
-    def in_singular_configuration(self, jacobian):
-        """
+    @staticmethod
+    def in_singular_configuration(jacobian):
+        r"""
         Return True if we are in a singular configuration.
 
         Singularities are interesting because (see [1]):
@@ -1941,7 +1950,7 @@ class Robot(ControllableBody):
         - around them, small velocities in the task/operational space may cause large velocities in the joint space
 
         Args:
-            jacobian (float[D,N]): Jacobian matrix
+            jacobian (np.float[D,N]): Jacobian matrix
 
         Returns:
             bool: True if in a singular configuration
@@ -1956,7 +1965,7 @@ class Robot(ControllableBody):
         return r < m
 
     def get_joint_velocities_from_cartesian_velocities(self, jacobian, velocity):
-        """
+        r"""
         Return the joint velocities :math:`\dot{q}` from the cartesian velocities :math:`v`.
 
         .. math:: \dot{q} = J^\dagger v
@@ -1964,24 +1973,25 @@ class Robot(ControllableBody):
         where :math:`J^\dagger` is the right pseudo-inverse of J, i.e. :math:`J^\dagger = J^T(JJ^T)^{-1}`.
 
         Args:
-            jacobain (float[3,N], float[6,N]): Jacobian matrix
-            velocity (float[3], float[6]): linear and/or angular velocities
+            jacobain (np.float[3,N], np.float[6,N]): Jacobian matrix
+            velocity (np.float[3], np.float[6]): linear and/or angular velocities
 
         Returns:
-            float[N]: joint velocities
+            np.float[N]: joint velocities
         """
         Jpinv = self.get_pinv_jacobian(jacobian)
         return Jpinv.dot(velocity)
 
-    def get_cartesian_velocities_from_joint_velocities(self, jacobian, dq):
-        """
+    @staticmethod
+    def get_cartesian_velocities_from_joint_velocities(jacobian, dq):
+        r"""
         Return the Cartesian velocities :math:`v = [\dot{p}, \omega]^T` where :math:`\dot{p}` and :math:`\omega`
         are the linear and angular velocities, respectively.
 
         .. math:: v = J(q) \dot{q}
 
         Returns:
-            float[6]: Cartesian linear and angular velocities
+            np.float[6]: Cartesian linear and angular velocities
         """
         return jacobian.dot(dq)
 
@@ -1989,7 +1999,7 @@ class Robot(ControllableBody):
     def calculate_inverse_kinematics(self, link_id, position, orientation=None, lower_limits=None, upper_limits=None, 
                                      joint_ranges=None, rest_poses=None, joint_dampings=None, max_iters=1, 
                                      threshold=1e-4):
-        """
+        r"""
         Compute the FULL Inverse kinematics; it will return a position for all the actuated joints.
 
         Args:
@@ -2025,7 +2035,7 @@ class Robot(ControllableBody):
                                                      threshold=threshold)
 
     def hard_priorities(self, jacobians, task_velocities, method='backtrack'):
-        """
+        r"""
         Return dq.
 
         Args:

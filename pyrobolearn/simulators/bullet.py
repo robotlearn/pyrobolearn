@@ -71,6 +71,8 @@ class Bullet(Simulator):
         sim = Bullet()
 
     References:
+        [1] "PyBullet, a Python module for physics simulation for games, robotics and machine learning", Erwin Coumans
+            and Yunfei Bai, 2016-2019
         [1] PyBullet Quickstart Guide: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA
             Erwin Coumans and Yunfei Bai, 2017/2018
     """
