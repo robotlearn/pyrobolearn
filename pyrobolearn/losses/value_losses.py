@@ -5,7 +5,7 @@
 import torch
 
 from pyrobolearn.losses.loss import Loss
-from pyrobolearn.estimators.estimator import TDReturn
+from pyrobolearn.returns import TDReturn
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

@@ -16,7 +16,7 @@ from pyrobolearn.exploration import ActionExploration
 
 from pyrobolearn.storages import RolloutStorage
 from pyrobolearn.samplers import BatchRandomSampler
-from pyrobolearn.estimators import GAE
+from pyrobolearn.returns import GAE
 from pyrobolearn.losses import CLIPLoss, ValueLoss, EntropyLoss
 from pyrobolearn.optimizers import Adam
 
@@ -40,7 +40,7 @@ class PPO(GradientRLAlgo):
 
     This class implements the PPO algorithm which was presented in [1], and is inspired on the implementation of [2, 3].
     Compared to [2, 3], the algorithm is made such that it is more modular and flexible by decoupling and defining the
-    various concepts (storages, losses, estimators / returns, policies, value function approximators, and others)
+    various concepts (storages, losses, returns / returns, policies, value function approximators, and others)
     outside the PPO class, and providing them as input to the constructor and thus privileging composition over
     inheritance.
 
@@ -183,7 +183,7 @@ class PPO(GradientRLAlgo):
         # create storage and estimator
         states, actions = policy.states, policy.actions
         logger.debug('create rollout storage')
-        storage = RolloutStorage(num_steps=1000, observation_shapes=states.merged_shape,
+        storage = RolloutStorage(num_steps=1000, state_shapes=states.merged_shape,
                                  action_shapes=actions.merged_shape, num_processes=num_workers)
         logger.debug('create return estimator (GAE)')
         estimator = GAE(storage, gamma=gamma, tau=tau)

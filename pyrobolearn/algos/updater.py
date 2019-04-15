@@ -35,7 +35,7 @@ class Updater(object):
     (Model-free) reinforcement learning algorithms requires 3 steps:
     1. Explore: Explore and collect samples in the environment using the policy. The samples are stored in the
                 given memory/storage unit.
-    2. Evaluate: Assess the quality of the actions/trajectories using the estimators.
+    2. Evaluate: Assess the quality of the actions/trajectories using the returns.
     3. Update: Update the policy (and/or value function) parameters based on the loss
 
     This class focuses on the third step of RL algorithms.

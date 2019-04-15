@@ -16,7 +16,7 @@ from pyrobolearn.values import ParametrizedQValueOutput
 from pyrobolearn.exploration import EpsilonGreedyActionExploration
 
 from pyrobolearn.storages import ExperienceReplay
-from pyrobolearn.estimators import TDQLearningReturn
+from pyrobolearn.returns import TDQLearningReturn
 from pyrobolearn.losses import MSBELoss, HuberLoss
 from pyrobolearn.optimizers import Adam
 

@@ -16,7 +16,7 @@ from pyrobolearn.exploration import ActionExploration, GaussianActionExploration
 
 from pyrobolearn.storages import ExperienceReplay
 from pyrobolearn.samplers import BatchRandomSampler
-from pyrobolearn.estimators import TDQValueReturn
+from pyrobolearn.returns import TDQValueReturn
 from pyrobolearn.losses import MSBELoss, QLoss
 from pyrobolearn.optimizers import Adam
 
@@ -302,14 +302,14 @@ class SAC(GradientRLAlgo):
         value_target = copy.deepcopy(value)
 
         # create experience replay
-        storage = ExperienceReplay(observation_shapes=policy.states, action_shapes=policy.actions, capacity=capacity)
+        storage = ExperienceReplay(state_shapes=policy.states, action_shapes=policy.actions, capacity=capacity)
         sampler = BatchRandomSampler(storage)
 
         # create action exploration
         exploration = ActionExploration(policy)
 
         # create targets
-        # TODO
+        # q_target =
 
 
         # create losses

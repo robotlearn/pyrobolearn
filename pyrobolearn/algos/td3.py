@@ -14,7 +14,7 @@ from pyrobolearn.exploration import ActionExploration, GaussianActionExploration
 
 from pyrobolearn.storages import ExperienceReplay
 from pyrobolearn.samplers import BatchRandomSampler
-from pyrobolearn.estimators import TDQValueReturn
+from pyrobolearn.returns import TDQValueReturn
 from pyrobolearn.losses import MSBELoss, QLoss
 from pyrobolearn.optimizers import Adam
 
@@ -212,7 +212,7 @@ class TD3(GradientRLAlgo):
         exploration = ActionExploration(policy=policy, action=policy.actions)
 
         # create experience replay
-        storage = ExperienceReplay(observation_shapes=policy.states, action_shapes=policy.actions, capacity=capacity)
+        storage = ExperienceReplay(state_shapes=policy.states, action_shapes=policy.actions, capacity=capacity)
         sampler = BatchRandomSampler(storage)
 
         # create target return estimator

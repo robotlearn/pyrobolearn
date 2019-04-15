@@ -16,7 +16,7 @@ from pyrobolearn.exploration import ActionExploration
 
 from pyrobolearn.storages import RolloutStorage
 from pyrobolearn.samplers import StorageSampler
-from pyrobolearn.estimators import ActionRewardEstimator
+from pyrobolearn.returns import ActionRewardEstimator
 from pyrobolearn.losses import PGLoss, ValueLoss
 from pyrobolearn.optimizers import Adam
 
@@ -188,7 +188,7 @@ class REINFORCE(GradientRLAlgo):
 
         # create storage
         states, actions = policy.states, policy.actions
-        storage = RolloutStorage(num_steps=1000, observation_shapes=states.shape, action_shapes=actions.shape,
+        storage = RolloutStorage(num_steps=1000, state_shapes=states.shape, action_shapes=actions.shape,
                                  num_processes=num_workers)
         sampler = StorageSampler(storage)
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 """Provide the Evaluator class used in the second step of RL algorithms
 
-The evaluator assesses the quality of the actions/trajectories performed by the policy using the given estimators.
+The evaluator assesses the quality of the actions/trajectories performed by the policy using the given returns.
 It is the step performed after the exploration phase, and before the update step.
 """
 
-from pyrobolearn.estimators import Estimator
+from pyrobolearn.returns import Estimator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -23,7 +23,7 @@ class Evaluator(object):
     (Model-free) reinforcement learning algorithms requires 3 steps:
     1. Explore: Explore and collect samples in the environment using the policy. The samples are stored in the
                 given memory/storage unit.
-    2. Evaluate: Assess the quality of the actions/trajectories using the estimators.
+    2. Evaluate: Assess the quality of the actions/trajectories using the returns.
     3. Update: Update the policy (and/or value function) parameters based on the loss
 
     This class focuses on the second step of RL algorithms.

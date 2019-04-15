@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 """Describes the various `Estimators` / `Returns` used in reinforcement learning.
 
+- Estimators are evaluated on trajectories (i.e. RolloutStorage).
+- Returns are estimated on batches of transition tuples (s, a, s', r, d).
+
+In both case, they add
+
 Dependencies:
 - `pyrobolearn.storages`
 """
@@ -138,7 +143,7 @@ class Estimator(BaseReturn):
     @property
     def states(self):
         """Return the states / observations from the rollout storage."""
-        return self.storage.observations
+        return self.storage.states
 
     ###########
     # Methods #
@@ -430,7 +435,7 @@ class GAE(Estimator):
         super(GAE, self).__init__(storage=storage, gamma=gamma)
         self.tau = tau
 
-    def _evaluate(self):  # , next_value):
+    def _evaluate(self):
         """Evaluate the estimator / return."""
         # self.values[-1] = next_value
         gae = 0
@@ -438,278 +443,3 @@ class GAE(Estimator):
             delta = self.rewards[t] + self.gamma * self.values[t + 1] * self.masks[t + 1] - self.values[t]
             gae = delta + self.gamma * self.tau * self.masks[t + 1] * gae
             self.returns[t] = gae + self.values[t]
-
-
-class Return(BaseReturn):
-    r"""Return
-
-    Compared to the estimator that used the whole trajectory, it only uses transition tuples
-    :math:`(s_t, a_t, s_{t+1}, r_t, d)`, where is :math:`s_t` is the state at time :math:`t`, :math:`a_t` is the action
-    outputted by the policy in response to the state :math:`s_t`, :math:`s_{t+1}` is the next state returned by the
-    environment due to the policy's action :math:`a_t` and the current state :math:`s_t`, :math:`r_t` is the reward
-    signal returned by the environment, and :math:`d` is a boolean value that specifies if the task is over or not
-    (i.e. if it has failed or succeeded).
-
-    That is, estimators are estimated on the Monte-Carlo trajectories, while returns are estimated on temporal
-    difference errors [1].
-
-    References:
-        [1] "Reinforcement Learning: an Introduction" (chap 8.13), Sutton and Barto, 2018
-    """
-
-    def __init__(self, gamma=1.):
-        """
-        Initialize the return / estimator.
-
-        Args:
-            gamma (float): discount factor
-        """
-        super(Return, self).__init__(gamma)
-
-
-class TDReturn(Return):
-    r"""TD Return
-
-    Return based on the one-step temporal difference TD(0).
-    """
-    pass
-
-
-class Target(BaseReturn):
-
-    def compute(self, batch):
-        pass
-
-    def __call__(self, batch):
-        return self.compute(batch)
-
-
-class ValueTarget(Target):
-    r"""Value target.
-
-    Compute the value target given by :math:`(r + \gamma (1-d) \min_i V_{\phi_i}(s'))`, where the index `i` is in
-    the case there are multiple value function approximators given to this class.
-    """
-
-    def __init__(self, values, gamma=1.):
-        """
-        Initialize the state value target.
-
-        Args:
-            values (Value, list of Value): state value function(s).
-            gamma (float): discount factor
-        """
-        super(ValueTarget, self).__init__(gamma)
-        if not isinstance(values, collections.Iterable):
-            values = [values]
-        for i, value in enumerate(values):
-            if not isinstance(value, Value):
-                raise TypeError('The {}th value is not an instance of `Value`, instead got: {}'.format(i, type(value)))
-        self._values = values
-
-    def compute(self, batch):
-        r"""
-        Compute the value target :math:`(r + \gamma (1-d) \min_i V_{\phi_i}(s'))`
-
-        Args:
-            batch (Batch): batch containing the transitions.
-        """
-        value = torch.min(torch.cat([value(batch['states']) for value in self._values], dim=1), dim=1)[0]
-        batch[self] = batch['rewards'] + self.gamma * (1 - batch['masks']) * value
-        return batch
-
-
-class QValueTarget(Target):
-    r"""Q-Value target.
-
-    Compute the Q-value target given by :math:`(r + \gamma (1-d) \min_i Q_{\phi_i}(s',a'))`, where the index `i` is in
-    the case there are multiple Q-value function approximators given to this class.
-    """
-
-    def __init__(self, q_values, gamma=1.):
-        """
-        Initialize the state value target.
-
-        Args:
-            q_values (QValue, list of QValue): state-action value function(s).
-            gamma (float): discount factor
-        """
-        super(QValueTarget, self).__init__(gamma)
-        if not isinstance(q_values, collections.Iterable):
-            q_values = [q_values]
-        for i, value in enumerate(q_values):
-            if not isinstance(value, QValue):
-                raise TypeError('The {}th value is not an instance of `QValue`, instead got: {}'.format(i, type(value)))
-        self._q_values = q_values
-
-    def compute(self, batch):
-        r"""
-        Compute the value target :math:`(r + \gamma (1-d) \min_i Q_{\phi_i}(s',a'))`
-
-        Args:
-            batch (Batch): batch containing the transitions.
-        """
-        value = torch.min(torch.cat([value(batch['states']) for value in self._q_values], dim=1), dim=1)[0]
-        batch[self] = batch['rewards'] + self.gamma * (1 - batch['masks']) * value
-        return batch
-
-
-class QLearningTarget(Target):
-    r"""Q-Learning target.
-
-    Compute the Q-value target given by :math:`(r + \gamma (1-d) \min_i \max_{a'} Q_{\phi_i}(s',a'))`, where the
-    index `i` is in the case there are multiple Q-value function approximators given to this class.
-    """
-
-    def __init__(self, q_values, gamma=1.):
-        """
-        Initialize the state value target.
-
-        Args:
-            q_values (QValue, list of QValue): state-action value function(s).
-            gamma (float): discount factor
-        """
-        super(QLearningTarget, self).__init__(gamma)
-        if not isinstance(q_values, collections.Iterable):
-            q_values = [q_values]
-        for i, value in enumerate(q_values):
-            if not isinstance(value, QValue):
-                raise TypeError('The {}th value is not an instance of `QValue`, instead got: {}'.format(i, type(value)))
-        self._q_values = q_values
-
-    def compute(self, batch):
-        r"""
-        Compute the value target :math:`(r + \gamma (1-d) \min_i \max_{a'} Q_{\phi_i}(s',a'))`.
-
-        Args:
-            batch (Batch): batch containing the transitions.
-        """
-        q_max = [torch.max(value(batch['states']), dim=1, keepdim=True)[0] for value in self._q_values]
-        value = torch.min(torch.cat(q_max, dim=1), dim=1)[0]
-        batch[self] = batch['rewards'] + self.gamma * (1 - batch['masks']) * value
-        return batch
-
-
-class TDValueReturn(TDReturn):
-    r"""TD State Value Return
-
-    Compute the state value one-step temporal difference TD(0), given by:
-    .. math:: \delta_t^{V} = (r + \gamma (1-d) V_{\phi_{target}}(s')) - V_{\phi}(s)
-
-    where :math:`V_{\phi_{target}}` is the target value function.
-    """
-
-    def __init__(self, value, target_value=None, gamma=1.):
-        """
-        Initialize the TD state value return.
-
-        Args:
-            value (ValueApproximator): state value function.
-            target_value (ValueApproximator): target state value function.
-            gamma (float): discount factor
-        """
-        super(TDValueReturn, self).__init__(gamma)
-        self.value = value
-        if target_value is None:
-            self.target_value = self.value
-
-    def evaluate(self, batch):
-        """Evaluate the TD return on the given batch.
-
-        Args:
-            batch (Batch): batch containing transitions.
-
-        Returns:
-            Batch: batch
-        """
-        target = batch['rewards'] + self.gamma * (1 - batch['masks']) * self.target_value(batch['states'])
-        batch[self] = target - self.value(batch['states'])
-        return batch
-
-
-class TDQValueReturn(TDReturn):
-    r"""TD Action Value Return
-
-    Compute the action value one-step temporal difference TD(0), given by:
-    .. math:: (r + \gamma (1-d) Q_{\phi_{target}}(s',a')) - Q_{\phi}(s,a)
-    where :math:`a'` is the action performed by the policy given the state :math:`s'`.
-
-    This is also known as the Sarsa (an on-policy TD control) algorithm.
-    """
-
-    def __init__(self, q_value, policy, target_qvalue=None, gamma=1.):
-        """
-        Initialize the TD state-action value return.
-
-        Args:
-            q_value (QValueApproximator): Q-value function.
-            policy (Policy): policy to compute the action a'.
-            target_qvalue (QValueApproximator, None): target Q-value function. If None, it will use the given
-                :attr:`q_value`.
-            gamma (float): discount factor
-        """
-        super(TDQValueReturn, self).__init__(gamma)
-        self.q_value = q_value
-        self.policy = policy
-        if target_qvalue is None:
-            self.target_qvalue = self.q_value
-
-    def evaluate(self, batch):
-        """Evaluate the TD return on the given batch.
-
-        Args:
-            batch (Batch): batch containing transitions.
-
-        Returns:
-            Batch: batch
-        """
-        action = self.policy.predict(batch['states'])
-        target = batch['rewards'] + self.gamma * (1 - batch['masks']) * self.target_qvalue(action)
-        batch[self] = target - self.q_value(batch['states'])
-        return batch
-
-
-class TDQLearningReturn(TDReturn):
-    r"""TD Q-Learning Value Return
-
-    Compute the one-step Q-Learning, given by:
-    .. math:: (r + \gamma (1-d) \max_{a'} Q_{\phi_{target}}(s',a')) - Q_{\phi}(s,a)
-
-    where if the actions :math:`a` are discrete, then :math:`a'` is selected such that it maximizes the Q-value, while
-    if :math:`a` are continuous, :math:`a'`, with the assumption that the policy is fully differentiable, is selected
-    such that it maximizes locally the Q-value. That is, in the latter case, the action :math:`a'` is first computed
-    using the policy :math:`\pi(a'|s')`, then by taking the gradient of the Q-value with respect to the action, we
-    increment the initial action by :math:`a' = a' + \alpha \grad_{a} Q_{\phi_{target}}(s',a)`. This increment step
-    can be computed for few iterations such that it locally maximizes the :math:` Q_{\phi_{target}}`.
-
-    This is known as the Q-Learning (an off-policy TD control) algorithm.
-    """
-
-    def __init__(self, q_value, target_qvalue=None, gamma=1.):
-        """
-        Initialize the TD Q-Learning value return.
-
-        Args:
-            q_value (QValueApproximator): Q-value function.
-            target_qvalue (QValueApproximator): target Q-value function. If None, it will use the given
-                :attr:`q_value`.
-            gamma (float): discount factor
-        """
-        super(TDQLearningReturn, self).__init__(gamma)
-        self.q_value = q_value
-        if target_qvalue is None:
-            self.target_qvalue = self.q_value
-
-    def evaluate(self, batch):
-        """Evaluate the TD return on the given batch.
-
-        Args:
-            batch (Batch): batch containing transitions.
-
-        Returns:
-            Batch: batch
-        """
-        q_max = torch.max(self.target_qvalue(batch['states']), dim=1, keepdim=True)[0]
-        target = batch['rewards'] + self.gamma * (1 - batch['masks']) * q_max
-        batch[self] = target - self.q_value(batch['states'])
-        return batch
