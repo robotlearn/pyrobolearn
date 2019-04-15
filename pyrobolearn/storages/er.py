@@ -133,7 +133,7 @@ __status__ = "Development"
 #             indices (list of int): indices. Each index must be between 0 and `self.size`.
 #
 #         Returns:
-#             DictStorage / Batch: batch containing a part of the storage. Variables such as `observations`, `actions`,
+#             DictStorage / Batch: batch containing a part of the storage. Variables such as `states`, `actions`,
 #                 `rewards`, `next_states`, `masks`, and others can be accessed from the object.
 #         """
 #         # create batch
@@ -145,7 +145,7 @@ __status__ = "Development"
 #
 #         for idx in indices:
 #             transition = self.memory[idx]
-#             batch.setdefault('observations', []).append(transition[0])
+#             batch.setdefault('states', []).append(transition[0])
 #             batch.setdefault('actions', []).append(transition[1])
 #             batch.setdefault('next_states', []).append(transition[2])
 #             batch.setdefault('rewards', []).append(transition[3])
@@ -176,17 +176,17 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
         [2] "Playing Atari with Deep Reinforcement Learning", Mnih et al., 2013
     """
 
-    def __init__(self, observation_shapes, action_shapes, capacity=10000, *args, **kwargs):
+    def __init__(self, state_shapes, action_shapes, capacity=10000, *args, **kwargs):
         """
         Initialize the experience replay storage.
 
         Args:
-            observation_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an observation.
+            state_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an observation/state.
             action_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an action.
             capacity (int): maximum size of the experience replay storage.
         """
         # recurrent_hidden_state_size (int): size of the internal state
-        print("\nStorage: observation shape: {}".format(observation_shapes))
+        print("\nStorage: state shape: {}".format(state_shapes))
         print("Storage: action shape: {}".format(action_shapes))
         super(ExperienceReplay, self).__init__()
         self.position = 0
@@ -194,7 +194,7 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
             raise ValueError("Expecting the capacity to be bigger than 0, instead got: {}".format(capacity))
         self.capacity = capacity
         self.full = False
-        self.init(observation_shapes, action_shapes)
+        self.init(state_shapes, action_shapes)
 
     ##############
     # Properties #
@@ -254,22 +254,22 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
             raise TypeError("Expecting the given shapes {} to be a list of tuple of int, a tuple of int, or an int, "
                             "instead got: {}".format({}, type(shapes)))
 
-    def init(self, observation_shapes, action_shapes):
+    def init(self, state_shapes, action_shapes):
         """
         Initialize the experience replay storage by allocating the appropriate tensors for the observations (states),
         actions, next states, rewards, and masks.
 
         Args:
-            observation_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an observation.
+            state_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an observation/state.
             action_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an action.
         """
         # clear itself: remove all items from the DictStorage, and reset all variables
         self.reset()
 
         # allocate space for observations / states
-        if not isinstance(observation_shapes, list):
-            observation_shapes = [observation_shapes]
-        self.create_new_entry('observations', shapes=observation_shapes)
+        if not isinstance(state_shapes, list):
+            state_shapes = [state_shapes]
+        self.create_new_entry('states', shapes=state_shapes)
 
         # allocate space for actions
         if not isinstance(action_shapes, list):
@@ -277,9 +277,9 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
         self.create_new_entry('actions', shapes=action_shapes)
 
         # allocate space for next observations / states  # TODO: improve this, don't copy, just keep reference
-        if not isinstance(observation_shapes, list):
-            observation_shapes = [observation_shapes]
-        self.create_new_entry('next_states', shapes=observation_shapes)
+        if not isinstance(state_shapes, list):
+            state_shapes = [state_shapes]
+        self.create_new_entry('next_states', shapes=state_shapes)
 
         # allocate space for rewards
         self.create_new_entry('rewards', shapes=1)
@@ -297,37 +297,38 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
     def clear(self):
         """Clear the experience replay storage."""
         self.full = False
-        super(ExperienceReplayStorage, self).clear()
+        # super(ExperienceReplayStorage, self).clear()
+        super(ExperienceReplay, self).clear()
 
-    def insert(self, observations, actions, reward, mask, next_states, **kwargs):
+    def insert(self, states, actions, reward, mask, next_states, **kwargs):
         """
         Insert the given parameters into the storage.
 
         Args:
-            observations (torch.Tensor, list of torch.Tensor): (list of) state(s) / observation(s).
+            states (torch.Tensor, list of torch.Tensor): (list of) state(s) / observation(s).
             actions (torch.Tensor, list of torch.Tensor): (list of) action(s).
             reward (float, int, torch.Tensor): reward value.
             mask (float, int, torch.Tensor): masks. They are set to zeros after an episode has terminated.
             next_states (torch.Tensor, list of torch.Tensor): (list of) next state(s) / observation(s).
             **kwargs (dict): kwargs
         """
-        print("ER - insert observation: {}".format(observations))
+        print("ER - insert state: {}".format(states))
         print("ER - insert action: {}".format(actions))
         print("ER - insert next state: {}".format(next_states))
         print("ER - insert reward: {}".format(reward))
         print("ER - insert mask: {}".format(mask))
 
-        # check given observations and actions
-        if not isinstance(observations, list):
-            observations = [observations]
+        # check given states/observations and actions
+        if not isinstance(states, list):
+            states = [states]
         if not isinstance(actions, list):
             actions = [actions]
         if not isinstance(next_states, list):
             next_states = [next_states]
 
-        # insert each observation / action / next states
-        for observation, storage in zip(observations, self.observations):
-            storage[self.position].copy_(self._convert_to_tensor(observation))
+        # insert each states / actions / next states
+        for state, storage in zip(states, self.states):
+            storage[self.position].copy_(self._convert_to_tensor(state))
         for action, storage in zip(actions, self.actions):
             storage[self.position].copy_(self._convert_to_tensor(action))
         for next_state, storage in zip(next_states, self.next_states):
@@ -350,7 +351,7 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
             indices (list of int): indices. Each index must be between 0 and `self.size`.
 
         Returns:
-            DictStorage / Batch: batch containing a part of the storage. Variables such as `observations`, `actions`,
+            DictStorage / Batch: batch containing a part of the storage. Variables such as `states`, `actions`,
                 `next_states`, `rewards`, and `masks`.
         """
         batch = {}
@@ -374,7 +375,8 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
         # if not isinstance(key, str):
         #     raise TypeError("The experience replay storage only accepts key as strings! Instead got: {} with type "
         #                     "{}".format(key, type(key)))
-        super(ExperienceReplayStorage, self).__setitem__(key, value)
+        # super(ExperienceReplayStorage, self).__setitem__(key, value)
+        super(ExperienceReplay, self).__setitem__(key, value)
 
     # def __setattr__(self, key, value):
     #     """Set the attribute using the given key and value. That is, instead of `D[key] = value`, you can do

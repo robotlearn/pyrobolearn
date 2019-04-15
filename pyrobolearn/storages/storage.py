@@ -626,7 +626,7 @@ class RolloutStorage(DictStorage):
     key variable check that it is correctly present inside the storage. Nonetheless, having a dynamic rollout storage
     has its advantages, as you can for example store multiple value scalars from multiple value function approximators.
 
-    Also, in contrast to [1], we do not compute the returns / estimators here. This is done by the `Estimator` class
+    Also, in contrast to [1], we do not compute the returns / returns here. This is done by the `Estimator` class
     which takes as input a `RolloutStorage`.
 
     In PRL, this storage is notably used by `RLAlgo` (`Explorator`, `Evaluator`, `Updater`), `Loss`, `Estimators`, etc.
@@ -635,26 +635,26 @@ class RolloutStorage(DictStorage):
         [1] https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail/blob/master/a2c_ppo_acktr/storage.py
     """
 
-    def __init__(self, num_steps, observation_shapes, action_shapes, num_processes=1):
+    def __init__(self, num_steps, state_shapes, action_shapes, num_processes=1):
         # , recurrent_hidden_state_size=0):
         """
         Initialize the rollout storage.
 
         Args:
             num_steps (int): number of steps in one episode
-            observation_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an observation.
+            state_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an observation/state.
             action_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an action.
             num_processes (int): number of processes
         """
         # recurrent_hidden_state_size (int): size of the internal state
-        print("\nStorage: observation shape: {}".format(observation_shapes))
+        print("\nStorage: state shape: {}".format(state_shapes))
         print("Storage: action shape: {}".format(action_shapes))
         super(RolloutStorage, self).__init__()
         self._step = 0
         self._num_steps = int(num_steps)
         self._num_processes = int(num_processes)
         self._shifts = {}  # dictionary that maps the key to the time shift; this is add to the current time step
-        self.init(self.num_steps, observation_shapes, action_shapes, self.num_processes)
+        self.init(self.num_steps, state_shapes, action_shapes, self.num_processes)
 
     ##############
     # Properties #
@@ -748,7 +748,7 @@ class RolloutStorage(DictStorage):
         # add shift
         self._shifts[key] = num_steps - self.num_steps
 
-    def init(self, num_steps, observation_shapes, action_shapes, num_processes=1):
+    def init(self, num_steps, state_shapes, action_shapes, num_processes=1):
         """
         Initialize the rollout storage by allocating the appropriate tensors for the observations (states), actions,
         rewards, masks, and returns.
@@ -757,7 +757,7 @@ class RolloutStorage(DictStorage):
 
         Args:
             num_steps (int): number of time steps in the finite-horizon RL setting.
-            observation_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an observation.
+            state_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an observation/state.
             action_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an action.
             num_processes (int): number of process.
         """
@@ -768,13 +768,13 @@ class RolloutStorage(DictStorage):
         self._num_processes = int(num_processes)
 
         # allocate space for observations / states
-        logger.debug('creating space for observations of shapes: {}'.format(observation_shapes))
-        if not isinstance(observation_shapes, list):
-            observation_shapes = [observation_shapes]
-        self.create_new_entry('observations', shapes=observation_shapes, num_steps=self.num_steps+1)
+        logger.debug('creating space for states with shape: {}'.format(state_shapes))
+        if not isinstance(state_shapes, list):
+            state_shapes = [state_shapes]
+        self.create_new_entry('states', shapes=state_shapes, num_steps=self.num_steps + 1)
 
         # allocate space for actions
-        logger.debug('creating space for actions of shapes: {}'.format(action_shapes))
+        logger.debug('creating space for actions with shape: {}'.format(action_shapes))
         if not isinstance(action_shapes, list):
             action_shapes = [action_shapes]
         self.create_new_entry('actions', shapes=action_shapes, num_steps=self.num_steps)
@@ -796,7 +796,7 @@ class RolloutStorage(DictStorage):
         # space for log probabilities on policy, distributions, scalar values from value functions,
         # recurrent hidden states, and others have to be allocated outside the class
 
-    def reset(self, init_observations=None):
+    def reset(self, init_states=None):
         """Reset the storage by copying the last value and setting it to the first value."""
         # for key, value in self.iteritems():
         #     if isinstance(value, list):
@@ -805,13 +805,13 @@ class RolloutStorage(DictStorage):
         #                 item[0].copy_(item[-1])
         #     elif isinstance(value, torch.Tensor) and len(value) == self.num_steps + 1:
         #             self[key][0].copy_(self[key][-1])
-        if init_observations is None:
-            for observation in self.observations:
-                observation[0].copy_(observation[-1])
+        if init_states is None:
+            for state in self.states:
+                state[0].copy_(state[-1])
         else:
-            if not isinstance(init_observations, list):
-                init_observations = [init_observations]
-            for observation, value in zip(self.observations, init_observations):
+            if not isinstance(init_states, list):
+                init_states = [init_states]
+            for observation, value in zip(self.states, init_states):
                 observation[0].copy_(self._convert_to_tensor(value))
         self.masks[0].copy_(self.masks[-1])
         # self.recurrent_hidden_states[0].copy_(self.recurrent_hidden_states[-1])
@@ -868,14 +868,14 @@ class RolloutStorage(DictStorage):
             else:
                 set_tensor(self[key], step, values, copy=copy)
 
-    def insert(self, observations, actions, reward, mask, distributions=None, update_step=True, **kwargs):
+    def insert(self, states, actions, reward, mask, distributions=None, update_step=True, **kwargs):
         # distributions, values=None):
         # recurrent_hidden_state, action_log_prob):
         """
         Insert the given parameters into the storage.
 
         Args:
-            observations (torch.Tensor, list of torch.Tensor): (list of) state(s) / observation(s).
+            states (torch.Tensor, list of torch.Tensor): (list of) state(s) / observation(s).
             actions (torch.Tensor, list of torch.Tensor): (list of) action(s)
             reward (float, int, torch.Tensor): reward value
             mask (float, int, torch.Tensor): masks. They are set to zeros after an episode has terminated.
@@ -885,19 +885,19 @@ class RolloutStorage(DictStorage):
             **kwargs (dict): dictionary containing other parameters to update in the storage. The other parameters
                 had to be added using the `create_new_entry()` method.
         """
-        print("Storage - insert observation: {}".format(observations))
+        print("Storage - insert state: {}".format(states))
         print("Storage - insert action: {}".format(actions))
 
-        # check given observations and actions
-        if not isinstance(observations, list):
-            observations = [observations]
+        # check given observations/states and actions
+        if not isinstance(states, list):
+            states = [states]
         if not isinstance(actions, list):
             actions = [actions]
         if not isinstance(distributions, list):
             distributions = [distributions]
 
         # insert each observation / action
-        for observation, storage in zip(observations, self.observations):
+        for observation, storage in zip(states, self.states):
             storage[self._step + 1].copy_(self._convert_to_tensor(observation))
         for action, storage in zip(actions, self.actions):
             storage[self._step].copy_(self._convert_to_tensor(action))
@@ -930,7 +930,7 @@ class RolloutStorage(DictStorage):
             indices (list of int): indices. Each index must be between 0 and `num_steps * num_processes`.
 
         Returns:
-            DictStorage / Batch: batch containing a part of the storage. Variables such as `observations`, `actions`,
+            DictStorage / Batch: batch containing a part of the storage. Variables such as `states`, `actions`,
                 `rewards`, `returns`, and others can be accessed from the object.
         """
         # In the next comments, T = number of time steps, P = number of processes, and I = number of indices

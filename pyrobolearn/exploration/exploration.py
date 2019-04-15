@@ -24,7 +24,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Exploration(object):
+class Exploration(object):  # TODO: inherit from Policy?
     r"""Exploration class
 
     Exploration strategy: it wraps the policy, and defines how the policy should explore in the environment.

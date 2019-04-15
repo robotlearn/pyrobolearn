@@ -81,8 +81,8 @@ class MLPDynamicModel(NNDynamicModel):
         if next_states is None:
             next_states = states
         model = MLPApproximator(inputs=[states, actions], outputs=next_states, hidden_units=hidden_units,
-                                activation_fct=activation_fct, last_activation_fct=last_activation_fct,
-                                dropout_prob=dropout_prob)
+                                activation=activation_fct, last_activation=last_activation_fct,
+                                dropout=dropout_prob)
         super(MLPDynamicModel, self).__init__(states, actions, model=model, next_states=next_states,
                                               distributions=distributions, preprocessors=preprocessors,
                                               postprocessors=postprocessors)
