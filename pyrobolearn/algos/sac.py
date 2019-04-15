@@ -16,7 +16,7 @@ from pyrobolearn.exploration import ActionExploration, GaussianActionExploration
 
 from pyrobolearn.storages import ExperienceReplay
 from pyrobolearn.samplers import BatchRandomSampler
-from pyrobolearn.returns import TDQValueReturn
+from pyrobolearn.returns import ValueTarget, EntropyValueTarget
 from pyrobolearn.losses import MSBELoss, QLoss
 from pyrobolearn.optimizers import Adam
 
@@ -260,7 +260,8 @@ class SAC(GradientRLAlgo):
         [3] RLKit: https://github.com/vitchyr/rlkit/blob/master/rlkit/torch/sac/sac.py
     """
 
-    def __init__(self, task, approximators, gamma=0.99, lr=5e-4, polyak=0.995, capacity=10000, num_workers=1):
+    def __init__(self, task, approximators, gamma=0.99, lr=5e-4, polyak=0.995, alpha=0.2, capacity=10000,
+                 num_workers=1):
         """
         Initialize the SAC off-policy RL algorithm.
 
@@ -271,6 +272,9 @@ class SAC(GradientRLAlgo):
                 importance has the future rewards we get.
             lr (float): learning rate
             polyak (float): coefficient in the polyak averaging when updating the target approximators.
+            alpha (float): entropy regularization coefficient which controls the tradeoff between exploration and
+                exploitation. Higher :attr:`alpha` means more exploration, and lower :attr:`alpha` corresponds to more
+                exploitation.
             capacity (int): capacity of the experience replay storage.
             num_workers (int): number of processes / workers to run in parallel
         """
@@ -309,8 +313,8 @@ class SAC(GradientRLAlgo):
         exploration = ActionExploration(policy)
 
         # create targets
-        # q_target =
-
+        q_target = ValueTarget(values=value_target, gamma=gamma)
+        v_target = EntropyValueTarget(q_values=q_values, policy=exploration, alpha=alpha)
 
         # create losses
         q_loss = MSBELoss(td_return=estimator)

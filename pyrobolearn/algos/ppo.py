@@ -184,7 +184,7 @@ class PPO(GradientRLAlgo):
         states, actions = policy.states, policy.actions
         logger.debug('create rollout storage')
         storage = RolloutStorage(num_steps=1000, state_shapes=states.merged_shape,
-                                 action_shapes=actions.merged_shape, num_processes=num_workers)
+                                 action_shapes=actions.merged_shape, num_trajectories=num_workers)
         logger.debug('create return estimator (GAE)')
         estimator = GAE(storage, gamma=gamma, tau=tau)
         logger.debug('create storage sampler')

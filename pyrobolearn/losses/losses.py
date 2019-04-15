@@ -22,12 +22,13 @@ class FixedLoss(Loss):
     r"""Fixed Loss
 
     """
+
     def __init__(self, value):
         super(FixedLoss, self).__init__()
-        self.value = value
+        self.value = torch.tensor(value)
 
     def compute(self, batch):
-        return self.value * batch
+        return self.value
 
 
 class L2Loss(Loss):
@@ -35,14 +36,22 @@ class L2Loss(Loss):
 
     Compute the L2 loss given by: :math:`1/2 * (y_{target} - y_{predict})^2`
     """
-    def __init__(self, target, approximator):
+
+    def __init__(self, target, predictor):
         super(L2Loss, self).__init__()
-        self.target = target
-        self.approximator = approximator
+        self._target = target
+        self._predictor = predictor
 
     def compute(self, batch):
-        # based on approximator check what we need
-        return 0.5 * (self.target(batch) - self.approximator(batch)).pow(2).mean()
+        if self._target in batch:
+            target = batch[self._target]
+        else:
+            target = self._target(batch)
+        if self._predictor in batch:
+            output = batch[self._predictor]
+        else:
+            output = self._predictor(batch)
+        return 0.5 * (target - output).pow(2).mean()
 
 
 class HuberLoss(Loss):

@@ -414,17 +414,21 @@ class ParametrizedQValue(QValueApproximator):  # ParametrizedValue, QValueApprox
         """
         self.model.set_vectorized_parameters(vector=vector)
 
-    def evaluate(self, state=None, to_numpy=False):
+    def evaluate(self, state=None, action=None, to_numpy=False):
         """Compute the output of the value function.
 
         Args:
             state (None, State, (list of) np.array, (list of) torch.Tensor): state input data. If None, it will get
-                the data from the inputs that were given at the initialization.
+                the data from the states that were given at the initialization.
+            action (None, Action, (list of) np.array, (list of) torch.Tensor): input actions. If None, it will get
+                the data from the actions that were given at the initialization.
             to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
         """
         # if no input is given, take the provided inputs at the beginning
         if state is None:
             state = self.state
+        if action is None:
+            action = self.action
 
         # if the input is an instance of State, get the inner merged data.
         if isinstance(state, State):
@@ -432,12 +436,17 @@ class ParametrizedQValue(QValueApproximator):  # ParametrizedValue, QValueApprox
             if len(state) == 1:
                 state = state[0]
 
-        self.value = self.model.predict(state, to_numpy=to_numpy, return_logits=True, set_output_data=False)
+        if isinstance(action, Action):
+            action = action.merged_data
+            if len(action) == 1:
+                action = action[0]
+
+        self.value = self.model.predict([state, action], to_numpy=to_numpy, return_logits=True, set_output_data=False)
         return self.value
 
-    def __call__(self, state=None, to_numpy=False):
+    def __call__(self, state=None, action=None, to_numpy=False):
         """Predict the value."""
-        return self.evaluate(state=state, to_numpy=to_numpy)
+        return self.evaluate(state=state, action=action, to_numpy=to_numpy)
 
 
 # alias
@@ -482,6 +491,32 @@ class ParametrizedQValueOutput(ParametrizedQValue):
         elif not isinstance(action, (torch.Tensor, np.ndarray)):
             raise TypeError("Expecting the action to be an int, float, Action, torch.Tensor, or np.ndarray.")
         self._action = action
+
+    def evaluate(self, state=None, action=None, to_numpy=False):
+        """Compute the output of the value function.
+
+        Args:
+            state (None, State, (list of) np.array, (list of) torch.Tensor): state input data. If None, it will get
+                the data from the states that were given at the initialization.
+            action (None): this argument is discarded.
+            to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+        """
+        # if no input is given, take the provided inputs at the beginning
+        if state is None:
+            state = self.state
+
+        # if the input is an instance of State, get the inner merged data.
+        if isinstance(state, State):
+            state = state.merged_data
+            if len(state) == 1:
+                state = state[0]
+
+        self.value = self.model.predict(state, to_numpy=to_numpy, return_logits=True, set_output_data=False)
+        return self.value
+
+    def __call__(self, state=None, action=None, to_numpy=False):
+        """Predict the value."""
+        return self.evaluate(state=state, to_numpy=to_numpy)
 
 
 # alias

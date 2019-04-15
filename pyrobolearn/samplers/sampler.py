@@ -71,7 +71,7 @@ class StorageSampler(Sampler):
                 raise ValueError("Expecting the batch size (={}) to be smaller than the size of the storage (={})"
                                  ".".format(batch_size, self.size))
             sampler = torch_sampler.BatchSampler(sampler=torch_sampler.SubsetRandomSampler(range(self.size)),
-                                                 batch_size=batch_size, drop_last=False)
+                                                 batch_size=batch_size, drop_last=True)
         self.sampler = sampler
 
     ##############

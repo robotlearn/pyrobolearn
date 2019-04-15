@@ -5,6 +5,7 @@
 import torch
 
 from pyrobolearn.losses.loss import Loss
+from pyrobolearn.returns.estimators import Estimator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -26,29 +27,39 @@ class PGLoss(Loss):
      where :math:`\psi_t` is the associated return estimator, which can be for instance, the total reward estimator
      :math:`\psi_t = R(\tau)` (where :math:`\tau` represents the whole trajectory), the state action value estimator
      :math:`\psi_t = Q(s_t, a_t)`, or the advantage estimator :math:`\psi_t = A_t = Q(s_t, a_t) - V(s_t)`. Other
-     estimators are also possible.
+     returns are also possible.
 
     The gradient with respect to the parameters :math:`\theta` is then given by:
 
-    .. math:: g = \mathbb{E}[ \nabla_\theta \log \pi_{\theta}(a_t | s_t)
+    .. math:: g = \mathbb{E}[ \nabla_{\theta} \log \pi_{\theta}(a_t | s_t) ]
 
     References:
         [1] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
         [2] "High-Dimensional Continuous Control using Generalized Advantage Estimation", Schulman et al., 2016
     """
 
-    def __init__(self):
+    def __init__(self, estimator):
+        """
+        Initialize the Policy Gradient loss.
+
+        Args:
+            estimator (Estimator): estimator that has been used on the rollout storage / batch.
+        """
         super(PGLoss, self).__init__()
+        if not isinstance(estimator, Estimator):
+            raise TypeError("The given estimator is not an instance of `Estimator`, instead got: "
+                            "{}".format(type(estimator)))
+        self._estimator = estimator
 
     def compute(self, batch):
         log_curr_pi = batch.current['action_distributions']
         log_curr_pi = log_curr_pi.log_probs(batch.current['actions'])
-        estimator = batch['estimator']
+        estimator = batch[self._estimator]
         loss = torch.exp(log_curr_pi) * estimator
         return -loss.mean()
 
     def latex(self):
-        return "\\mathbb{E}[ r_t(\\theta) A_t ]"
+        return r"\mathbb{E}[ r_t(\theta) A_t ]"
 
 
 class CPILoss(Loss):
@@ -67,11 +78,18 @@ class CPILoss(Loss):
         [2] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
     """
 
-    def __init__(self):
+    def __init__(self, estimator):
         """
         Initialize the CPI Loss.
+
+        Args:
+            estimator (Estimator): estimator that has been used on the rollout storage / batch.
         """
         super(CPILoss, self).__init__()
+        if not isinstance(estimator, Estimator):
+            raise TypeError("The given estimator is not an instance of `Estimator`, instead got: "
+                            "{}".format(type(estimator)))
+        self._estimator = estimator
 
     def compute(self, batch):  # policy_distribution, old_policy_distribution, estimator):
         # ratio = policy_distribution / old_policy_distribution
@@ -81,13 +99,13 @@ class CPILoss(Loss):
         log_prev_pi = log_prev_pi.log_probs(batch['actions'])
 
         ratio = torch.exp(log_curr_pi - log_prev_pi)
-        estimator = batch['estimator']
+        estimator = batch[self._estimator]
 
         loss = ratio * estimator
         return -loss.mean()
 
     def latex(self):
-        return "\\mathbb{E}[ r_t(\\theta) A_t ]"
+        return r"\mathbb{E}[ r_t(\theta) A_t ]"
 
 
 class CLIPLoss(Loss):
@@ -105,15 +123,20 @@ class CLIPLoss(Loss):
         [1] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
     """
 
-    def __init__(self, clip=0.2):
+    def __init__(self, estimator, clip=0.2):
         """
         Initialize the loss.
 
         Args:
-            epsilon (float): clip parameter
+            estimator (Estimator): estimator that has been used on the rollout storage / batch.
+            clip (float): clip parameter
         """
         super(CLIPLoss, self).__init__()
         self.eps = clip
+        if not isinstance(estimator, Estimator):
+            raise TypeError("The given estimator is not an instance of `Estimator`, instead got: "
+                            "{}".format(type(estimator)))
+        self._estimator = estimator
 
     def compute(self, batch):  # , policy_distribution, old_policy_distribution, estimator):
         log_curr_pi = batch.current['action_distributions']
@@ -122,13 +145,13 @@ class CLIPLoss(Loss):
         log_prev_pi = log_prev_pi.log_probs(batch['actions'])
 
         ratio = torch.exp(log_curr_pi - log_prev_pi)
-        estimator = batch['estimator']
+        estimator = batch[self._estimator]
 
         loss = torch.min(ratio * estimator, torch.clamp(ratio, 1.0-self.eps, 1.0+self.eps) * estimator)
         return -loss.mean()
 
     def latex(self):
-        return "\\mathbb{E}[ \\min(r_t(\\theta) A_t, clip(r_t(\\theta), 1-\\epsilon, 1+\\epsilon) A_t) ]"
+        return r"\mathbb{E}[ \min(r_t(\theta) A_t, clip(r_t(\theta), 1-\epsilon, 1+\epsilon) A_t) ]"
 
 
 class KLPenaltyLoss(Loss):
@@ -181,7 +204,7 @@ class EntropyLoss(Loss):
         [3] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
     """
 
-    def __init__(self):  # approximator):
+    def __init__(self):
         super(EntropyLoss, self).__init__()
 
     def compute(self, batch):

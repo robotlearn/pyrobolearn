@@ -5,6 +5,8 @@
 import torch
 
 from pyrobolearn.losses.loss import Loss
+from pyrobolearn.policies import Policy
+from pyrobolearn.values import QValue
 from pyrobolearn.returns import TDReturn
 
 __author__ = "Brian Delhaisse"
@@ -36,14 +38,39 @@ class QLoss(Loss):
     """
 
     def __init__(self, q_value, policy):
+        """
+        Initialize the Q-loss.
+
+        Args:
+            q_value (QValue): Q-value function approximator.
+            policy (Policy): policy.
+        """
         super(QLoss, self).__init__()
-        # TODO: check that the Q-Value accepts as inputs the actions
-        self.q_value = q_value
-        self.policy = policy
+
+        # check the given q_value
+        if not isinstance(q_value, QValue):
+            raise TypeError("Expecting the given q_value to be an instance of `QValue`, instead got: "
+                            "{}".format(type(q_value)))
+        self._q_value = q_value
+
+        # check the policy
+        if not isinstance(policy, Policy):
+            raise TypeError("Expecting the given policy to be an instance of `Policy`, instead got: "
+                            "{}".format(type(policy)))
+        self._policy = policy
 
     def compute(self, batch):
-        actions = self.policy.predict(batch['observations'])
-        q_values = self.q_value(batch['observations'], actions)
+        """
+        Compute the loss on the given batch.
+
+        Args:
+            batch (Batch): batch that contains the 'states'.
+
+        Returns:
+            torch.tensor: loss scalar value
+        """
+        actions = self._policy.predict(batch['states'])
+        q_values = self._q_value(batch['states'], actions)
         return -q_values.mean()
 
 
@@ -90,9 +117,13 @@ class MSBELoss(Loss):
         Compute the mean-squared TD return.
 
         Args:
-            batch: batch
+            batch (Batch): batch that contains the td returns.
 
         Returns:
             torch.Tensor: loss value.
         """
-        return batch[self._td].pow(2).mean()
+        if self._td in batch:
+            returns = batch[self._td]
+        else:
+            returns = self._td.evaluate(batch, store=False)
+        return returns.pow(2).mean()

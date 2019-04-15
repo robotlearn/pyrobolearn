@@ -212,8 +212,8 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
     ###########
 
     def create_new_entry(self, key, shapes, dtype=torch.dtype):
-        """Create a new entry (=tensor) in the experience replay storage dictionary. The tensor will have the dimension
-        (num_steps, self.num_processes, *shape) for each shape in shapes, and will be initialized to zero.
+        """Create a new entry (=tensor) in the experience replay storage dictionary. The tensor will have the
+        dimension (capacity, *shape) for each shape in shapes, and will be initialized to zero.
         The tensor will also have the same type than the other tensors and will be sent to the correct device.
 
         Args:
@@ -380,7 +380,7 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
 
     # def __setattr__(self, key, value):
     #     """Set the attribute using the given key and value. That is, instead of `D[key] = value`, you can do
-    #     `D.key = value`. By default, this creates a tensor with shape (num_steps + 1, self.num_processes, 1).
+    #     `D.key = value`. By default, this creates a tensor with shape (num_steps + 1, self.num_trajectories, 1).
     #
     #     Warnings: avoid to use this.
     #     """

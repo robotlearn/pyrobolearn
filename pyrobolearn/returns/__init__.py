@@ -1,6 +1,6 @@
 
 # import the various returns
-from .estimator import *
+from .estimators import *
 
 # import the various targets
 from .targets import *

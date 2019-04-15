@@ -626,7 +626,7 @@ class RolloutStorage(DictStorage):
     key variable check that it is correctly present inside the storage. Nonetheless, having a dynamic rollout storage
     has its advantages, as you can for example store multiple value scalars from multiple value function approximators.
 
-    Also, in contrast to [1], we do not compute the returns / returns here. This is done by the `Estimator` class
+    Also, in contrast to [1], we do not compute the returns / estimators here. This is done by the `Estimator` class
     which takes as input a `RolloutStorage`.
 
     In PRL, this storage is notably used by `RLAlgo` (`Explorator`, `Evaluator`, `Updater`), `Loss`, `Estimators`, etc.
@@ -635,7 +635,7 @@ class RolloutStorage(DictStorage):
         [1] https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail/blob/master/a2c_ppo_acktr/storage.py
     """
 
-    def __init__(self, num_steps, state_shapes, action_shapes, num_processes=1):
+    def __init__(self, num_steps, state_shapes, action_shapes, num_trajectories=1):
         # , recurrent_hidden_state_size=0):
         """
         Initialize the rollout storage.
@@ -644,7 +644,7 @@ class RolloutStorage(DictStorage):
             num_steps (int): number of steps in one episode
             state_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an observation/state.
             action_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an action.
-            num_processes (int): number of processes
+            num_trajectories (int): number of trajectories.
         """
         # recurrent_hidden_state_size (int): size of the internal state
         print("\nStorage: state shape: {}".format(state_shapes))
@@ -652,9 +652,9 @@ class RolloutStorage(DictStorage):
         super(RolloutStorage, self).__init__()
         self._step = 0
         self._num_steps = int(num_steps)
-        self._num_processes = int(num_processes)
+        self._num_trajectories = int(num_trajectories)
         self._shifts = {}  # dictionary that maps the key to the time shift; this is add to the current time step
-        self.init(self.num_steps, state_shapes, action_shapes, self.num_processes)
+        self.init(self.num_steps, state_shapes, action_shapes, self.num_trajectories)
 
     ##############
     # Properties #
@@ -666,14 +666,14 @@ class RolloutStorage(DictStorage):
         return self._num_steps
 
     @property
-    def num_processes(self):
+    def num_trajectories(self):
         """Return the number of processes used."""
-        return self._num_processes
+        return self._num_trajectories
 
     @property
     def size(self):
         """Return the size (=number of steps * number of processes) of the rollout storage."""
-        return self._num_steps * self._num_processes
+        return self._num_steps * self._num_trajectories
 
     @property
     def curr_step(self):
@@ -691,7 +691,7 @@ class RolloutStorage(DictStorage):
 
     def create_new_entry(self, key, shapes, num_steps=None, dtype=torch.dtype):
         """Create a new entry (=tensor) in the rollout storage dictionary. The tensor will have the dimension
-        (num_steps, self.num_processes, *shape) for each shape in shapes, and will be initialized to zero.
+        (num_steps, self.num_trajectories, *shape) for each shape in shapes, and will be initialized to zero.
         The tensor will also have the same type than the other tensors and will be sent to the correct device.
 
         Args:
@@ -722,24 +722,24 @@ class RolloutStorage(DictStorage):
         # if we have a list of shapes
         if isinstance(shapes, list):
             if isinstance(dtype, torch.dtype):
-                self[key] = [torch.zeros(num_steps, self.num_processes, *shape).to(device=self.device, dtype=dtype)
+                self[key] = [torch.zeros(num_steps, self.num_trajectories, *shape).to(device=self.device, dtype=dtype)
                              for shape in shapes]
             else:  # numpy array
-                self[key] = [np.zeros((num_steps, self.num_processes,) + shape, dtype=dtype) for shape in shapes]
+                self[key] = [np.zeros((num_steps, self.num_trajectories,) + shape, dtype=dtype) for shape in shapes]
 
         # if the 'shapes' is a tuple
         elif isinstance(shapes, tuple):
             if isinstance(dtype, torch.dtype):
-                self[key] = torch.zeros(num_steps, self.num_processes, *shapes).to(device=self.device, dtype=dtype)
+                self[key] = torch.zeros(num_steps, self.num_trajectories, *shapes).to(device=self.device, dtype=dtype)
             else:
-                self[key] = np.zeros((num_steps, self.num_processes,) + shapes, dtype=dtype)
+                self[key] = np.zeros((num_steps, self.num_trajectories,) + shapes, dtype=dtype)
 
         # if the 'shapes' is an int
         elif isinstance(shapes, int):
             if isinstance(dtype, torch.dtype):
-                self[key] = torch.zeros(num_steps, self.num_processes, shapes).to(device=self.device, dtype=dtype)
+                self[key] = torch.zeros(num_steps, self.num_trajectories, shapes).to(device=self.device, dtype=dtype)
             else:
-                self[key] = np.zeros((num_steps, self.num_processes, shapes), dtype=dtype)
+                self[key] = np.zeros((num_steps, self.num_trajectories, shapes), dtype=dtype)
 
         else:
             raise TypeError("Expecting the given shapes {} to be a list of tuple of int, a tuple of int, or an int, "
@@ -748,7 +748,7 @@ class RolloutStorage(DictStorage):
         # add shift
         self._shifts[key] = num_steps - self.num_steps
 
-    def init(self, num_steps, state_shapes, action_shapes, num_processes=1):
+    def init(self, num_steps, state_shapes, action_shapes, num_trajectories=1):
         """
         Initialize the rollout storage by allocating the appropriate tensors for the observations (states), actions,
         rewards, masks, and returns.
@@ -759,13 +759,13 @@ class RolloutStorage(DictStorage):
             num_steps (int): number of time steps in the finite-horizon RL setting.
             state_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an observation/state.
             action_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an action.
-            num_processes (int): number of process.
+            num_trajectories (int): number of trajectories.
         """
         # clear itself: remove all items from the DictStorage, and reset all variables
         self.clear()
         self._step = 0
         self._num_steps = int(num_steps)
-        self._num_processes = int(num_processes)
+        self._num_trajectories = int(num_trajectories)
 
         # allocate space for observations / states
         logger.debug('creating space for states with shape: {}'.format(state_shapes))
@@ -783,9 +783,7 @@ class RolloutStorage(DictStorage):
         logger.debug('creating space for rewards')
         self.create_new_entry('rewards', shapes=1, num_steps=self.num_steps)
 
-        # allocate space for the returns and masks
-        logger.debug('creating space for returns')
-        self.create_new_entry('returns', shapes=1, num_steps=self.num_steps + 1)
+        # allocate space for the masks
         logger.debug('creating space for masks')
         self.create_new_entry('masks', shapes=1, num_steps=self.num_steps + 1)
 
@@ -927,11 +925,11 @@ class RolloutStorage(DictStorage):
         """Return a batch of the Rollout storage in the form of a `DictStorage`.
 
         Args:
-            indices (list of int): indices. Each index must be between 0 and `num_steps * num_processes`.
+            indices (list of int): indices. Each index must be between 0 and `num_steps * num_trajectories`.
 
         Returns:
             DictStorage / Batch: batch containing a part of the storage. Variables such as `states`, `actions`,
-                `rewards`, `returns`, and others can be accessed from the object.
+                `rewards`, `masks`, and others can be accessed from the object.
         """
         # In the next comments, T = number of time steps, P = number of processes, and I = number of indices
         batch = {}
@@ -970,7 +968,7 @@ class RolloutStorage(DictStorage):
 
     # def __setattr__(self, key, value):
     #     """Set the attribute using the given key and value. That is, instead of `D[key] = value`, you can do
-    #     `D.key = value`. By default, this creates a tensor with shape (num_steps + 1, self.num_processes, 1).
+    #     `D.key = value`. By default, this creates a tensor with shape (num_steps + 1, self.num_trajectories, 1).
     #
     #     Warnings: avoid to use this.
     #     """

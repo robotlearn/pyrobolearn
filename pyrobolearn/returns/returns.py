@@ -8,12 +8,14 @@ Dependencies:
 - `pyrobolearn.values`
 """
 
+from abc import ABCMeta
+
 import torch
 
 from pyrobolearn.storages import Batch
-from pyrobolearn.values import Value, QValue
+from pyrobolearn.values import Value, QValue, QValueOutput
 from pyrobolearn.policies import Policy
-from pyrobolearn.returns.estimator import BaseReturn
+from pyrobolearn.returns.targets import ValueTarget, QValueTarget, QLearningTarget
 
 
 __author__ = "Brian Delhaisse"
@@ -26,7 +28,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Return(BaseReturn):
+class Return(object):
     r"""Return
 
     Compared to the estimator that used the whole trajectory, it only uses transition tuples
@@ -43,14 +45,46 @@ class Return(BaseReturn):
         [1] "Reinforcement Learning: an Introduction" (chap 8.13), Sutton and Barto, 2018
     """
 
-    def __init__(self, gamma=1.):
+    def _evaluate(self, batch):
         """
-        Initialize the return / estimator.
+        Evaluate the return on the given batch.
 
         Args:
-            gamma (float): discount factor
+            batch (Batch): batch containing the transitions.
+
+        Returns:
+            torch.Tensor: evaluated return.
         """
-        super(Return, self).__init__(gamma)
+        raise NotImplementedError
+
+    def evaluate(self, batch, store=True):
+        """
+        Evaluate the return on the given batch.
+
+        Args:
+            batch (Batch): batch containing the transitions.
+            store (bool): If True, it will save the evaluation of the target in the given batch.
+
+        Returns:
+            torch.Tensor: evaluated return.
+        """
+        output = self._evaluate(batch)
+        if store:  # store the target in the batch if specified
+            batch[self] = output
+        return output
+
+    def __call__(self, batch, store=True):
+        """
+        Evaluate the return on the given batch.
+
+        Args:
+            batch (Batch): batch containing the transitions.
+            store (bool): If True, it will save the evaluation of the target in the given batch.
+
+        Returns:
+            torch.Tensor: evaluated return.
+        """
+        return self.evaluate(batch, store=store)
 
 
 class TDReturn(Return):
@@ -58,7 +92,33 @@ class TDReturn(Return):
 
     Return based on the one-step temporal difference TD(0).
     """
-    pass
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, gamma=1.):
+        """
+        Initialize the base return / estimator.
+
+        Args:
+            gamma (float): discount factor
+        """
+        super(TDReturn, self).__init__()
+        self.gamma = gamma
+
+    @property
+    def gamma(self):
+        """Return the discount factor"""
+        return self._gamma
+
+    @gamma.setter
+    def gamma(self, gamma):
+        """Set the discount factor"""
+        if gamma > 1.:
+            gamma = 1.
+        elif gamma < 0.:
+            gamma = 0.
+
+        self._gamma = gamma
 
 
 class TDValueReturn(TDReturn):
@@ -75,27 +135,36 @@ class TDValueReturn(TDReturn):
         Initialize the TD state value return.
 
         Args:
-            value (ValueApproximator): state value function.
-            target_value (ValueApproximator): target state value function.
+            value (Value): state value function.
+            target_value (Value, list of Value, None): target state value function(s). If None, it will be set to be
+                the same as the given :attr:`value`. Note however that this can lead to unstable behaviors.
             gamma (float): discount factor
         """
         super(TDValueReturn, self).__init__(gamma)
-        self.value = value
-        if target_value is None:
-            self.target_value = self.value
 
-    def evaluate(self, batch):
+        # check value
+        if not isinstance(value, Value):
+            raise TypeError("Expecting the given value to be an instance of `Value`, instead got: "
+                            "{}".format(type(value)))
+        self._value = value
+
+        # check target value
+        if target_value is None:
+            # Warning: using the same value function for the target can lead to unstable behaviors.
+            target_value = value
+        self._target = ValueTarget(values=target_value, gamma=gamma)
+
+    def _evaluate(self, batch):
         """Evaluate the TD return on the given batch.
 
         Args:
             batch (Batch): batch containing transitions.
 
         Returns:
-            Batch: batch
+            torch.Tensor: evaluated TD-return.
         """
-        target = batch['rewards'] + self.gamma * (1 - batch['masks']) * self.target_value(batch['states'])
-        batch[self] = target - self.value(batch['states'])
-        return batch
+        target = self._target(batch, store=False)
+        return target - self._value(batch['states'])
 
 
 class TDQValueReturn(TDReturn):
@@ -113,31 +182,37 @@ class TDQValueReturn(TDReturn):
         Initialize the TD state-action value return.
 
         Args:
-            q_value (QValueApproximator): Q-value function.
+            q_value (QValue): Q-value function.
             policy (Policy): policy to compute the action a'.
-            target_qvalue (QValueApproximator, None): target Q-value function. If None, it will use the given
-                :attr:`q_value`.
+            target_qvalue (QValue, list of QValue, None): target Q-value function(s). If None, it will use the given
+                :attr:`q_value`. Note however that this can lead to unstable behaviors.
             gamma (float): discount factor
         """
         super(TDQValueReturn, self).__init__(gamma)
-        self.q_value = q_value
-        self.policy = policy
-        if target_qvalue is None:
-            self.target_qvalue = self.q_value
 
-    def evaluate(self, batch):
+        # check Q-value
+        if not isinstance(q_value, QValue):
+            raise TypeError("Expecting the given q_value to be an instance of `QValue`, instead got: "
+                            "{}".format(type(q_value)))
+        self._q_value = q_value
+
+        # check target Q-value
+        if target_qvalue is None:
+            # Warning: using the same value function for the target can lead to unstable behaviors.
+            target_qvalue = q_value
+        self._target = QValueTarget(q_values=target_qvalue, policy=policy, gamma=gamma)
+
+    def _evaluate(self, batch):
         """Evaluate the TD return on the given batch.
 
         Args:
             batch (Batch): batch containing transitions.
 
         Returns:
-            Batch: batch
+            torch.Tensor: evaluated TD-return.
         """
-        action = self.policy.predict(batch['next_states'])
-        target = batch['rewards'] + self.gamma * (1 - batch['masks']) * self.target_qvalue(action)
-        batch[self] = target - self.q_value(batch['states'])
-        return batch
+        target = self._target(batch, store=False)
+        return target - self._q_value(batch['states'], actions)
 
 
 class TDQLearningReturn(TDReturn):
@@ -161,26 +236,32 @@ class TDQLearningReturn(TDReturn):
         Initialize the TD Q-Learning value return.
 
         Args:
-            q_value (QValueApproximator): Q-value function.
-            target_qvalue (QValueApproximator): target Q-value function. If None, it will use the given
-                :attr:`q_value`.
+            q_value (QValue): Q-value function.
+            target_qvalue (QValue): target Q-value function. If None, it will use the given :attr:`q_value`.
             gamma (float): discount factor
         """
         super(TDQLearningReturn, self).__init__(gamma)
-        self.q_value = q_value
-        if target_qvalue is None:
-            self.target_qvalue = self.q_value
 
-    def evaluate(self, batch):
+        # check Q-value
+        if not isinstance(q_value, QValueOutput):
+            raise TypeError("Expecting the given q_value to be an instance of `QValueOutput`, instead got: "
+                            "{}".format(type(q_value)))
+        self._q_value = q_value
+
+        # check target Q-value
+        if target_qvalue is None:
+            # Warning: using the same value function for the target can lead to unstable behaviors.
+            target_qvalue = q_value
+        self._target = QLearningTarget(q_values=target_qvalue, gamma=gamma)
+
+    def _evaluate(self, batch):
         """Evaluate the TD return on the given batch.
 
         Args:
             batch (Batch): batch containing transitions.
 
         Returns:
-            Batch: batch
+            torch.Tensor: evaluated TD-return.
         """
-        q_max = torch.max(self.target_qvalue(batch['states']), dim=1, keepdim=True)[0]
-        target = batch['rewards'] + self.gamma * (1 - batch['masks']) * q_max
-        batch[self] = target - self.q_value(batch['states'])
-        return batch
+        target = self._target(batch, store=False)
+        return target - self._q_value(batch['states'])

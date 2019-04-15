@@ -17,7 +17,7 @@ from pyrobolearn.storages import Batch
 from pyrobolearn.values import Value, QValue
 from pyrobolearn.policies import Policy
 from pyrobolearn.exploration import Exploration
-from pyrobolearn.returns.estimator import BaseReturn
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -54,31 +54,35 @@ class Target(object):
             targets = []
         self._targets = targets
 
-    def _compute(self, batch):
-        """Compute the target on the given batch, and return the result.
+    def _evaluate(self, batch):
+        """Compute/evaluate the target on the given batch, and return the result.
 
         Args:
             batch (Batch): batch containing the transitions / trajectories.
 
         Returns:
-            torch.Tensor: result of evaluating the batch.
+            torch.Tensor: evaluated targets.
         """
         raise NotImplementedError
 
-    def compute(self, batch):
+    def evaluate(self, batch, store=True):
         """Compute/evaluate the target on the given batch and insert the result in the given batch.
 
         Args:
             batch (Batch): batch containing the transitions / trajectories.
+            store (bool): If True, it will save the evaluation of the target in the given batch.
 
         Returns:
-            Batch: updated batch.
+            torch.Tensor: evaluated targets.
         """
-        batch[self] = self._compute(batch)
-        return batch
+        output = self._evaluate(batch)
+        if store:  # store the target in the batch if specified
+            batch[self] = output
+        return output
 
-    def __call__(self, batch):
-        return self.compute(batch)
+    def __call__(self, batch, store=True):
+        """Evaluate the target on the given batch."""
+        return self.evaluate(batch)
 
 
 class GammaTarget(Target):
@@ -133,7 +137,7 @@ class VTarget(Target):
         self._value = value
         self._flag = flag % 2
 
-    def _compute(self, batch):
+    def _evaluate(self, batch):
         r"""
         Compute :math:`V(s)`.
 
@@ -141,7 +145,7 @@ class VTarget(Target):
             batch (Batch): batch containing the transitions.
 
         Returns:
-            torch.Tensor: result
+            torch.Tensor: evaluated targets.
         """
         if self._flag == 0:
             return self._value(batch['states'])
@@ -177,7 +181,7 @@ class QTarget(Target):
                             "{}".format(type(policy)))
         self._policy = policy
 
-    def _compute(self, batch):
+    def _evaluate(self, batch):
         r"""
         Compute :math:`Q(s, a)` or :math:`Q(s', \pi(s'))`.
 
@@ -185,7 +189,7 @@ class QTarget(Target):
             batch (Batch): batch containing the transitions.
 
         Returns:
-            torch.Tensor: result
+            torch.Tensor: evaluated targets.
         """
         if self._policy is None:
             return self._qvalue(batch['states'], batch['actions'])
@@ -219,7 +223,7 @@ class PolicyTarget(Target):  # TODO
 
         self._flag = flag % 2
 
-    def _compute(self, batch):
+    def _evaluate(self, batch):
         """
         Compute the log-likelihood on the action :math:`a` returned by the policy.
 
@@ -227,7 +231,7 @@ class PolicyTarget(Target):  # TODO
             batch (Batch): batch containing the transitions.
 
         Returns:
-            torch.Tensor: result
+            torch.Tensor: evaluated targets.
         """
         if self._flag == 0:
             return self._policy.predict(batch['states'])
@@ -257,7 +261,7 @@ class ValueTarget(GammaTarget):
                 raise TypeError('The {}th value is not an instance of `Value`, instead got: {}'.format(i, type(value)))
         self._values = values
 
-    def _compute(self, batch):
+    def _evaluate(self, batch):
         r"""
         Compute the value target :math:`(r + \gamma (1-d) \min_i V_{\phi_i}(s'))`
 
@@ -265,10 +269,10 @@ class ValueTarget(GammaTarget):
             batch (Batch): batch containing the transitions.
 
         Returns:
-            torch.Tensor: result
+            torch.Tensor: evaluated targets.
         """
         value = torch.min(torch.cat([value(batch['next_states']) for value in self._values], dim=1), dim=1)[0]
-        return batch['rewards'] + self.gamma * (1 - batch['masks']) * value
+        return batch['rewards'] + self.gamma * batch['masks'] * value
 
 
 class QValueTarget(GammaTarget):
@@ -302,7 +306,7 @@ class QValueTarget(GammaTarget):
             raise TypeError("Expecting the policy to be an instance of `Policy`, instead got: {}".format(type(policy)))
         self._policy = policy
 
-    def _compute(self, batch):
+    def _evaluate(self, batch):
         r"""
         Compute the value target :math:`(r + \gamma (1-d) \min_i Q_{\phi_i}(s',a'))`.
 
@@ -310,12 +314,12 @@ class QValueTarget(GammaTarget):
             batch (Batch): batch containing the transitions.
 
         Returns:
-            torch.Tensor: result
+            torch.Tensor: evaluated targets.
         """
-        actions = self._policy.predict(batch['next_states'])
-        value = torch.min(torch.cat([value(batch['next_states'], actions) for value in self._q_values], dim=1), dim=1)[
-            0]
-        return batch['rewards'] + self.gamma * (1 - batch['masks']) * value
+        next_states = batch['next_states']
+        actions = self._policy.predict(next_states)
+        value = torch.min(torch.cat([value(next_states, actions) for value in self._q_values], dim=1), dim=1)[0]
+        return batch['rewards'] + self.gamma * batch['masks'] * value
 
 
 class QLearningTarget(GammaTarget):
@@ -341,7 +345,7 @@ class QLearningTarget(GammaTarget):
                 raise TypeError('The {}th value is not an instance of `QValue`, instead got: {}'.format(i, type(value)))
         self._q_values = q_values
 
-    def _compute(self, batch):
+    def _evaluate(self, batch):
         r"""
         Compute the value target :math:`(r + \gamma (1-d) \min_i \max_{a'} Q_{\phi_i}(s',a'))`.
 
@@ -349,11 +353,12 @@ class QLearningTarget(GammaTarget):
             batch (Batch): batch containing the transitions.
 
         Returns:
-            torch.Tensor: result
+            torch.Tensor: evaluated targets.
         """
-        q_max = [torch.max(value(batch['next_states']), dim=1, keepdim=True)[0] for value in self._q_values]
+        next_states = batch['next_states']
+        q_max = [torch.max(q_value(next_states), dim=1, keepdim=True)[0] for q_value in self._q_values]
         value = torch.min(torch.cat(q_max, dim=1), dim=1)[0]
-        return batch['rewards'] + self.gamma * (1 - batch['masks']) * value
+        return batch['rewards'] + self.gamma * batch['masks'] * value
 
 
 class EntropyValueTarget(Target):
@@ -392,7 +397,7 @@ class EntropyValueTarget(Target):
 
         self._alpha = float(alpha)
 
-    def _compute(self, batch):
+    def _evaluate(self, batch):
         r"""
         Compute the entropy regularized Q-value target
         :math:`min_i Q_{\phi_i}(s, \tilde{a}) - \alpha \log \pi_\theta(\tilde{a}|s)`, where
@@ -402,7 +407,7 @@ class EntropyValueTarget(Target):
             batch (Batch): batch containing the transitions.
 
         Returns:
-            torch.Tensor: result
+            torch.Tensor: evaluated targets.
         """
         actions, distribution = self._policy.predict(batch['states'])
         value = torch.min(torch.cat([value(batch['states'], actions) for value in self._q_values], dim=1), dim=1)[0]
