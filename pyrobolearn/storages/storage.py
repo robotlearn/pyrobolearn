@@ -582,6 +582,10 @@ class DictStorage(dict, PyTorchStorage):
             default = self._to(default, device=self.device, dtype=self.dtype)
         super(DictStorage, self).setdefault(key, default)
 
+    def end(self, *args, **kwargs):
+        """End; fill the remaining value. This has to be inherited in the child classes."""
+        pass
+
     #############
     # Operators #
     #############
@@ -650,7 +654,7 @@ class RolloutStorage(DictStorage):
         print("\nStorage: state shape: {}".format(state_shapes))
         print("Storage: action shape: {}".format(action_shapes))
         super(RolloutStorage, self).__init__()
-        self._step = 0
+        self._step = np.zeros(int(num_trajectories), dtype=np.int)
         self._num_steps = int(num_steps)
         self._num_trajectories = int(num_trajectories)
         self._shifts = {}  # dictionary that maps the key to the time shift; this is add to the current time step
@@ -684,10 +688,10 @@ class RolloutStorage(DictStorage):
     # Methods #
     ###########
 
-    def step(self):
+    def step(self, rollout_idx=0):
         """Perform one step; increment by one the current step. If it reaches the end, start from 0 again."""
         # if end of storage, go at the beginning
-        self._step = (self._step + 1) % self.num_steps
+        self._step[rollout_idx] = (self._step[rollout_idx] + 1) % self.num_steps
 
     def create_new_entry(self, key, shapes, num_steps=None, dtype=torch.dtype):
         """Create a new entry (=tensor) in the rollout storage dictionary. The tensor will have the dimension
@@ -763,7 +767,7 @@ class RolloutStorage(DictStorage):
         """
         # clear itself: remove all items from the DictStorage, and reset all variables
         self.clear()
-        self._step = 0
+        self._step = np.zeros(int(num_trajectories), dtype=np.int)
         self._num_steps = int(num_steps)
         self._num_trajectories = int(num_trajectories)
 
@@ -794,27 +798,30 @@ class RolloutStorage(DictStorage):
         # space for log probabilities on policy, distributions, scalar values from value functions,
         # recurrent hidden states, and others have to be allocated outside the class
 
-    def reset(self, init_states=None):
-        """Reset the storage by copying the last value and setting it to the first value."""
-        # for key, value in self.iteritems():
-        #     if isinstance(value, list):
-        #         for idx, item in enumerate(value):
-        #             if isinstance(item, torch.Tensor) and len(item) == self.num_steps + 1:
-        #                 item[0].copy_(item[-1])
-        #     elif isinstance(value, torch.Tensor) and len(value) == self.num_steps + 1:
-        #             self[key][0].copy_(self[key][-1])
+    def reset(self, init_states=None, rollout_idx=0, *args, **kwargs):
+        """Reset the storage by copying the last value and setting it to the first value.
+
+        Args:
+            init_states (torch.Tensor, list of torch.Tensor): (list of) initial state(s) / observation(s).
+            rollout_idx (int, torch.tensor, np.array, list): trajectory/rollout index(ices). This index must be below
+                `self.num_trajectories`.
+        """
+        # reset the step
+        self._step[rollout_idx] = 0
+
+        # insert initial states
         if init_states is None:
             for state in self.states:
-                state[0].copy_(state[-1])
+                state[0][rollout_idx].copy_(state[-1][rollout_idx])
         else:
             if not isinstance(init_states, list):
                 init_states = [init_states]
             for observation, value in zip(self.states, init_states):
-                observation[0].copy_(self._convert_to_tensor(value))
-        self.masks[0].copy_(self.masks[-1])
+                observation[0][rollout_idx].copy_(self._convert_to_tensor(value))
+        self.masks[0][rollout_idx].copy_(self.masks[-1][rollout_idx])
         # self.recurrent_hidden_states[0].copy_(self.recurrent_hidden_states[-1])
 
-    def update_tensor(self, key, values, step=None, copy=True):
+    def update_tensor(self, key, values, step=None, rollout_idx=None, copy=True):
         """
         Update one particular (or several) tensor(s) in the dictionary at the specified time step. It will convert the
         given value tensors to the correct data type if not already done.
@@ -823,12 +830,14 @@ class RolloutStorage(DictStorage):
             key (object): dictionary key
             values ((list of) torch.Tensor, np.array, int, float, np.generic): items
             step (None, int): the time step.
+            rollout_idx (int, torch.tensor, np.array, list): trajectory/rollout index(ices). This index must be below
+                `self.num_trajectories`.
             copy (bool): if the item(s) should be copied. If False, it will not copy the item(s). Note that if you
                 modify these item(s) outside the storage, it will be reflected in the storage as well.
         """
         # check the given time step
         if step is None:
-            step = self._step
+            step = self._step[rollout_idx]
 
         # check if the key is inside the storage
         if key in self:
@@ -838,16 +847,16 @@ class RolloutStorage(DictStorage):
                 # if torch tensor
                 if isinstance(tensor, torch.Tensor):
                     if copy:
-                        tensor[step].copy_(self._convert_to_tensor(value))
+                        tensor[step][rollout_idx].copy_(self._convert_to_tensor(value))
                     else:
-                        tensor[step] = self._convert_to_tensor(value)
+                        tensor[step][rollout_idx] = self._convert_to_tensor(value)
 
                 # if numpy array
                 elif isinstance(tensor, np.ndarray):
                     if copy:
-                        tensor[step] = np.copy(value)
+                        tensor[step][rollout_idx] = np.copy(value)
                     else:
-                        tensor[step] = value
+                        tensor[step][rollout_idx] = value
 
             # if we have a list of tensors at the specified key
             if isinstance(self[key], list):
@@ -866,7 +875,8 @@ class RolloutStorage(DictStorage):
             else:
                 set_tensor(self[key], step, values, copy=copy)
 
-    def insert(self, states, actions, reward, mask, distributions=None, update_step=True, **kwargs):
+    def insert(self, states, actions, next_states, reward, mask, distributions=None, update_step=True, rollout_idx=0,
+               **kwargs):
         # distributions, values=None):
         # recurrent_hidden_state, action_log_prob):
         """
@@ -874,46 +884,50 @@ class RolloutStorage(DictStorage):
 
         Args:
             states (torch.Tensor, list of torch.Tensor): (list of) state(s) / observation(s).
-            actions (torch.Tensor, list of torch.Tensor): (list of) action(s)
+            actions (torch.Tensor, list of torch.Tensor): (list of) action(s).
+            next_states (torch.Tensor, list of torch.Tensor): (list of) next state(s) / observation(s).
             reward (float, int, torch.Tensor): reward value
             mask (float, int, torch.Tensor): masks. They are set to zeros after an episode has terminated.
             distributions (torch.distributions.Distribution, None): action distribution.
             update_step (bool): if True, it will update the current time step. If False, the user needs to call
                 `step()` in order to update it.
+            rollout_idx (int, torch.tensor, np.array, list): trajectory/rollout index(ices). This index must be below
+                `self.num_trajectories`.
             **kwargs (dict): dictionary containing other parameters to update in the storage. The other parameters
                 had to be added using the `create_new_entry()` method.
         """
         print("Storage - insert state: {}".format(states))
         print("Storage - insert action: {}".format(actions))
+        t = self._step[rollout_idx]
 
         # check given observations/states and actions
-        if not isinstance(states, list):
-            states = [states]
+        if not isinstance(next_states, list):
+            next_states = [next_states]
         if not isinstance(actions, list):
             actions = [actions]
         if not isinstance(distributions, list):
             distributions = [distributions]
 
         # insert each observation / action
-        for observation, storage in zip(states, self.states):
-            storage[self._step + 1].copy_(self._convert_to_tensor(observation))
-        for action, storage in zip(actions, self.actions):
-            storage[self._step].copy_(self._convert_to_tensor(action))
+        for observation, storage in zip(next_states, self['states']):
+            storage[t + 1][rollout_idx].copy_(self._convert_to_tensor(observation))
+        for action, storage in zip(actions, self['actions']):
+            storage[t][rollout_idx].copy_(self._convert_to_tensor(action))
 
         # insert rewards and masks
-        self.rewards[self._step].copy_(self._convert_to_tensor(reward))
+        self['rewards'][t][rollout_idx].copy_(self._convert_to_tensor(reward))
         if mask is None:
             mask = torch.tensor(1.)
-        self.masks[self._step + 1].copy_(self._convert_to_tensor(mask))
+        self['masks'][t + 1][rollout_idx].copy_(self._convert_to_tensor(mask))
 
         # insert distributions
-        for distribution, storage in zip(distributions, self.distributions):
-            storage[self._step] = distribution
+        for distribution, storage in zip(distributions, self['distributions']):
+            storage[t][rollout_idx] = distribution
 
         # add other elements
         for key, value in kwargs:
             if key in self and key in self._shifts:
-                self.update_tensor(key, value, step=self._step+self._shifts[key], copy=True)
+                self.update_tensor(key, value, step=self._step+self._shifts[key], rollout_idx=rollout_idx, copy=True)
             else:
                 raise ValueError("The given keys in kwargs do not exist in this storage or in its 'shift' dictionary.")
 
@@ -954,6 +968,16 @@ class RolloutStorage(DictStorage):
 
         # return batch (which is given to the updater (and loss))
         return Batch(batch, device=self.device, dtype=self.dtype)
+
+    def end(self, rollout_idx=0, *args, **kwargs):
+        """Once arrived at the end of an episode, it will fill the remaining mask values.
+
+        Args:
+            rollout_idx (int, torch.tensor, np.array, list): trajectory/rollout index(ices). This index must be below
+                `self.num_trajectories`.
+        """
+        t = self._step[rollout_idx]
+        self['masks'][t+1:, rollout_idx] = torch.zeros(self.num_steps - t, 1)
 
     #############
     # Operators #

@@ -127,4 +127,21 @@ class QP(object):
         return np.allclose(X, X.T, atol=tol)
 
     def optimize(self, P, q, x0=None, G=None, h=None, A=None, b=None):
+        r"""
+        Optimize the given quadratic problem.
+
+        .. math::
+
+            \min_{x \in R^n} \frac{1}{2} x^T P x + q^T x
+
+        subject to
+
+        .. math::
+
+            Gx \leq h
+            Ax = b
+
+        Returns:
+            np.array: QP solution
+        """
         return qpsolvers.solve_qp(P, q, G, h, A, b, solver=self.method, initvals=x0, sym_proj=self.sym_proj)

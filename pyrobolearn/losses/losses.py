@@ -43,14 +43,19 @@ class L2Loss(Loss):
         self._predictor = predictor
 
     def compute(self, batch):
+        # get target data
         if self._target in batch:
             target = batch[self._target]
         else:
             target = self._target(batch)
+
+        # get predicted data
         if self._predictor in batch:
             output = batch[self._predictor]
         else:
             output = self._predictor(batch)
+
+        # compute L2 loss
         return 0.5 * (target - output).pow(2).mean()
 
 

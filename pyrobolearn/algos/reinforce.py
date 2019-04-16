@@ -196,7 +196,7 @@ class REINFORCE(GradientRLAlgo):
         estimator = ActionRewardEstimator(storage, gamma=gamma)
 
         # create loss for policy
-        loss = PGLoss()
+        loss = PGLoss(estimator)
 
         # create optimizer for policy (and possibly value function)
         optimizer = Adam(learning_rate=lr)

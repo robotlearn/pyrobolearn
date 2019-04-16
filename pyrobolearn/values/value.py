@@ -81,6 +81,10 @@ class ValueApproximator(object):
     # Methods #
     ###########
 
+    def reset(self):
+        """Reset the value approximator."""
+        pass
+
     def evaluate(self, *args, **kwargs):
         """Predict the value."""
         pass

@@ -16,6 +16,7 @@ from pyrobolearn.values import ParametrizedQValueOutput
 from pyrobolearn.exploration import EpsilonGreedyActionExploration
 
 from pyrobolearn.storages import ExperienceReplay
+from pyrobolearn.samplers import BatchRandomSampler
 from pyrobolearn.returns import TDQLearningReturn
 from pyrobolearn.losses import MSBELoss, HuberLoss
 from pyrobolearn.optimizers import Adam
@@ -139,14 +140,17 @@ class DQN(GradientRLAlgo):
         # create action exploration strategy
         exploration = EpsilonGreedyActionExploration(policy=policy, action=policy.actions)
 
-        # create experience replay
+        # create experience replay and sampler
         storage = ExperienceReplay(capacity=capacity)
+        sampler = BatchRandomSampler(storage)
 
         # create target return estimator
-        estimator = TDQLearningReturn(q_value=q_value, target_qvalue=q_target, gamma=gamma)
+        # target = QLearningTarget(q_values=q_target, gamma=gamma)
+        td_return = TDQLearningReturn(q_value=q_value, target_qvalue=q_target, gamma=gamma)
 
         # create loss
-        loss = HuberLoss(MSBELoss(td_return=estimator), delta=1.)
+        # loss = HuberLoss(L2Loss(target=target, predictor=q_value))
+        loss = HuberLoss(MSBELoss(td_return=td_return), delta=1.)
 
         # create optimizer
         optimizer = Adam(learning_rate=lr)
@@ -156,8 +160,9 @@ class DQN(GradientRLAlgo):
 
         # define the 3 main steps in RL: explore, evaluate, and update
         explorer = Explorer(task, exploration, storage, num_workers=num_workers)
-        evaluator = Evaluator(estimator)
-        updater = Updater(policy, storage, loss, optimizer, updaters={target_updater: q_target})
+        evaluator = Evaluator(None)  # off-policy
+        updater = Updater(policy, sampler, loss, optimizer, evaluators=[td_return],
+                          updaters={target_updater: q_target})
 
         # initialize RL algorithm
         super(DQN, self).__init__(explorer, evaluator, updater)

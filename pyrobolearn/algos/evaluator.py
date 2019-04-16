@@ -27,6 +27,8 @@ class Evaluator(object):
     3. Update: Update the policy (and/or value function) parameters based on the loss
 
     This class focuses on the second step of RL algorithms.
+
+    Note that step is used in the on-policy case, where we evaluate complete trajectories based on estimators
     """
 
     def __init__(self, estimator):

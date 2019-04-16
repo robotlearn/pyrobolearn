@@ -290,7 +290,7 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
         # space for log probabilities on policy, distributions, scalar values from value functions,
         # recurrent hidden states, and others have to be allocated outside the class
 
-    def reset(self):
+    def reset(self, *args, **kwargs):
         """Reset the experience replay storage."""
         pass
 
@@ -300,16 +300,16 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
         # super(ExperienceReplayStorage, self).clear()
         super(ExperienceReplay, self).clear()
 
-    def insert(self, states, actions, reward, mask, next_states, **kwargs):
+    def insert(self, states, actions, next_states, reward, mask, **kwargs):
         """
         Insert the given parameters into the storage.
 
         Args:
             states (torch.Tensor, list of torch.Tensor): (list of) state(s) / observation(s).
             actions (torch.Tensor, list of torch.Tensor): (list of) action(s).
+            next_states (torch.Tensor, list of torch.Tensor): (list of) next state(s) / observation(s).
             reward (float, int, torch.Tensor): reward value.
             mask (float, int, torch.Tensor): masks. They are set to zeros after an episode has terminated.
-            next_states (torch.Tensor, list of torch.Tensor): (list of) next state(s) / observation(s).
             **kwargs (dict): kwargs
         """
         print("ER - insert state: {}".format(states))

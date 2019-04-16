@@ -21,8 +21,34 @@ class Controller(object):
     programming.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, rate=1):
+        """
+        Initialize the controller.
+
+        Args:
+            rate (int, float): rate (float) at which the controller operates if we are operating in real-time. If we
+                are stepping deterministically in the simulator, it represents the number of ticks (int) to sleep
+                before executing the model.
+        """
+        self.rate = rate
+
+    ##############
+    # Properties #
+    ##############
+
+    @property
+    def rate(self):
+        """Return the rate."""
+        return self._rate
+
+    @rate.setter
+    def rate(self, rate):
+        """Set the rate."""
+        if not isinstance(rate, int):
+            raise TypeError("Expecting the given 'rate' to be an int, instead got: {}".format(type(rate)))
+        if rate <= 0:
+            raise ValueError("Expecting the rate to be positive, instead got: {}".format(rate))
+        self._rate = rate
 
     ###########
     # Methods #
@@ -34,6 +60,12 @@ class Controller(object):
     #############
     # Operators #
     #############
+
+    def __repr__(self):
+        return self.__class__.__name__
+
+    def __str__(self):
+        return self.__class__.__name__
 
     def __call__(self, *args, **kwargs):
         return self.act(*args, **kwargs)

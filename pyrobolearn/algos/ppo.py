@@ -17,7 +17,7 @@ from pyrobolearn.exploration import ActionExploration
 from pyrobolearn.storages import RolloutStorage
 from pyrobolearn.samplers import BatchRandomSampler
 from pyrobolearn.returns import GAE
-from pyrobolearn.losses import CLIPLoss, ValueLoss, EntropyLoss
+from pyrobolearn.losses import CLIPLoss, L2Loss, EntropyLoss
 from pyrobolearn.optimizers import Adam
 
 from pyrobolearn import logger
@@ -180,19 +180,21 @@ class PPO(GradientRLAlgo):
         logger.debug('creating the action exploration strategies for each action')
         exploration = ActionExploration(policy)
 
-        # create storage and estimator
+        # create storage and sampler
         states, actions = policy.states, policy.actions
         logger.debug('create rollout storage')
         storage = RolloutStorage(num_steps=1000, state_shapes=states.merged_shape,
                                  action_shapes=actions.merged_shape, num_trajectories=num_workers)
-        logger.debug('create return estimator (GAE)')
-        estimator = GAE(storage, gamma=gamma, tau=tau)
         logger.debug('create storage sampler')
         sampler = BatchRandomSampler(storage)
 
+        # create estimator
+        logger.debug('create return estimator (GAE)')
+        estimator = GAE(storage, gamma=gamma, tau=tau)
+
         # create loss
         logger.debug('create loss')
-        loss = CLIPLoss(clip=clip) + l2_coeff * ValueLoss() + entropy_coeff * EntropyLoss()
+        loss = CLIPLoss(estimator, clip=clip) + l2_coeff * L2Loss(estimator, value) + entropy_coeff * EntropyLoss()
 
         # create optimizer
         logger.debug('create Adam optimizer')

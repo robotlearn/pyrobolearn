@@ -205,7 +205,7 @@ class RLAlgo(object):  # Algo):
     @evaluator.setter
     def evaluator(self, evaluator):
         """Set the evaluator for the 2nd phase of RL algorithms."""
-        if not isinstance(evaluator, Evaluator):
+        if evaluator is not None and not isinstance(evaluator, Evaluator):
             raise TypeError("Expecting the evaluator to be an instance of `Evaluator`, instead got: "
                             "{}".format(type(evaluator)))
         self._evaluator = evaluator
@@ -266,11 +266,14 @@ class RLAlgo(object):  # Algo):
     # Methods #
     ###########
 
-    def init(self, explorer, evaluator, updater):
-        """Initialize the RL algo."""
-        self.explorer = explorer
-        self.evaluator = evaluator
-        self.updater = updater
+    def init(self, *args, **kwargs):
+        pass
+
+    # def init(self, explorer, evaluator, updater):
+    #     """Initialize the RL algo."""
+    #     self.explorer = explorer
+    #     self.evaluator = evaluator
+    #     self.updater = updater
 
     def rollout(self, deterministic=True):
         """
@@ -307,8 +310,8 @@ class RLAlgo(object):  # Algo):
         Train the policy in the provided environment.
 
         Args:
-            num_steps (int): number of step per rollout
-            num_rollouts (int): number of rollouts per episode (default: 1)
+            num_steps (int): number of step per rollout/trajectory
+            num_rollouts (int): number of rollouts/trajectories per episode (default: 1)
             num_episodes (int): number of episodes (default: 1)
             verbose(bool): if True, print details about the optimization process
             seed (int): random seed
@@ -329,8 +332,9 @@ class RLAlgo(object):  # Algo):
                 # TODO: consider to learn the dynamic model if provided
 
                 # Explore, evaluate, and update
-                self.explorer(num_steps)
-                self.evaluator()
+                self.explorer(num_steps, rollout)
+                if self.evaluator is not None:
+                    self.evaluator()
                 loss = self.updater()
 
                 # add the loss in the history
@@ -384,12 +388,8 @@ class GradientRLAlgo(RLAlgo):
         TD residual,...)
     """
 
-    # def __init__(self, task, exploration_strategy, memory, hyperparameters):
-    #    super(GradientRLAlgo, self).__init__(task, exploration_strategy, memory, hyperparameters)
-    def __init__(self, explorer, evaluator, updater, hyperparameters=None, dynamic_model=None):  # , num_workers=1):
+    def __init__(self, explorer, evaluator, updater, hyperparameters=None, dynamic_model=None):
         super(GradientRLAlgo, self).__init__(explorer, evaluator, updater, hyperparameters, dynamic_model)
-        # , num_workers)
-        # self.optimizer = hyperparameters.get('optimizer') #TODO
 
 
 class EMRLAlgo(RLAlgo):

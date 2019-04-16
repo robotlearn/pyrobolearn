@@ -6,8 +6,8 @@ import torch
 
 from pyrobolearn.losses.loss import Loss
 from pyrobolearn.policies import Policy
-from pyrobolearn.values import QValue
-from pyrobolearn.returns import TDReturn
+from pyrobolearn.values import QValue, Value
+from pyrobolearn.returns import TDReturn, Estimator, Return
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -22,12 +22,32 @@ __status__ = "Development"
 class ValueLoss(Loss):
     r"""L2 loss for values
     """
-    def __init__(self):
+
+    def __init__(self, returns, value):
+        """
+        Initialize the L2 loss between the returns and values.
+
+        Args:
+            returns ():
+            value (Value): value function approximator.
+        """
         super(ValueLoss, self).__init__()
 
+        # check the given returns or estimators
+        if not isinstance(returns, (Estimator, Return)):
+            raise TypeError("Expecting the given 'returns' to be an instance of `Estimator` or `Return`, instead got: "
+                            "{}".format(type(returns)))
+        self._returns = returns
+
+        # check the given value approximator
+        if not isinstance(value, Value):
+            raise TypeError("Expecting the given 'value' to be an instance of `Value`, instead got: "
+                            "{}".format(type(value)))
+        self._value = value
+
     def compute(self, batch):
-        returns = batch['returns']
-        values = batch.current['values']
+        returns = batch[self._returns]
+        values = batch.current[self._value]
         return 0.5 * (returns - values).pow(2).mean()
 
 

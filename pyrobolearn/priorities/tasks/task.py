@@ -167,7 +167,8 @@ class Task(object):
     @weight.setter
     def weight(self, weight):
         if not isinstance(weight, (int, float)):
-            raise TypeError("Expecting the relative weight to be an int or float, instead got: {}".format(type(weight)))
+            raise TypeError("Expecting the relative weight to be an int or float, instead got: "
+                            "{}".format(type(weight)))
         if weight < 0:
             raise ValueError("Expecting the relative weight to be positive.")
         self._weight = weight
@@ -193,6 +194,8 @@ class Task(object):
 
     def _update(self):
         """Update the task.
+
+        Compute the A matrix and b vector that will be used by the task solver.
 
         Returns:
             np.array: A matrix used in QP.

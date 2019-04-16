@@ -41,7 +41,7 @@ class Updater(object):
     This class focuses on the third step of RL algorithms.
     """
 
-    def __init__(self, approximators, sampler, losses, optimizers, updaters=None, subevaluators=None, delays=None):
+    def __init__(self, approximators, sampler, losses, optimizers, evaluators=None, updaters=None, delays=None):
         """
         Initialize the update phase.
 
@@ -51,8 +51,8 @@ class Updater(object):
             losses (Loss, list/dict of losses): losses. If dict: key=approximator, value=loss.
             optimizers (Optimizer, or list/dict of optimizers): optimizer to use. If dict: key=approximator,
                 value=optimizer.
+            evaluators (list of Estimator/Return): list of sub-evaluators that are evaluated on batches.
             updaters (None, dictionary, list of tuple): list of parameter updaters to run at the end.
-            subevaluators (list of Estimator/Return): list of sub-evaluators that are evaluated on batches.
             delays (None, dictionary): dictionary containing as the key the number of time steps to wait before
                 updating the specified values (can be the updaters or losses).
         """
@@ -61,6 +61,9 @@ class Updater(object):
         self.losses = losses
         self.optimizers = optimizers
         self._evaluator = ApproximatorEvaluator(approximators)
+
+        self.evaluators = evaluators
+        self.updaters = updaters
 
     ##############
     # Properties #

@@ -45,7 +45,7 @@ class Explorer(object):
         Args:
             task (Task, Env, tuple of Env and Policy): RL task or environment.
             explorer (Exploration): policies.
-            storage (RolloutStorage): Rollout storage unit (=replay memory). It will save the rollouts in the storage
+            storage (DictStorage): Rollout storage unit (=replay memory). It will save the rollouts in the storage
                 while exploring.
             num_workers (int): number of processes / workers to run in parallel.
         """
@@ -122,7 +122,7 @@ class Explorer(object):
     # Methods #
     ###########
 
-    def explore(self, num_steps, deterministic=False):
+    def explore(self, num_steps, rollout_idx=0, deterministic=False):
         """
         Explore the environment.
 
@@ -134,11 +134,11 @@ class Explorer(object):
             Rollout: memory storage
         """
         # reset environment
-        obs = self.env.reset()
-        print("\nExplorer - initial state: {}".format(obs))
+        observation = self.env.reset()
+        print("\nExplorer - initial state: {}".format(observation))
 
         # reset storage
-        self.storage.reset(init_observations=obs)
+        self.storage.reset(init_states=observation, rollout_idx=rollout_idx)
 
         # reset explorer
         self.explorer.reset()
@@ -146,27 +146,34 @@ class Explorer(object):
         # run RL task for T steps
         for step in range(num_steps):
             # get action and corresponding distribution from policy
-            act, dist = self.explorer.act(obs, deterministic=deterministic)
+            action, distribution = self.explorer.act(observation, deterministic=deterministic)
 
             # perform one step in the environment
-            next_obs, reward, done, info = self.env.step(act)
+            next_observation, reward, done, info = self.env.step(action)
 
             # insert in storage
             print("\nExplorer:")
-            print("1. Observation data: {}".format(obs))  # .merged_torch_data))
-            print("2. Action data: {}".format(act))
-            print("3. Next observation data: {}".format(next_obs))  # merged_torch_data))
+            print("1. Observation data: {}".format(observation))
+            print("2. Action data: {}".format(action))
+            print("3. Next observation data: {}".format(next_observation))
             print("4. Reward: {}".format(reward))
-            print("5. \\pi(.|s): {}".format(dist))
-            print("6. log \\pi(a|s): {}".format([d.log_prob(act) for d in dist]))
+            print("5. \\pi(.|s): {}".format(distribution))
+            print("6. log \\pi(a|s): {}".format([d.log_prob(action) for d in distribution]))
 
-            self.storage.insert(next_obs, act, reward, mask=done, distributions=dist)
+            self.storage.insert(observation, action, next_observation, reward, mask=(1-done),
+                                distributions=distribution, rollout_idx=rollout_idx)
 
-            raw_input('enter')
-
-            obs = next_obs
+            observation = next_observation
             if done:
+                self.storage.end(rollout_idx)  # fill remaining mask values
                 break
+
+        # print("states: {}".format(self.storage['states']))
+        print("actions: {}".format(self.storage['actions']))
+        print("rewards: {}".format(self.storage['rewards']))
+        # print("masks: {}".format(self.storage['masks']))
+        # print("distributions: {}".format(self.storage['distributions']))
+        raw_input('enter')
 
         # # clear explorer
         # self.explorer.clear()
@@ -185,6 +192,6 @@ class Explorer(object):
         """Return a string describing the class."""
         return self.__class__.__name__
 
-    def __call__(self, num_steps):
+    def __call__(self, num_steps, rollout_idx=0):
         """Explore in the environment with the specified number of time steps."""
-        self.explore(num_steps)
+        self.explore(num_steps, rollout_idx=rollout_idx)
