@@ -198,7 +198,7 @@ class ActionExploration(Exploration):
                     action_data, action_distribution = self.explore(action_data)
 
                 # post-process the action data
-                self.policy.postprocess(action_data)
+                action_data = self.policy.postprocess(action_data)
 
                 # set the action data
                 self.action_data = self.policy.set_action_data(action_data, to_numpy=to_numpy,

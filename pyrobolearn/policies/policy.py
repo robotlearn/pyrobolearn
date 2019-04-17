@@ -482,17 +482,28 @@ class Policy(object):
         for idx, (action, data) in enumerate(zip(self.actions, action_data)):
             if action.is_discrete():  # discrete action
                 if isinstance(data, np.ndarray):  # data action is a numpy array
-                    discrete_data = np.array([np.argmax(data)])
-                    action.data = discrete_data
-                    if not return_logits:
-                        action_data[idx] = discrete_data
+                    # check if given logits or not
+                    if data.shape[-1] == 1:  # no logits
+                        action.data = data
+                    else:  # given logits
+                        discrete_data = np.array([np.argmax(data)])
+                        action.data = discrete_data
+
+                        # if we do not want the logits in the action data, replace it by the discrete data
+                        if not return_logits:
+                            action_data[idx] = discrete_data
+
                 elif isinstance(data, torch.Tensor):  # data action is a torch.Tensor
-                    discrete_data = torch.argmax(data, dim=0, keepdim=True)
-                    action.torch_data = discrete_data
-                    if not return_logits:
-                        action_data[idx] = self.__convert_to_numpy(discrete_data, to_numpy=to_numpy)
-                    else:
-                        action_data[idx] = self.__convert_to_numpy(data, to_numpy=to_numpy)
+                    # check if given logits or not
+                    if data.shape[-1] == 1:  # no logits
+                        action.torch_data = data
+                    else:  # given logits
+                        discrete_data = torch.argmax(data, dim=-1, keepdim=True)
+                        action.torch_data = discrete_data
+                        if not return_logits:
+                            action_data[idx] = self.__convert_to_numpy(discrete_data, to_numpy=to_numpy)
+                        else:
+                            action_data[idx] = self.__convert_to_numpy(data, to_numpy=to_numpy)
                 # elif isinstance(data, (float, int)):
                 #     discrete_data = np.argmax(data)
                 #     action.data = discrete_data

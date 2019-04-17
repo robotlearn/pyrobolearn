@@ -147,9 +147,7 @@ class RLAlgo(object):  # Algo):
         [5] OpenAI - Spinning Up: https://spinningup.openai.com/
     """
 
-    # def __init__(self, rlTask, exploration_strategy, storage, hyperparameters, optimizer=None, dynamic_model=None,
-    #              num_workers=1):
-    def __init__(self, explorer, evaluator, updater, hyperparameters={}, dynamic_model=None):  # , num_workers=1):
+    def __init__(self, explorer, evaluator, updater, dynamic_model=None):  # , hyperparameters={}, num_workers=1):
         """
         Initialize the reinforcement learning algorithm.
 
@@ -157,9 +155,7 @@ class RLAlgo(object):  # Algo):
             explorer (Explorer): explorer that specifies how to explore in the environment
             evaluator (Evaluator): evaluate the actions
             updater (Updater): update the approximators (rl, value-functions,...)
-            hyperparameters (dict): dictionary containing the hyperparameters
             dynamic_model (None): dynamical model
-            num_workers (int): number of workers (useful when parallelizing the code)
         """
 
         super(RLAlgo, self).__init__()
@@ -171,11 +167,6 @@ class RLAlgo(object):  # Algo):
 
         self.env = self.environment
         self.dynamic_model = dynamic_model
-
-        # self.episodes = hyperparameters.get('episodes', 1) # nb of episodes
-        # self.rollouts = hyperparameters.get('rollouts', 1) # nb of rollouts per episode
-        # self.timesteps = hyperparameters.get('timesteps', 1000) # nb of timesteps per rollout
-        # TODO: define the number of iterations
 
         self.best_reward = -np.infty
         self.best_parameters = None
@@ -235,7 +226,7 @@ class RLAlgo(object):  # Algo):
     @property
     def policy(self):
         """Return the policy."""
-        return self.task.policy
+        return self.explorer.policy
 
     @property
     def exploration_strategy(self):
@@ -245,7 +236,9 @@ class RLAlgo(object):  # Algo):
     @property
     def estimator(self):
         """Return the estimator."""
-        return self.evaluator.estimator
+        if self.evaluator is not None:
+            return self.evaluator.estimator
+        return None
 
     @property
     def storage(self):
@@ -266,7 +259,18 @@ class RLAlgo(object):  # Algo):
     # Methods #
     ###########
 
-    def init(self, *args, **kwargs):
+    def init(self, num_steps, num_rollouts, num_episodes, seed=None, *args, **kwargs):
+        """
+        Initialize the reinforcement learning algorithm.
+
+        Args:
+            num_steps (int): number of step per rollout/trajectory
+            num_rollouts (int): number of rollouts/trajectories per episode (default: 1)
+            num_episodes (int): number of episodes (default: 1)
+            seed (int): random seed
+            *args (list): list of optional arguments.
+            **kwargs (dict): dictionary of optional arguments.
+        """
         pass
 
     # def init(self, explorer, evaluator, updater):
@@ -274,36 +278,6 @@ class RLAlgo(object):  # Algo):
     #     self.explorer = explorer
     #     self.evaluator = evaluator
     #     self.updater = updater
-
-    def rollout(self, deterministic=True):
-        """
-        Run the policy in the environment.
-        """
-        # Reset the environment
-        state = self.env.reset()
-
-        if deterministic:
-            self.explorer.disable()
-
-        # Run policy in environment for T time steps
-        total_reward = 0
-        for _ in range(self.timesteps):
-            # run policy given the state
-            prev_state = state
-            action = self.policy.act(state, self.exploration)
-
-            # run one step in the environment
-            state, reward, done, info = self.env.step(action)
-            total_reward += reward
-
-            # save (s,a,s',r) in storage
-            self.storage.add(prev_state, action, state, reward)
-
-            # if episode is done
-            if done:
-                break
-
-        return total_reward
 
     def train(self, num_steps, num_rollouts=1, num_episodes=1, verbose=False, seed=None):
         """
@@ -320,6 +294,9 @@ class RLAlgo(object):  # Algo):
             dict: history
         """
         history = {}
+
+        # init algo with the given parameters
+        self.init(num_steps=num_steps, num_rollouts=num_rollouts, num_episodes=num_episodes, seed=seed)
 
         # set the policy in training mode
         self.policy.train()
@@ -347,7 +324,7 @@ class RLAlgo(object):  # Algo):
 
     def test(self, num_steps, dt=0., use_terminating_condition=False, render=True):  # , storage):
         """
-        Test the policy in the environment.
+        Test the policy in the environment; perform one rollout.
 
         Args:
             num_steps (int): number of steps
@@ -368,9 +345,11 @@ class RLAlgo(object):  # Algo):
     #############
 
     def __repr__(self):
+        """Return a representation string about the object."""
         return self.__class__.__name__
 
     def __str__(self):
+        """Return a string describing the object."""
         return self.__class__.__name__
 
 
@@ -388,14 +367,13 @@ class GradientRLAlgo(RLAlgo):
         TD residual,...)
     """
 
-    def __init__(self, explorer, evaluator, updater, hyperparameters=None, dynamic_model=None):
-        super(GradientRLAlgo, self).__init__(explorer, evaluator, updater, hyperparameters, dynamic_model)
+    def __init__(self, explorer, evaluator, updater, dynamic_model=None):  # hyperparameters=None)
+        super(GradientRLAlgo, self).__init__(explorer, evaluator, updater, dynamic_model)
 
 
 class EMRLAlgo(RLAlgo):
     r"""Expectation-Maximization reinforcement learning algorithm.
-
     """
 
-    def __init__(self, task, exploration_strategy, storage, hyperparameters):
-        super(EMRLAlgo, self).__init__(task, exploration_strategy, storage, hyperparameters)
+    def __init__(self, task, exploration_strategy, storage, dynamic_model=None):  # hyperparameters=None)
+        super(EMRLAlgo, self).__init__(task, exploration_strategy, storage, dynamic_model)
