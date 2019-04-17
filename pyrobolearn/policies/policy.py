@@ -504,6 +504,10 @@ class Policy(object):
                             action_data[idx] = self.__convert_to_numpy(discrete_data, to_numpy=to_numpy)
                         else:
                             action_data[idx] = self.__convert_to_numpy(data, to_numpy=to_numpy)
+
+                elif isinstance(data, (float, int)):
+                    action.data = int(data)
+                    action_data[idx] = int(data)
                 # elif isinstance(data, (float, int)):
                 #     discrete_data = np.argmax(data)
                 #     action.data = discrete_data
@@ -511,7 +515,7 @@ class Policy(object):
                 #         action_data[idx] = discrete_data
                 else:
                     raise TypeError(
-                        "Expecting the `data` action to be a numpy array or torch.Tensor, instead got: "
+                        "Expecting the `data` action to be an int, numpy array, torch.Tensor, instead got: "
                         "{}".format(type(data)))
             else:  # continuous action
                 if isinstance(data, np.ndarray):
@@ -519,8 +523,8 @@ class Policy(object):
                 elif isinstance(data, torch.Tensor):
                     action.torch_data = data
                     action_data[idx] = self.__convert_to_numpy(data, to_numpy=to_numpy)
-                # elif isinstance(data, (float, int)):
-                #     pass
+                elif isinstance(data, (float, int)):
+                    action.data = data
                 else:
                     raise TypeError(
                         "Expecting `data` to be a numpy array or torch.Tensor, instead got: "
@@ -682,7 +686,8 @@ class Policy(object):
         Returns:
             Action: action
         """
-        return self.act(*args, **kwargs)
+        return self.act(state=state, deterministic=deterministic, to_numpy=to_numpy, return_logits=return_logits,
+                        apply_action=apply_action)
 
     def __repr__(self):
         """Return representation of python object."""

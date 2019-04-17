@@ -42,6 +42,9 @@ class RandomPolicy(Policy):
                 np.random.seed(seed)
             self._seed = seed
 
+        def reset(self):
+            pass
+
         def predict(self, state=None, to_numpy=True):
             spaces = self.actions.space
             return [space.sample() for space in spaces]
