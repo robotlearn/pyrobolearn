@@ -1,6 +1,5 @@
 
-
-import openvr
+# import openvr
 
 from pyrobolearn.tools.interfaces.interface import InputOutputInterface
 
