@@ -14,8 +14,8 @@ from pyrobolearn.exploration import ActionExploration, GaussianActionExploration
 
 from pyrobolearn.storages import ExperienceReplay
 from pyrobolearn.samplers import BatchRandomSampler
-from pyrobolearn.returns import TDQValueReturn
-from pyrobolearn.losses import MSBELoss, QLoss
+from pyrobolearn.returns import TDQValueReturn, QValueTarget
+from pyrobolearn.losses import MSBELoss, QLoss, L2Loss, ValueL2Loss
 from pyrobolearn.optimizers import Adam
 
 from pyrobolearn.parameters.updater import PolyakAveraging
@@ -234,7 +234,9 @@ class DDPG(GradientRLAlgo):
             gamma (float): discount factor (which is a bias-variance tradeoff). This parameter describes how much
                 importance has the future rewards we get.
             lr (float): learning rate
-            polyak (float): coefficient in the polyak averaging when updating the target approximators.
+            polyak (float): coefficient (between 0 and 1) used in the polyak averaging when updating the target
+                approximators. If 1, it will let the target parameter(s) unchanged, if 0 it will just copy the
+                current parameter(s).
             capacity (int): capacity of the experience replay storage.
             num_workers (int): number of processes / workers to run in parallel
         """
@@ -276,10 +278,13 @@ class DDPG(GradientRLAlgo):
         sampler = BatchRandomSampler(storage)
 
         # create target return estimator
-        estimator = TDQValueReturn(q_value=q_value, policy=policy_target, target_qvalue=q_target, gamma=gamma)
+        # target = QValueTarget(q_values=q_target, policy=policy_target, gamma=gamma)
+        returns = TDQValueReturn(q_value=q_value, policy=policy_target, target_qvalue=q_target, gamma=gamma)
 
         # create Q-value loss and policy loss
-        q_loss = MSBELoss(td_return=estimator)
+        # q_loss = L2Loss(target=target, predictor=q_value)
+        # q_loss = ValueLoss(returns=target, value=q_value)
+        q_loss = MSBELoss(td_return=returns)
         policy_loss = QLoss(q_value=q_value, policy=policy)
         losses = [q_loss, policy_loss]
 
@@ -287,14 +292,14 @@ class DDPG(GradientRLAlgo):
         optimizer = Adam(learning_rate=lr)
 
         # create q value and policy updaters
-        q_value_updater = PolyakAveraging(rho=polyak)
-        policy_updater = PolyakAveraging(rho=polyak)
-        approximator_updaters = {q_value_updater: q_target, policy_updater: policy_target}
+        q_value_updater = PolyakAveraging(current=q_value, target=q_target, rho=polyak)
+        policy_updater = PolyakAveraging(current=policy, target=policy_target, rho=polyak)
 
         # define the 3 main steps in RL: explore, evaluate, and update
         explorer = Explorer(task, exploration, storage, num_workers=num_workers)
-        evaluator = Evaluator(estimator)
-        updater = Updater(approximators, sampler, losses, optimizer, approximator_updaters)
+        evaluator = Evaluator(None)  # off-policy
+        updater = Updater(approximators, sampler, losses, optimizer, evaluators=returns,
+                          updaters=[q_value_updater, policy_updater])
 
         # initialize RL algorithm
         super(DDPG, self).__init__(explorer, evaluator, updater)

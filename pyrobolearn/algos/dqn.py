@@ -21,7 +21,7 @@ from pyrobolearn.returns import TDQLearningReturn
 from pyrobolearn.losses import MSBELoss, HuberLoss
 from pyrobolearn.optimizers import Adam
 
-from pyrobolearn.parameters.updater import CopyParameter
+from pyrobolearn.parameters.updater import PolyakAveraging  # , CopyParameter
 
 
 __author__ = "Brian Delhaisse"
@@ -110,7 +110,7 @@ class DQN(GradientRLAlgo):
             https://lilianweng.github.io/lil-log/2018/05/05/implementing-deep-reinforcement-learning-models.html
     """
 
-    def __init__(self, task, approximator, gamma=0.99, lr=5e-4, capacity=10000, num_workers=1):
+    def __init__(self, task, approximator, gamma=0.99, lr=5e-4, capacity=10000, polyak=0.995, num_workers=1):
         """
         Initialize the DQN reinforcement learning algorithm.
 
@@ -121,6 +121,9 @@ class DQN(GradientRLAlgo):
                 importance has the future rewards we get.
             lr (float): learning rate.
             capacity (int): capacity of the experience replay storage.
+            polyak (float): coefficient (between 0 and 1) used in the polyak averaging when updating the target
+                approximators. If 1, it will let the target parameter(s) unchanged, if 0 it will just copy the
+                current parameter(s).
             num_workers (int): number of processes / workers to run in parallel.
         """
         # check given approximator
@@ -156,13 +159,13 @@ class DQN(GradientRLAlgo):
         optimizer = Adam(learning_rate=lr)
 
         # create target updater
-        target_updater = CopyParameter(sleep_count=100)  # PolyakAveraging(rho=0.5)
+        # target_updater = CopyParameter(current=q_value, target=q_target, sleep_count=100)
+        target_updater = PolyakAveraging(current=q_value, target=q_target, rho=polyak)
 
         # define the 3 main steps in RL: explore, evaluate, and update
         explorer = Explorer(task, exploration, storage, num_workers=num_workers)
         evaluator = Evaluator(None)  # off-policy
-        updater = Updater(policy, sampler, loss, optimizer, evaluators=[td_return],
-                          updaters={target_updater: q_target})
+        updater = Updater(policy, sampler, loss, optimizer, evaluators=[td_return], updaters=[target_updater])
 
         # initialize RL algorithm
         super(DQN, self).__init__(explorer, evaluator, updater)

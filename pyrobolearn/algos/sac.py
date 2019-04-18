@@ -271,7 +271,9 @@ class SAC(GradientRLAlgo):
             gamma (float): discount factor (which is a bias-variance tradeoff). This parameter describes how much
                 importance has the future rewards we get.
             lr (float): learning rate
-            polyak (float): coefficient in the polyak averaging when updating the target approximators.
+            polyak (float): coefficient (between 0 and 1) used in the polyak averaging when updating the target
+                approximators. If 1, it will let the target parameter(s) unchanged, if 0 it will just copy the
+                current parameter(s).
             alpha (float): entropy regularization coefficient which controls the tradeoff between exploration and
                 exploitation. Higher :attr:`alpha` means more exploration, and lower :attr:`alpha` corresponds to more
                 exploitation.
@@ -325,12 +327,11 @@ class SAC(GradientRLAlgo):
         optimizer = Adam(learning_rate=lr)
 
         # create parameter updater for target value function
-        params_updater = PolyakAveraging(rho=polyak)
-        params_updater = (params_updater, value_target)
+        params_updater = PolyakAveraging(current=value, target=value_target, rho=polyak)
 
         # define the 3 main steps in RL: explore, evaluate, and update
         explorer = Explorer(task, exploration, storage, num_workers=num_workers)
-        evaluator = Evaluator(None)
+        evaluator = Evaluator(None)  # off-policy
         updater = Updater(approximators, sampler, losses, optimizer, updaters=params_updater)
 
         # initialize RL algorithm

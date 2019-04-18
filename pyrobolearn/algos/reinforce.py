@@ -17,7 +17,7 @@ from pyrobolearn.exploration import ActionExploration
 from pyrobolearn.storages import RolloutStorage
 from pyrobolearn.samplers import StorageSampler
 from pyrobolearn.returns import ActionRewardEstimator
-from pyrobolearn.losses import PGLoss, ValueLoss
+from pyrobolearn.losses import PGLoss, ValueL2Loss
 from pyrobolearn.optimizers import Adam
 
 
@@ -189,14 +189,14 @@ class REINFORCE(GradientRLAlgo):
         # create storage
         states, actions = policy.states, policy.actions
         storage = RolloutStorage(num_steps=1000, state_shapes=states.shape, action_shapes=actions.shape,
-                                 num_trajectories=num_workers)
+                                 num_trajectories=10)
         sampler = StorageSampler(storage)
 
-        # create estimator
-        estimator = ActionRewardEstimator(storage, gamma=gamma)
+        # create return: R_t = \sum_{t'=t}^{T} \gamma^{t'-t} r_{t'}
+        returns = ActionRewardEstimator(storage, gamma=gamma)
 
-        # create loss for policy
-        loss = PGLoss(estimator)
+        # create loss for policy: \mathbb{E}[ \log \pi_{\theta}(a_t | s_t) R_t ]
+        loss = PGLoss(returns)
 
         # create optimizer for policy (and possibly value function)
         optimizer = Adam(learning_rate=lr)
@@ -204,15 +204,15 @@ class REINFORCE(GradientRLAlgo):
         # if value function, create its loss
         if value is not None:
             approximators = [policy, value]
-            value_loss = ValueLoss()
+            value_loss = ValueL2Loss(returns, value)
             loss = [loss, value_loss]
         else:
             approximators = policy
 
         # define the 3 main steps in RL: explore, evaluate, and update
         explorer = Explorer(task, exploration, storage, num_workers=num_workers)
-        evaluator = Evaluator(estimator)
-        updater = Updater(approximators, sampler, loss, optimizer)
+        evaluator = Evaluator(returns)
+        updater = Updater(approximators, sampler, loss, optimizer, evaluators=[])
 
         # initialize RL algorithm
         super(REINFORCE, self).__init__(explorer, evaluator, updater)

@@ -147,7 +147,7 @@ class TD3(GradientRLAlgo):
         16.             Update policy by one step of gradient ascent using
                          :math:`\grad_{\theta} \frac{1}{|B|} \sum_{s \in B} Q_{\phi_1}(s, \mu_{\theta}(s))`
         17.             Update target networks with
-                         :math:`\phi_{target,i} \leftarrow \rho \phi_{target,i} + (1 - \rho)\phi_i` for i=1,2
+                         :math:`\phi_{target,i} \leftarrow \rho \phi_{target,i} + (1 - \rho) \phi_i` for i=1,2
                          :math:`\theta_{target} \leftarrow \rho \theta_{target} + (1 - \rho) \theta`
         18.          end if
         19.      end for
@@ -160,7 +160,7 @@ class TD3(GradientRLAlgo):
         [2] OpenAI - Spinning Up: https://spinningup.openai.com/en/latest/algorithms/td3.html
     """
 
-    def __init__(self, task, approximators, gamma=0.99, lr=0.001, polyak=0.995, capacity=10000, num_workers=1):
+    def __init__(self, task, approximators, gamma=0.99, lr=0.001, polyak=0.995, delay=2, capacity=10000, num_workers=1):
         """
         Initialize the TD3 off-policy RL algorithm.
 
@@ -170,7 +170,10 @@ class TD3(GradientRLAlgo):
             gamma (float): discount factor (which is a bias-variance tradeoff). This parameter describes how much
                 importance has the future rewards we get.
             lr (float): learning rate.
-            polyak (float): coefficient in the polyak averaging when updating the target approximators.
+            polyak (float): coefficient (between 0 and 1) used in the polyak averaging when updating the target
+                approximators. If 1, it will let the target parameter(s) unchanged, if 0 it will just copy the
+                current parameter(s).
+            delay (int): number of steps to wait before performing an update.
             capacity (int): capacity of the experience replay storage.
             num_workers (int): number of processes / workers to run in parallel
         """
@@ -216,24 +219,31 @@ class TD3(GradientRLAlgo):
         sampler = BatchRandomSampler(storage)
 
         # create target return estimator
-        estimator = TDQValueReturn(q_value=q_values, policy=policy_target, target_qvalue=q_targets, gamma=gamma)
+        returns = TDQValueReturn(q_value=q_values, policy=policy_target, target_qvalue=q_targets, gamma=gamma)
 
         # create Q-value loss and policy loss
-        q_loss = MSBELoss(td_return=estimator)
+        q_loss = MSBELoss(td_return=returns)
         policy_loss = QLoss(q_value=q_values[0], policy=policy)  # only the first q-value is used to train the policy
         losses = [q_loss, policy_loss]
 
         # create optimizer
         optimizer = Adam(learning_rate=lr)
 
-        # create q value and policy updaters
-        params_updater = PolyakAveraging(rho=polyak)
-        params_updaters = [(params_updater, q_target) for q_target in q_targets] + [(params_updater, policy_target)]
+        # create policy and q-value updaters
+        params_updaters = [PolyakAveraging(current=policy, target=policy_target, rho=polyak)]
+        for q_value, q_target in zip(q_values, q_targets):
+            params_updaters.append(PolyakAveraging(current=q_value, target=q_target, rho=polyak))
+
+        # create ticks (number of steps to wait before evaluating the loss / parameter updater)
+        # this is used to delay the updates
+        ticks = {updater: delay for updater in params_updaters}
+        ticks.update({policy_loss: delay})
 
         # define the 3 main steps in RL: explore, evaluate, and update
         explorer = Explorer(task, exploration, storage, num_workers=num_workers)
-        evaluator = Evaluator(estimator)
-        updater = Updater(approximators, sampler, losses, optimizer, params_updaters)
+        evaluator = Evaluator(None)  # off-policy
+        updater = Updater(approximators, sampler, losses, optimizer, evaluators=returns, updaters=params_updaters,
+                          ticks=ticks)
 
         # initialize RL algorithm
         super(TD3, self).__init__(explorer, evaluator, updater)

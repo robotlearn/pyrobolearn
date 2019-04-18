@@ -3,7 +3,15 @@
 
 The updater update the approximator (such as the policy and/or value function) parameters based on the loss, and
 using the specified optmizer.
+
+Dependencies:
+- `pyrobolearn/approximators`: models (which contain parameters to update)
+- `pyrobolearn/losses`: to compute the loss
+- `pyrobolearn/optimizers`: the optimizers used to update the model parameters
+- `pyrobolearn/samplers`:
 """
+
+import collections
 
 # TODO: makes the 5 following classes inherit from the same Parent class
 from pyrobolearn.approximators import Approximator
@@ -15,8 +23,9 @@ from pyrobolearn.exploration import Exploration  # TODO change that name to Expl
 
 from pyrobolearn.losses import Loss
 from pyrobolearn.optimizers import Optimizer
-from pyrobolearn.storages import Storage, RolloutStorage, Batch
 from pyrobolearn.samplers import StorageSampler
+from pyrobolearn.returns import Return, Target, Evaluator
+from pyrobolearn.parameters.updater import ParameterUpdater
 
 
 __author__ = "Brian Delhaisse"
@@ -41,7 +50,7 @@ class Updater(object):
     This class focuses on the third step of RL algorithms.
     """
 
-    def __init__(self, approximators, sampler, losses, optimizers, evaluators=None, updaters=None, delays=None):
+    def __init__(self, approximators, sampler, losses, optimizers, evaluators=None, updaters=None, ticks=None):
         """
         Initialize the update phase.
 
@@ -51,19 +60,24 @@ class Updater(object):
             losses (Loss, list/dict of losses): losses. If dict: key=approximator, value=loss.
             optimizers (Optimizer, or list/dict of optimizers): optimizer to use. If dict: key=approximator,
                 value=optimizer.
-            evaluators (list of Estimator/Return): list of sub-evaluators that are evaluated on batches.
+            evaluators (list of Target, Return, Evaluator): list of sub-evaluators that are evaluated on batches at
+                each update step before evaluating the losses and updating the parameters of the approximators. They
+                modify the `current` attribute of the batch.
             updaters (None, dictionary, list of tuple): list of parameter updaters to run at the end.
-            delays (None, dictionary): dictionary containing as the key the number of time steps to wait before
-                updating the specified values (can be the updaters or losses).
+            ticks (None, dictionary): dictionary containing as the key (updater or loss) and the value are the number
+                of time steps to wait before updating the corresponding key. By default, it will evaluate the given
+                losses and updaters at each time step.
         """
         self.approximators = approximators
         self.sampler = sampler
         self.losses = losses
         self.optimizers = optimizers
-        self._evaluator = ApproximatorEvaluator(approximators)
-
         self.evaluators = evaluators
         self.updaters = updaters
+        self.ticks = ticks
+
+        # counter
+        self._cnt = 0
 
     ##############
     # Properties #
@@ -77,7 +91,7 @@ class Updater(object):
     @approximators.setter
     def approximators(self, approximators):
         """Set the approximator instances."""
-        if not isinstance(approximators, list):
+        if not isinstance(approximators, collections.Iterable):
             approximators = [approximators]
         for approximator in approximators:
             if not isinstance(approximator, (Approximator, Policy, Value, ActorCritic, DynamicModel, Exploration)):
@@ -85,7 +99,6 @@ class Updater(object):
                                 "`ActorCritic`, `DynamicModel`, or `Exploration`. Instead got: "
                                 "{}".format(type(approximator)))
         self._approximators = approximators
-        self._evaluator = ApproximatorEvaluator(self._approximators)
 
     @property
     def sampler(self):
@@ -125,7 +138,7 @@ class Updater(object):
     def losses(self, losses):
         """Set the losses."""
         # check that the losses are the correct data type
-        if not isinstance(losses, list):
+        if not isinstance(losses, collections.Iterable):
             losses = [losses]
         for loss in losses:
             if not isinstance(loss, Loss):
@@ -147,7 +160,7 @@ class Updater(object):
     def optimizers(self, optimizers):
         """Set the optimizers."""
         # check that the optimizers are the correct data type
-        if not isinstance(optimizers, list):
+        if not isinstance(optimizers, collections.Iterable):
             optimizers = [optimizers]
         for optimizer in optimizers:
             if not isinstance(optimizer, Optimizer):
@@ -166,20 +179,101 @@ class Updater(object):
         self._optimizers = optimizers
 
     @property
-    def evaluator(self):
-        """Return the evaluator instance which evaluates the approximators on the given batch.."""
-        return self._evaluator
+    def evaluators(self):
+        """Return the (sub-)evaluator instances which are applied on batches at each update step before evaluating the
+        losses and updating the parameters of the approximators."""
+        return self._evaluators
+
+    @evaluators.setter
+    def evaluators(self, evaluators):
+        """Set the (sub-)evaluators which are applied on each batch at each update step before evaluating the
+        losses and updating the parameters of the approximators."""
+        if evaluators is None:
+            evaluators = []
+        if not isinstance(evaluators, collections.Iterable):
+            evaluators = [evaluators]
+        for i, evaluator in enumerate(evaluators):
+            if not isinstance(evaluator, (Target, Return, Evaluator)):
+                raise TypeError("Expecting the {}th given 'evaluator' to be an instance of `Target`, `Return`, "
+                                "`Evaluator`, instead got: {}".format(i, type(evaluator)))
+        self._evaluators = evaluators
+
+    @property
+    def updaters(self):
+        """Return the list of updaters (i.e. functions that updates some parameters and that are run at the end of an
+        update step."""
+        return self._updaters
+
+    @updaters.setter
+    def updaters(self, updaters):
+        if updaters is None:
+            updaters = []
+        if not isinstance(updaters, collections.Iterable):
+            updaters = [updaters]
+        for i, updater in enumerate(updaters):
+            if not isinstance(updater, ParameterUpdater):
+                raise TypeError("Expecting the {}th updater to be an instance of `ParameterUpdater`, instead got: "
+                                "{}".format(i, type(updater)))
+        self._updaters = updaters
+
+    @property
+    def ticks(self):
+        """Return the ticks."""
+        return self._ticks
+
+    @ticks.setter
+    def ticks(self, ticks):
+        """Set the ticks for each loss and updater."""
+        # check type of the given ticks
+        if ticks is None:
+            ticks = dict()
+        if not isinstance(ticks, dict):
+            raise TypeError("Expecting the given ticks to be a dictionary, instead got: {}".format(type(ticks)))
+
+        # check first the items already present in the ticks
+        for key, value in ticks.iteritems():
+            # check that the key is a Loss or ParamaterUpdater
+            if not isinstance(key, (Loss, ParameterUpdater)):
+                raise TypeError("Expecting the given key for the tick to be an instance of `Loss` or "
+                                "`ParameterUpdater`, instead got: {}".format(type(key)))
+
+            # check that the tick value is an int
+            if not isinstance(value, int):
+                if isinstance(value, float):
+                    value = int(value)
+                else:
+                    raise TypeError("Expecting the given value for the tick to be an int, instead got: "
+                                    "{}".format(type(value)))
+
+            # check that the tick is bigger than 0
+            if value <= 0:
+                raise ValueError("Expecting the given value for the tick to be an integer bigger than 0, instead got: "
+                                 "{}".format(value))
+
+        # set the tick for each loss
+        for loss in self.losses:
+            if loss not in self._ticks:
+                self._ticks[loss] = 1
+
+        # set the tick for each updater
+        for updater in self.updaters:
+            if updater not in self._ticks:
+                self._ticks[updater] = 1
+
+        # set the ticks
+        self._ticks = ticks
 
     ###########
     # Methods #
     ###########
 
-    def update(self, num_batches=10):
+    def update(self, num_batches=10, num_epochs=1):
         """
         Update the given approximators (policies, value functions, etc).
 
         Args:
-            num_batches (int): number of batches
+            num_batches (int): number of batches.
+            num_epochs (int): number of epochs.
 
         Returns:
             list: list of losses
@@ -187,22 +281,49 @@ class Updater(object):
         # set the number of batches
         self.sampler.num_batches = num_batches
 
-        # for each batch
-        for batch in self.sampler:
+        losses = []
 
-            # evaluation with the current parameters
-            self.evaluator.evaluate(batch)
+        # for each epoch
+        for epoch in range(num_epochs):
 
-            # update each approximator based on the loss on which it is evaluated and using the specified optimizer
-            for approximator, loss, optimizer in zip(self.approximators, self.losses, self.optimizers):
+            # batch losses
+            batch_losses = []
 
-                # compute loss on the data (the loss knows what to do)
-                loss = loss.compute(batch)
+            # for each batch
+            for batch in self.sampler:
 
-                # update parameters
-                optimizer.optimize(approximator.parameters(), loss)
+                # evaluate the evaluators with the current parameters on the given batch and save the results in the
+                # batch's `current` attribute
+                for evaluator in self.evaluators:
+                    evaluator.evaluate(batch, store=True)
 
-        return self.losses
+                # update each approximator based on the loss on which it is evaluated and using the specified optimizer
+                for approximator, loss, optimizer in zip(self.approximators, self.losses, self.optimizers):
+
+                    # if time to update
+                    if self._cnt % self.ticks[loss] == 0:
+
+                        # compute loss on the data (the loss knows what to do with the batch)
+                        loss = loss.compute(batch)
+
+                        # append the loss / batch
+                        batch_losses.append(loss)
+
+                        # update parameters
+                        optimizer.optimize(approximator.parameters(), loss)
+
+                    # call each updater
+                    for updater in self.updaters:
+                        if self._cnt % self.ticks[updater] == 0:
+                            updater()
+
+                # increase counter
+                self._cnt += 1
+
+            # append the batch losses into the epoch losses
+            losses.append(batch_losses)
+
+        return losses  # shape=(epochs, batches)
 
     #############
     # Operators #
@@ -219,301 +340,3 @@ class Updater(object):
     def __call__(self, num_batches=10):  # , storage, losses):
         """Update the approximators."""
         self.update(num_batches=num_batches)
-
-
-class ApproximatorEvaluator(object):
-    r"""Approximators evaluator
-
-    Approximators evaluator used mostly during the update phase. Evaluate the various approximators on the given batch.
-
-    This consists:
-    - for policies, to compute :math:`\pi_{\theta}(a|s)` and :math:`\pi_{\theta}(.|s)` if possible.
-    - for value functions, to compute :math:`V_{\phi}(s)`, :math:`Q_{\phi}(s,a)`, and/or :math:`A_{\phi}`(s,a)
-    - for dynamic models, to compute :math:``
-    """
-
-    def __init__(self, approximators):
-        """
-        Initialize the evaluator for the approximators.
-
-        Args:
-            approximators ((list of) Approximator): approximators
-        """
-        self.approximators = approximators
-
-    ##############
-    # Properties #
-    ##############
-
-    @property
-    def approximators(self):
-        """Return the list of approximators to update."""
-        return self._approximators
-
-    @approximators.setter
-    def approximators(self, approximators):
-        """Set the list of approximators to update."""
-        if not isinstance(approximators, list):
-            approximators = [approximators]
-        for approximator in approximators:
-            if not isinstance(approximator, (Approximator, Policy, Value, ActorCritic, DynamicModel, Exploration)):
-                raise TypeError("Expecting the approximator to be an instance of `Approximator`, `Policy`, `Value`, "
-                                "`ActorCritic`, `DynamicModel`, or `Exploration`. Instead got: "
-                                "{}".format(type(approximator)))
-        self._approximators = approximators
-
-    ###########
-    # Methods #
-    ###########
-
-    def evaluate(self, batch):
-        """Evaluate the various approximators."""
-        if not isinstance(batch, Batch):
-            raise TypeError("Expecting the given batch storage to be an instance of `Batch`, instead got: "
-                            "{}".format(type(batch)))
-        # sub-evaluation with the current parameter
-        for approximator in self.approximators:
-            if isinstance(approximator, (Policy, Exploration)):
-                actions, action_distributions = approximator.evaluate(batch['observations'])
-                batch.current['actions'] = actions
-                batch.current['action_distributions'] = action_distributions
-            elif isinstance(approximator, Value):
-                values = approximator.evaluate(batch['observations'], batch['actions'])
-                batch.current['values'] = values
-            elif isinstance(approximator, ActorCritic):
-                actions, action_distributions, values = approximator.evaluate(batch['observations'], batch['actions'])
-                batch.current['actions'] = actions
-                batch.current['action_distributions'] = action_distributions
-                batch.current['values'] = values
-            elif isinstance(approximator, DynamicModel):
-                next_states, state_distributions = approximator.evaluate(batch['observations'], batch['actions'])
-                batch.current['next_states'] = next_states
-                batch.current['state_distributions'] = state_distributions
-            else:
-                raise TypeError("Expecting the approximator to be an instance of `Policy`, `Value`, `ActorCritic`, or "
-                                "`DynamicModel`, instead got: {}".format(type(approximator)))
-        return batch
-
-
-class PolicyEvaluator(object):
-    r"""Policy evaluator
-
-    Evaluate a policy by computing :math:`\pi_{\theta}(a|s)` and if possible the distribution :math:`\pi(.|s)`. The
-    policy is evaluated on a batch.
-    """
-
-    def __init__(self, policy, batch=None):
-        """Initialize the policy evaluator.
-
-        policy (Policy): policy to evaluate.
-        batch (None, Batch): initial batch.
-        """
-        self.policy = policy
-        self.batch = batch
-
-    ##############
-    # Properties #
-    ##############
-
-    @property
-    def policy(self):
-        """Return the policy instance."""
-        return self._policy
-
-    @policy.setter
-    def policy(self, policy):
-        """Set the policy."""
-        if not isinstance(policy, Policy):
-            raise TypeError("Expecting the given policy to be an instance of `Policy`, instead got: "
-                            "{}".format(type(policy)))
-        self._policy = policy
-
-    ###########
-    # Methods #
-    ###########
-
-    def evaluate(self, batch=None):
-        """Evaluate the policy on the given batch. If None, it will evaluate on the previous batch."""
-        # check batch
-        if batch is None:
-            batch = self.batch
-            if batch is None:
-                raise ValueError("Expecting a batch to be given.")
-
-        # evaluate policy
-        actions, action_distributions = self.policy.evaluate(batch['observations'])
-
-        # put them in the batch
-        batch.current['actions'] = actions
-        batch.current['action_distributions'] = action_distributions
-
-        # return batch
-        return batch
-
-
-class ValueEvaluator(object):
-    r"""Value evaluator
-
-    Evaluate a value by computing :math:`V_{\phi}(s)`, :math:`Q_{\phi}(s,a)`, and / or :math:`A_{\phi}(s,a)`.
-    The value is evaluated on a batch.
-    """
-
-    def __init__(self, value, batch=None):
-        """Initialize the value evaluator.
-
-        value (Value): value to evaluate.
-        batch (None, Batch): initial batch.
-        """
-        self.value = value
-        self.batch = batch
-
-    ##############
-    # Properties #
-    ##############
-
-    @property
-    def value(self):
-        """Return the value instance."""
-        return self._value
-
-    @value.setter
-    def value(self, value):
-        """Set the value function approximator."""
-        if not isinstance(value, Value):
-            raise TypeError("Expecting the given value to be an instance of `Value`, instead got: "
-                            "{}".format(type(value)))
-        self._value = value
-
-    ###########
-    # Methods #
-    ###########
-
-    def evaluate(self, batch=None):
-        """Evaluate the value on the given batch. If None, it will evaluate on the previous batch."""
-        # check batch
-        if batch is None:
-            batch = self.batch
-            if batch is None:
-                raise ValueError("Expecting a batch to be given.")
-
-        # evaluate value
-        values = self.value.evaluate(batch['observations'], batch['actions'])
-
-        # put them in the batch
-        batch.current['values'] = values
-
-        # return batch
-        return batch
-
-
-class ActorCriticEvaluator(object):
-    r"""ActorCritic evaluator
-
-    Evaluate an action by computing :math:`\pi_{\theta}(a|s)` and if possible the distribution :math:`\pi(.|s)`. It
-    also evaluates the value by computing :math:`V_{\phi}(s)`, :math:`Q_{\phi}(s,a)`, and / or :math:`A_{\phi}(s,a)`.
-    Both are evaluated on a batch.
-    """
-
-    def __init__(self, actorcritic, batch=None):
-        """Initialize the actorcritic evaluator.
-
-        actorcritic (ActorCritic): actorcritic to evaluate.
-        batch (None, Batch): initial batch.
-        """
-        self.actorcritic = actorcritic
-        self.batch = batch
-
-    ##############
-    # Properties #
-    ##############
-
-    @property
-    def actorcritic(self):
-        """Return the actor-critic instance."""
-        return self._actorcritic
-
-    @actorcritic.setter
-    def actorcritic(self, actorcritic):
-        """Set the actor-critic."""
-        if not isinstance(actorcritic, ActorCritic):
-            raise TypeError("Expecting the given actorcritic to be an instance of `ActorCritic`, instead got: "
-                            "{}".format(type(actorcritic)))
-        self._actorcritic = actorcritic
-
-    ###########
-    # Methods #
-    ###########
-
-    def evaluate(self, batch=None):
-        """Evaluate the actorcritic on the given batch. If None, it will evaluate on the previous batch."""
-        # check batch
-        if batch is None:
-            batch = self.batch
-            if batch is None:
-                raise ValueError("Expecting a batch to be given.")
-
-        # evaluate actorcritic
-        actions, action_distributions, values = self.actorcritic.evaluate(batch['observations'])  # , batch['actions'])
-
-        # put them in the batch
-        batch.current['actions'] = actions
-        batch.current['action_distributions'] = action_distributions
-        batch.current['values'] = values
-
-        # return batch
-        return batch
-
-
-class DynamicModelEvaluator(object):
-    r"""Dynamic model evaluator
-
-    Evaluate the next state given the current state and action.
-    """
-
-    def __init__(self, dynamic_model, batch=None):
-        """Initialize the dynamic_model evaluator.
-
-        dynamic_model (ActorCritic): dynamic_model to evaluate.
-        batch (None, Batch): initial batch.
-        """
-        self.dynamic_model = dynamic_model
-        self.batch = batch
-
-    ##############
-    # Properties #
-    ##############
-
-    @property
-    def dynamic_model(self):
-        """Return the dynamic_model instance."""
-        return self._dynamic_model
-
-    @dynamic_model.setter
-    def dynamic_model(self, dynamic_model):
-        """Set the dynamic model."""
-        if not isinstance(dynamic_model, DynamicModel):
-            raise TypeError("Expecting the given dynamic_model to be an instance of `ActorCritic`, instead got: "
-                            "{}".format(type(dynamic_model)))
-        self._dynamic_model = dynamic_model
-
-    ###########
-    # Methods #
-    ###########
-
-    def evaluate(self, batch=None):
-        """Evaluate the dynamic_model on the given batch. If None, it will evaluate on the previous batch."""
-        # check batch
-        if batch is None:
-            batch = self.batch
-            if batch is None:
-                raise ValueError("Expecting a batch to be given.")
-
-        # evaluate dynamic_model
-        next_states, state_distributions = self.dynamic_model.evaluate(batch['observations'], batch['actions'])
-
-        # put them in the batch
-        batch.current['next_states'] = next_states
-        batch.current['state_distributions'] = state_distributions
-
-        # return batch
-        return batch
