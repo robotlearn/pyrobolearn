@@ -210,11 +210,7 @@ class Task(object):
         # results = []
         total_rewards = np.zeros(len(self.policies))
         self.reset()
-        # for t in range(4):
-        #     for policy in self.policies:
-        #         actions = policy.act(policy.states)
-        #     self.simulator.stepSimulation()
-        # time.sleep(2.)
+
         for t in count():
             if t >= num_steps:
                 break
@@ -264,7 +260,7 @@ class Task(object):
             return [policy.model for policy in self.policies]
         return self.policies[idx].model
 
-    def save_task(self, filename):
+    def save(self, filename):
         pass
 
 

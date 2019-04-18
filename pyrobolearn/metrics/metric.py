@@ -5,6 +5,10 @@ Dependencies:
 - `pyrobolearn.tasks`
 """
 
+import collections
+import matplotlib.pyplot as plt
+
+
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
@@ -24,45 +28,97 @@ class Metric(object):
     It notably contains the functionalities to evaluate a certain task using the metric, and different to plot them.
     """
 
-    def __init__(self):
+    def __init__(self, metrics=None):
+        """
+        Initialize the metric object.
+
+        Args:
+            metrics (None, Metric, list of Metric): inner metric objects.
+        """
+        self._metrics = metrics
+
+    ##############
+    # Properties #
+    ##############
+
+    @property
+    def metrics(self):
+        """Return the inner list of metric objects."""
+        return self._metrics
+
+    @metrics.setter
+    def metrics(self, metrics):
+        """Set the inner list of metrics."""
+        if metrics is None:
+            metrics = []
+        if not isinstance(metrics, collections.Iterable):
+            metrics = [metrics]
+        for i, metric in enumerate(metrics):
+            if not isinstance(metric, Metric):
+                raise TypeError("Expecting the given {}th metric to be an instance of `Metric`, instead got: "
+                                "{}".format(i, type(metric)))
+        self._metrics = metrics
+
+    ###########
+    # Methods #
+    ###########
+
+    def append(self, *args, **kwargs):
         pass
 
+    def update(self, *args, **kwargs):
+        pass
 
-class ILMetric(Metric):
-    r"""Imitation Learning Metric
+    def _plot(self, ax=None, filename=None):
+        """
+        Plot the metric. This has to be implemented in the child classes.
 
-    Metrics used in imitation learning.
+        Args:
+            ax (plt.Axes): axis to plot the figure.
+            filename (str, None): if a string is given, it will save the plot in the given filename.
 
-    References:
-        [1] "Learning from Humans", Billard et al., 2016
-    """
+        Returns:
+            plt.Axes: ax
+        """
+        pass
 
-    def __init__(self):
-        super(ILMetric, self).__init__()
+    def plot(self, ax=None, block=False, filename=None, subplots=()):
+        """
+        Plot the metric.
 
+        Args:
+            ax (plt.Axes): axis to plot the figure.
+            block (bool): if True, it will block when showing the graphs.
+            filename (str, None): if a string is given, it will save the plot in the given filename.
+        """
+        # if multiple metrics
+        if self.metrics:
 
-class RLMetric(Metric):
-    r"""Reinforcement Learning Metric
+            # if we want to use subplots
+            if len(subplots) > 0:
+                pass
 
-    Metrics used in reinforcement learning.
+            # if we just want multiple figures
+            for metric in self.metrics:
+                metric._plot(ax=ax, filename=filename)
 
-    References:
-        [1] "Deep Reinforcement Learning that Matters", Henderson et al., 2018
-    """
+            plt.show(block=block)
+        else:
+            self._plot(ax=ax, filename=filename)
+            plt.show(block=block)
 
-    def __init__(self):
-        super(RLMetric, self).__init__()
+    #############
+    # Operators #
+    #############
 
+    def __repr__(self):
+        """Return a representation string of the object."""
+        if self.metrics:
+            return ' + '.join(self.metrics)
+        return self.__class__.__name__
 
-class TLMetric(Metric):
-    r"""Transfer Learning Metric
-
-    Metrics used in transfer learning.
-
-    References:
-        [1] "A Survey on Transfer Learning", Pan et al., 2010
-        [2] "Transfer Learning for Reinforcement Learning Domains: A Survey", Taylor et al., 2009
-    """
-
-    def __init__(self):
-        super(TLMetric, self).__init__()
+    def __str__(self):
+        """Return a string describing the object."""
+        if self.metrics:
+            return ' + '.join(self.metrics)
+        return self.__class__.__name__

@@ -2,7 +2,7 @@
 """Define the State class.
 
 This file defines the `State` class, which is returned by the environment, and given as an input to several
-models such as policies/controllers, dynamic transition functions, value estimators, reward/cost function, and so on.
+models such as policies/controllers, dynamic transition functions, value approximators, reward/cost function, and so on.
 """
 
 import numpy as np

@@ -205,3 +205,17 @@ class PolicyFromQValue(Policy):
 
     # def sample(self, state):
     #     pass
+
+
+# Tests
+if __name__ == '__main__':
+    import copy
+    from pyrobolearn.states import FixedState
+    from pyrobolearn.actions import FixedAction
+
+    # check linear policy
+    policy = LinearPolicy(states=FixedState(range(4)), actions=FixedAction(range(2)))
+    print(policy)
+
+    target = copy.deepcopy(policy)
+    print(target)

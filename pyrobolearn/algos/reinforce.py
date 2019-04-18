@@ -149,7 +149,7 @@ class REINFORCE(GradientRLAlgo):
     - https://github.com/rlcode/reinforcement-learning/blob/master/2-cartpole/3-reinforce/cartpole_reinforce.py
     """
 
-    def __init__(self, task, approximators, gamma=0.99, lr=3e-4, num_workers=1):
+    def __init__(self, task, approximators, gamma=0.99, lr=0.001, num_workers=1):
         """
         Initialize the REINFORCE on-policy RL algorithm.
 
@@ -183,7 +183,7 @@ class REINFORCE(GradientRLAlgo):
             raise TypeError("Expecting the approximators to be an instance of `Policy`, or `ActorCritic`, instead got:"
                             " {}".format(type(approximators)))
 
-        # create exploration strategy
+        # create exploration strategy (if action is discrete, boltzmann exploration. If action is continuous, gaussian)
         exploration = ActionExploration(policy)
 
         # create storage
@@ -195,6 +195,7 @@ class REINFORCE(GradientRLAlgo):
         # create return: R_t = \sum_{t'=t}^{T} \gamma^{t'-t} r_{t'}
         returns = ActionRewardEstimator(storage, gamma=gamma)
 
+        # create policy evaluator that will compute :math:`a \sim \pi(.|s_t)` and :math:`\pi(.|s_t)` on batch
         policy_evaluator = PolicyEvaluator(policy=exploration)
 
         # create loss for policy: \mathbb{E}[ \log \pi_{\theta}(a_t | s_t) R_t ]

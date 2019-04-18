@@ -639,6 +639,8 @@ class Batch(DictStorage):
         super(Batch, self).__init__(kwargs=kwargs, device=device, dtype=dtype, update=False)
         # contains the current values evaluated during the update phase of RL algorithms.
         self.current = DictStorage(kwargs={}, device=device, dtype=dtype, update=False)
+        # indices where the masks is different from 0 in the current batch
+        self.indices = None
 
     def get_current(self, key, default=None):
         """Try first to get the key from :attr:`current`, if not present, try to get it from the batch storage.
@@ -698,12 +700,12 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
             num_trajectories (int): number of trajectories.
         """
         # recurrent_hidden_state_size (int): size of the internal state
-        print("\nStorage: state shape: {}".format(state_shapes))
-        print("Storage: action shape: {}".format(action_shapes))
         super(RolloutStorage, self).__init__()
         self._step = np.zeros(int(num_trajectories), dtype=np.int)
         self._num_steps = int(num_steps)
         self._num_trajectories = int(num_trajectories)
+        self._state_shapes = state_shapes
+        self._action_shapes = action_shapes
         self._shifts = {}  # dictionary that maps the key to the time shift; this is add to the current time step
         self.init(self.num_steps, state_shapes, action_shapes, self.num_trajectories)
 
@@ -730,6 +732,16 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
     def curr_step(self):
         """Return the current time step."""
         return self._step
+
+    @property
+    def state_shapes(self):
+        """Return the state shapes."""
+        return self._state_shapes
+
+    @property
+    def action_shapes(self):
+        """Return the action shapes."""
+        return self._action_shapes
 
     ###########
     # Methods #
@@ -822,6 +834,8 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
         self._step = np.zeros(int(num_trajectories), dtype=np.int)
         self._num_steps = int(num_steps)
         self._num_trajectories = int(num_trajectories)
+        self._state_shapes = state_shapes
+        self._action_shapes = action_shapes
 
         # allocate space for observations / states
         logger.debug('creating space for states with shape: {}'.format(state_shapes))
@@ -951,8 +965,6 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
             **kwargs (dict): dictionary containing other parameters to update in the storage. The other parameters
                 had to be added using the `create_new_entry()` method.
         """
-        print("Storage - insert state: {}".format(states))
-        print("Storage - insert action: {}".format(actions))
         t = self._step[rollout_idx]
 
         # check given observations/states and actions
@@ -1021,8 +1033,12 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
             else:  # value = tensor
                 batch[key] = sample(value, indices)
 
+        # create Batch object
+        batch = Batch(batch, device=self.device, dtype=self.dtype)
+        batch.indices = torch.tensor(range(len(indices)))[batch['masks'][:, 0] != 0].tolist()
+
         # return batch (which is given to the updater (and loss))
-        return Batch(batch, device=self.device, dtype=self.dtype)
+        return batch
 
     def end(self, rollout_idx=0, *args, **kwargs):
         """Once arrived at the end of an episode, it will fill the remaining mask values.

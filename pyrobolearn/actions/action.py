@@ -36,7 +36,7 @@ class Action(object):
 
     In our framework, the `Action` class is decoupled from the policy and environment rendering it more modular [1].
     Nevertheless, the `Action` class still acts as a bridge between the policy and environment. In addition to be
-    the output of a policy/controller, it can also be the input to some value estimators, dynamic models, reward
+    the output of a policy/controller, it can also be the input to some value approximators, dynamic models, reward
     functions, and so on.
 
     This class also describes the `action_space` which has initially been defined in `gym.Env` [2].

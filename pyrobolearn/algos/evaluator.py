@@ -62,6 +62,11 @@ class Evaluator(object):
         """Return the storage unit."""
         return self.estimator.storage
 
+    @storage.setter
+    def storage(self, storage):
+        """Set the storage unit."""
+        self.estimator.storage = storage
+
     ###########
     # Methods #
     ###########

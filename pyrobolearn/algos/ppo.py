@@ -16,7 +16,7 @@ from pyrobolearn.exploration import ActionExploration
 
 from pyrobolearn.storages import RolloutStorage
 from pyrobolearn.samplers import BatchRandomSampler
-from pyrobolearn.returns import GAE
+from pyrobolearn.returns import GAE, PolicyEvaluator
 from pyrobolearn.losses import CLIPLoss, L2Loss, EntropyLoss
 from pyrobolearn.optimizers import Adam
 
@@ -171,8 +171,9 @@ class PPO(GradientRLAlgo):
         if not isinstance(actor_critic, ActorCritic):
             raise TypeError("Expecting 'actor_critic' to be an instance of ActorCritic")
 
-        # get policy
+        # get policy and value
         policy = actor_critic.actor
+        value = actor_critic.critic
 
         # create exploration strategy (wrap the original policy and specify how to explore)
         # By default, for discrete actions it will use a Categorical distribution and for continuous actions, it will
@@ -190,7 +191,10 @@ class PPO(GradientRLAlgo):
 
         # create estimator
         logger.debug('create return estimator (GAE)')
-        estimator = GAE(storage, gamma=gamma, tau=tau)
+        estimator = GAE(storage, value, gamma=gamma, tau=tau)
+
+        # create policy evaluator that will compute :math:`a \sim \pi(.|s_t)` and :math:`\pi(.|s_t)` on batch
+        policy_evaluator = PolicyEvaluator(policy=exploration)
 
         # create loss
         logger.debug('create loss')
@@ -204,7 +208,7 @@ class PPO(GradientRLAlgo):
         logger.debug('create explorer, evaluator, and updater')
         explorer = Explorer(task, exploration, storage, num_workers=num_workers)
         evaluator = Evaluator(estimator)
-        updater = Updater(policy, sampler, loss, optimizer)
+        updater = Updater(policy, sampler, loss, optimizer,  evaluators=[policy_evaluator])
 
         # initialize RL algorithm
         super(PPO, self).__init__(explorer, evaluator, updater)

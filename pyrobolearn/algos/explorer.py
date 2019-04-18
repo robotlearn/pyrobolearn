@@ -139,7 +139,7 @@ class Explorer(object):
         observation = self.env.reset()
         if verbose:
             print("\n#### Starting the Exploration phase ####")
-            print("Explorer - initial state: {}".format(observation))
+            # print("Explorer - initial state: {}".format(observation))
 
         # reset storage
         self.storage.reset(init_states=observation, rollout_idx=rollout_idx)
@@ -155,14 +155,14 @@ class Explorer(object):
             # perform one step in the environment
             next_observation, reward, done, info = self.env.step(action)
 
-            if verbose:
-                print("\nExplorer:")
-                print("1. Observation data: {}".format(observation))
-                print("2. Action data: {}".format(action))
-                print("3. Next observation data: {}".format(next_observation))
-                print("4. Reward: {}".format(reward))
-                print("5. \\pi(.|s): {}".format(distribution))
-                print("6. log \\pi(a|s): {}".format([d.log_prob(action) for d in distribution]))
+            # if verbose:
+            #     print("\nExplorer:")
+            #     print("1. Observation data: {}".format(observation))
+            #     print("2. Action data: {}".format(action))
+            #     print("3. Next observation data: {}".format(next_observation))
+            #     print("4. Reward: {}".format(reward))
+            #     print("5. \\pi(.|s): {}".format(distribution))
+            #     print("6. log \\pi(a|s): {}".format([d.log_prob(action) for d in distribution]))
 
             # insert in storage
             self.storage.insert(observation, action, next_observation, reward, mask=(1-done),

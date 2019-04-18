@@ -265,8 +265,10 @@ class ParametrizedValue(ValueApproximator):
         # if the input is an instance of State, get the inner merged data.
         if isinstance(state, State):
             state = state.merged_data
-            if len(state) == 1:
-                state = state[0]
+
+        # if the input state is a list of len(1)
+        if isinstance(state, list) and len(state) == 1:
+            state = state[0]
 
         self.value = self.model.predict(state, to_numpy=to_numpy, return_logits=True, set_output_data=False)
         return self.value
@@ -437,13 +439,16 @@ class ParametrizedQValue(QValueApproximator):  # ParametrizedValue, QValueApprox
         # if the input is an instance of State, get the inner merged data.
         if isinstance(state, State):
             state = state.merged_data
-            if len(state) == 1:
-                state = state[0]
+        # if the input state is a list of len(1)
+        if isinstance(state, list) and len(state) == 1:
+            state = state[0]
 
+        # if the input is an insrtance of Action, get the inner merged data.
         if isinstance(action, Action):
             action = action.merged_data
-            if len(action) == 1:
-                action = action[0]
+        # if the input action is a list of len(1)
+        if isinstance(action, list) and len(action) == 1:
+            action = action[0]
 
         self.value = self.model.predict([state, action], to_numpy=to_numpy, return_logits=True, set_output_data=False)
         return self.value

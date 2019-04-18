@@ -10,6 +10,8 @@ Dependencies:
 import numpy as np
 # from pathos.multiprocessing import Pool
 
+from pyrobolearn.storages import RolloutStorage
+
 from pyrobolearn.algos.explorer import Explorer
 from pyrobolearn.algos.evaluator import Evaluator
 from pyrobolearn.algos.updater import Updater
@@ -246,6 +248,14 @@ class RLAlgo(object):  # Algo):
         """Return the storage unit."""
         return self.explorer.storage
 
+    @storage.setter
+    def storage(self, storage):
+        """Set the storage unit to the exploration, evaluation, and update phase."""
+        self.explorer.storage = storage
+        if self.evaluator is not None:
+            self.evaluator.storage = storage
+        self.updater.storage = storage
+
     @property
     def optimizers(self):
         """Return the optimizers."""
@@ -260,19 +270,28 @@ class RLAlgo(object):  # Algo):
     # Methods #
     ###########
 
-    def init(self, num_steps, num_rollouts, num_episodes, seed=None, *args, **kwargs):
+    def init(self, num_steps, num_rollouts, num_episodes, seed=None, verbose=False, *args, **kwargs):
         """
-        Initialize the reinforcement learning algorithm.
+        Initialize the reinforcement learning algorithm by creating and setting a new storage unit if necessary.
 
         Args:
             num_steps (int): number of step per rollout/trajectory
             num_rollouts (int): number of rollouts/trajectories per episode (default: 1)
             num_episodes (int): number of episodes (default: 1)
             seed (int): random seed
+            verbose (bool): if True, print details about the optimization process
             *args (list): list of optional arguments.
             **kwargs (dict): dictionary of optional arguments.
         """
-        pass
+        if isinstance(self.storage, RolloutStorage):
+            if self.storage.size != num_steps * num_rollouts:
+                if verbose:
+                    print("Creating new storage unit to have a new size with num_steps={} and num_rollouts={}"
+                          "".format(num_steps, num_rollouts))
+
+                state_shapes, action_shapes = self.storage.state_shapes, self.storage.action_shapes
+                self.storage.init(num_steps=num_steps, state_shapes=state_shapes, action_shapes=action_shapes,
+                                  num_trajectories=num_rollouts)
 
     # def init(self, explorer, evaluator, updater):
     #     """Initialize the RL algo."""
@@ -288,7 +307,7 @@ class RLAlgo(object):  # Algo):
             num_steps (int): number of step per rollout/trajectory
             num_rollouts (int): number of rollouts/trajectories per episode (default: 1)
             num_episodes (int): number of episodes (default: 1)
-            verbose(bool): if True, print details about the optimization process
+            verbose (bool): if True, print details about the optimization process
             seed (int): random seed
 
         Returns:
@@ -300,7 +319,7 @@ class RLAlgo(object):  # Algo):
             print("\n#### Start the RL algo ####")
 
         # init algo with the given parameters
-        self.init(num_steps=num_steps, num_rollouts=num_rollouts, num_episodes=num_episodes, seed=seed)
+        self.init(num_steps=num_steps, num_rollouts=num_rollouts, num_episodes=num_episodes, seed=seed, verbose=verbose)
 
         # set the policy in training mode
         self.policy.train()
@@ -321,7 +340,7 @@ class RLAlgo(object):  # Algo):
             # evaluate and update
             if self.evaluator is not None:
                 self.evaluator.evaluate(verbose=verbose)
-            losses = self.updater()
+            losses = self.updater.update(verbose=verbose)
 
             # add the loss in the history
             history.setdefault('losses', []).append(losses)
@@ -348,7 +367,7 @@ class RLAlgo(object):  # Algo):
         Returns:
             list: list of results for each policy at each time step
         """
-        results = self.task.run(self, num_steps=num_steps, dt=dt, use_terminating_condition=use_terminating_condition,
+        results = self.task.run(num_steps=num_steps, dt=dt, use_terminating_condition=use_terminating_condition,
                                 render=render)
         return results
 

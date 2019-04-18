@@ -124,10 +124,6 @@ class Updater(object):
     def storage(self, storage):
         """Set the storage unit."""
         self.sampler.storage = storage
-        # if not isinstance(storage, RolloutStorage):
-        #     raise TypeError("Expecting the storage to be an instance of `Storage`, instead got: "
-        #                     "{}".format(type(storage)))
-        # self._storage = storage
 
     @property
     def losses(self):
