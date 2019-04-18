@@ -4,10 +4,11 @@
 
 import torch
 
-from pyrobolearn.losses.loss import Loss
+from pyrobolearn.losses import BatchLoss
 from pyrobolearn.policies import Policy
 from pyrobolearn.values import QValue, Value
 from pyrobolearn.returns import TDReturn, Estimator, Return
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -19,7 +20,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class ValueLoss(Loss):
+class ValueL2Loss(BatchLoss):
     r"""L2 loss for values
     """
 
@@ -28,10 +29,10 @@ class ValueLoss(Loss):
         Initialize the L2 loss between the returns and values.
 
         Args:
-            returns ():
+            returns (Estimator, Return): returns.
             value (Value): value function approximator.
         """
-        super(ValueLoss, self).__init__()
+        super(ValueL2Loss, self).__init__()
 
         # check the given returns or estimators
         if not isinstance(returns, (Estimator, Return)):
@@ -45,16 +46,37 @@ class ValueLoss(Loss):
                             "{}".format(type(value)))
         self._value = value
 
-    def compute(self, batch):
-        returns = batch[self._returns]
-        values = batch.current[self._value]
+    def _compute(self, batch):
+        """
+        Compute the loss on the given batch.
+
+        Args:
+            batch (Batch): batch that contains the 'states'.
+
+        Returns:
+            torch.tensor: loss scalar value
+        """
+        if self._returns in batch.current:
+            returns = batch.current[self._returns]
+        elif self._returns in batch:
+            returns = batch[self._returns]
+        else:
+            returns = self._returns.evaluate(batch, store=False)
+
+        if self._value in batch.current:
+            values = batch.current[self._value]
+        elif self._value in batch:
+            values = batch[self._value]
+        else:
+            values = self._value(state=batch['states'])
         return 0.5 * (returns - values).pow(2).mean()
 
 
-class QLoss(Loss):
+class QLoss(BatchLoss):
     r"""QLoss
 
-    This computes :math:`\frac{1}{|B|} \sum_{s \in B} Q_{s, \mu_{\theta}(s)}}`, where :math:`\mu_\theta` is the policy.
+    This computes :math:`\frac{1}{|B|} \sum_{s \in B} Q_{s, \mu_{\theta}(s)}}`, where :math:`\mu_\theta` is the
+    policy, and this quantity is being maximized.
     """
 
     def __init__(self, q_value, policy):
@@ -79,7 +101,7 @@ class QLoss(Loss):
                             "{}".format(type(policy)))
         self._policy = policy
 
-    def compute(self, batch):
+    def _compute(self, batch):
         """
         Compute the loss on the given batch.
 
@@ -94,7 +116,7 @@ class QLoss(Loss):
         return -q_values.mean()
 
 
-class MSBELoss(Loss):
+class MSBELoss(BatchLoss):
     r"""Mean-squared Bellman error
 
     The mean-squared Bellman error (MSBE) computes the Bellman error, also known as the one-step temporal difference
@@ -132,7 +154,7 @@ class MSBELoss(Loss):
                             "{}".format(type(td_return)))
         self._td = td_return
 
-    def compute(self, batch):
+    def _compute(self, batch):
         """
         Compute the mean-squared TD return.
 
@@ -142,7 +164,9 @@ class MSBELoss(Loss):
         Returns:
             torch.Tensor: loss value.
         """
-        if self._td in batch:
+        if self._td in batch.current:
+            returns = batch.current[self._td]
+        elif self._td in batch:
             returns = batch[self._td]
         else:
             returns = self._td.evaluate(batch, store=False)

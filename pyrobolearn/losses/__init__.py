@@ -10,3 +10,6 @@ from .policy_losses import *
 
 # import value losses
 from .value_losses import *
+
+# import dynamic losses
+from .dynamic_losses import *

@@ -7,3 +7,6 @@ from .targets import *
 
 # import the various returns
 from .returns import *
+
+# import evaluators
+from .evaluators import *

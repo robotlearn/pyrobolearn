@@ -32,6 +32,12 @@ class Loss(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, losses=None):
+        """
+        Initialize the loss abstract class.
+
+        Args:
+            losses (None, list of Loss): internal losses to compute.
+        """
         self.losses = losses
 
     ##############
@@ -70,7 +76,7 @@ class Loss(object):
         """Compute the loss and return the scalar value."""
         pass
 
-    def latex(self):
+    def latex(self):  # TODO: check when using operators with latex formula
         """Return a latex formula of the loss."""
         pass
 

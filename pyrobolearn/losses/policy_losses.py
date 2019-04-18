@@ -4,8 +4,9 @@
 
 import torch
 
-from pyrobolearn.losses.loss import Loss
+from pyrobolearn.losses import BatchLoss
 from pyrobolearn.returns.estimators import Estimator
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -17,7 +18,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class PGLoss(Loss):
+class PGLoss(BatchLoss):
     r"""Policy Gradient Loss
 
     Compute the policy gradient loss which is maximized and given by:
@@ -31,7 +32,7 @@ class PGLoss(Loss):
 
     The gradient with respect to the parameters :math:`\theta` is then given by:
 
-    .. math:: g = \mathbb{E}[ \nabla_{\theta} \log \pi_{\theta}(a_t | s_t) ]
+    .. math:: g = \mathbb{E}[ \nabla_{\theta} \log \pi_{\theta}(a_t | s_t) \psi_t ]
 
     References:
         [1] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
@@ -43,7 +44,7 @@ class PGLoss(Loss):
         Initialize the Policy Gradient loss.
 
         Args:
-            estimator (Estimator): estimator that has been used on the rollout storage / batch.
+            estimator (Estimator): estimator/return that has been used on the rollout storage / batch.
         """
         super(PGLoss, self).__init__()
         if not isinstance(estimator, Estimator):
@@ -51,18 +52,31 @@ class PGLoss(Loss):
                             "{}".format(type(estimator)))
         self._estimator = estimator
 
-    def compute(self, batch):
+    def _compute(self, batch):
+        """
+        Compute the PG loss on the given batch.
+
+        Args:
+            batch (Batch): batch containing the states, actions, rewards, etc.
+
+        Returns:
+            torch.Tensor: loss scalar value
+        """
+        # evaluate the action
         log_curr_pi = batch.current['action_distributions']
         log_curr_pi = log_curr_pi.log_probs(batch.current['actions'])
         estimator = batch[self._estimator]
+
+        # compute loss and return it
         loss = torch.exp(log_curr_pi) * estimator
         return -loss.mean()
 
     def latex(self):
+        """Return a latex formula of the loss."""
         return r"\mathbb{E}[ r_t(\theta) A_t ]"
 
 
-class CPILoss(Loss):
+class CPILoss(BatchLoss):
     r"""CPI Loss
 
     Conservative Policy Iteration objective which is maximized and defined in [1]:
@@ -91,7 +105,16 @@ class CPILoss(Loss):
                             "{}".format(type(estimator)))
         self._estimator = estimator
 
-    def compute(self, batch):  # policy_distribution, old_policy_distribution, estimator):
+    def _compute(self, batch):
+        """
+        Compute the CPI loss on the given batch.
+
+        Args:
+            batch (Batch): batch containing the states, actions, rewards, etc.
+
+        Returns:
+            torch.Tensor: loss scalar value
+        """
         # ratio = policy_distribution / old_policy_distribution
         log_curr_pi = batch.current['action_distributions']
         log_curr_pi = log_curr_pi.log_probs(batch.current['actions'])
@@ -105,10 +128,11 @@ class CPILoss(Loss):
         return -loss.mean()
 
     def latex(self):
+        """Return a latex formula of the loss."""
         return r"\mathbb{E}[ r_t(\theta) A_t ]"
 
 
-class CLIPLoss(Loss):
+class CLIPLoss(BatchLoss):
     r"""CLIP Loss
 
     Loss defined in [1] which is maximized and given by:
@@ -138,7 +162,16 @@ class CLIPLoss(Loss):
                             "{}".format(type(estimator)))
         self._estimator = estimator
 
-    def compute(self, batch):  # , policy_distribution, old_policy_distribution, estimator):
+    def _compute(self, batch):
+        """
+        Compute the CLIP loss on the given batch.
+
+        Args:
+            batch (Batch): batch containing the states, actions, rewards, etc.
+
+        Returns:
+            torch.Tensor: loss scalar value
+        """
         log_curr_pi = batch.current['action_distributions']
         log_curr_pi = log_curr_pi.log_probs(batch.current['actions'])
         log_prev_pi = batch['action_distributions']
@@ -151,10 +184,11 @@ class CLIPLoss(Loss):
         return -loss.mean()
 
     def latex(self):
+        """Return a latex formula of the loss."""
         return r"\mathbb{E}[ \min(r_t(\theta) A_t, clip(r_t(\theta), 1-\epsilon, 1+\epsilon) A_t) ]"
 
 
-class KLPenaltyLoss(Loss):
+class KLPenaltyLoss(BatchLoss):
     r"""KL Penalty Loss
 
     KL Penalty to minimize:
@@ -164,32 +198,35 @@ class KLPenaltyLoss(Loss):
     where :math:`KL(.||.)` is the KL-divergence between two probability distributions.
     """
 
-    def __init__(self):  # p, q):
+    def __init__(self):
         """
         Initialize the KL Penalty loss.
-
-        Args:
-            p (torch.distributions.Distribution): 1st distribution
-            q (torch.distributions.Distribution): 2nd distribution
         """
         super(KLPenaltyLoss, self).__init__()
         # self.p = p
         # self.q = q
 
-    def compute(self, batch):
+    def _compute(self, batch):
         """
-        Compute :math:`KL(p||q)`.
+        Compute the KL divergence loss: :math:`KL(p||q)`.
+
+        Args:
+            batch (Batch): batch containing the states, actions, rewards, etc.
+
+        Returns:
+            torch.Tensor: loss scalar value
         """
         curr_pi = batch.current['action_distributions']
         prev_pi = batch['action_distributions']
 
-        return torch.distributions.kl.kl_divergence(prev_pi, curr_pi)
+        return torch.distributions.kl.kl_divergence(prev_pi, curr_pi).mean()
 
     def latex(self):
+        """Return a latex formula of the loss."""
         return r"\mathbb{E}[ KL( \pi_{\theta_{old}}(a_t | s_t) || \pi_{\theta}(a_t | s_t) ) ]"
 
 
-class EntropyLoss(Loss):
+class EntropyLoss(BatchLoss):
     r"""Entropy Loss
 
     Entropy loss, which is used to ensure sufficient exploration when maximized [1,2,3]:
@@ -205,9 +242,21 @@ class EntropyLoss(Loss):
     """
 
     def __init__(self):
+        """
+        Initialize the entropy loss.
+        """
         super(EntropyLoss, self).__init__()
 
-    def compute(self, batch):
+    def _compute(self, batch):
+        """
+        Compute the entropy loss.
+
+        Args:
+            batch (Batch): batch containing the states, actions, rewards, etc.
+
+        Returns:
+            torch.Tensor: loss scalar value
+        """
         distribution = batch.current['action_distributions']
         entropy = distribution.entropy().mean()
         return entropy

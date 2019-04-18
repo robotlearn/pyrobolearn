@@ -1,17 +1,15 @@
 #!/usr/bin/env python
 """Describes the various `Estimators` / `Returns` used in reinforcement learning.
 
-- Estimators are evaluated on trajectories (i.e. RolloutStorage).
-- Returns are estimated on batches of transition tuples (s, a, s', r, d).
+- Estimators are evaluated on trajectories and directly saved in the rollout storage unit (i.e. RolloutStorage).
+- Returns are estimated on batches of transition tuples (s, a, s', r, d) and saved in the `batch.current` attribute.
 
-In both case, they add
+In both case, the computed data is saved in the storage / batch unit, which can then be later used by the loss for
+instance.
 
 Dependencies:
 - `pyrobolearn.storages`
 """
-
-from abc import ABCMeta
-import collections
 
 import torch
 
@@ -144,11 +142,12 @@ class Estimator(object):
         """
         raise NotImplementedError
 
-    def evaluate(self, storage=None):
+    def evaluate(self, storage=None, store=True):
         """Evaluate the estimator on the given rollout storage.
 
         Args:
             storage (RolloutStorage): rollout storage.
+            store (True): This is always True.
 
         Returns:
             torch.Tensor: the computed returns.
@@ -426,15 +425,16 @@ class AdvantageEstimator(Estimator):  # TODO: check with masks
                              &= \mathbb{E}_{s_{t+1}}[ \delta_t^{V^{\pi,\gamma}} ]
     """
 
-    def __init__(self, storage, value, q_value, gamma=1.):
+    def __init__(self, storage, value, q_value, gamma=1., standardize=False):
         """
         Initialize the Advantage estimator.
 
         Args:
             storage (RolloutStorage): rollout storage
             value (Value): value function approximator.
-            q_value (QValue): Q-value function approximator.
+            q_value (QValue, Estimator): Q-value function approximator, or estimator.
             gamma (float): discount factor
+            standardize (bool): If True, it will standardize the advantage estimates.
         """
         super(AdvantageEstimator, self).__init__(storage=storage, gamma=gamma)
 
@@ -445,10 +445,13 @@ class AdvantageEstimator(Estimator):  # TODO: check with masks
         self._value = value
 
         # check q-value
-        if not isinstance(q_value, QValue):
-            raise TypeError("Expecting the given q_value to be an instance of `QValue`, instead got: "
+        if not isinstance(q_value, (QValue, Estimator)):
+            raise TypeError("Expecting the given q_value to be an instance of `QValue` or `Estimator`, instead got: "
                             "{}".format(type(q_value)))
         self._q_value = q_value
+
+        # set if we should standardize or not
+        self._standardize = bool(standardize)
 
     def _evaluate(self):
         """Evaluate the estimator / return.
@@ -463,13 +466,28 @@ class AdvantageEstimator(Estimator):  # TODO: check with masks
         else:
             values = self._value(self.states)
 
-        # get Q-values from storage if present. If not, evaluate the Q-values based on the states and actions.
+        # get Q-values/estimators from storage if present. If not, evaluate the Q-values based on the states and
+        # actions.
         if self._q_value in self.storage:
             q_values = self.storage[self._q_value]
         else:
-            q_values = self._q_value(self.states, self.actions)
+            if isinstance(self._q_value, Estimator):
+                # evaluate the estimator
+                self._q_value.evaluate()
+                # get the returns
+                q_values = self.storage[self._q_value]
+            else:
+                q_values = self._q_value(self.states, self.actions)
 
-        self.returns[:] = q_values - values
+        # compute the advantage estimates
+        returns = q_values - values
+
+        # standardize the advantage estimates
+        if self._standardize:
+            returns = (returns - returns.mean()) / (returns.std() + 1.e-5)
+
+        # set the returns
+        self.returns[:] = returns
         return self.returns
 
 

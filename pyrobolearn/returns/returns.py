@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 """Computes the various returns evaluated on batches of transitions (used in RL).
 
-The targets that are evaluated are placed inside the given batch, which can then be accessed by other classes.
+The returns that are evaluated are placed inside the given batch, which can then be accessed by other classes.
+Note that most of the TD-returns are using the targets defined in `pyrobolearn/returns/targets.py`.
 
 Dependencies:
 - `pyrobolearn.storages`
@@ -68,9 +69,14 @@ class Return(object):
         Returns:
             torch.Tensor: evaluated return.
         """
+        # check batch type
+        if not isinstance(batch, Batch):
+            raise TypeError("Expecting the given 'batch' to be an instance of `Batch`, instead got: "
+                            "{}".format(type(batch)))
+
         output = self._evaluate(batch)
         if store:  # store the target in the batch if specified
-            batch[self] = output
+            batch.current[self] = output
         return output
 
     def __call__(self, batch, store=True):
@@ -135,7 +141,7 @@ class TDValueReturn(TDReturn):
         Initialize the TD state value return.
 
         Args:
-            value (Value): state value function.
+            value (Value, list of Value): state value function(s).
             target_value (Value, list of Value, None): target state value function(s). If None, it will be set to be
                 the same as the given :attr:`value`. Note however that this can lead to unstable behaviors.
             gamma (float): discount factor
@@ -182,7 +188,7 @@ class TDQValueReturn(TDReturn):
         Initialize the TD state-action value return.
 
         Args:
-            q_value (QValue): Q-value function.
+            q_value (QValue, list of QValue): Q-value function(s).
             policy (Policy): policy to compute the action a'.
             target_qvalue (QValue, list of QValue, None): target Q-value function(s). If None, it will use the given
                 :attr:`q_value`. Note however that this can lead to unstable behaviors.
@@ -212,7 +218,7 @@ class TDQValueReturn(TDReturn):
             torch.Tensor: evaluated TD-return.
         """
         target = self._target(batch, store=False)
-        return target - self._q_value(batch['states'], actions)
+        return target - self._q_value(batch['states'], self._target.actions)
 
 
 class TDQLearningReturn(TDReturn):
@@ -236,7 +242,7 @@ class TDQLearningReturn(TDReturn):
         Initialize the TD Q-Learning value return.
 
         Args:
-            q_value (QValue): Q-value function.
+            q_value (QValue, list of QValue): Q-value function(s).
             target_qvalue (QValue): target Q-value function. If None, it will use the given :attr:`q_value`.
             gamma (float): discount factor
         """

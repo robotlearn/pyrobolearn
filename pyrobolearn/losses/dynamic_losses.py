@@ -6,9 +6,8 @@ That is, the losses that are used with dynamic models.
 
 import torch
 
-from pyrobolearn.losses.loss import Loss
+from pyrobolearn.losses import BatchLoss
 from pyrobolearn.dynamics import DynamicModel
-from pyrobolearn.storages import Batch
 
 
 __author__ = "Brian Delhaisse"
@@ -21,7 +20,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class DynamicL2Loss(Loss):
+class DynamicL2Loss(BatchLoss):
     r"""Dynamic L2 loss.
 
     This loss computes the Frobenius norm between the prediction of a dynamic model and the next states that are
@@ -42,7 +41,7 @@ class DynamicL2Loss(Loss):
                             "{}".format(type(dynamic_model)))
         self._dynamic_model = dynamic_model
 
-    def compute(self, batch):
+    def _compute(self, batch):
         """
         Compute the frobenius norm (i.e. L2-norm).
 

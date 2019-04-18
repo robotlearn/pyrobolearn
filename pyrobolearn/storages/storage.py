@@ -607,14 +607,61 @@ class DictStorage(dict, PyTorchStorage):
 
 # alias
 class Batch(DictStorage):
-    r"""Batch storage"""
+    r"""Batch storage
+
+    The Batch storage contains states, actions, rewards, and masks. It might be filled later by the various estimators,
+    targets, and returns that are defined in `pyrobolearn/returns` folder.
+
+    The Batch is notably returned by rollout storages (used for on-policy algorithms) and experience replays (used for
+    off-policy algorithms) when requesting batches.
+
+    For the states, actions, rewards, and masks; these can be accessed from the batch using `batch[name]`. For the
+    estimators, returns, targets, and others, they can be accessed using `batch[object]`.
+
+    Finally, the Batch is created by the various storages, filled by the various returns/targets/estimators (see
+    `pyrobolearn/returns` folder), and given to the various losses (see `pyrobolearn/losses` folder). Thus, there is a
+    tight coupling between these 3 concepts. As for the original storages from which the batches are created, these
+    are filled by the exploration phase in RL algorithms (see `pyrobolearn/algos/explorer`).
+    """
 
     def __init__(self, kwargs=None, device=None, dtype=None):
+        """
+        Initialize the Batch storage.
+
+        Args:
+            kwargs (dict): initial dictionary containing the various states, acti
+            device (torch.device, str, None): the device to put the data on (e.g. `torch.device("cuda:0")` or
+               `torch.device("cpu")`). If string, it can be 'cpu' or 'cuda'. If None, it will keep the original device
+               to which the tensor is allocated.
+            dtype (torch.dtype, None): convert the `torch.Tensor` to the specified data type. If None, it will keep
+                the original dtype
+        """
         super(Batch, self).__init__(kwargs=kwargs, device=device, dtype=dtype, update=False)
+        # contains the current values evaluated during the update phase of RL algorithms.
         self.current = DictStorage(kwargs={}, device=device, dtype=dtype, update=False)
 
+    def get_current(self, key, default=None):
+        """Try first to get the key from :attr:`current`, if not present, try to get it from the batch storage.
 
-class RolloutStorage(DictStorage):
+        Args:
+            key (object): dictionary key
+            default (object): default value to return if the key is not found in `Batch.current` and `Batch`.
+        """
+        # check in current
+        if key in self.current:
+            return self.current[key]
+        # check in self
+        if key in self:
+            return self[key]
+        # return default
+        return default
+
+    # def __contains__(self, key):
+    #     """Check if the given key is in batch.current and in batch."""
+    #     return (key in self.current) or (key in self)
+
+
+class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: storage[policy_class]['actions']?
     r"""Rollout Storage
 
     Specific storage used in RL which stores transitions at each step `(s_t, a_t, s_{t+1}, r_t)`, and allows to
@@ -689,7 +736,12 @@ class RolloutStorage(DictStorage):
     ###########
 
     def step(self, rollout_idx=0):
-        """Perform one step; increment by one the current step. If it reaches the end, start from 0 again."""
+        """Perform one step; increment by one the current step. If it reaches the end, start from 0 again.
+
+        Args:
+            rollout_idx (int, torch.tensor, np.array, list): trajectory/rollout index(ices). This index must be below
+                `self.num_trajectories`.
+        """
         # if end of storage, go at the beginning
         self._step[rollout_idx] = (self._step[rollout_idx] + 1) % self.num_steps
 
@@ -792,7 +844,7 @@ class RolloutStorage(DictStorage):
         self.create_new_entry('masks', shapes=1, num_steps=self.num_steps + 1)
 
         # allocate space for action distribution
-        self.create_new_entry('distributions', shapes=[() for _ in action_shapes], num_steps=self.num_steps,
+        self.create_new_entry('action_distributions', shapes=[() for _ in action_shapes], num_steps=self.num_steps,
                               dtype=object)
 
         # space for log probabilities on policy, distributions, scalar values from value functions,
@@ -921,7 +973,7 @@ class RolloutStorage(DictStorage):
         self['masks'][t + 1][rollout_idx].copy_(self._convert_to_tensor(mask))
 
         # insert distributions
-        for distribution, storage in zip(distributions, self['distributions']):
+        for distribution, storage in zip(distributions, self['action_distributions']):
             storage[t][rollout_idx] = distribution
 
         # add other elements

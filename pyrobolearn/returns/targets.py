@@ -75,9 +75,14 @@ class Target(object):
         Returns:
             torch.Tensor: evaluated targets.
         """
+        # check batch type
+        if not isinstance(batch, Batch):
+            raise TypeError("Expecting the given 'batch' to be an instance of `Batch`, instead got: "
+                            "{}".format(type(batch)))
+
         output = self._evaluate(batch)
-        if store:  # store the target in the batch if specified
-            batch[self] = output
+        if store:  # store the target in the current batch if specified
+            batch.current[self] = output
         return output
 
     def __call__(self, batch, store=True):
@@ -318,6 +323,7 @@ class QValueTarget(GammaTarget):
         """
         next_states = batch['next_states']
         actions = self._policy.predict(next_states)
+        self.actions = actions
         value = torch.min(torch.cat([value(next_states, actions) for value in self._q_values], dim=1), dim=1)[0]
         return batch['rewards'] + self.gamma * batch['masks'] * value
 
@@ -410,5 +416,6 @@ class EntropyValueTarget(Target):
             torch.Tensor: evaluated targets.
         """
         actions, distribution = self._policy.predict(batch['states'])
+        self.actions, self.distribution = actions, distribution
         value = torch.min(torch.cat([value(batch['states'], actions) for value in self._q_values], dim=1), dim=1)[0]
         return value - self._alpha * distribution.log_prob(actions)
