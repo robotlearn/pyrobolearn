@@ -221,6 +221,7 @@ class RLAlgo(object):  # Algo):
 
     @property
     def environment(self):
+        """Return the environment instance."""
         return self.task.environment
 
     @property
@@ -295,6 +296,9 @@ class RLAlgo(object):  # Algo):
         """
         history = {}
 
+        if verbose:
+            print("\n#### Start the RL algo ####")
+
         # init algo with the given parameters
         self.init(num_steps=num_steps, num_rollouts=num_rollouts, num_episodes=num_episodes, seed=seed)
 
@@ -308,17 +312,25 @@ class RLAlgo(object):  # Algo):
             for rollout in range(num_rollouts):
                 # TODO: consider to learn the dynamic model if provided
 
-                # Explore, evaluate, and update
-                self.explorer(num_steps, rollout)
-                if self.evaluator is not None:
-                    self.evaluator()
-                loss = self.updater()
+                if verbose:
+                    print("Episode: {}/{} - Rollout: {}/{}".format(episode+1, num_episodes, rollout+1, num_rollouts))
 
-                # add the loss in the history
-                history.setdefault('loss', []).append(loss)
+                # Explore
+                self.explorer.explore(num_steps, rollout, verbose=verbose)
+
+            # evaluate and update
+            if self.evaluator is not None:
+                self.evaluator.evaluate(verbose=verbose)
+            losses = self.updater()
+
+            # add the loss in the history
+            history.setdefault('losses', []).append(losses)
 
         # set the policy in test mode
         self.policy.eval()
+
+        if verbose:
+            print("\n#### End of the RL algo ####")
 
         return history
 

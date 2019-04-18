@@ -73,6 +73,14 @@ class Evaluator(object):
                 batch.current[self] = output
         return output
 
+    def __repr__(self):
+        """Return a representation string of the object."""
+        return self.__class__.__name__
+
+    def __str__(self):
+        """Return a string describing the object."""
+        return self.__class__.__name__
+
     def __call__(self, batch, store=True):
         """Evaluate the evaluator on the given batch."""
         return self.evaluate(batch)
@@ -170,7 +178,8 @@ class PolicyEvaluator(Evaluator):
             torch.Tensor: advantage estimates.
         """
         # evaluate policy
-        actions, action_distributions = self._policy.predict(batch['states'])
+        actions, action_distributions = self._policy.predict(batch['states'], deterministic=False, to_numpy=False,
+                                                             return_logits=False)
 
         # return actions and distribution over actions
         return [('actions', actions), ('action_distributions', action_distributions)]

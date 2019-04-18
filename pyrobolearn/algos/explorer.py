@@ -122,9 +122,9 @@ class Explorer(object):
     # Methods #
     ###########
 
-    def explore(self, num_steps, rollout_idx=0, deterministic=False, verbose=True):
+    def explore(self, num_steps, rollout_idx=0, deterministic=False, verbose=False):
         """
-        Explore the environment.
+        Explore in the environment.
 
         Args:
             num_steps (int): number of steps
@@ -137,7 +137,9 @@ class Explorer(object):
         """
         # reset environment
         observation = self.env.reset()
-        print("\nExplorer - initial state: {}".format(observation))
+        if verbose:
+            print("\n#### Starting the Exploration phase ####")
+            print("Explorer - initial state: {}".format(observation))
 
         # reset storage
         self.storage.reset(init_states=observation, rollout_idx=rollout_idx)
@@ -174,11 +176,13 @@ class Explorer(object):
                 self.storage.end(rollout_idx)  # fill remaining mask values
                 break
 
-        # print("states: {}".format(self.storage['states']))
-        # print("actions: {}".format(self.storage['actions']))
-        # print("rewards: {}".format(self.storage['rewards']))
-        # print("masks: {}".format(self.storage['masks']))
-        # print("distributions: {}".format(self.storage['distributions']))
+        if verbose:
+            print("#### End of the Exploration phase #####")
+            # print("states: {}".format(self.storage['states']))
+            # print("actions: {}".format(self.storage['actions']))
+            # print("rewards: {}".format(self.storage['rewards']))
+            # print("masks: {}".format(self.storage['masks']))
+            # print("distributions: {}".format(self.storage['distributions']))
 
         # # clear explorer
         # self.explorer.clear()
@@ -198,6 +202,16 @@ class Explorer(object):
         """Return a string describing the class."""
         return self.__class__.__name__
 
-    def __call__(self, num_steps, rollout_idx=0):
-        """Explore in the environment with the specified number of time steps."""
+    def __call__(self, num_steps, rollout_idx=0, deterministic=False, verbose=True):
+        """Explore in the environment.
+
+        Args:
+            num_steps (int): number of steps
+            rollout_idx (int): trajectory/rollout index.
+            deterministic (bool): if deterministic is True, then it does not explore in the environment.
+            verbose (bool): If true, print information on the standard output.
+
+        Returns:
+            DictStorage: updated memory storage
+        """
         self.explore(num_steps, rollout_idx=rollout_idx)

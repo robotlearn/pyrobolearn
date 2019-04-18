@@ -93,7 +93,7 @@ class Estimator(object):
     @property
     def returns(self):
         """Return the returns tensor from the rollout storage."""
-        return self.storage['self']
+        return self.storage[self]
 
     @property
     def states(self):
@@ -165,6 +165,14 @@ class Estimator(object):
     #############
     # Operators #
     #############
+
+    def __repr__(self):
+        """Return a representation string of the object."""
+        return self.__class__.__name__
+
+    def __str__(self):
+        """Return a string describing the object."""
+        return self.__class__.__name__ + "(gamma=" + str(self.gamma) + ")"
 
     def __call__(self, storage=None):
         """Evaluate the estimator on the rollout storage.
@@ -613,3 +621,7 @@ class GAE(Estimator):
             returns[t] = gae + values[t]
 
         return returns
+
+    def __str__(self):
+        """Return a string describing the object."""
+        return self.__class__.__name__ + "(gamma=" + str(self.gamma) + ", tau=" + str(self.tau) + ")"

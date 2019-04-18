@@ -252,13 +252,13 @@ class Updater(object):
 
         # set the tick for each loss
         for loss in self.losses:
-            if loss not in self._ticks:
-                self._ticks[loss] = 1
+            if loss not in ticks:
+                ticks[loss] = 1
 
         # set the tick for each updater
         for updater in self.updaters:
-            if updater not in self._ticks:
-                self._ticks[updater] = 1
+            if updater not in ticks:
+                ticks[updater] = 1
 
         # set the ticks
         self._ticks = ticks
@@ -267,34 +267,42 @@ class Updater(object):
     # Methods #
     ###########
 
-    def update(self, num_batches=10, num_epochs=1):
+    def update(self, num_epochs=1, num_batches=10, verbose=False):
         """
         Update the given approximators (policies, value functions, etc).
 
         Args:
-            num_batches (int): number of batches.
             num_epochs (int): number of epochs.
+            num_batches (int): number of batches.
+            verbose (bool): If true, print information on the standard output.
 
         Returns:
-            list: list of losses
+            dict: dictionary of losses. There is a key for each loss, and the value is a nested list which contains
+                the obtained loss for each epoch and for each batch in the corresponding epoch.
         """
         # set the number of batches
         self.sampler.num_batches = num_batches
 
-        losses = []
+        # keep history of each loss
+        losses = {}
+
+        if verbose:
+            print("\n#### Starting the Update phase ####")
 
         # for each epoch
         for epoch in range(num_epochs):
 
-            # batch losses
-            batch_losses = []
-
             # for each batch
-            for batch in self.sampler:
+            for batch_idx, batch in enumerate(self.sampler):
+
+                if verbose:
+                    print("Epoch: {}/{} - Batch: {}/{}".format(epoch + 1, num_epochs, batch_idx + 1, num_batches))
 
                 # evaluate the evaluators with the current parameters on the given batch and save the results in the
                 # batch's `current` attribute
                 for evaluator in self.evaluators:
+                    if verbose:
+                        print("Subevaluation on the batch using the estimator: {}".format(evaluator))
                     evaluator.evaluate(batch, store=True)
 
                 # update each approximator based on the loss on which it is evaluated and using the specified optimizer
@@ -303,25 +311,36 @@ class Updater(object):
                     # if time to update
                     if self._cnt % self.ticks[loss] == 0:
 
-                        # compute loss on the data (the loss knows what to do with the batch)
-                        loss = loss.compute(batch)
+                        if verbose:
+                            print("\t Compute loss {}".format(loss))
 
-                        # append the loss / batch
-                        batch_losses.append(loss)
+                        # compute loss on the data (the loss knows what to do with the batch)
+                        loss_value = loss.compute(batch)
+
+                        # append the loss value in the history of losses
+                        if loss not in losses:
+                            losses[loss] = [[]] * num_epochs
+                        else:
+                            losses[loss][epoch].append(loss_value)
 
                         # update parameters
-                        optimizer.optimize(approximator.parameters(), loss)
+                        if verbose:
+                            print("\t Optimize the parameters for {} using the loss value: {}".format(approximator,
+                                                                                                      loss_value))
+                        optimizer.optimize(approximator.parameters(), loss_value)
 
                     # call each updater
                     for updater in self.updaters:
                         if self._cnt % self.ticks[updater] == 0:
+                            if verbose:
+                                print("\tRun updater {}".format(updater))
                             updater()
 
                 # increase counter
                 self._cnt += 1
 
-            # append the batch losses into the epoch losses
-            losses.append(batch_losses)
+        if verbose:
+            print("#### End of the Update phase ####")
 
         return losses  # shape=(epochs, batches)
 
@@ -337,6 +356,17 @@ class Updater(object):
         """Return a string describing the class."""
         return self.__class__.__name__
 
-    def __call__(self, num_batches=10):  # , storage, losses):
-        """Update the approximators."""
-        self.update(num_batches=num_batches)
+    def __call__(self, num_epochs=1, num_batches=10, verbose=False):
+        """
+        Update the given approximators (policies, value functions, etc).
+
+        Args:
+            num_epochs (int): number of epochs.
+            num_batches (int): number of batches.
+            verbose (bool): If true, print information on the standard output.
+
+        Returns:
+            dict: dictionary of losses. There is a key for each loss, and the value is a nested list which contains
+                the obtained loss for each epoch and for each batch in the corresponding epoch.
+        """
+        self.update(num_epochs=num_epochs, num_batches=num_batches, verbose=verbose)

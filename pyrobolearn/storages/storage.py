@@ -861,16 +861,19 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
         # reset the step
         self._step[rollout_idx] = 0
 
+        # reset masks
+        self.masks[:, rollout_idx].copy_(torch.ones_like(self.masks[:, rollout_idx]))
+
         # insert initial states
         if init_states is None:
             for state in self.states:
-                state[0][rollout_idx].copy_(state[-1][rollout_idx])
+                state[0, rollout_idx].copy_(state[-1, rollout_idx])
         else:
             if not isinstance(init_states, list):
                 init_states = [init_states]
             for observation, value in zip(self.states, init_states):
-                observation[0][rollout_idx].copy_(self._convert_to_tensor(value))
-        self.masks[0][rollout_idx].copy_(self.masks[-1][rollout_idx])
+                observation[0, rollout_idx].copy_(self._convert_to_tensor(value))
+        # self.masks[0, rollout_idx].copy_(self.masks[-1, rollout_idx])
         # self.recurrent_hidden_states[0].copy_(self.recurrent_hidden_states[-1])
 
     def update_tensor(self, key, values, step=None, rollout_idx=None, copy=True):
@@ -1013,7 +1016,7 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
 
         # go through each attribute and sample from the tensors
         for key, value in self.iteritems():
-            if isinstance(list, value):  # value = list of tensors
+            if isinstance(value, list):  # value = list of tensors
                 batch[key] = [sample(val, indices) for val in value]
             else:  # value = tensor
                 batch[key] = sample(value, indices)

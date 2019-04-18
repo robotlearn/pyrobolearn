@@ -62,9 +62,10 @@ class PGLoss(BatchLoss):
         Returns:
             torch.Tensor: loss scalar value
         """
-        # evaluate the action
-        log_curr_pi = batch.current['action_distributions']
-        log_curr_pi = log_curr_pi.log_probs(batch.current['actions'])
+        # evaluate the action  # TODO: think when there are multiple actions --> independent joint distribution?
+        log_curr_pi = 0
+        for pi, action in zip(batch.current['action_distributions'], batch.current['actions']):
+            log_curr_pi += pi.log_prob(action)
         estimator = batch[self._estimator]
 
         # compute loss and return it
@@ -115,11 +116,14 @@ class CPILoss(BatchLoss):
         Returns:
             torch.Tensor: loss scalar value
         """
-        # ratio = policy_distribution / old_policy_distribution
-        log_curr_pi = batch.current['action_distributions']
-        log_curr_pi = log_curr_pi.log_probs(batch.current['actions'])
-        log_prev_pi = batch['action_distributions']
-        log_prev_pi = log_prev_pi.log_probs(batch['actions'])
+        # evaluate the actions # TODO: think when there are multiple actions
+        log_curr_pi = 0
+        for pi, action in zip(batch.current['action_distributions'], batch.current['actions']):
+            log_curr_pi += pi.log_prob(action)
+
+        log_prev_pi = 0
+        for pi, action in zip(batch['action_distributions'], batch['actions']):
+            log_prev_pi += pi.log_prob(action)
 
         ratio = torch.exp(log_curr_pi - log_prev_pi)
         estimator = batch[self._estimator]
@@ -172,10 +176,14 @@ class CLIPLoss(BatchLoss):
         Returns:
             torch.Tensor: loss scalar value
         """
-        log_curr_pi = batch.current['action_distributions']
-        log_curr_pi = log_curr_pi.log_probs(batch.current['actions'])
-        log_prev_pi = batch['action_distributions']
-        log_prev_pi = log_prev_pi.log_probs(batch['actions'])
+        # evaluate the actions # TODO: think when there are multiple actions
+        log_curr_pi = 0
+        for pi, action in zip(batch.current['action_distributions'], batch.current['actions']):
+            log_curr_pi += pi.log_prob(action)
+
+        log_prev_pi = 0
+        for pi, action in zip(batch['action_distributions'], batch['actions']):
+            log_prev_pi += pi.log_prob(action)
 
         ratio = torch.exp(log_curr_pi - log_prev_pi)
         estimator = batch[self._estimator]
@@ -216,10 +224,10 @@ class KLPenaltyLoss(BatchLoss):
         Returns:
             torch.Tensor: loss scalar value
         """
-        curr_pi = batch.current['action_distributions']
-        prev_pi = batch['action_distributions']
-
-        return torch.distributions.kl.kl_divergence(prev_pi, curr_pi).mean()
+        kl_div = 0
+        for curr_pi, prev_pi in zip(batch.current['action_distributions'], batch['action_distributions']):
+            kl_div += torch.distributions.kl.kl_divergence(prev_pi, curr_pi).mean()
+        return kl_div
 
     def latex(self):
         """Return a latex formula of the loss."""
@@ -257,6 +265,7 @@ class EntropyLoss(BatchLoss):
         Returns:
             torch.Tensor: loss scalar value
         """
-        distribution = batch.current['action_distributions']
-        entropy = distribution.entropy().mean()
+        entropy = 0
+        for dist in batch.current['action_distributions']:
+            entropy += dist.entropy().mean()
         return entropy

@@ -79,6 +79,14 @@ class Return(object):
             batch.current[self] = output
         return output
 
+    def __repr__(self):
+        """Return a representation string of the object."""
+        return self.__class__.__name__
+
+    def __str__(self):
+        """Return a string describing the object."""
+        return self.__class__.__name__
+
     def __call__(self, batch, store=True):
         """
         Evaluate the return on the given batch.
@@ -125,6 +133,10 @@ class TDReturn(Return):
             gamma = 0.
 
         self._gamma = gamma
+
+    def __str__(self):
+        """Return a string describing the object."""
+        return self.__class__.__name__ + "(gamma=" + str(self.gamma) + ")"
 
 
 class TDValueReturn(TDReturn):

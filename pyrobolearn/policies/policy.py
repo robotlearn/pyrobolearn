@@ -407,8 +407,10 @@ class Policy(object):
         # if the input is an instance of State, get the inner merged data.
         if isinstance(state, State):
             state = state.merged_data
-            if len(state) == 1:
-                state = state[0]
+
+        # if the input state is a list of len(1)
+        if isinstance(state, list) and len(state) == 1:
+            state = state[0]
 
         return state
 

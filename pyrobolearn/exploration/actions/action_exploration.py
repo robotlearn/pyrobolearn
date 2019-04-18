@@ -150,6 +150,56 @@ class ActionExploration(Exploration):
         """
         raise NotImplementedError
 
+    def predict(self, state=None, deterministic=True, to_numpy=False, return_logits=True):
+        """Predict the action given the state.
+
+        This does not set the action data in the action instances, nor apply the actions in the simulator. Instead,
+        it gets the state data, preprocess it, predict using the actions using the inner model, then post-process
+        the actions, and return the resulting action data.
+
+        Args:
+            state (State): current state
+            deterministic (bool): True by default. It can only be set to False, if the policy is stochastic.
+            to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+            return_logits (bool): If True, in the case of discrete outputs, it will return the logits.
+
+        Returns:
+            (list of) torch.Tensor: action data
+        """
+        # if deterministic outcome, i.e. we don't explore we just predict the actions using the policy
+        if deterministic:
+            action_data = self.policy.predict(state=state, deterministic=True, to_numpy=to_numpy,
+                                              return_logits=return_logits)
+            action_distribution = None
+
+        # if we should explore
+        else:
+            # get the state data
+            state_data = self.policy.get_state_data(state=state)
+
+            # pre-process the state data
+            state_data = self.policy.preprocess(state_data)
+
+            # predict the actions using the inner model
+            action_data = self.policy.inner_predict(state_data, deterministic=True, to_numpy=False,
+                                                    return_logits=True, set_output_data=False)
+
+            # exploration phase
+
+            # if exploration is a combination of multiple exploration
+            if self._explorations:
+                # explore for each action
+                actions = [explorer.explore(action_data) for explorer in self.explorations]
+                action_data, action_distribution = [a[0] for a in actions], [a[1] for a in actions]
+
+            else:  # there is only one action
+                action_data, action_distribution = self.explore(action_data)
+
+            # post-process the action data
+            action_data = self.policy.postprocess(action_data)
+
+        return action_data, action_distribution
+
     def act(self,  state=None, deterministic=False, to_numpy=False, return_logits=False, apply_action=True):
         r"""
         Act/Explore in the environment given the states.

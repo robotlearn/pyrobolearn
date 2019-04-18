@@ -66,12 +66,23 @@ class Evaluator(object):
     # Methods #
     ###########
 
-    def evaluate(self):
+    def evaluate(self, verbose=False):
         """
-        Evaluate the actions.
+        Evaluate the trajectories performed by the policy.
+
+        Args:
+            verbose (bool): If true, print information on the standard output.
         """
         if self.estimator is not None:
-            self.estimator.evaluate(self.storage)
+            if verbose:
+                print("\n#### Starting the Evaluation phase ####")
+
+            # compute the returns
+            returns = self.estimator.evaluate(self.storage)
+
+            if verbose:
+                print("Returns: {}".format(returns))
+                print("#### End of the Evaluation phase ####")
 
     #############
     # Operators #
@@ -85,6 +96,11 @@ class Evaluator(object):
         """Return the class string."""
         return self.__class__.__name__
 
-    def __call__(self):
-        """Evaluate the estimator on the storage."""
-        self.evaluate()
+    def __call__(self, verbose=False):
+        """
+        Evaluate the trajectories performed by the policy.
+
+        Args:
+            verbose (bool): If true, print information on the standard output.
+        """
+        self.evaluate(verbose=verbose)

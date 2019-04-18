@@ -16,7 +16,7 @@ from pyrobolearn.exploration import ActionExploration
 
 from pyrobolearn.storages import RolloutStorage
 from pyrobolearn.samplers import StorageSampler
-from pyrobolearn.returns import ActionRewardEstimator
+from pyrobolearn.returns import ActionRewardEstimator, PolicyEvaluator
 from pyrobolearn.losses import PGLoss, ValueL2Loss
 from pyrobolearn.optimizers import Adam
 
@@ -189,11 +189,13 @@ class REINFORCE(GradientRLAlgo):
         # create storage
         states, actions = policy.states, policy.actions
         storage = RolloutStorage(num_steps=1000, state_shapes=states.shape, action_shapes=actions.shape,
-                                 num_trajectories=10)
+                                 num_trajectories=1)
         sampler = StorageSampler(storage)
 
         # create return: R_t = \sum_{t'=t}^{T} \gamma^{t'-t} r_{t'}
         returns = ActionRewardEstimator(storage, gamma=gamma)
+
+        policy_evaluator = PolicyEvaluator(policy=exploration)
 
         # create loss for policy: \mathbb{E}[ \log \pi_{\theta}(a_t | s_t) R_t ]
         loss = PGLoss(returns)
@@ -212,7 +214,7 @@ class REINFORCE(GradientRLAlgo):
         # define the 3 main steps in RL: explore, evaluate, and update
         explorer = Explorer(task, exploration, storage, num_workers=num_workers)
         evaluator = Evaluator(returns)
-        updater = Updater(approximators, sampler, loss, optimizer, evaluators=[])
+        updater = Updater(approximators, sampler, loss, optimizer, evaluators=[policy_evaluator])
 
         # initialize RL algorithm
         super(REINFORCE, self).__init__(explorer, evaluator, updater)
