@@ -12,6 +12,7 @@ Dependencies:
 
 from abc import ABCMeta, abstractmethod
 import collections
+import numpy as np
 import torch
 
 from pyrobolearn.states import State
@@ -73,7 +74,7 @@ class DynamicModel(object):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, states, actions, next_states=None):
+    def __init__(self, states, actions, next_states=None, preprocessors=None, postprocessors=None):
         """
         Initialize the dynamic transition probability :math:`p(s_{t+1} | s_t, a_t)`, or dynamic transition function
         :math:`s_{t+1} = f(s_t, a_t)`.
@@ -82,6 +83,8 @@ class DynamicModel(object):
             states (State): state inputs.
             actions (Action): action inputs.
             next_states (State, None): state outputs. If None, it will take the state inputs as the outputs.
+            preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
+            postprocessors (Processor, list of Processor, None): post-processors to be applied to the output
         """
         # set inputs
         self.states = states
@@ -89,6 +92,20 @@ class DynamicModel(object):
 
         # set outputs
         self.next_states = next_states
+        self.state_data = None
+
+        # preprocessors and postprocessors
+        if preprocessors is None:
+            preprocessors = []
+        if not isinstance(preprocessors, collections.Iterable):
+            preprocessors = [preprocessors]
+        self.preprocessors = preprocessors
+
+        if postprocessors is None:
+            postprocessors = []
+        if not isinstance(postprocessors, collections.Iterable):
+            postprocessors = [postprocessors]
+        self.postprocessors = postprocessors
 
     ##############
     # Properties #
@@ -139,32 +156,156 @@ class DynamicModel(object):
     # Methods #
     ###########
 
+    @staticmethod
+    def __convert_to_numpy(x, to_numpy=True):
+        """Convert the given argument to a numpy array if specified."""
+        if to_numpy and isinstance(x, torch.Tensor):
+            if x.requires_grad:
+                return x.detach().numpy()
+            return x.numpy()
+        return x
+
+    def preprocess(self, state_data, action_data):
+        """Pre-process the given state and action data.
+
+        Args:
+            state_data ((list of) torch.Tensor, (list of) np.array): state data.
+            action_data ((list of) torch.Tensor, (list of) np.array): action data.
+
+        Returns:
+            (list of) torch.Tensor, (list of) np.array: preprocessed state and action data
+        """
+        # go through each preprocessor
+        for processor in self.preprocessors:
+            state_data, action_data = processor([state_data, action_data])
+        return state_data, action_data
+
+    def postprocess(self, state_data):
+        """Post-process the given state data.
+
+        Args:
+            state_data ((list of) torch.Tensor, (list of) np.array): state data.
+
+        Returns:
+            (list of) torch.Tensor, (list of) np.array: preprocessed state data
+        """
+        # go through each preprocessor
+        for processor in self.preprocessors:
+            state_data = processor(state_data)
+        return state_data
+
+    def set_state_data(self, state_data, to_numpy=True, return_logits=False):
+        """Set the given state data.
+
+        Args:
+            state_data ((list of) torch.Tensor, (list of) np.array): state data.
+            to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
+            return_logits (bool): If True, in the case of discrete outputs, it will return the logits.
+
+        Returns:
+            (list of) torch.Tensor, (list of) np.array: state data
+        """
+        # set the state data
+        if state_data is None:
+            state_data = self.state_data
+
+        # if state data is not a list, make it a list as we will iterate through it
+        if not isinstance(state_data, list):
+            state_data = [state_data]
+
+        # go through each state and data
+        for idx, (state, data) in enumerate(zip(self.states, state_data)):
+            if state.is_discrete():  # discrete state
+                if isinstance(data, np.ndarray):  # data state is a numpy array
+                    # check if given logits or not
+                    if data.shape[-1] == 1:  # no logits
+                        state.data = data
+                    else:  # given logits
+                        discrete_data = np.array([np.argmax(data)])
+                        state.data = discrete_data
+
+                        # if we do not want the logits in the state data, replace it by the discrete data
+                        if not return_logits:
+                            state_data[idx] = discrete_data
+
+                elif isinstance(data, torch.Tensor):  # data state is a torch.Tensor
+                    # check if given logits or not
+                    if data.shape[-1] == 1:  # no logits
+                        state.torch_data = data
+                    else:  # given logits
+                        discrete_data = torch.argmax(data, dim=-1, keepdim=True)
+                        state.torch_data = discrete_data
+                        if not return_logits:
+                            state_data[idx] = self.__convert_to_numpy(discrete_data, to_numpy=to_numpy)
+                        else:
+                            state_data[idx] = self.__convert_to_numpy(data, to_numpy=to_numpy)
+
+                elif isinstance(data, (float, int)):
+                    state.data = int(data)
+                    state_data[idx] = int(data)
+                # elif isinstance(data, (float, int)):
+                #     discrete_data = np.argmax(data)
+                #     state.data = discrete_data
+                #     if not return_logits:
+                #         state_data[idx] = discrete_data
+                else:
+                    raise TypeError(
+                        "Expecting the `data` state to be an int, numpy array, torch.Tensor, instead got: "
+                        "{}".format(type(data)))
+            else:  # continuous state
+                if isinstance(data, np.ndarray):
+                    state.data = data
+                elif isinstance(data, torch.Tensor):
+                    state.torch_data = data
+                    state_data[idx] = self.__convert_to_numpy(data, to_numpy=to_numpy)
+                elif isinstance(data, (float, int)):
+                    state.data = data
+                else:
+                    raise TypeError(
+                        "Expecting `data` to be a numpy array or torch.Tensor, instead got: "
+                        "{}".format(type(data)))
+
+        # if action_data is a list and has one element, return just that element
+        if isinstance(state_data, list) and len(state_data) == 1:
+            state_data = state_data[0]
+
+        return state_data
+
     @abstractmethod
-    def predict(self, states=None, actions=None, deterministic=False):
+    def predict(self, states=None, actions=None, deterministic=False, to_numpy=True, set_state_data=True):
         """
         Predict the next state given the current state and action.
 
         Args:
             states (None, State, (list of) np.array, (list of) torch.Tensor): input states.
             actions (None, Action, (list of) np.array, (list of) torch.Tensor): input actions.
+            deterministic (bool): if True, the prediction will be deterministic. If False and if a distribution was
+                given at initialization, then the predicted output will be stochastic.
+            to_numpy (bool): If True, it will return a (list of) np.array.
+            set_state_data (bool): if True, it will set the next state data.
 
         Returns:
             (list of) np.array, (list of) torch.Tensor: predicted next state data.
         """
         pass
 
-    def __call__(self, states, actions):
+    def __call__(self, states=None, actions=None, deterministic=False, to_numpy=True, set_state_data=True):
         """
         Return predicted next state given the current state and action.
 
         Args:
             states (None, State, (list of) np.array, (list of) torch.Tensor): input states.
             actions (None, Action, (list of) np.array, (list of) torch.Tensor): input actions.
+            deterministic (bool): if True, the prediction will be deterministic. If False and if a distribution was
+                given at initialization, then the predicted output will be stochastic.
+            to_numpy (bool): If True, it will return a (list of) np.array.
+            set_state_data (bool): if True, it will set the next state data.
 
         Returns:
             (list of) np.array, (list of) torch.Tensor: predicted next state data.
         """
-        return self.predict(states, actions)
+        return self.predict(states=states, actions=actions, deterministic=deterministic, to_numpy=to_numpy,
+                            set_state_data=set_state_data)
 
 
 class ParametrizedDynamicModel(DynamicModel):
@@ -173,7 +314,8 @@ class ParametrizedDynamicModel(DynamicModel):
     Dynamic model that can be trained.
     """
 
-    def __init__(self, states, actions, model, next_states=None, distributions=None):
+    def __init__(self, states, actions, model, next_states=None, distributions=None, preprocessors=None,
+                 postprocessors=None):
         """
         Initialize the dynamic transition probability :math:`p(s_{t+1} | s_t, a_t)`.
 
@@ -183,10 +325,13 @@ class ParametrizedDynamicModel(DynamicModel):
             model (Approximator): approximator (inner learning model).
             next_states (State, None): state outputs. If None, it will take the state inputs as the outputs.
             distributions ((list of) torch.distributions.Distribution, None): distribution to use to sample the next
-                state. If None, it will be deterministic.
+                state. If None, it will be deterministic if the model is deterministic.
+            preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
+            postprocessors (Processor, list of Processor, None): post-processors to be applied to the output
         """
         # set inner model
-        super(ParametrizedDynamicModel, self).__init__(states, actions, next_states)
+        super(ParametrizedDynamicModel, self).__init__(states, actions, next_states, preprocessors=preprocessors,
+                                                       postprocessors=postprocessors)
         self.model = model
         self.distributions = distributions
 
@@ -318,7 +463,7 @@ class ParametrizedDynamicModel(DynamicModel):
         """
         self.model.set_vectorized_parameters(vector=vector)
 
-    def predict(self, states=None, actions=None, deterministic=False, to_numpy=True, set_next_state_data=True):
+    def predict(self, states=None, actions=None, deterministic=False, to_numpy=True, set_state_data=True):
         """
         Predict the next state given the current state and action.
 
@@ -328,7 +473,7 @@ class ParametrizedDynamicModel(DynamicModel):
             deterministic (bool): if True, the prediction will be deterministic. If False and if a distribution was
                 given at initialization, then the predicted output will be stochastic.
             to_numpy (bool): If True, it will return a (list of) np.array.
-            set_next_state_data (bool): if True, it will set the next state data.
+            set_state_data (bool): if True, it will set the next state data.
 
         Returns:
             (list of) np.array, (list of) torch.Tensor: predicted next state data.
@@ -341,8 +486,12 @@ class ParametrizedDynamicModel(DynamicModel):
         if deterministic or len(self.distributions) == 0:
             return data
         data = [distribution(datum).sample() for distribution, datum in zip(self.distributions, data)]
-        if set_next_state_data:
+
+        # set the state data if specified
+        if set_state_data:
             self.next_states.data = data
+
+        # return next state data
         return data
 
 

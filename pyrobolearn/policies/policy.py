@@ -382,7 +382,8 @@ class Policy(object):
         """Set the vectorized parameters."""
         self.model.set_vectorized_parameters(vector=vector)
 
-    def __convert_to_numpy(self, x, to_numpy=True):
+    @staticmethod
+    def __convert_to_numpy(x, to_numpy=True):
         """Convert the given argument to a numpy array if specified."""
         if to_numpy and isinstance(x, torch.Tensor):
             if x.requires_grad:
