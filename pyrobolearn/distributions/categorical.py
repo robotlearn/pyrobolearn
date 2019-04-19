@@ -45,3 +45,35 @@ class Categorical(torch.distributions.Categorical):
     def mode(self):
         """Return the mode of the Categorical distribution."""
         return self.probs.argmax(dim=-1, keepdim=True)
+
+    @staticmethod
+    def from_list(categoricals):
+        """
+        Convert a list of Categorical [cat1, cat2, ..., catN] to a single Categorical distribution with N logits /
+        probs.
+
+        Args:
+            categoricals (list of Categorical): list of Categorical distributions.
+
+        Returns:
+            Categorical: resulting single Categorical distribution.
+        """
+        return Categorical(probs=torch.stack([categorical.probs for categorical in categoricals]))
+
+    def __getitem__(self, indices):
+        """
+        Get the corresponding Categoricals from the single Categorical distribution. That is, if the single Categorical
+        distribution has multiple logits / probs, it selects the corresponding Categorical distributions from it.
+
+        Examples:
+            categorical = Categorical(probs=torch.tensor([[0.25, 0.75], [0.6, 0.4], [0.7, 0.3]]))
+            categorical[[0,2]]  # this returns Categorical(probs=torch.tensor([[0.25, 0.75], [0.7, 0.3]]))
+            categorical[:2]  # this returns Categorical(probs=torch.tensor([[0.25, 0.75], [0.6, 0.4]]))
+
+        Args:
+            indices (int, list of int, slices): indices.
+
+        Returns:
+            Categorical: resulting sliced Categorical distribution.
+        """
+        return Categorical(probs=self.probs[indices])

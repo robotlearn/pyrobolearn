@@ -884,6 +884,22 @@ class Gaussian(torch.distributions.MultivariateNormal):
     # def __array_ufunc__(self, *args):
     #     print(args)
 
+    @staticmethod
+    def from_list(gaussians):
+        """
+        Convert a list of Gaussian [gauss1, gauss2, ..., gaussN] to a single Gaussian distribution with N means and
+        covariances.
+
+        Args:
+            gaussians (list of Gaussian): list of Gaussian distributions.
+
+        Returns:
+            Gaussian: resulting single Gaussian distribution.
+        """
+        means = torch.stack([gaussian.mean for gaussian in gaussians])
+        covariances = torch.stack([gaussian.covariance for gaussian in gaussians])
+        return Gaussian(mean=means, covariance=covariances)
+
     #############
     # Operators #
     #############
@@ -909,41 +925,61 @@ class Gaussian(torch.distributions.MultivariateNormal):
             return self.pdf(x)
         return self.sample_n(n=size)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, indices):
         """
-        Conditional and marginal distribution.
-
-        Args:
-            idx (int, slice, tuple): if int or slice, it will return the marginal distribution. If tuple, it
-                will return the conditional distribution.
-
-        Returns:
-            Gaussian: conditional or marginal distribution
+        Get the corresponding Gaussians from the single Gaussian distribution. That is, if the single Gaussian
+        distribution has multiple means and covariances, it selects the corresponding Gaussian distributions from it.
 
         Examples:
-            # joint distribution p(x1,x2)
-            g = Gaussian(torch.Tensor([1.,2.]), np.identity(2))
+            means = torch.tensor([[0., 0.], [1., 1.], [2., 2.]])
+            covariances = torch.stack([torch.eye(2), 0.5*torch.eye(2), 2*torch.eye(2)])
+            gaussian = Gaussian(mean=means, covariance=covariances)
+            gaussian[[0,2]]  # this returns Gaussian(mean=means[[0,2]], covariance=covariances[[0,2]])
+            gaussian[:2]  # this returns Gaussian(mean=means[:2], covariance=covariances[:2])
 
-            # marginal distribution p(x1) and p(x2)
-            marg1 = g[0]
-            marg2 = g[1]
+        Args:
+            indices (int, list of int, slices): indices.
 
-            # conditional distribution p(x1|x2) and p(x2|x1)
-            sample = g.sample()
-            cond1 = g[0,1,sample[0]]
-            cond2 = g[1,0,sample[1]]
+        Returns:
+            Bernoulli: resulting sliced Bernoulli distribution.
         """
-        if isinstance(idx, tuple):  # conditional distribution
-            if len(idx) == 2:
-                value, idx1 = idx
-                idx2 = None
-            elif len(idx) == 3:
-                value, idx1, idx2 = idx
-            else:
-                raise IndexError("Expecting two or three indices: value, idx1 (, idx2)")
-            return self.condition(value, idx1, idx2)
-        else:  # marginal distribution
-            return self.marginalize(idx)
+        return Gaussian(mean=self.mean[indices], covariance=self.covariance[indices])
+
+    # def __getitem__(self, idx):
+    #     """
+    #     Conditional and marginal distribution.
+    #
+    #     Args:
+    #         idx (int, slice, tuple): if int or slice, it will return the marginal distribution. If tuple, it
+    #             will return the conditional distribution.
+    #
+    #     Returns:
+    #         Gaussian: conditional or marginal distribution
+    #
+    #     Examples:
+    #         # joint distribution p(x1,x2)
+    #         g = Gaussian(torch.Tensor([1.,2.]), np.identity(2))
+    #
+    #         # marginal distribution p(x1) and p(x2)
+    #         marg1 = g[0]
+    #         marg2 = g[1]
+    #
+    #         # conditional distribution p(x1|x2) and p(x2|x1)
+    #         sample = g.sample()
+    #         cond1 = g[0,1,sample[0]]
+    #         cond2 = g[1,0,sample[1]]
+    #     """
+    #     if isinstance(idx, tuple):  # conditional distribution
+    #         if len(idx) == 2:
+    #             value, idx1 = idx
+    #             idx2 = None
+    #         elif len(idx) == 3:
+    #             value, idx1, idx2 = idx
+    #         else:
+    #             raise IndexError("Expecting two or three indices: value, idx1 (, idx2)")
+    #         return self.condition(value, idx1, idx2)
+    #     else:  # marginal distribution
+    #         return self.marginalize(idx)
 
     def __add__(self, other):
         """

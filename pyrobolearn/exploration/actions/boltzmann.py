@@ -61,6 +61,8 @@ class BoltzmannActionExploration(DiscreteActionExploration):
             torch.Tensor: action
             torch.distributions.Distribution: distribution on the action :math:`\pi_{\theta}(.|s)`
         """
-        distribution = self._module(outputs)
-        action = distribution.sample((1,))
+        distribution = self._module(outputs)   # shape = (N, D)
+        action = distribution.sample((1,))     # shape = (1, N)
+        if len(action.shape) > 1:
+            action = action.view(-1, 1)        # shape = (N, 1) otherwise shape = (1,)
         return action, distribution

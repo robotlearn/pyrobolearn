@@ -44,3 +44,35 @@ class Bernoulli(torch.distributions.Bernoulli):
     def mode(self):
         """Return the mode of the Bernoulli distribution."""
         return torch.gt(self.probs, 0.5).float()
+
+    @staticmethod
+    def from_list(bernoullis):
+        """
+        Convert a list of Bernoulli [Ber1, Ber2, ..., BerN] to a single Bernoulli distribution with N logits /
+        probs.
+
+        Args:
+            bernoullis (list of Bernoulli): list of Bernoulli distributions.
+
+        Returns:
+            Bernoulli: resulting single Bernoulli distribution.
+        """
+        return Bernoulli(probs=torch.stack([bernoulli.probs for bernoulli in bernoullis]))
+
+    def __getitem__(self, indices):
+        """
+        Get the corresponding Bernoullis from the single Bernoulli distribution. That is, if the single Bernoulli
+        distribution has multiple logits / probs, it selects the corresponding Bernoulli distributions from it.
+
+        Examples:
+            bernoulli = Bernoulli(probs=torch.tensor([[0.25, 0.75], [0.6, 0.4], [0.7, 0.3]]))
+            bernoulli[[0,2]]  # this returns Bernoulli(probs=torch.tensor([[0.25, 0.75], [0.7, 0.3]]))
+            bernoulli[:2]  # this returns Bernoulli(probs=torch.tensor([[0.25, 0.75], [0.6, 0.4]]))
+
+        Args:
+            indices (int, list of int, slices): indices.
+
+        Returns:
+            Bernoulli: resulting sliced Bernoulli distribution.
+        """
+        return Bernoulli(probs=self.probs[indices])

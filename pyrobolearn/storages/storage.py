@@ -1033,6 +1033,22 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
             else:  # value = tensor
                 batch[key] = sample(value, indices)
 
+        # TODO: add the following lines in the `end` method? Need to be called only one time as long we don't clear
+        # replace the zeros in the action_distributions field by dummy distributions
+        # take the first distribution for each action distribution
+        dists = [dist[dist != 0][0] for dist in self['action_distributions']]
+        # replace the zeros by that first distribution
+        for distribution, dist in zip(batch['action_distributions'], dists):
+            distribution[distribution == 0] = dist
+
+        # Now that we have a list of distributions for each action, transform it to a single distribution
+        distributions = batch['action_distributions']
+        for i, distribution in enumerate(distributions):
+            # select first distribution
+            dist = distribution[0]
+            # transform list of distributions to a single distribution and put it in the batch
+            distributions[i] = dist.__class__.from_list(distribution)
+
         # create Batch object
         batch = Batch(batch, device=self.device, dtype=self.dtype)
         batch.indices = torch.tensor(range(len(indices)))[batch['masks'][:, 0] != 0].tolist()

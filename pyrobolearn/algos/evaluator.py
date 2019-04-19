@@ -86,7 +86,7 @@ class Evaluator(object):
             returns = self.estimator.evaluate(self.storage)
 
             if verbose:
-                print("Returns: {}".format(returns))
+                # print("Returns: {}".format(returns))
                 print("#### End of the Evaluation phase ####")
 
     #############

@@ -54,9 +54,14 @@ class EpsilonGreedyActionExploration(DiscreteActionExploration):
             torch.Tensor: action
             torch.distributions.Distribution: distribution on the action :math:`\pi_{\theta}(.|s)`
         """
-        idx = torch.argmax(outputs)
-        probs = self.epsilon/(outputs.size()[-1] - 1) * torch.ones_like(outputs)
-        probs[idx] = (1. - self.epsilon)
-        distribution = Categorical(probs=probs)
-        action = distribution.sample((1,))
+        idx = torch.argmax(outputs, dim=-1)  # shape = (N,) or (1,)
+        probs = self.epsilon/(outputs.size()[-1] - 1) * torch.ones_like(outputs)  # shape = (N, D) or (D,)
+        if len(probs.shape) > 1:  # multiple data
+            probs[range(len(outputs)), idx] = (1. - self.epsilon)
+        else:
+            probs[idx] = (1. - self.epsilon)
+        distribution = Categorical(probs=probs)   # shape = (N, D)
+        action = distribution.sample((1,))        # shape = (1, N)
+        if len(action.shape) > 1:  # multiple data
+            action = action.view(-1, 1)           # shape = (N, 1) otherwise shape = (1,)
         return action, distribution

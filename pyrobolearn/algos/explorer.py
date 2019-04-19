@@ -173,8 +173,10 @@ class Explorer(object):
 
             # if done, get out of the loop
             if done:
-                self.storage.end(rollout_idx)  # fill remaining mask values
                 break
+
+        # fill remaining mask values
+        self.storage.end(rollout_idx)
 
         if verbose:
             print("#### End of the Exploration phase #####")

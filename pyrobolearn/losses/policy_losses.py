@@ -52,7 +52,7 @@ class PGLoss(BatchLoss):
                             "{}".format(type(estimator)))
         self._estimator = estimator
 
-    def _compute(self, batch):
+    def _compute(self, batch):  # TODO: think when there are multiple actions --> independent joint distribution?
         """
         Compute the PG loss on the given batch.
 
@@ -62,7 +62,7 @@ class PGLoss(BatchLoss):
         Returns:
             torch.Tensor: loss scalar value
         """
-        # evaluate the action  # TODO: think when there are multiple actions --> independent joint distribution?
+        # evaluate the action
         log_curr_pi = 0
         for pi, action in zip(batch.current['action_distributions'], batch.current['actions']):
             log_curr_pi += pi.log_prob(action)
@@ -106,7 +106,7 @@ class CPILoss(BatchLoss):
                             "{}".format(type(estimator)))
         self._estimator = estimator
 
-    def _compute(self, batch):
+    def _compute(self, batch):  # TODO: think when there are multiple actions
         """
         Compute the CPI loss on the given batch.
 
@@ -116,17 +116,23 @@ class CPILoss(BatchLoss):
         Returns:
             torch.Tensor: loss scalar value
         """
-        # evaluate the actions # TODO: think when there are multiple actions
-        log_curr_pi = 0
-        for pi, action in zip(batch.current['action_distributions'], batch.current['actions']):
-            log_curr_pi += pi.log_prob(action)
+        masks = batch['masks']  # shape = (len(batch), 1)
+        idx = batch.indices  # shape = (I,)  where 0 <= I <= len(batch)
 
+        # evaluate the old actions using the old distribution
         log_prev_pi = 0
         for pi, action in zip(batch['action_distributions'], batch['actions']):
-            log_prev_pi += pi.log_prob(action)
+            log_prev_pi += pi.log_prob(action) * masks  # shape = (len(batch), 1)
+        log_prev_pi = log_prev_pi[idx]  # shape = (I, 1)
 
-        ratio = torch.exp(log_curr_pi - log_prev_pi)
-        estimator = batch[self._estimator]
+        # evaluate the old actions using the current distribution
+        log_curr_pi = 0
+        for pi, action in zip(batch.current['action_distributions'], batch['actions']):
+            log_curr_pi += pi.log_prob(action) * masks  # shape = (len(batch), 1)
+        log_curr_pi = log_curr_pi[idx]  # shape = (I, 1)
+
+        ratio = torch.exp(log_curr_pi - log_prev_pi)  # shape = (I, 1)
+        estimator = batch[self._estimator][idx]  # shape = (I, 1)
 
         loss = ratio * estimator
         return -loss.mean()
@@ -166,7 +172,7 @@ class CLIPLoss(BatchLoss):
                             "{}".format(type(estimator)))
         self._estimator = estimator
 
-    def _compute(self, batch):
+    def _compute(self, batch):  # TODO: think when there are multiple actions
         """
         Compute the CLIP loss on the given batch.
 
@@ -176,19 +182,25 @@ class CLIPLoss(BatchLoss):
         Returns:
             torch.Tensor: loss scalar value
         """
-        # evaluate the actions # TODO: think when there are multiple actions
-        log_curr_pi = 0
-        for pi, action in zip(batch.current['action_distributions'], batch.current['actions']):
-            log_curr_pi += pi.log_prob(action)
+        masks = batch['masks']  # shape = (len(batch), 1)
+        idx = batch.indices     # shape = (I,)  where 0 <= I <= len(batch)
 
+        # evaluate the old actions using the old distribution
         log_prev_pi = 0
         for pi, action in zip(batch['action_distributions'], batch['actions']):
-            log_prev_pi += pi.log_prob(action)
+            log_prev_pi += pi.log_prob(action) * masks  # shape = (len(batch), 1)
+        log_prev_pi = log_prev_pi[idx]  # shape = (I, 1)
 
-        ratio = torch.exp(log_curr_pi - log_prev_pi)
-        estimator = batch[self._estimator]
+        # evaluate the old actions using the current distribution
+        log_curr_pi = 0
+        for pi, action in zip(batch.current['action_distributions'], batch['actions']):
+            log_curr_pi += pi.log_prob(action) * masks  # shape = (len(batch), 1)
+        log_curr_pi = log_curr_pi[idx]  # shape = (I, 1)
 
-        loss = torch.min(ratio * estimator, torch.clamp(ratio, 1.0-self.eps, 1.0+self.eps) * estimator)
+        ratio = torch.exp(log_curr_pi - log_prev_pi)  # shape = (I, 1)
+        estimator = batch[self._estimator][idx]       # shape = (I, 1)
+
+        loss = torch.min(ratio * estimator, torch.clamp(ratio, 1.0 - self.eps, 1.0 + self.eps) * estimator)
         return -loss.mean()
 
     def latex(self):
@@ -201,7 +213,7 @@ class KLPenaltyLoss(BatchLoss):
 
     KL Penalty to minimize:
 
-    .. math:: L^{KL}(\theta) = \mathbb{E}[ KL( \pi_{\theta_{old}}(a_t | s_t) || \pi_{\theta}(a_t | s_t) ) ]
+    .. math:: L^{KL}(\theta) = \mathbb{E}[ KL( \pi_{\theta_{old}}(\cdot | s_t) || \pi_{\theta}(\cdot | s_t) ) ]
 
     where :math:`KL(.||.)` is the KL-divergence between two probability distributions.
     """
@@ -211,12 +223,10 @@ class KLPenaltyLoss(BatchLoss):
         Initialize the KL Penalty loss.
         """
         super(KLPenaltyLoss, self).__init__()
-        # self.p = p
-        # self.q = q
 
     def _compute(self, batch):
-        """
-        Compute the KL divergence loss: :math:`KL(p||q)`.
+        r"""
+        Compute the KL divergence loss: :math:`KL[\pi_{\theta_{old}}(\cdot | s_t) || \pi_{\theta}(\cdot | s_t)]`.
 
         Args:
             batch (Batch): batch containing the states, actions, rewards, etc.
@@ -224,9 +234,11 @@ class KLPenaltyLoss(BatchLoss):
         Returns:
             torch.Tensor: loss scalar value
         """
+        idx = batch.indices  # shape = (I,)  where 0 <= I <= len(batch)
+
         kl_div = 0
         for curr_pi, prev_pi in zip(batch.current['action_distributions'], batch['action_distributions']):
-            kl_div += torch.distributions.kl.kl_divergence(prev_pi, curr_pi).mean()
+            kl_div += torch.distributions.kl.kl_divergence(prev_pi[idx], curr_pi[idx]).mean()
         return kl_div
 
     def latex(self):
@@ -265,7 +277,9 @@ class EntropyLoss(BatchLoss):
         Returns:
             torch.Tensor: loss scalar value
         """
+        idx = batch.indices  # shape = (I,)  where 0 <= I <= len(batch)
+
         entropy = 0
         for dist in batch.current['action_distributions']:
-            entropy += dist.entropy().mean()
+            entropy += dist[idx].entropy().mean()
         return entropy

@@ -17,7 +17,7 @@ from pyrobolearn.exploration import ActionExploration
 from pyrobolearn.storages import RolloutStorage
 from pyrobolearn.samplers import BatchRandomSampler
 from pyrobolearn.returns import GAE, PolicyEvaluator
-from pyrobolearn.losses import CLIPLoss, L2Loss, EntropyLoss
+from pyrobolearn.losses import CLIPLoss, ValueL2Loss, EntropyLoss
 from pyrobolearn.optimizers import Adam
 
 from pyrobolearn import logger
@@ -198,7 +198,7 @@ class PPO(GradientRLAlgo):
 
         # create loss
         logger.debug('create loss')
-        loss = CLIPLoss(estimator, clip=clip) + l2_coeff * L2Loss(estimator, value) + entropy_coeff * EntropyLoss()
+        loss = CLIPLoss(estimator, clip=clip) + l2_coeff * ValueL2Loss(estimator, value) + entropy_coeff * EntropyLoss()
 
         # create optimizer
         logger.debug('create Adam optimizer')

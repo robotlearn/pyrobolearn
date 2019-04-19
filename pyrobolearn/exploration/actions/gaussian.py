@@ -65,6 +65,6 @@ class GaussianActionExploration(ContinuousActionExploration):
             torch.Tensor: action
             torch.distributions.Distribution: distribution on the action :math:`\pi_{\theta}(.|s)`
         """
-        distribution = self._module(outputs)
-        action = distribution.rsample((1,))
+        distribution = self._module(outputs)    # shape = (N, D) or (D,)
+        action = distribution.rsample((1,))[0]  # shape = (N, D) or (D,)
         return action, distribution
