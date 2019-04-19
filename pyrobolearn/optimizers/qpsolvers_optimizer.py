@@ -20,7 +20,8 @@ try:
 except ImportError as e:
     raise ImportError(e.__str__() + "\n HINT: you can install qpsolvers directly via 'pip install qpsolvers'.")
 
-from optimizer import Optimizer
+from pyrobolearn.optimizers import Optimizer
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -62,7 +63,7 @@ __status__ = "Development"
 #     """
 #     pass
 
-class QP(object):
+class QP(Optimizer):
     r"""Quadratic Programming solvers
 
     This class uses the `qpsolvers` which is a unified Python interface for multiple QP solvers [1,2].
@@ -105,13 +106,15 @@ class QP(object):
         [2] Github repo: https://github.com/stephane-caron/qpsolvers
     """
 
-    def __init__(self, method='quadprog'):
+    def __init__(self, method='quadprog', *args, **kwargs):
         """
         Initialize the QP solver.
 
         Args:
             method (str): ['cvxopt', 'cvxpy', 'ecos', 'gurobi', 'mosek', 'osqp', 'qpoases', 'quadprog']
         """
+        super(QP, self).__init__(*args, **kwargs)
+
         solvers = set(qpsolvers.available_solvers)
         if len(solvers) == 0:
             raise ValueError("No QP solvers have been found on this computer. Please install one of the QP modules")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Provide the abstract optimizer class.
+r"""Provide the abstract optimizer class.
 
 Optimizers allows to optimize (i.e. minimize or maximize) a utility function (also known as objective function,
 fitness function, loss, etc.) with or without constraints and bounds. Notably, it assumes the functions have some
@@ -89,9 +89,10 @@ class Optimizer(object):
         """
         Initialize the optimizer.
         """
+        self.optimizer = None
+        self.is_minimizing = True
         self.best_parameters = None
         self.best_result = None
-        self.is_maximizing = True
 
     ##############
     # Properties #
@@ -99,37 +100,88 @@ class Optimizer(object):
 
     @property
     def best_parameters(self):
+        """Return the best parameters."""
         return self._best_parameters
 
     @best_parameters.setter
     def best_parameters(self, params):
+        """Set the best parameters."""
         self._best_parameters = params
 
     @property
     def best_result(self):
+        """Return the best value."""
         return self._best_result
 
     @best_result.setter
     def best_result(self, result):
+        """Set the optimal value."""
         self._best_result = result
 
     @property
+    def is_minimizing(self):
+        """Return if the optimizer is used to minimize an objective / loss function."""
+        return self._is_minimizing
+
+    @is_minimizing.setter
+    def is_minimizing(self, boolean):
+        """Set if the optimizer is used to minimize an objective / loss function."""
+        self._is_minimizing = boolean
+
+    @property
     def is_maximizing(self):
-        return self._is_maximizing
+        """Return if we are maximizing. If False, we are minimizing."""
+        return not self.is_minimizing
 
     @is_maximizing.setter
     def is_maximizing(self, boolean):
-        self._is_maximizing = bool(boolean)
-
-    @property
-    def is_minimizing(self):
-        return not self.is_maximizing
+        """Setting if the optimizer is used to maximize an objective function."""
+        self.is_minimizing = not bool(boolean)
 
     ###########
     # Methods #
     ###########
 
-    def optimize(self, *args, **kwargs):
+    def convert_from(self, parameters):
+        """
+        Convert the parameters to the desired form for the optimizer. This should be implemented in the child classes.
+
+        Args:
+            parameters: initial parameters.
+
+        Returns:
+            object: parameters in the desired form.
+        """
+        return parameters
+
+    def convert_to(self, parameters):
+        """
+        Convert back the optimized parameters to the initial form. This should be implemented in the child classes.
+
+        Args:
+            parameters: optimized parameters.
+
+        Returns:
+            object: parameters in the initial form.
+        """
+        return parameters
+
+    def optimize(self, parameters, loss, max_iters=1, verbose=False, *args, **kwargs):
+        """
+        Optimize the given objective function using the optimizer. This should be implemented in the child classes.
+
+        Args:
+            parameters: parameters.
+            loss: callable objective / loss function to minimize.
+            max_iters (int): number of maximum iterations.
+            verbose (bool): if True, it will display information during the optimization process.
+            *args: list of arguments to give to the loss function if callable.
+            **kwargs: dictionary of arguments to give to the loss function if callable.
+
+        Returns:
+            float, torch.Tensor, np.array: loss scalar value.
+            object: best parameters
+        """
         pass
 
     #############
@@ -137,10 +189,13 @@ class Optimizer(object):
     #############
 
     def __repr__(self):
+        """Return a representation string of the object."""
         return self.__class__.__name__
 
     def __str__(self):
+        """Return a string describing the object."""
         return self.__class__.__name__
 
     def __call__(self, *args, **kwargs):
+        """Optimize the given objective function using the optimizer."""
         return self.optimize(*args, **kwargs)

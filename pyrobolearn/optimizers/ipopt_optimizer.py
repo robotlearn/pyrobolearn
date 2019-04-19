@@ -15,7 +15,8 @@ except ImportError as e:
                                     "If ipopt is already installed, you can install the python wrapper via "
                                     "`pip install ipopt`.")
 
-from optimizer import Optimizer
+from pyrobolearn.optimizers import Optimizer
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -119,12 +120,33 @@ class IPopt(Optimizer):
         [4] Repos: https://github.com/coin-or/Ipopt   and   https://pypi.org/project/ipopt/
     """
 
-    def __init__(self, model, losses, hyperparameters):
-        super(IPopt, self).__init__(model, losses, hyperparameters)
+    def __init__(self, *args, **kwargs):
+        """
+        Initialize the interior point optimizer.
+        """
+        super(IPopt, self).__init__(*args, **kwargs)
 
-    def optimize(self):
+    def optimize(self, parameters, loss, max_iters=1, verbose=False, *args, **kwargs):
+        """
+        Optimize the given loss function with respect to the given parameters.
+
+        Args:
+            parameters (np.array): parameters to optimize.
+            loss (callable): callable objective / loss function to minimize.
+            bounds (tuple, list, np.array): parameter bounds. E.g. bounds=[0, np.inf]
+            max_iters (int): number of maximum iterations.
+            verbose (bool): if True, it will display information during the optimization process.
+            *args: list of arguments to give to the loss function if callable.
+            **kwargs: dictionary of arguments to give to the loss function if callable.
+
+        Returns:
+            float, torch.Tensor, np.array: loss scalar value.
+            object: best parameters
+        """
+        N = len(parameters)
+
         # define initial value
-        x0 = np.array([0.1] * N)  # important that the initial value != 0 for the computation of the grad!
+        x0 = parameters  # important that the initial value != 0 for the computation of the grad!
 
         # define (lower and upper) bound constraints
         lb = [-1] * N
@@ -140,9 +162,13 @@ class IPopt(Optimizer):
         opt.add_constraint(OrthogonalConstraint(x))
 
         # define the nonlinear optimization problem
-        nlp = ipopt.problem(n=N, m=len(cl[:i]), problem_obj=opt, lb=lb, ub=ub, cl=cl[:i], cu=cu[:i])
+        self.optimizer = ipopt.problem(n=N, m=len(cl[:i]), problem_obj=opt, lb=lb, ub=ub, cl=cl[:i], cu=cu[:i])
 
         # solve problem
-        x, info = nlp.solve(x0)
+        x, info = self.optimizer.solve(x0)
 
-        return x
+        # save the results
+        self.best_parameters = x
+        self.best_result = info['obj_val']
+
+        return self.best_result, self.best_parameters
