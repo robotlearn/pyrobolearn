@@ -3431,8 +3431,8 @@ class Bullet(Simulator):
         """Get information about the debug visualizer camera.
 
         Returns:
-            float: width of the visualizer camera
-            float: height of the visualizer camera
+            int: width of the visualizer camera
+            int: height of the visualizer camera
             np.float[4,4]: view matrix [4,4]
             np.float[4,4]: perspective projection matrix [4,4]
             np.float[3]: camera up vector expressed in the Cartesian world space

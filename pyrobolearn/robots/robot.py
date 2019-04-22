@@ -166,7 +166,7 @@ class Robot(ControllableBody):
 
         Returns:
             float[3]: position
-            np.float[4]: orientation
+            np.float[4]: orientation (x, y, z, w)
         """
         return self.sim.get_base_pose(self.id)
 
@@ -181,10 +181,10 @@ class Robot(ControllableBody):
 
     def get_base_orientation(self):
         """
-        Get the base orientation.
+        Get the base orientation in the form of a quaternion (x, y, z, w).
 
         Returns:
-            quaternion (np.float[4]): base orientation in the form of a quaternion.
+            quaternion (np.float[4]): base orientation in the form of a quaternion (x, y, z, w).
         """
         return self.sim.get_base_orientation(self.id)
 
@@ -403,7 +403,7 @@ class Robot(ControllableBody):
                 [12] str:       name of the link (as specified in the URDF/SDF/etc file)
                 [13] float[3]:  joint axis in local frame (ignored for JOINT_FIXED)
                 [14] float[3]:  joint position in parent frame
-                [15] float[4]:  joint orientation in parent frame
+                [15] float[4]:  joint orientation in parent frame (x, y, z, w)
                 [16] int:       parent link index, -1 for base
 
             if multiple joints: list of joint information (i.e. list of above)

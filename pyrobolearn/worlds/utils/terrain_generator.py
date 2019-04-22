@@ -9,8 +9,6 @@ References:
     [1] https://github.com/deltabrot/random-terrain-generator
 """
 
-import sys
-import os
 import time
 from PIL import Image
 import numpy as np
@@ -105,7 +103,6 @@ def diamond_square_heightmap(n, max_height, jitter, jitter_factor):
         stride = int((size-1) / 2**(i+1))
         radius = int((size-1) / 2**i)
 
-        #
         for j in range(2**i):
             for k in range(2**i):
                 height = (heightmap[j*radius, k*radius] + heightmap[2*stride + j*radius, k*radius] +
@@ -165,9 +162,9 @@ def diamond_square_heightmap(n, max_height, jitter, jitter_factor):
     for i in range(size):
         for j in range(size):
             if heightmap[i, j] > middle_point:
-                pixels[i,j] = (0, int(255 * (heightmap[i, j] - middle_point) / (dist/2.) ), 0)
+                pixels[i, j] = (0, int(255 * (heightmap[i, j] - middle_point) / (dist/2.)), 0)
             else:
-                pixels[i,j] = (10, 10, 200)
+                pixels[i, j] = (10, 10, 200)
 
     # save image
     img.save("map.bmp")
@@ -175,8 +172,27 @@ def diamond_square_heightmap(n, max_height, jitter, jitter_factor):
     return heightmap
 
 
-def create_hexagonal_terrain(segment, scale, tile, max_height, min_height, heightmap, smooth=True, verbose=True,
-                             output_rate=1):
+def create_hexagonal_terrain(segment, scale, tile, min_height, heightmap, smooth=True, verbose=True, verbose_rate=1):
+    """
+    Create the terrain with hexagonal tiles.
+
+    Args:
+        segment (int): number of segments; number of square tiles in rows or columns.
+        scale (float): scaling factor.
+        tile (bool): if True, it will create a tile texture.
+        min_height (float): minimum height.
+        heightmap (np.float[size, size]): 2D square heightmap
+        smooth (bool): if the normals should be smooth.
+        verbose (bool): if True, it will output information about the creation of the terrain.
+        verbose_rate (int): if :attr:`verbose` is True, it will output
+
+    Returns:
+        list: vertices (for OBJ)
+        list: textures (for OBJ)
+        list: (smooth) normals (for OBJ)
+        list: faces (for OBJ)
+    """
+    scale = float(scale)
     vertices = []
     vertices_obj = []
     textures_obj = []
@@ -186,10 +202,7 @@ def create_hexagonal_terrain(segment, scale, tile, max_height, min_height, heigh
     prevent_output = False
 
     if tile:
-        textures_obj.append([0, 0])
-        textures_obj.append([0, 1])
-        textures_obj.append([1, 0])
-        textures_obj.append([1, 1])
+        textures_obj = [[0, 0], [0, 1], [1, 0], [1, 1]]
     
     for i in range(segment):
         if i == segment-1:
@@ -198,12 +211,12 @@ def create_hexagonal_terrain(segment, scale, tile, max_height, min_height, heigh
         for j in range(segment):
             if not smooth:
                 tmp = 2 * (i*segment + j)
-                facesOBJ.append(str(i*(segment+1) + j + 1) + '/' + str(1) + '/' + str(tmp + 1) + ' ' +\
-                                str(i*(segment+1) + j + 2) + '/' + str(2) + '/' + str(tmp + 1) + ' ' +\
-                                str((i+1)*(segment+1) + j + 1) + '/' + str(3) + '/' + str(tmp + 1) )
-                facesOBJ.append(str((i+1)*(segment+1) + j + 1) + '/' + str(3) + '/' + str(tmp + 2) + ' ' +\
-                                str(i*(segment+1) + j + 2) + '/' + str(2) + '/' + str(tmp + 2) + ' ' +\
-                                str((i+1)*(segment+1) + j + 2) + '/' + str(4) + '/' + str(tmp + 2) )
+                facesOBJ.append(str(i*(segment+1) + j + 1) + '/' + str(1) + '/' + str(tmp + 1) + ' ' +
+                                str(i*(segment+1) + j + 2) + '/' + str(2) + '/' + str(tmp + 1) + ' ' +
+                                str((i+1)*(segment+1) + j + 1) + '/' + str(3) + '/' + str(tmp + 1))
+                facesOBJ.append(str((i+1)*(segment+1) + j + 1) + '/' + str(3) + '/' + str(tmp + 2) + ' ' +
+                                str(i*(segment+1) + j + 2) + '/' + str(2) + '/' + str(tmp + 2) + ' ' +
+                                str((i+1)*(segment+1) + j + 2) + '/' + str(4) + '/' + str(tmp + 2))
 
             else:
                 facesOBJ.append(str(i*(segment+1) + j + 1) + '/' + str(1) + '/' + str(i*(segment+1) + j + 1) + ' ' +
@@ -214,9 +227,9 @@ def create_hexagonal_terrain(segment, scale, tile, max_height, min_height, heigh
                                 ' ' + str((i+1)*(segment+1) + j + 2) + '/' + str(4) + '/' +
                                 str((i+1)*(segment+1) + j + 2))
             
-            #T1
-            half_scale = scale/2
-            scale_seg = scale/segment
+            # T1
+            half_scale = scale / 2.
+            scale_seg = scale / segment
             vertices_obj.append([-half_scale + i*scale_seg, heightmap[i, j], -half_scale + j*scale_seg])
             if j == segment-1:
                 vertices_obj.append([-half_scale + i*scale_seg, heightmap[i, j+1], -half_scale + (j+1)*scale_seg])
@@ -259,10 +272,10 @@ def create_hexagonal_terrain(segment, scale, tile, max_height, min_height, heigh
             normals_obj.append(normal)
             
             if verbose:
-                if (time.time() % output_rate) < 0.05 and not prevent_output:
+                if (time.time() % verbose_rate) < 0.05 and not prevent_output:
                     display_loading(i*segment + j, segment*segment, "TER | Segm")
                     prevent_output = True
-                elif time.time() % output_rate > 0.05:
+                elif time.time() % verbose_rate > 0.05:
                     prevent_output = False
 
     # smooth the normals
@@ -324,7 +337,7 @@ def create_hexagonal_terrain(segment, scale, tile, max_height, min_height, heigh
     return [vertices_obj, textures_obj, normals_obj, facesOBJ]
 
 
-def create_obj(vertices, textures, normals, faces):
+def create_obj(vertices, textures, normals, faces, filename=None):
     """
     Create content of the OBJ file.
 
@@ -333,10 +346,13 @@ def create_obj(vertices, textures, normals, faces):
         textures (list): list of textures
         normals (list): list of normals
         faces (list): list of faces
+        filename (None, str): if a string is provided, it will save the OBJ file in the given file path.
 
     Returns:
         str: content of the OBJ file.
     """
+
+    # create obj list
     obj = []
     for v in vertices:
         obj.append("v " + str(v[0]) + " " + str(v[1]) + " " + str(v[2]))
@@ -346,53 +362,42 @@ def create_obj(vertices, textures, normals, faces):
         obj.append("vn " + str(n[0]) + " " + str(n[1]) + " " + str(n[2]))
     for f in faces:
         obj.append("f " + f)
-    return '\n'.join(obj)
+
+    # create document
+    obj = '\n'.join(obj)
+
+    # create file if specified
+    if filename is not None:
+        with open(filename, "w+") as f:
+            f.write(obj)
+    return obj
                 
                 
 segments = 8
-scale = 600
+scale = 600.
 tile = True
-max_height = 75
-min_height = 0
+max_height = 75.
+min_height = 0.
 verbose = True
-output_rate = 1
-jitter = 40
+verbose_rate = 1
+jitter = 40.
 jitter_factor = 1.5
 smooth = True
-
-for i in range(len(sys.argv)):
-    if sys.argv[i] == '-s' or sys.argv[i] == '--segment':
-        segments = int(sys.argv[i+1])
-    if sys.argv[i] == '-z' or sys.argv[i] == '--scale':
-        scale = float(sys.argv[i+1])
-    if sys.argv[i] == '-m' or sys.argv[i] == '--min':
-        min_height = float(sys.argv[i+1])
-    if sys.argv[i] == '-x' or sys.argv[i] == '--max':
-        max_height = float(sys.argv[i+1])
-    if sys.argv[i] == '-v' or sys.argv[i] == '--verbose':
-        verbose = bool(sys.argv[i+1])
-    if sys.argv[i] == '-r' or sys.argv[i] == '--rate':
-        output_rate = float(sys.argv[i+1])
-    if sys.argv[i] == '-j' or sys.argv[i] == '--jitter':
-        jitter = float(sys.argv[i+1])
-    if sys.argv[i] == '-f' or sys.argv[i] == '--factor':
-        jitter_factor = float(sys.argv[i+1])
-    if sys.argv[i] == '-e' or sys.argv[i] == '--edges':
-        smooth = bool(sys.argv[i+1])
 
 # create heightmap, generate terrain from it, and obj mesh
 print("Generating terrain")
 start = time.time()
 
+# create heightmap
 heightmap = diamond_square_heightmap(segments, max_height, jitter, jitter_factor)
-terrain = create_hexagonal_terrain(2**segments, scale, tile, max_height, min_height, heightmap, smooth, verbose,
-                                   output_rate)
-OBJ = create_obj(terrain[0], terrain[1], terrain[2], terrain[3])
+
+# create vertices, textures, normals, and faces
+terrain = create_hexagonal_terrain(2 ** segments, scale, tile, min_height, heightmap, smooth, verbose,
+                                   verbose_rate)
+
+# create obj based on above information
+obj = create_obj(vertices=terrain[0], textures=terrain[1], normals=terrain[2], faces=terrain[3],
+                 filename='terrain.obj')
 
 end = time.time()
 print("Terrain generated in {:.2f} seconds.".format(end - start))
-
-# save terrain
-file = open("terrain.obj", "w+")
-file.write(OBJ)
-file.close()

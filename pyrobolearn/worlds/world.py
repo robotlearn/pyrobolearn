@@ -6,23 +6,22 @@ Dependencies:
 - `pyrobolearn.simulators`
 """
 
+import numpy as np
 import collections
 import inspect
 import multiprocessing
 import os
-import numpy as np
-
 import cv2
 import time
 
 from pyrobolearn.simulators import Simulator
+from pyrobolearn.worlds.world_camera import WorldCamera
 
-from pyrobolearn.utils.converter import QuaternionListConverter
 # from pyrobolearn.utils.heightmap_generator import *  # TODO: problem with gdal installation
 from pyrobolearn.utils import has_method, has_variable
 
-from pyrobolearn.robots import Robot, robot_names_to_classes
-# from pyrobolearn.tools.bridges.bridge import Bridge
+from pyrobolearn.robots import Body, Robot, robot_names_to_classes
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -32,341 +31,6 @@ __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
-
-
-class WorldCamera(object):
-    r"""World camera.
-
-    Camera that looks at the world (only available in the simulator).
-
-    The following operations carried out (in the given order) by OpenGL in order to display images seen by the
-    camera are:
-    * M: Model space --> World space. This transforms the coordinates of each model described in their own local
-     frame :math:`[x_{l}, y_{l}, z_{l}, 1]` to world coordinates :math:`[x_{w}, y_{w}, z_{w}, 1]`.
-    * V: World space --> View space. This transforms world coordinates :math:`[x_{w}, y_{w}, z_{w}, 1]` into eye
-     coordinates :math:`[x_{e}, y_{e}, z_{e}, 1]`. That is, it rotates and translates the world such that it is in
-     front of the camera.
-    * P: View space --> Projection space. Transforms the eye coordinates into clip coordinates using an orthographic
-     or perspective projection. The new coordinates are given by :math:`[x_{c}, y_{c}, z_{c}, w_{c}]`. This is not
-     normalized, i.e. w_{c} is not equal to 1. See next operation.
-    * norm: Screen space --> NDC space. This normalizes the previous clipped coordinates into
-     Normalized Device Coordinates (NDC) where each coordinate is normalized and is between -1 and 1. That is,
-     we now have :math:`[x_{n}, y_{n}, z_{n}, 1] = [x_c/w_c, y_c/w_c, z_c, w_c/w_c]`
-    * Vp: NDC space --> Screen space. Finally, this maps the previous normalized clip coordinates to pixel
-     coordinates :math:`[x_{s}, y_{s}, z_{s}, 1]` where :math:`x_s` (:math:`y_s`) is between 0 and the width
-     (height) of the screen respectively, and :math:`z_s` represents the depth which is between 0 and 1.
-
-    References:
-        [1] http://www.codinglabs.net/article_world_view_projection_matrix.aspx
-        [2] https://learnopengl.com/Getting-started/Coordinate-Systems
-        [3] http://www.thecodecrate.com/opengl-es/opengl-transformation-matrices/
-        [4] http://learnwebgl.brown37.net/08_projections/projections_perspective.html
-    """
-
-    def __init__(self, simulator):
-        self.sim = simulator
-
-    def __repr__(self):
-        return self.__class__.__name__
-
-    @property
-    def info(self):
-        """
-        Return all the information about the camera.
-        """
-        return self.get_debug_visualizer_camera(convert=False)
-
-    # alias
-    def get_debug_visualizer_camera(self, convert=True):
-        """
-        Return all the information provided by the camera.
-
-        Args:
-            convert (bool): if True, it will convert the lists into numpy vectors and matrices
-
-        Returns:
-            width (int): width of the camera image in pixels
-            height (int): height of the camera image in pixels
-            view_matrix (float[16], float[4x4]): view matrix of the camera
-            projection_matrix (float[16], float[4x4]): projection matrix of the camera
-            camera_up (float[3]): up axis of the camera, in Cartesian world space coordinates
-            cameraForward (float[3]): forward axis of the camera, in Cartesian world space coordinates
-            horizontal (float[3]): TBD. This is a horizontal vector that can be used to generate rays (for mouse
-                picking or creating a simple ray tracer for example)
-            vertical (float[3]): TBD.This is a vertical vector that can be used to generate rays(for mouse picking
-                or creating a simple ray tracer for example).
-            yaw (float): yaw angle of the camera, in Cartesian local space coordinates
-            pitch (float): pitch angle of the camera, in Cartesian local space coordinates
-            dist (float): distance between the camera and the camera target
-            target (float[3]): target of the camera, in Cartesian world space coordinates
-
-        """
-        return self.sim.get_debug_visualizer()
-
-    @property
-    def width(self):
-        """
-        Return the width of the pictures (in pixel)
-        """
-        return self.sim.get_debug_visualizer()[0]
-
-    @property
-    def height(self):
-        """
-        Return the height of the pictures (in pixel)
-        """
-        return self.sim.get_debug_visualizer()[1]
-
-    @property
-    def V(self):
-        """
-        Return the view matrix, which maps from the world to the view space.
-        """
-        return self.sim.get_debug_visualizer()[2]
-
-    # alias
-    view_matrix = V
-
-    @property
-    def Vinv(self):
-        """
-        Return the inverse of the view matrix
-        """
-        return np.linalg.inv(self.V)
-
-    @property
-    def P(self):
-        """
-        Return the projection matrix, which maps from the view to the projected/clipped space.
-        """
-        return self.sim.get_debug_visualizer()[3]
-
-    # alias
-    projection_matrix = P
-
-    @property
-    def Pinv(self):
-        """
-        Return the inverse of the projection matrix
-        """
-        return np.linalg.inv(self.P)
-
-    @property
-    def Vp(self):
-        """
-        Return the viewport matrix, which maps from the normalized clip coordinates to pixel coordinates.
-        """
-        width, height = self.sim.get_debug_visualizer()[:2]
-        return np.array([[width / 2, 0, 0, width / 2],
-                         [0, height / 2, 0, height / 2],
-                         [0, 0, 0.5, 0.5],
-                         [0, 0, 0, 1]])
-
-    viewport_matrix = Vp
-
-    @property
-    def Vp_inv(self):
-        """
-        Return the inverse of the viewport matrix.
-        """
-        return np.linalg.inv(self.Vp)
-
-    def get_matrices(self, inverse=False):
-        """
-        Return the view, projection, and viewport matrices.
-        """
-        width, height, V, P = self.sim.get_debug_visualizer()[:4]
-        Vp = np.array([[width / 2, 0, 0, width / 2],
-                         [0, height / 2, 0, height / 2],
-                         [0, 0, 0.5, 0.5],
-                         [0, 0, 0, 1]])
-        if inverse:
-            Vinv = np.linalg.inv(V)
-            Pinv = np.linalg.inv(P)
-            Vpinv = np.linalg.inv(Vp)
-            return V, P, Vp, Vinv, Pinv, Vpinv
-        return V, P, Vp
-
-    @property
-    def up_vector(self):
-        """
-        Return the up axis of the camera in the Cartesian world space coordinates
-        """
-        return self.sim.get_debug_visualizer()[4]
-
-    @property
-    def forward_vector(self):
-        """
-        Return the forward axis of the camera in the Cartesian world space coordinates.
-        """
-        return self.sim.get_debug_visualizer()[5]
-
-    def get_vectors(self):
-        """
-        Return the forward, up, and lateral vectors of the camera.
-        """
-        up_vector, forward_vector = self.sim.get_debug_visualizer()[4:6]
-        lateral_vector = np.cross(forward_vector, up_vector)
-        return forward_vector, up_vector, lateral_vector
-
-    @property
-    def yaw(self):
-        """
-        Return the yaw angle of the camera in radian
-        """
-        return self.sim.get_debug_visualizer()[8]
-
-    @property
-    def pitch(self):
-        """
-        Return the pitch angle of the camera.
-        """
-        return self.sim.get_debug_visualizer()[9]
-
-    @property
-    def dist(self):
-        """
-        Return the distance between the camera and the camera target.
-        """
-        return self.sim.get_debug_visualizer()[10]
-
-    @property
-    def target_position(self):
-        """
-        Return the target of the camera in the Cartesian world space coordinates.
-        """
-        return self.sim.get_debug_visualizer()[11]
-
-    @target_position.setter
-    def target_position(self, pos):
-        yaw, pitch, dist = self.sim.get_debug_visualizer()[-4:-1]
-        self.sim.reset_debug_visualizer(dist, yaw, pitch, pos)
-
-    @property
-    def position(self):
-        """
-        Return the current position of the camera in the Cartesian world space coordinates.
-        """
-        Vinv = np.linalg.inv(self.V)  # compute inverse of the view matrix
-        position = Vinv[:3, 3]  # the last column is the current position of the camera
-        return position
-
-    @position.setter
-    def position(self, pos):
-        self.sim.reset_debug_visualizer(dist, yaw, pitch, targetPos)
-
-    @property
-    def orientation(self):
-        # based on forward_vector and up_vector
-        pass
-
-    @orientation.setter
-    def orientation(self, orientation):
-        pass
-
-    def set_yaw_pitch(self, yaw, pitch, radian=True):
-        if radian:
-            yaw, pitch = np.rad2deg(yaw), np.rad2deg(pitch)
-        dist, target_pos = self.sim.get_debug_visualizer()[-2:]
-        self.sim.reset_debug_visualizer(dist, yaw, pitch, target_pos)
-
-    def add_yaw_pitch(self, dyaw, dpitch, radian=True):
-        yaw, pitch, dist, target_pos = self.sim.get_debug_visualizer()[-4:]
-        if radian:
-            dyaw, dpitch = np.rad2deg(dyaw), np.rad2deg(dpitch)
-        yaw += dyaw
-        pitch += dpitch
-        self.sim.reset_debug_visualizer(dist, yaw, pitch, target_pos)
-
-    def get_rgb_image(self):
-        """
-        Return the captured RGB image.
-        """
-        return self.get_rgba_image()[:, :, :3]
-
-    def get_rgba_image(self):
-        """
-        Return the captured RGBA image. 'A' stands for alpha channel (for opacity/transparency)
-        """
-        width, height, view_matrix, projection_matrix = self.sim.get_debug_visualizer()[:4]
-        img = np.array(self.sim.get_camera_image(width, height, view_matrix, projection_matrix)[2])
-        img = img.reshape(width, height, 4)  # RGBA
-        return img
-
-    def get_depth_image(self):
-        """
-        Return the depth image.
-        """
-        width, height, viewMatrix, projectionMatrix = self.sim.get_debug_visualizer()[:4]
-        img = np.array(self.sim.get_camera_image(width, height, viewMatrix, projectionMatrix)[3])
-        img = img.reshape(width, height)
-        return img
-
-    def get_rgbad_image(self, concatenate=True):
-        """
-        Return the RGBA and depth images.
-        """
-        width, height, view_matrix, projection_matrix = self.sim.get_debug_visualizer()[:4]
-        rgba, depth = self.sim.get_camera_image(width, height, view_matrix, projection_matrix)[2:4]
-        rgba = np.array(rgba).reshape(width, height, 4)
-        depth = np.array(depth).reshape(width, height)
-        if concatenate:
-            return np.dstack((rgba, depth))
-        return (rgba, depth)
-
-    def screen_to_world(self, x_screen, Vp_inv=None, P_inv=None, V_inv=None):
-        """
-        Return the corresponding coordinates in the Cartesian world space from the coordinates of a point
-        on the screen.
-
-        Args:
-            x_screen (float[4]): augmented vector coordinates of a point on the screen
-            Vp_inv (float[4,4])): inverse of viewport matrix
-            P_inv (float[4,4]): inverse of projection matrix
-            V_inv (float[4,4]): inverse of view matrix
-
-        Returns:
-            float[4]: augmented vector coordinates of the corresponding point in the world
-        """
-        if Vp_inv is None:
-            Vp_inv = self.Vp_inv
-        if P_inv is None:
-            P_inv = self.Pinv
-        if V_inv is None:
-            V_inv = self.Vinv
-
-        x_ndc = Vp_inv.dot(x_screen)
-        x_ndc[1] = -x_ndc[1]  # invert y-axis
-        x_ndc[2] = -x_ndc[2]  # invert z-axis
-        x_eye = P_inv.dot(x_ndc)
-        x_eye = x_eye / x_eye[3]  # normalize
-        x_world = V_inv.dot(x_eye)
-        return x_world
-
-    def world_to_screen(self, x_world, V=None, P=None, Vp=None):
-        """
-        Return the corresponding screen coordinates from a 3D point in the world.
-
-        Args:
-            x_world (float[4]): augmented vector coordinates of a point in the Cartesian world space
-            V (float[4,4], None): view matrix
-            P (float[4,4], None): projection matrix
-            Vp (float[4,4], None): viewport matrix
-
-        Returns:
-            float[4]: augmented vector coordinates of the corresponding point on the screen
-        """
-        if V is None: V = self.V
-        if P is None: P = self.P
-        if Vp is None: Vp = self.Vp
-
-        x_eye = V.dot(x_world)
-        x_clip = P.dot(x_eye)
-        x_ndc = x_clip / x_clip[3]  # normalize
-        x_ndc[1] = -x_ndc[1]  # invert y-axis (as y pointing upward in projection but should point downward in screen)
-        x_ndc[2] = -x_ndc[2]  # invert z-axis (to get right-handed coord. system, -1=close and 1=far)
-        x_screen = Vp.dot(x_ndc)    # for depth between 0(=close) and 1(=far)
-        return x_screen
 
 
 class World(object):
@@ -400,6 +64,10 @@ class World(object):
         # By default, set the gravity
         self.gravity = gravity
 
+        # set world camera
+        self.camera = WorldCamera(self.simulator)
+
+        # keep track of the objects present in the world
         self.robots = {}
         self.movable_bodies = {}  # set()
         self.immovable_bodies = {}  # set()
@@ -409,8 +77,7 @@ class World(object):
         self.map = None
         self.floor_id = -1
 
-        self.quaternion_converter = QuaternionListConverter(convention=1)
-
+        # create world state
         self.world_state = None
 
         # configure debug visualizer
@@ -436,11 +103,6 @@ class World(object):
             raise TypeError("Expecting the given simulator to be an instance of `Simulator`, instead got: "
                             "{}".format(type(simulator)))
         self.sim = simulator
-
-    @property
-    def main_camera(self):
-        """Return the main camera of the simulator."""
-        return WorldCamera(self.sim)
 
     @property
     def gravity(self):
@@ -557,11 +219,12 @@ class World(object):
         if self.floor_id > 0:
             self.sim.change_dynamics(body_id=self.floor_id, link_id=-1, **dynamics)
 
-    ########################
-    # Operator Overloading #
-    ########################
+    #############
+    # Operators #
+    #############
 
     def __repr__(self):
+        """Return a representation string of the object."""
         return self.__class__.__name__
 
     def __contains__(self, item):
@@ -577,14 +240,14 @@ class World(object):
         if not isinstance(item, int):
             item = item.id
 
-        return (item in self.robots) or (item in self.movable_bodies) or (item in self.immovable_bodies) \
-                or (item in self.visual_objects)
+        return (item in self.robots) or (item in self.movable_bodies) or (item in self.immovable_bodies) or \
+               (item in self.visual_objects)
 
     ###########
     # Methods #
     ###########
 
-    def set_bridges(self, bridges):
+    def set_bridges(self, bridges):  # TODO: remove this
         """
         This append the given bridges to various interfaces to the list of bridges.
 
@@ -674,6 +337,21 @@ class World(object):
         if sleep_dt is not None:
             time.sleep(sleep_dt)
 
+    def follow(self, body, distance=None, yaw=None, pitch=None):
+        """
+        Follow the given body with the world camera at the specified distance, yaw and pitch angles.
+
+        Args:
+            body (Body): body to follow with the world camera.
+            distance (float, None): distance (in meter) from the camera and the body position. If None, it will take
+                the current distance.
+            yaw (float, None): camera yaw angle (in radians) left/right. If None, it will take the current yaw angle.
+            pitch (float, None): camera pitch angle (in radians) up/down. If None, it will take the current pitch angle.
+        """
+        if not isinstance(body, Body):
+            raise TypeError("Expecting the given body to be an instance of `Body`, instead got: {}".format(type(body)))
+        self.camera.reset(distance=distance, yaw=yaw, pitch=pitch, target_position=body.position)
+
     def load_robot(self, robot, position=None, orientation=None, fixed_base=None, *args, **kwargs):
         """
         Load the robot into the world. If the robot parameter is a known robot name or the path to the urdf file,
@@ -690,6 +368,8 @@ class World(object):
         Return:
             Robot: instance of the Robot class
         """
+        # TODO check the height of the terrain where we wish to load the robot
+
         if isinstance(robot, Robot):  # the robot is already loaded, then add it to the list
             pass
 
@@ -805,17 +485,17 @@ class World(object):
         """
         bodies = self.sim.load_mjcf(filename, scaling=scaling)
         for body in bodies:
-            self.movable_bodies[body] = self.sim.getBodyInfo(body)
+            self.movable_bodies[body] = self.sim.get_body_info(body)
         return bodies
 
-    def _loadSDForURDF(self, path, position, orientation, scaling, objectType=None):
+    def _load_sdf_or_urdf(self, path, position, orientation, scaling, objectType=None):
         extension_name = path.split('.')[-1]
         if extension_name == 'urdf':
             object_id = self.sim.load_urdf(path, position, orientation, scale=scaling)
             self.movable_bodies[object_id] = 'urdf' if objectType is None else objectType
         elif extension_name == 'sdf':
-            object_id = self.sim.loadSDF(path, scale=scaling) # list of ids
-            for i in object_id: # assume for now that the objects are movable...
+            object_id = self.sim.load_sdf(path, scale=scaling)  # list of ids
+            for i in object_id:  # assume for now that the objects are movable...
                 self.movable_bodies[i] = 'sdf' if objectType is None else objectType
         else:
             raise ValueError('Extension name of the file is not known; this method only accepts URDF/SDF files.')
@@ -828,10 +508,10 @@ class World(object):
 
         Args:
             object_type (str): type of the object (name, 'sphere',
-            path:
-            position:
-            orientation:
-            scaling:
+            path (str): path to the object
+            position (np.float[3]): position of the object in the world frame.
+            orientation (np.float[4]): orientation of the object in the world frame.
+            scaling (float): scaling factor
 
         Returns:
             int or int[]: object ids
@@ -839,7 +519,7 @@ class World(object):
         # check if an object has already been loaded at that place.
 
         if path is not None:
-            object_id = self._loadSDForURDF(path, position, orientation, scaling=1., objectType=object_type)
+            object_id = self._load_sdf_or_urdf(path, position, orientation, scaling=1., objectType=object_type)
         else:
             if object_type == 'sphere':
                 object_id = self.load_sphere(position)
@@ -1064,7 +744,7 @@ class World(object):
             None
         """
         # TODO: currently not possible in PyBullet
-        raise NotImplementedError
+        pass
 
     def get_object_aabb(self, object_id, link_id=-1):
         """
@@ -1119,11 +799,38 @@ class World(object):
             return False
         return True
 
-    def get_closest_object(self):  # Not possible for now
-        raise NotImplementedError
+    def get_closest_objects(self, body, radius=1, link_id=-1, body2=None, link2_id=-1):  # Not possible for now
+        """
+        Get the closest objects from the specified body (or link) within the specified radius.
 
-    def get_closest_objects(self, radius):  # Not possible for now
-        raise NotImplementedError
+        Args:
+            body (Body): body.
+            radius (float): radius around the body in which we check the closest objects.
+            link_id (int): link id. Only report contact points that involve link index of body A.
+            body2 (int): only report contact points that involve body B. Important: you need to have a valid body A
+                if you provide body B
+            link2_id (int): only report contact points that involve link index of body B
+
+        Returns:
+            list:
+                int: contact flag (reserved)
+                int: body unique id of body A
+                int: body unique id of body B
+                int: link index of body A, -1 for base
+                int: link index of body B, -1 for base
+                np.float[3]: contact position on A, in Cartesian world coordinates
+                np.float[3]: contact position on B, in Cartesian world coordinates
+                np.float[3]: contact normal on B, pointing towards A
+                float: contact distance, positive for separation, negative for penetration
+                float: normal force applied during the last `step`. Always equal to 0.
+                float: lateral friction force in the first lateral friction direction (see next returned value)
+                np.float[3]: first lateral friction direction
+                float: lateral friction force in the second lateral friction direction (see next returned value)
+                np.float[3]: second lateral friction direction
+        """
+        if body2 is not None:
+            return self.sim.get_closest_points(body1=body.id, body2=body2, distance=radius,
+                                               link1_id=link_id, link2_id=link_id)
 
     def load_floor(self, scaling=1.):
         """
@@ -1251,7 +958,7 @@ class World(object):
             self.sim.change_visual_shape(heightmap, -1, texture_id=texture)
 
         # remove mesh from memory
-        os.remove(filename + '.obj') # remove mesh from memory
+        os.remove(filename + '.obj')  # remove mesh from memory
         os.remove(filename + '.mtl')
 
         # replace the floor if there is already one present
@@ -1264,26 +971,38 @@ class World(object):
     # aliases
     loadDEM = load_heightmap
 
-    def generateHeightmap(self, filename=None, algo=None):
+    def generate_heightmap(self, filename=None, algo=None):
         """
         Generate a heightmap (png) using the specified algorithm. We provide 4 algorithms to generate this last one:
-        1. Random
-        2. Diamond algorithm
-        3.
-        4.
+        1. by generating it randomly (not advised)
+        2. by using the diamond-square algorithm
+        3. by using gaussian process regression
+        4. by interpolating the given initial points using RBF functions.
+        5. from a given 3D equation
+        6. by using the Geospatial Data Abstraction Library (GDAL), which allows to open Digital Elevation Models
+        (DEM) or Geographic Information System (GIS). It can open a .tiff, .geotiff, ascii grid, or image
+        (jpg, png,...) file. Warning: the GDAL option requires the gdal library to be installed.
 
-        By default, the diamond algorithm is used.
+        By default, the diamond-square algorithm is used. Two good other algorithms are the GDAL and the RBF
+        approaches.
 
         Args:
             filename (None, str): if not None, it will save the heightmap in the format specified by the filename.
                 The format is inferred from the filename. Supported ones include '.png', '.jpg', and '.obj'.
 
         Returns:
-            np.ndarray: heightmap
+            np.array[W,H]: heightmap (with, height)
         """
         pass
 
-    def generate_terrain(self, filename=None):
+    def generate_terrain(self, heightmap, filename):
+        """
+        Generate the terrain (obj) file and load it in the world.
+
+        Args:
+            heightmap (np.array[W,H]): 2D heightmap.
+            filename (str): filename.
+        """
         pass
 
     def load_stadium(self, scaling=1.):
@@ -1323,16 +1042,10 @@ class World(object):
     def load_stairs(self):
         pass
 
-    def createCity(self):
+    def create_city(self):
         pass
 
-    def createParkour(self):
-        pass
-
-    def createMountainWithPath(self):
-        pass
-
-    def loadTable(self, position, scaling=1.):
+    def load_table(self, position, scaling=1.):
         """
         Load a table in the world.
 
@@ -1357,11 +1070,11 @@ class World(object):
         Returns:
             int: unique id of the shelf
         """
-        shelf = self.sim.loadSDF('kiva_shelf/model.sdf', scale=scaling)[0]
+        shelf = self.sim.load_sdf('kiva_shelf/model.sdf', scale=scaling)[0]
         self.movable_bodies[shelf] = 'shelf'
         return shelf
 
-    def load_visual_Sphere(self, position, radius=0.5, color=None):
+    def load_visual_sphere(self, position, radius=0.5, color=None):
         """
         Load a visual sphere in the world (only available in the simulator).
 
@@ -1900,56 +1613,36 @@ if __name__ == '__main__':
     # world = World(sim)
     # world.load_bot_lab()
 
-    # world.load_sdf('/home/brian/Downloads/cobblestones_origin/model.sdf', scaling=1)
-
-    # world.load_mesh('/home/brian/Downloads/cobblestones_origin/mesh/cobblestones.obj',
-    #                position=[0, 0, 0],
-    #                orientation=[.707, 0, 0, .707],
-    #                mass=0.,
-    #                scale=(1., 1., 1.),
-    #                # color=[1, 0, 0, 1],
-    #                flags=1)
-
-    # world.load_mesh('/home/brian/save/code/random-terrain-generator-master/terrain.obj',
+    # # load meshes
+    # world.load_mesh('meshes/terrain.obj',
     #                position=[0, 0, -2],
     #                orientation=[.707, 0, 0, .707],
     #                mass=0.,
     #                scale=(.1, .1, .1),
     #                # color=[1, 0, 0, 1],
     #                flags=1)
-
     # world.load_mesh('bedroom.obj', [0, 0, 0], mass=0., color=[0.4, 0.4, 0.4, 1], flags=1) #, scale=(0.01, 0.01, 0.01))
     # world.load_mesh('mtsthelens.obj', [0, 0, -8], mass=0., color=[0.2, 0.5, 0.2, 1], flags=1, scale=(0.01,0.01,0.01))
     # world.load_mesh('meshes/terrain.obj', [0,0,0], mass=0., color=[1,1,1,1], flags=1)
-    # world.load_mesh('/home/brian/heightmap_old.obj', [0,0,0], mass=0., scale=(0.1,0.1,0.01), color=[1,1,1,1], flags=1)
-    # world.load_mesh('/home/brian/Downloads/arab_desert/desert.obj',
-    #                position=[0, 0, -10.8], orientation=(0.707,0,0,0.707), mass=0., scale=(1, 1, 1),
-    #                color=[1, 1, 1, 1], flags=1)
-    # world.load_mesh('/home/brian/PhD-repos/pyrobolearn/tests/heightmap_test_exp.obj', [0, 0, 0], mass=0.,
-    #                scale=(0.1, 0.1, 0.015),
-    #                color=[1, 0, 0, 1],
-    #                flags=1)
 
+    # # load robots
     # world.load_robot('Cogimon', position=[0,0,1.])
-
     # world.load_robot('coman', use_fixed_base=False)
-    # sphere = world.load_visual_Sphere([1.,0,1.], color=(1,0,0,0.5))
+
+    # load basic shapes
+    sphere = world.load_visual_sphere([1., 0, 1.], color=(1, 0, 0, 0.5))
     # world.load_visual_box([-1,0,1], dimensions=[1.,1.,1.], color=[0,0,1,0.5])
     # world.load_cylinder([0, -1, 1], color=[1, 0, 0, 1])
     #  world.load_capsule([0, 1, 1],  color=[1, 0, 0, 1])
     #  world.load_mesh(filename='duck.obj', [1, 0, 2], [0.707, 0, 0, 0.707], mass=0.1, scale=[0.1,0.1,0.1],
     #                 color=[1, 0, 0, 1])
 
-    # from utils.orientation import RotX, RotY, RotZ, getQuaternionFromMatrix
-    # R = RotZ(np.deg2rad(90.))
-    # q = tuple(getQuaternionFromMatrix(R))
-    # world.load_ellipsoid([0,0,2], orientation=q, mass=0, scale=[2.,1.,1.], color=(0,0,1,1))
+    # world.load_ellipsoid([0,0,2], mass=0, scale=[2.,1.,1.], color=(0,0,1,1))
     # world.load_cone([1,1,2])
     world.load_right_triangular_prism([-1, -1, 2])
     # floor = world.load_mesh(filename='box', [1, 0, 2], mass=0, color=None)
 
     # floor = world.load_floor()
-    # print(p.get_dynamics_info(floor, -1))
     # floor = world.load_mesh([1,0,0], [0,0,0,1], filename='grass.obj', mass=0, color=(1,1,1,1))
     # texture = sim.load_texture('grass.png')
     # sim.change_visual_shape(floor, -1, texture_id=texture)
@@ -1958,10 +1651,7 @@ if __name__ == '__main__':
     # texture = sim.load_texture('grass.png')
     # sim.change_visual_shape(grass, -1, texture_id=texture)
 
-    # vs = world.load_visual_Sphere([0,0,2], radius=0.1, color=(0,0,1,1))
-
-    # path = '/home/brian/bullet3/data/'
-    # objects = p.load_mjcf(path+"MPL/mpl2.xml")
+    # vs = world.load_visual_sphere([0,0,2], radius=0.1, color=(0,0,1,1))
 
     # world.load_plane([1.,0.,1.], [0,0,0,1], color=(1,0,0,1))
 
@@ -1973,12 +1663,12 @@ if __name__ == '__main__':
         # p = world.get_object_position(sphere)
         # p -= 0.001 * np.array([1.,0,0])
         p = np.array([np.cos(w*t), np.sin(w*t), 1.])
-        # world.move_object(sphere, p)
-        # if t % T == 0:
-        #     if red:
-        #         world.change_object_color(sphere, (1,0,0,0.5))
-        #     else:
-        #         world.change_object_color(sphere, (0,0,1,0.5))
-        #     red = not red
-        # world.move_object(sphere)
+
+        if t % T == 0:
+            if red:
+                world.change_object_color(sphere, (1,0,0,0.5))
+            else:
+                world.change_object_color(sphere, (0,0,1,0.5))
+            red = not red
+        world.move_object(sphere, p)
         world.step(sleep_dt=1./240)

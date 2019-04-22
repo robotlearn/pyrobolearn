@@ -260,7 +260,7 @@ def heightmap_rbf(init_values, x, y, function='multiquadric', lower_bound=0, upp
     return heightmap
 
 
-def heighmap_equation(x, y, z, lower_bound=0, upper_bound=255, dtype=np.int):
+def heightmap_equation(x, y, z, lower_bound=0, upper_bound=255, dtype=np.int):
     r"""
     Generate heightmap from 3D equation :math:`z = f(x,y)`.
 
@@ -414,7 +414,7 @@ if __name__ == '__main__':
 
     # generate heightmap using RBF interpolations
     x = np.array(range(256))
-    y = np.array(range(256)) # range(128)
+    y = np.array(range(256))  # range(128)
     N_init = 20     # number of bumps
     x_init = np.random.randint(low=x.min(), high=x.max(), size=N_init)
     y_init = np.random.randint(low=y.min(), high=y.max(), size=N_init)
