@@ -8,10 +8,11 @@ models such as policies/controllers, dynamic transition functions, value approxi
 import numpy as np
 import torch
 import collections
-from abc import ABCMeta, abstractmethod
+# from abc import ABCMeta, abstractmethod
 import gym
 
 from pyrobolearn.utils.data_structures.orderedset import OrderedSet
+from pyrobolearn.utils.data_structures.queues import FIFOQueue
 
 
 __author__ = "Brian Delhaisse"
@@ -63,7 +64,7 @@ class State(object):
 
     """
 
-    def __init__(self, states=(), data=None, space=None, name=None):
+    def __init__(self, states=(), data=None, space=None, name=None, window_size=1, axis=-1, ticks=1):
         """
         Initialize the state. The state contains some kind of data, or is a state combined of other states.
 
@@ -71,6 +72,20 @@ class State(object):
             states (list/tuple of State): list of states to be combined together (if given, we can not specified data)
             data (np.ndarray): data associated to this state
             space (gym.space): space associated with the given data
+            name (str, None): name of the state. If None, by default, it will have the name of the class.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int): axis to concatenate or stack the states in the current window. If you have a state with shape
+                (n,), then if the axis is -1 (by default) or 0, it will just concatenate it such that resulting state
+                has a shape (n*w,) where w is the window size. If the axis is `dim` (in this example, axis=1), then
+                it will just stack the states present in the window (in this example, it will return the state with
+                shape (n,w)). The :attr:`axis` attribute is only when the state is not a combination of states,
+                but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
 
         Warning:
             Both arguments can not be provided to the state.
@@ -87,29 +102,6 @@ class State(object):
             raise TypeError("Expecting a list, tuple, or (ordered) set of states.")
         if len(states) > 0 and data is not None:
             raise ValueError("Please specify only one of the argument `states` xor `data`, but not both.")
-
-        # # Check if data is given
-        # if data is not None:
-        #     if not isinstance(data, np.ndarray):
-        #         if isinstance(data, (list, tuple)):
-        #             data = np.array(data)
-        #         elif isinstance(data, (int, float)):
-        #             data = np.array([data])
-        #         else:
-        #             raise TypeError("Expecting a numpy array, a list/tuple of int/float, or an int/float for 'data'")
-        #
-        # if isinstance(states, collections.Iterable):
-        #     if len(states) > 0 and data is not None: # check if both the states and data are specified
-        #         raise ValueError("Please specify only one of the argument `states` xor `data`, but not both.")
-        #
-        #     #
-        #     for state in states:
-        #         if not isinstance(state, State):
-        #             if data is None: # in the case, someone calls `State(data)`
-        #                 data = states
-        #                 break
-        #             else:
-        #                 raise ValueError("Please specify only one of the argument `states` xor `data`, but not both.")
 
         # Check if data is given
         if data is not None:
@@ -128,7 +120,7 @@ class State(object):
         self._distribution = None  # for sampling
         self._normalizer = None
         self._noiser = None  # for noise
-        self._name = name
+        self.name = name
         self._training_mode = False
 
         # create ordered set which is useful if this state is a combination of multiple states
@@ -138,6 +130,15 @@ class State(object):
 
         # reset state
         self.reset()
+
+        # set window
+        self._window = None
+        self.window_size = window_size
+        self.axis = axis
+
+        # set ticks and counter
+        self.cnt = 0
+        self.ticks = int(ticks)
 
     ##############################
     # Properties (Getter/Setter) #
@@ -199,6 +200,7 @@ class State(object):
         # one state: change the data
         # if self.has_data():
         else:
+            # make sure data is a numpy array
             if not isinstance(data, np.ndarray):
                 if isinstance(data, (list, tuple)):
                     data = np.array(data)
@@ -208,9 +210,9 @@ class State(object):
                     data = data * np.ones(self._data.shape)
                 else:
                     raise TypeError("Expecting a numpy array, a list/tuple of int/float, or an int/float for 'data'")
+
+            # if previous data shape is different from the current one
             if self._data is not None and self._data.shape != data.shape:
-                print(data.shape)
-                print(self._data.shape)
                 raise ValueError("The given data does not have the same shape as previously.")
 
             # clip the value using the space
@@ -222,6 +224,8 @@ class State(object):
                     n = self._space.n
                     if data.size == 1:
                         data = np.clip(data, 0, n)
+
+            # set data
             self._data = data
             self._torch_data = torch.from_numpy(data).float()
 
@@ -340,8 +344,7 @@ class State(object):
         """
         Set the corresponding space. This can only be used one time!
         """
-        if self.has_data() and not self.has_space() and \
-                isinstance(space, (gym.spaces.Box, gym.spaces.Discrete)):
+        if self.has_data() and not self.has_space() and isinstance(space, (gym.spaces.Box, gym.spaces.Discrete)):
             self._space = space
 
     @property
@@ -358,6 +361,8 @@ class State(object):
         """
         Set the name of the state.
         """
+        if name is None:
+            name = self.__class__.__name__
         if not isinstance(name, str):
             raise TypeError("Expecting the name to be a string.")
         self._name = name
@@ -411,25 +416,60 @@ class State(object):
         """
         return len(np.unique(self.dimension))
 
-    @property
-    def distribution(self):
-        """
-        Get the current distribution used when sampling the state
-        """
-        pass
-
-    @distribution.setter
-    def distribution(self, distribution):
-        """
-        Set the distribution to the state.
-        """
-        # check if distribution is discrete/continuous
-        pass
+    # @property
+    # def distribution(self):
+    #     """
+    #     Get the current distribution used when sampling the state
+    #     """
+    #     pass
+    #
+    # @distribution.setter
+    # def distribution(self, distribution):
+    #     """
+    #     Set the distribution to the state.
+    #     """
+    #     # check if distribution is discrete/continuous
+    #     pass
 
     @property
     def in_training_mode(self):
         """Return True if we are in training mode."""
         return self._training_mode
+
+    @property
+    def window(self):
+        """Return the window."""
+        return self._window
+
+    @property
+    def window_size(self):
+        """Return the window size."""
+        return self.window.maxsize
+
+    @window_size.setter
+    def window_size(self, size):
+        """Set the window size."""
+        if size is None:
+            size = 1
+        if not isinstance(size, int):
+            raise TypeError("Expecting the given window size to be an int, instead got: {}".format(type(size)))
+        size = size if size > 0 else 1
+        self._window = FIFOQueue(maxsize=size)
+
+    @property
+    def axis(self):
+        """Return the axis to concatenate or stack the states in the current window."""
+        return self._axis
+
+    @axis.setter
+    def axis(self, axis):
+        """Set the axis to concatenate or stack the states in the current window."""
+        if axis is None:
+            axis = -1
+        if not isinstance(axis, int):
+            raise TypeError("Expecting the given axis to be an int, instead got: {}".format(type(axis)))
+        axis = axis if axis > -2 else -1
+        self._axis = axis
 
     ###########
     # Methods #
@@ -487,12 +527,14 @@ class State(object):
     extend = add
 
     def _read(self):
+        """
+        Read the state value. This has to be overwritten in the child class.
+        """
         pass
 
     def read(self):
         """
         Read the state values from the simulator for each state, set it and return their values.
-        This has to be overwritten by the child class.
         """
         if self.has_data():  # read the current state
             self._read()
@@ -501,18 +543,17 @@ class State(object):
                 state._read()
 
         # return the data
-        return self.data
+        # return self.data
 
     def _reset(self):
-        pass
+        """
+        Reset the state. This has to be overwritten in the child class.
+        """
+        self._read()
 
     def reset(self):
         """
         Some states need to be reset. It returns the initial state.
-        This needs to be overwritten by the child class.
-
-        Returns:
-            initial state
         """
         if self.has_data():  # reset the current state
             self._reset()
@@ -521,7 +562,7 @@ class State(object):
                 state._reset()
 
         # return the first state data
-        return self.read()
+        return self.data  # self.read()
 
     def max_dimension(self):
         """
@@ -578,7 +619,7 @@ class State(object):
         if self._data is None:
             return [state.bounds() for state in self._states]
         if isinstance(self._space, gym.spaces.Box):
-            return (self._space.low, self._space.high)
+            return self._space.low, self._space.high
         elif isinstance(self._space, gym.spaces.Discrete):
             return (self._space.n,)
         raise NotImplementedError
@@ -718,9 +759,9 @@ class State(object):
             if state.__class__ == class_type or state.__class__.__name__.lower() == class_type:
                 return state
 
-    ########################
-    # Operator Overloading #
-    ########################
+    #############
+    # Operators #
+    #############
 
     def __repr__(self):
         if self._data is None:
