@@ -1,5 +1,18 @@
+#!/usr/bin/env python
+"""Define the OrderedSet data structure class.
+"""
 
 import collections
+
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class OrderedSet(collections.MutableSet):
     r"""Ordered Set
@@ -59,6 +72,10 @@ class OrderedSet(collections.MutableSet):
             for item in iterator:
                 self.add(item)
 
+    ###########
+    # Methods #
+    ###########
+
     def add(self, item):
         """
         Add/Append an item to the ordered set.
@@ -86,15 +103,14 @@ class OrderedSet(collections.MutableSet):
         Time complexity: O(N)
         """
         # check idx
-        idx = self._checkIndex(idx)
+        idx = self._check_index(idx)
         if item in self._set:
             # move the item at the specified location
-            self.move(idx, item) # O(N)
+            self.move(idx, item)  # O(N)
         else:
             # add it
-            self._list.insert(idx, item) # O(N)
-            self._set.add(item) # O(1)
-
+            self._list.insert(idx, item)  # O(N)
+            self._set.add(item)  # O(1)
 
     def move(self, idx, item):
         """
@@ -102,11 +118,10 @@ class OrderedSet(collections.MutableSet):
         Time complexity: O(N)
         """
         # remove the item from the list/set
-        self.remove(item) # O(N)
+        self.remove(item)  # O(N)
 
         # insert item
-        self.insert(idx, item) # O(N)
-
+        self.insert(idx, item)  # O(N)
 
     def discard(self, item):
         """
@@ -115,7 +130,7 @@ class OrderedSet(collections.MutableSet):
         """
         if item in self._set:
             self._list.remove(item)  # O(N)
-            self._set.remove(item) # O(1)
+            self._set.remove(item)  # O(1)
 
     def remove(self, item):
         """
@@ -134,9 +149,9 @@ class OrderedSet(collections.MutableSet):
             index: index in the ordered set.
         """
         if index is None: index = len(self._list)
-        index = self._checkIndex(index) # to be sure the index is valid
-        self._set.remove(self._list[index]) # O(1)
-        item = self._list.pop(index) # O(1) if last, O(N) if first
+        index = self._check_index(index)  # to be sure the index is valid
+        self._set.remove(self._list[index])  # O(1)
+        item = self._list.pop(index)  # O(1) if last, O(N) if first
         return item
 
     def copy(self):
@@ -146,7 +161,7 @@ class OrderedSet(collections.MutableSet):
         """
         return self.__class__(self)
 
-    def _checkIndex(self, idx):
+    def _check_index(self, idx):
         """
         Check the given index; if it is in the range of the ordered set, and if it is negative return the
         corresponding positive index.
@@ -274,7 +289,12 @@ class OrderedSet(collections.MutableSet):
         """
         return other.issuperset(self, order=order)
 
+    #############
+    # Operators #
+    #############
+
     def __repr__(self):
+        """Return a representation string."""
         return '%s(%r)' % (self.__class__.__name__, list(self))
 
     def __contains__(self, item):
@@ -336,14 +356,14 @@ class OrderedSet(collections.MutableSet):
             else:
                 self._list[idx] = item
                 self._set.add(item)
-        elif isinstance(idx, slice): # slice
+        elif isinstance(idx, slice):  # slice
             # replace in list
-            items_to_remove = self._list[idx] # O(K)
-            self._list[idx] = item # O(K+N)
+            items_to_remove = self._list[idx]  # O(K)
+            self._list[idx] = item  # O(K+N)
 
             # remove previous items from the set
             for elem in items_to_remove:
-                self._set.remove(elem) # O(1)
+                self._set.remove(elem)  # O(1)
 
             # add new items in the set
             for elem in item:
@@ -455,6 +475,10 @@ class OrderedSet2(collections.MutableSet):
             for item in iterator:
                 self.add(item)
 
+    ###########
+    # Methods #
+    ###########
+
     def add(self, item):
         """
         Add/Append an item to the ordered set.
@@ -491,7 +515,7 @@ class OrderedSet2(collections.MutableSet):
         Time complexity: O(N)
         """
         # check idx
-        idx = self._checkIndex(idx)
+        idx = self._check_index(idx)
 
         # if the set is initially empty or index is the size of the set, just add the item (at the end)
         if len(self._map) == 0 or idx == len(self._map):
@@ -503,10 +527,10 @@ class OrderedSet2(collections.MutableSet):
                 # get current item at the specified index, update the items nearby, and insert the new item
                 curr = self[idx]
                 prev_item, next_item = self._map[curr]
-                if prev_item == self.NonePtr: # beginning of the ordered set (idx=0)
+                if prev_item == self.NonePtr:  # beginning of the ordered set (idx=0)
                     self._map[curr][0] = item
                     self._map[item] = [self.NonePtr, curr]
-                else: # somewhere between the start and the end (not included)
+                else:  # somewhere between the start and the end (not included)
                     self._map[item] = [prev_item, next_item]
                     self._map[prev_item][1] = item
                     self._map[next_item][0] = item
@@ -524,7 +548,6 @@ class OrderedSet2(collections.MutableSet):
 
         # insert item
         self.insert(idx, item)
-
 
     def discard(self, item):
         """
@@ -579,7 +602,7 @@ class OrderedSet2(collections.MutableSet):
         """
         return self.__class__(self)
 
-    def _checkIndex(self, idx):
+    def _check_index(self, idx):
         """
         Check the given index; if it is in the range of the ordered set, and if it is negative return the
         corresponding positive index.
@@ -709,7 +732,12 @@ class OrderedSet2(collections.MutableSet):
         """
         return other.issuperset(self, order=order)
 
+    #############
+    # Operators #
+    #############
+
     def __repr__(self):
+        """Return a representation string."""
         return '%s(%r)' % (self.__class__.__name__, list(self))
 
     def __contains__(self, item):
@@ -763,7 +791,7 @@ class OrderedSet2(collections.MutableSet):
         if isinstance(idx, int): # index is an integer
 
             # check index
-            idx = self._checkIndex(idx)
+            idx = self._check_index(idx)
 
             # traverse the set in a specific order based on how close the index is wrt the start/end of the set
             curr = self.NonePtr
@@ -818,7 +846,7 @@ class OrderedSet2(collections.MutableSet):
         Time complexity: O(N)
         """
         # check idx
-        idx = self._checkIndex(idx)
+        idx = self._check_index(idx)
 
         # check if item already in the set
         if item in self._map:
@@ -880,7 +908,7 @@ class OrderedSet2(collections.MutableSet):
         self &= other
 
 
-#OrderedSet = OrderedSet2
+# OrderedSet = OrderedSet2
 
 
 # Tests
