@@ -32,12 +32,25 @@ class GymState(State):
     See Also: `GymEnv`
     """
 
-    def __init__(self, gym_env):
+    def __init__(self, gym_env, window_size=1, axis=None, ticks=1):
         """
         Initialize the OpenAI Gym state.
 
         Args:
             gym_env (gym.Env): OpenAI gym environment
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
         """
 
         # check types
@@ -50,7 +63,7 @@ class GymState(State):
         data = space.sample()
 
         # call super constructor
-        super(GymState, self).__init__(data=data, space=space)
+        super(GymState, self).__init__(data=data, space=space, window_size=window_size, axis=axis, ticks=ticks)
 
     def _reset(self):
         pass
@@ -65,7 +78,7 @@ if __name__ == '__main__':
     env = gym.make('CartPole-v1')
 
     # create gym state
-    states = GymState(env)
+    states = GymState(env, window_size=1, axis=None)
 
     # print some information
     print("State: {}".format(states))

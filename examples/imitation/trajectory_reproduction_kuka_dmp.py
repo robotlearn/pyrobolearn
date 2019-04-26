@@ -39,7 +39,7 @@ robot = world.load_robot(KukaIIWA)
 print("Robot's actuated joint ids: {}".format(robot.joints))
 
 # create state/action
-state = ExponentialPhaseState(rate=rate)
+state = ExponentialPhaseState(ticks=rate)
 action = JointPositionAction(robot, joint_ids=joint_ids)
 print("State: {}".format(state))
 print("Action: {}".format(action))

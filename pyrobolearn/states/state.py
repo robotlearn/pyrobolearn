@@ -64,7 +64,7 @@ class State(object):
 
     """
 
-    def __init__(self, states=(), data=None, space=None, name=None, window_size=1, axis=-1, ticks=1):
+    def __init__(self, states=(), data=None, space=None, name=None, window_size=1, axis=None, ticks=1):
         """
         Initialize the state. The state contains some kind of data, or is a state combined of other states.
 
@@ -79,12 +79,12 @@ class State(object):
                 current state. The window size has to be bigger than 1. If it is below, it will be set automatically
                 to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
                 but is given some :attr:`data`.
-            axis (int): axis to concatenate or stack the states in the current window. If you have a state with shape
-                (n,), then if the axis is -1 (by default) or 0, it will just concatenate it such that resulting state
-                has a shape (n*w,) where w is the window size. If the axis is `dim` (in this example, axis=1), then
-                it will just stack the states present in the window (in this example, it will return the state with
-                shape (n,w)). The :attr:`axis` attribute is only when the state is not a combination of states,
-                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
             ticks (int): number of ticks to sleep before getting the next state data.
 
         Warning:
@@ -128,17 +128,18 @@ class State(object):
         if self._data is None:
             self.add(states)
 
-        # reset state
-        self.reset()
-
         # set window
         self._window = None
+        self._torch_window = None
         self.window_size = window_size
         self.axis = axis
 
         # set ticks and counter
         self.cnt = 0
         self.ticks = int(ticks)
+
+        # reset state
+        self.reset()
 
     ##############################
     # Properties (Getter/Setter) #
@@ -176,9 +177,20 @@ class State(object):
         Returns:
             list of np.ndarray: list of data associated to the state
         """
+        # if the current state has data
         if self.has_data():
-            return [self._data]
-        return [state._data for state in self._states]
+            if len(self.window) == 1:
+                return [self.window[0]]  # [self._data]
+
+            # concatenate the data in the window
+            if self.axis is None:
+                return [np.concatenate(self.window.queue)]
+
+            # stack the data in the window
+            return [np.stack(self.window.queue, axis=self.axis)]  # stack
+
+        # if multiple states
+        return [state.data[0] for state in self._states]
 
     @data.setter
     def data(self, data):
@@ -228,6 +240,15 @@ class State(object):
             # set data
             self._data = data
             self._torch_data = torch.from_numpy(data).float()
+            self.window.append(self._data)
+            self.torch_window.append(self._torch_data)
+
+            # check that the window is full: if not, copy the last data
+            if len(self.window) != self.window.maxsize:
+                for _ in range(self.window.maxsize - len(self.window)):
+                    # copy last appended data
+                    self.window.append(self.window[-1])
+                    self.torch_window.append(self.torch_window[-1])
 
     @property
     def merged_data(self):
@@ -245,8 +266,17 @@ class State(object):
         Return the data as a list of torch tensors.
         """
         if self.has_data():
-            return [self._torch_data]
-        return [state._torch_data for state in self._states]
+            if len(self.torch_window) == 1:
+                return [self.torch_window[0]]  # [self._torch_data]
+
+            # concatenate the data in the window
+            if self.axis is None:
+                return [torch.cat(self.torch_window.tolist())]
+
+            # stack the data in the window
+            return [torch.stack(self.torch_window.tolist(), dim=self.axis)]  # stack
+
+        return [state.torch_data[0] for state in self._states]
 
     @torch_data.setter
     def torch_data(self, data):
@@ -290,12 +320,19 @@ class State(object):
                     n = self._space.n
                     if data.size == 1:
                         data = torch.clamp(data, min=0, max=n)
+
+            # set data
             self._torch_data = data
-            if data.requires_grad:
-                data = data.detach().numpy()
-            else:
-                data = data.numpy()
-            self._data = data
+            self._data = data.detach().numpy() if data.requires_grad else data.numpy()
+            self.torch_window.append(self._torch_data)
+            self.window.append(self._data)
+
+            # check that the window is full: if not, copy the last data
+            if len(self.window) != self.window.maxsize:
+                for _ in range(self.window.maxsize - len(self.window)):
+                    # copy last appended data
+                    self.window.append(self.window[-1])
+                    self.torch_window.append(self.torch_window[-1])
 
     @property
     def merged_torch_data(self):
@@ -442,6 +479,11 @@ class State(object):
         return self._window
 
     @property
+    def torch_window(self):
+        """Return the torch window."""
+        return self._torch_window
+
+    @property
     def window_size(self):
         """Return the window size."""
         return self.window.maxsize
@@ -454,7 +496,22 @@ class State(object):
         if not isinstance(size, int):
             raise TypeError("Expecting the given window size to be an int, instead got: {}".format(type(size)))
         size = size if size > 0 else 1
+
+        # create windows
         self._window = FIFOQueue(maxsize=size)
+        self._torch_window = FIFOQueue(maxsize=size)
+
+        # add data if present
+        if self._data is not None:
+            self._window.append(self._data)
+            self._torch_window.append(self._torch_data)
+
+            # check that the window is full: if not, copy the last data
+            if len(self._window) != self._window.maxsize:
+                for _ in range(self._window.maxsize - len(self._window)):
+                    # copy last appended data
+                    self._window.append(self._window[-1])
+                    self._torch_window.append(self._torch_window[-1])
 
     @property
     def axis(self):
@@ -464,11 +521,9 @@ class State(object):
     @axis.setter
     def axis(self, axis):
         """Set the axis to concatenate or stack the states in the current window."""
-        if axis is None:
-            axis = -1
-        if not isinstance(axis, int):
-            raise TypeError("Expecting the given axis to be an int, instead got: {}".format(type(axis)))
-        axis = axis if axis > -2 else -1
+        if axis is not None and not isinstance(axis, int):
+            raise TypeError("Expecting the given axis to be None (concatenate) or an int (stack), instead got: "
+                            "{}".format(type(axis)))
         self._axis = axis
 
     ###########
@@ -496,9 +551,11 @@ class State(object):
     has_states = is_combined_states
 
     def has_data(self):
+        """Check if the state has data."""
         return self._data is not None
 
     def has_space(self):
+        """Check if the state has a space."""
         return self._space is not None
 
     def add(self, state):
@@ -536,25 +593,33 @@ class State(object):
         """
         Read the state values from the simulator for each state, set it and return their values.
         """
-        if self.has_data():  # read the current state
-            self._read()
-        else:  # read each state
-            for state in self.states:
-                state._read()
+        # if time to read
+        if self.cnt % self.ticks == 0:
+
+            if self.has_data():  # read the current state
+                self._read()
+            else:  # read each state
+                for state in self.states:
+                    state._read()
+
+        # increment counter
+        self.cnt += 1
 
         # return the data
-        # return self.data
+        return self.data
 
     def _reset(self):
         """
         Reset the state. This has to be overwritten in the child class.
         """
+        self.cnt = 0
         self._read()
 
     def reset(self):
         """
         Some states need to be reset. It returns the initial state.
         """
+        self.cnt = 0
         if self.has_data():  # reset the current state
             self._reset()
         else:  # reset each state
@@ -662,7 +727,7 @@ class State(object):
                 state.add_noise(noise=noise)
         else:
             # add noise to the data
-            noisy_data = self.data + noise
+            noisy_data = self.data[0] + noise
             # clip such that the data is within the bounds
             self.data = noisy_data
 
@@ -715,14 +780,14 @@ class State(object):
         # build the dictionary with key=dimension of shape, value=list of states
         dic = {}
         for state in states:
-            dic.setdefault(len(state._data.shape), []).append(state)
+            dic.setdefault(len(state.data[0].shape), []).append(state)
 
         # traverse the dictionary and fuse corresponding shapes
         states = []
         for key, value in dic.items():
             if len(value) > 1:
                 # fuse
-                data = [state._data for state in value]
+                data = [state.data[0] for state in value]
                 names = [state.name for state in value]
                 s = State(data=np.concatenate(data, axis=min(axis, key)), name='+'.join(names))
                 states.append(s)
@@ -771,7 +836,7 @@ class State(object):
             lst.append(')')
             return '\n'.join(lst)
         else:
-            return '%s(%s)' % (self.name, self._data)
+            return '%s(%s)' % (self.name, self.data[0])
 
     # def __str__(self):
     #     """
@@ -871,7 +936,7 @@ class State(object):
         """
         # if one state, slice the corresponding state data
         if len(self._states) == 0:
-            return self._data[key]
+            return self.data[0][key]
         # if multiple states
         if isinstance(key, int):
             # get one state
@@ -898,7 +963,7 @@ class State(object):
                 raise TypeError("Expecting key to be an int, and value to be a state.")
         else:
             # set the value on the data directly
-            self._data[key] = value
+            self.data[0][key] = value
 
     def __add__(self, other):
         """
@@ -955,7 +1020,7 @@ class State(object):
         s1 = self._states if self._data is None else OrderedSet([self])
         s2 = other._states if other._data is None else OrderedSet([other])
         s = s1 - s2
-        if len(s) == 1: # just one element
+        if len(s) == 1:  # just one element
             return s[0]
         return State(s)
 

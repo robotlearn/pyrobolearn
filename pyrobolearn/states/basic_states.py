@@ -25,8 +25,28 @@ class FixedState(State):
 
     This is a dummy fixed state which always returns the value it was initialized with.
     """
-    def __init__(self, value):
-        super(FixedState, self).__init__(data=value)
+
+    def __init__(self, value, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the dummy fixed state.
+
+        Args:
+            value (int, float, object): always return this value.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
+        super(FixedState, self).__init__(data=value, window_size=window_size, axis=axis, ticks=ticks)
 
 
 class FunctionalState(State):
@@ -34,16 +54,40 @@ class FunctionalState(State):
 
     This is a state which accepts a function which has to output the data.
     """
-    def __init__(self, function, *args, **kwargs):
+
+    def __init__(self, function, window_size=1, axis=None, ticks=1, *args, **kwargs):
+        """
+        Initialize the functional state.
+
+        Args:
+            function (callable): callable function or class that has to output the next state data.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+            *args: list of arguments given to the function.
+            **kwargs: dictionary of arguments given to the function.
+        """
         self.function = function
         self.args, self.kwargs = args, kwargs
         data = function(*args, **kwargs)  # call one time to get data
-        super(FunctionalState, self).__init__(data=data)
+        super(FunctionalState, self).__init__(data=data, window_size=window_size, axis=axis, ticks=ticks)
 
     def _reset(self):
+        """Reset the functional state."""
         self.data = self.function(*self.args, **self.kwargs)
 
     def _read(self):
+        """Read the next functional state data."""
         self.data = self.function(*self.args, **self.kwargs)
 
 
@@ -53,38 +97,80 @@ class CounterState(State):
     Counts the number of time this step has been called.
     """
 
-    def __init__(self, cnt=-1):
-        self.cnt = cnt
+    def __init__(self, cnt=0, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the counter state.
+
+        Args:
+            cnt (int): initial value for the counter.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
+        self.count = cnt
         if isinstance(cnt, int):
             cnt = np.array([cnt])
         if not (isinstance(cnt, np.ndarray) and cnt.size == 1 and len(cnt.shape) == 1
                 and cnt.dtype.kind in np.typecodes['AllInteger']):
             raise TypeError("Expecting an int, or a numpy array (integer) with size 1")
-        super(CounterState, self).__init__(data=cnt)
+        super(CounterState, self).__init__(data=cnt, window_size=window_size, axis=axis, ticks=ticks)
 
     def _reset(self):
-        self.data = self.cnt
+        """Reset the counter state."""
+        self.data = self.count
 
     def _read(self):
+        """Read the next counter state."""
         self.data = self._data + 1
 
 
 class PreviousActionState(State):
     r"""Previous Action State
 
-    This state copies the previous action.
+    This state copies the previous action data.
     """
 
-    def __init__(self, action):
+    def __init__(self, action, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the previous action state.
+
+        Args:
+            action (Action): action to copy the data from.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
         if not isinstance(action, Action):
             raise TypeError("Expecting the action to be an instance of Action, instead got {}".format(action))
         self.action = action
-        super(PreviousActionState, self).__init__()
+        super(PreviousActionState, self).__init__(window_size=window_size, axis=axis, ticks=ticks)
 
     def _reset(self):
+        """Reset the action state."""
         self.data = self.action.data
 
     def _read(self):
+        """Read the next action state."""
         self.data = self.action.data
 
 

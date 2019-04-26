@@ -6,7 +6,7 @@ This includes notably the joint positions, velocities, and force/torque states.
 
 from abc import ABCMeta
 
-from pyrobolearn.states.robot_states.robot_states import RobotState
+from pyrobolearn.states.robot_states.robot_states import RobotState, Robot
 
 
 __author__ = "Brian Delhaisse"
@@ -24,15 +24,30 @@ class JointState(RobotState):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, robot, joint_ids=None):
+    def __init__(self, robot, joint_ids=None, window_size=1, axis=None, ticks=1):
         """
         Initialize the joint state.
 
         Args:
-            robot (Robot): robot instance
-            joint_ids (int, int[N]): joint id or list of joint ids
+            robot (Robot): robot instance.
+            joint_ids (int, int[N]): joint id or list of joint ids.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
         """
-        super(JointState, self).__init__(robot)
+        # check if robot instance
+        if not isinstance(robot, Robot):
+            raise TypeError("The 'robot' parameter has to be an instance of Robot")
 
         # get the joints of the robot
         if joint_ids is None:
@@ -41,8 +56,7 @@ class JointState(RobotState):
             joint_ids = [joint_ids]
         self.joints = joint_ids
 
-        # read the data
-        self._read()
+        super(JointState, self).__init__(robot, window_size=window_size, axis=axis, ticks=ticks)
 
 
 class JointPositionState(JointState):
@@ -51,10 +65,31 @@ class JointPositionState(JointState):
     Return the joint positions as the state.
     """
 
-    def __init__(self, robot, joint_ids=None):
-        super(JointPositionState, self).__init__(robot, joint_ids)
+    def __init__(self, robot, joint_ids=None, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the joint position state.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, int[N]): joint id or list of joint ids.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
+        super(JointPositionState, self).__init__(robot, joint_ids, window_size=window_size, axis=axis, ticks=ticks)
 
     def _read(self):
+        """Read the next joint position state."""
         self.data = self.robot.get_joint_positions(self.joints)
 
 
@@ -64,10 +99,31 @@ class JointVelocityState(JointState):
     Return the joint velocities as the state.
     """
 
-    def __init__(self, robot, joint_ids=None):
-        super(JointVelocityState, self).__init__(robot, joint_ids)
+    def __init__(self, robot, joint_ids=None, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the joint velocity state.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, int[N]): joint id or list of joint ids.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
+        super(JointVelocityState, self).__init__(robot, joint_ids, window_size=window_size, axis=axis, ticks=ticks)
 
     def _read(self):
+        """Read the next joint velocity state."""
         self.data = self.robot.get_joint_velocities(self.joints)
 
 
@@ -77,10 +133,31 @@ class JointForceTorqueState(JointState):
     Return the joint force and torques as the state.
     """
 
-    def __init__(self, robot, joint_ids=None):
-        super(JointForceTorqueState, self).__init__(robot, joint_ids)
+    def __init__(self, robot, joint_ids=None, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the joint force torque state.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, int[N]): joint id or list of joint ids.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
+        super(JointForceTorqueState, self).__init__(robot, joint_ids, window_size=window_size, axis=axis, ticks=ticks)
 
     def _read(self):
+        """Read the next joint force torque state."""
         self.data = self.robot.get_joint_torques(self.joints)
 
 
@@ -91,8 +168,29 @@ class JointAccelerationState(JointState):
     joint torques and then applied forward dynamics to get the corresponding joint accelerations.
     """
 
-    def __init__(self, robot, joint_ids=None):
-        super(JointAccelerationState, self).__init__(robot, joint_ids)
+    def __init__(self, robot, joint_ids=None, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the joint acceleration state.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, int[N]): joint id or list of joint ids.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
+        super(JointAccelerationState, self).__init__(robot, joint_ids, window_size=window_size, axis=axis, ticks=ticks)
 
     def _read(self):
+        """Read the next joint acceleration state."""
         self.data = self.robot.get_joint_accelerations(self.joints)
