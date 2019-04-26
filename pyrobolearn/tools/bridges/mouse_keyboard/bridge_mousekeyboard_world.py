@@ -166,7 +166,7 @@ class BridgeMouseKeyboardWorld(Bridge):
     @property
     def camera(self):
         if self._camera is None:
-            self._camera = self.world_camera.get_debug_visualizer_camera(convert=False)
+            self._camera = self.world_camera.get_debug_visualizer_camera()
             if self.default_camera is None:
                 self.default_camera = self._camera
         return self._camera
@@ -369,7 +369,7 @@ class BridgeMouseKeyboardWorld(Bridge):
 
         elif self.interface.mouse_down and self.interface.mouse_moving and self.robot is not None:
             V, P, Vp, V_inv, P_inv, Vp_inv = self.world_camera.get_matrices(True)
-            camera = self.world_camera.get_debug_visualizer_camera(convert=False)
+            camera = self.world_camera.get_debug_visualizer_camera()
 
             if self.plane is not None:
                 # project the point on the screen to the world, and check where the line that starts from this point
