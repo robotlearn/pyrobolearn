@@ -6,6 +6,14 @@ import os
 
 from pyrobolearn.robots.manipulator import ManipulatorRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class WAM(ManipulatorRobot):
     r"""Wam robot
@@ -58,7 +66,7 @@ if __name__ == "__main__":
     # H = robot.get_mass_matrix()
     # print("Inertia matrix: H(q) = {}".format(H))
 
-    robot.set_joint_positions([np.pi / 4, np.pi / 2], joint_ids=[0, 1]) #2, 4])
+    robot.set_joint_positions([np.pi / 4, np.pi / 2], joint_ids=[0, 1])  # 2, 4])
 
     Jlin = robot.get_jacobian(6)[:3]
     robot.draw_velocity_manipulability_ellipsoid(6, Jlin, color=(1, 0, 0, 0.7))

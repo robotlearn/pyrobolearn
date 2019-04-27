@@ -7,6 +7,14 @@ import numpy as np
 
 from pyrobolearn.robots.manipulator import ManipulatorRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class RRBot(ManipulatorRobot):
     r"""RRBot
@@ -147,19 +155,19 @@ if __name__ == "__main__":
     print(robot.get_link_names())
     force = np.array([1., 0., 0.])
     pos = np.array([0., 0., 0.])
-    sim.applyExternalForce(robot.id, 1, force, pos, flags=p.LINK_FRAME) # link_frame = 1
+    sim.apply_external_force(robot.id, 1, force, pos, frame=1)  # link_frame = 1, world_frame = 2
 
-    slider = sim.addUserDebugParameter('force', -1000., 1000., 0)
+    slider = sim.add_user_debug_parameter('force', -1000., 1000., 0)
 
     dq, ddq = [0., 0.], [0., 0.]
-    J = sim.get_jacobian(robot.id, 1, [0., 0., 0.])
+    J = sim.calculate_jacobian(robot.id, 1, [0., 0., 0.])
     print(np.array(J[0]))
 
     a = robot.get_joint_positions()
-    # print(robot.getJacobianMatrix(1, np.array([0.,0.]))) # TODO: need to convert numpy array to list
+    # print(robot.get_jacobian(1, np.array([0.,0.]))) # TODO: need to convert numpy array to list
 
     linkId = 2
-    com_frame = robot.getLinkStates(linkId)[2]
+    com_frame = robot.get_link_states(linkId)[2]
     xdes = np.array(robot.get_link_world_positions(linkId))
     K = 100*np.identity(3)
     D = 2*np.sqrt(K)  # critically damped
@@ -176,11 +184,11 @@ if __name__ == "__main__":
         # dq = robot.get_joint_velocities().tolist()
         x = np.array(robot.get_link_world_positions(linkId))
         dx = np.array(robot.get_link_world_linear_velocities(linkId))
-        tau = robot.calculateID(q, dq, ddq)  # Coriolis, centrifugal and gravity compensation
-        Jlin = np.array(sim.get_jacobian(robot.id, linkId, com_frame)[0])
-        F = K.dot(xdes - x) - D.dot(dx) # compute cartesian forces
+        tau = robot.calculate_inverse_dynamics(ddq, dq, q)  # Coriolis, centrifugal and gravity compensation
+        Jlin = np.array(sim.calculate_jacobian(robot.id, linkId, com_frame)[0])
+        F = K.dot(xdes - x) - D.dot(dx)  # compute cartesian forces
         # print("force: {}".format(F))
-        tau += Jlin.T.dot(F) # cartesian PD with gravity compensation
+        tau += Jlin.T.dot(F)  # cartesian PD with gravity compensation
         # tau += Jlin.T.dot(- D.dot(dx))  # active compliance
 
         # tau = Jlin.T.dot(F)
@@ -191,14 +199,13 @@ if __name__ == "__main__":
         # print("manipulability: {}".format(w))
 
         # Impedance/Torque control
-        sim.setJointMotorControlArray(robot.id, robot.joint_indices, sim.TORQUE_CONTROL, forces=tau)
-
-        force = sim.readUserDebugParameter(slider)
+        sim.set_joint_motor_control(robot.id, robot.joints, sim.TORQUE_CONTROL, forces=tau)
+        force = sim.read_user_debug_parameter(slider)
         if force > 0:
             force = np.array([0., 0., 1.])
         else:
             force = np.array([0., 0., 0.])
-        sim.applyExternalForce(robot.id, linkId, force, pos, flags=p.LINK_FRAME)  # p.LINK_FRAME = 1
+        sim.apply_external_force(robot.id, linkId, force, pos, frame=1)  # p.LINK_FRAME = 1, p.WORLD_FRAME = 2
 
         # robot.update_joint_slider()
         world.step(sleep_dt=1./240)

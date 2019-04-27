@@ -6,6 +6,10 @@ Here is the list of repos where you can find the original URDF/meshes of each ro
     * Pepper: https://github.com/ros-naoqi/pepper_robot
     * PR2: https://github.com/pr2/pr2_common
     * Fetch: https://github.com/fetchrobotics/fetch_ros
+    * Youbot: https://github.com/youbot/youbot_description
+    * Epuck: https://github.com/gctronic/epuck_driver_cpp
+    * F10 racecar: https://github.com/erwincoumans/pybullet_robots/tree/master/data/f10_racecar
+    * Lincoln MKZ car: https://bitbucket.org/DataspeedInc/dbw_mkz_ros
 
 * Quadruped
     * Aibo: https://github.com/dkotfis/aibo_ros
@@ -23,6 +27,8 @@ Here is the list of repos where you can find the original URDF/meshes of each ro
     * Atlas: https://github.com/openai/roboschool
     * Valkyrie: https://github.com/openhumanoids/val_description
     * Cassie: https://github.com/UMich-BipedLab/Cassie_Model   and    https://github.com/agilityrobotics/cassie-gazebo-sim
+    * Darwin: https://github.com/HumaRobotics/darwin_description
+    * Blackbird: https://hackaday.io/project/160882-blackbird-bipedal-robot
 
 * Manipulator
     * rrbot: https://github.com/ros-simulation/gazebo_ros_demos
@@ -31,11 +37,18 @@ Here is the list of repos where you can find the original URDF/meshes of each ro
     * franka-emika: https://github.com/frankaemika/franka_ros
     * Baxter: https://github.com/RethinkRobotics/baxter_common
     * Jaco: https://github.com/JenniferBuehler/jaco-arm-pkgs
+    * e.DO: https://github.com/Comau/eDO_description
 
 * Hexapod
     * phantomx: https://github.com/HumaRobotics/phantomx_description
     * crab: https://github.com/tuuzdu/crab_project
     * SEA (Series Elastic Actuators) hexapod (CMU): https://github.com/alexansari101/snake_ws
+    * Rhex: https://github.com/grafoteka/rhex
+
+* Hand
+    * allegrohand: https://github.com/simlabrobotics/allegro_hand_ros
+    * softhand: https://github.com/CentroEPiaggio/pisa-iit-soft-hand
+    * shadowhand: https://github.com/shadow-robot/sr_common   and    https://github.com/shadow-robot/sr_ur_arm
 
 * UVA
     * quadcopter: https://github.com/wilselby/ROS_quadrotor_simulator
@@ -52,7 +65,8 @@ Here is the list of repos where you can find the original URDF/meshes of each ro
     * SEA (Series Elastic Actuators) snake (CMU): https://github.com/alexansari101/snake_ws
 
 * Others
-    * cubli: modeled by Songyan Xin 
+    * cubli: modeled by Songyan Xin
+    * ballbot: https://github.com/CesMak/bb
 
 
 **Notes**:

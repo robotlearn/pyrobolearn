@@ -10,6 +10,14 @@ import numpy as np
 from pyrobolearn.robots.manipulator import ManipulatorRobot, BiManipulatorRobot
 from pyrobolearn.robots.wheeled_robot import DifferentialWheeledRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class YoubotBase(DifferentialWheeledRobot):
     r"""Youbot Base robot

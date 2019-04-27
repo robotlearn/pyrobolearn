@@ -6,6 +6,14 @@ import os
 
 from pyrobolearn.robots.hand import Hand
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 # TODO: correct the inertia matrices and masses; they are too big!
 class SoftHand(Hand):
@@ -68,12 +76,12 @@ if __name__ == "__main__":
     # Position control using sliders
     # left_hand.add_joint_slider()
 
-    left_hand.set_joint_positions([0.] * left_hand.getNumberOfDoFs())
-    right_hand.set_joint_positions([0.] * right_hand.getNumberOfDoFs())
+    left_hand.set_joint_positions([0.] * left_hand.num_dofs)
+    right_hand.set_joint_positions([0.] * right_hand.num_dofs)
 
     for i in count():
         # left_hand.update_joint_slider()
-        # left_hand.set_joint_positions([0.] * left_hand.getNumberOfDoFs())
-        # right_hand.set_joint_positions([0.] * right_hand.getNumberOfDoFs())
+        # left_hand.set_joint_positions([0.] * left_hand.num_dofs)
+        # right_hand.set_joint_positions([0.] * right_hand.num_dofs)
 
         world.step(sleep_dt=1./240)

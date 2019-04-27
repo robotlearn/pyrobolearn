@@ -7,6 +7,14 @@ import numpy as np
 
 from pyrobolearn.robots.wheeled_robot import DifferentialWheeledRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class Husky(DifferentialWheeledRobot):
     r"""Husky robot
@@ -40,7 +48,7 @@ class Husky(DifferentialWheeledRobot):
         self.name = 'husky'
 
         self.wheels = [self.get_link_ids(link) for link in ['front_left_wheel_link', 'front_right_wheel_link',
-                                                          'rear_left_wheel_link', 'rear_right_wheel_link']
+                                                            'rear_left_wheel_link', 'rear_right_wheel_link']
                        if link in self.link_names]
         self.wheel_directions = np.ones(len(self.wheels))
 

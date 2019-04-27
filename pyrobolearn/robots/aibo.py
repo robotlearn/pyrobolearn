@@ -6,6 +6,14 @@ import os
 
 from pyrobolearn.robots.legged_robot import QuadrupedRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class Aibo(QuadrupedRobot):
     r"""Aibo
@@ -13,6 +21,9 @@ class Aibo(QuadrupedRobot):
     This is the Aibo quadruped dog robot developed by Sony.
 
     WARNINGS: THE INERTIA MATRICES AND THE POSITION OF COLLISIONS MESHES IN THE URDF NEED TO BE CORRECTED!!
+
+    References:
+        [1] https://github.com/dkotfis/aibo_ros
     """
 
     def __init__(self,
@@ -58,13 +69,13 @@ if __name__ == "__main__":
     world = BasicWorld(sim)
 
     # create robot
-    robot = Aibo(sim)  # , useFixedBase=True)
+    robot = Aibo(sim)  # , fixed_base=True)
 
     # print information about the robot
     robot.print_info()
 
     # # Position control using sliders
-    # robot.add_joint_slider(robot.getLeftFrontLegIds() + robot.getRightFrontLegIds())
+    robot.add_joint_slider(robot.left_front_leg + robot.right_front_leg)
 
     # run simulator
     for _ in count():

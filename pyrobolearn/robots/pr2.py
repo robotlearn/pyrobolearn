@@ -7,10 +7,21 @@ import os
 from pyrobolearn.robots.wheeled_robot import WheeledRobot
 from pyrobolearn.robots.manipulator import BiManipulatorRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class PR2(WheeledRobot, BiManipulatorRobot):
     r"""PR2 robot
 
+    References:
+        [1] http://www.willowgarage.com/pages/pr2/overview
+        [2] https://github.com/pr2/pr2_common
     """
 
     def __init__(self,

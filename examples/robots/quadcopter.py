@@ -7,6 +7,8 @@ from itertools import count
 from pyrobolearn.simulators import BulletSim
 from pyrobolearn.worlds import BasicWorld
 from pyrobolearn.robots import Quadcopter
+from pyrobolearn.utils.units import rpm_to_rad_per_second
+
 
 # Create simulator
 sim = BulletSim()
@@ -20,9 +22,9 @@ robot = Quadcopter(sim)
 # print information about the robot
 robot.print_info()
 
-rpm = robot.getStationaryRPM()
+rpm = robot.get_stationary_rpm()
 print("Stationary RPM: {}".format(rpm))
-v = robot.rpmToRadPerSecond(rpm+20)
+v = rpm_to_rad_per_second(rpm+20)
 v = [v, -v, v, -v]
 
 # run simulation

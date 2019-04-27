@@ -7,6 +7,14 @@ import os
 from pyrobolearn.robots.wheeled_robot import WheeledRobot
 from pyrobolearn.robots.manipulator import ManipulatorRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class Sawyer(ManipulatorRobot, WheeledRobot):
     r"""Sawyer robot
@@ -15,6 +23,7 @@ class Sawyer(ManipulatorRobot, WheeledRobot):
 
     References:
         [1] Rethink Robotics
+        [2] https://github.com/RethinkRobotics/sawyer_robot
     """
 
     def __init__(self,

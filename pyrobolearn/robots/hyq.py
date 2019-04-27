@@ -6,6 +6,14 @@ import os
 
 from pyrobolearn.robots.legged_robot import QuadrupedRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class HyQ(QuadrupedRobot):
     r"""HyQ robot
@@ -13,7 +21,8 @@ class HyQ(QuadrupedRobot):
     HyQ robot created by IIT.
 
     References:
-        [1]
+        [1] https://dls.iit.it/robots/hyq-robot
+        [2] https://github.com/iit-DLSLab/hyq-description
     """
 
     def __init__(self,
@@ -65,7 +74,7 @@ if __name__ == "__main__":
     robot.print_info()
 
     # # Position control using sliders
-    robot.add_joint_slider(robot.getLeftFrontLegIds())
+    robot.add_joint_slider(robot.left_front_leg)
 
     # run simulator
     for _ in count():

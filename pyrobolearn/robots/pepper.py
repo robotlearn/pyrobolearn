@@ -8,6 +8,14 @@ from pyrobolearn.robots.wheeled_robot import WheeledRobot
 from pyrobolearn.robots.manipulator import BiManipulatorRobot
 from pyrobolearn.robots.sensors.camera import CameraSensor
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class Pepper(WheeledRobot, BiManipulatorRobot):
     r"""Pepper robot.
@@ -38,7 +46,7 @@ class Pepper(WheeledRobot, BiManipulatorRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Pepper, self).__init__(simulator, urdf, position, orientation, fixed_base)
+        super(Pepper, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling=scaling)
         self.name = 'pepper'
 
         # 2D Camera sensor

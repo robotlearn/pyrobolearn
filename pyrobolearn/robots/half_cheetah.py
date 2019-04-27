@@ -6,9 +6,20 @@ import os
 
 from pyrobolearn.robots.robot import Robot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class HalfCheetah(Robot):
     r"""Half Cheetah Mujoco Model
+
+    References:
+        [1] description: https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_data/mjcf
     """
 
     def __init__(self,

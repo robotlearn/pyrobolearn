@@ -4,6 +4,15 @@
 
 from pyrobolearn.robots.robot import Robot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class Hand(Robot):
     r"""Hand end-effector
@@ -26,10 +35,10 @@ class Hand(Robot):
         """Return the number of fingers on the hand"""
         return len(self.fingers)
 
-    def getFinger(self, fingerId=None):
+    def get_finger(self, finger_id=None):
         """Return the list of joint/link ids for the specified finger"""
-        if fingerId:
-            return self.fingers[fingerId]
+        if finger_id:
+            return self.fingers[finger_id]
         return self.fingers
 
 
@@ -37,6 +46,7 @@ class TwoHand(Hand):
     r"""Two hand end-effectors
 
     """
+
     def __init__(self,
                  simulator,
                  urdf,
@@ -59,20 +69,20 @@ class TwoHand(Hand):
         """Return the number of fingers on the right hand"""
         return len(self.right_fingers)
 
-    def getLeftFingers(self, fingerId=None):
+    def get_left_fingers(self, finger_id=None):
         """Return the specified left fingers"""
-        if fingerId:
-            if isinstance(fingerId, int):
-                return self.fingers[self.left_fingers[fingerId]]
-            elif isinstance(fingerId, (tuple, list)):
-                return [self.fingers[self.left_fingers[finger]] for finger in fingerId]
+        if finger_id:
+            if isinstance(finger_id, int):
+                return self.fingers[self.left_fingers[finger_id]]
+            elif isinstance(finger_id, (tuple, list)):
+                return [self.fingers[self.left_fingers[finger]] for finger in finger_id]
         return [self.fingers[finger] for finger in self.left_fingers]
 
-    def getRightFingers(self, fingerId=None):
+    def get_right_fingers(self, finger_id=None):
         """Return the specified right fingers"""
-        if fingerId:
-            if isinstance(fingerId, int):
-                return self.fingers[self.right_fingers[fingerId]]
-            elif isinstance(fingerId, (tuple, list)):
-                return [self.fingers[self.right_fingers[finger]] for finger in fingerId]
+        if finger_id:
+            if isinstance(finger_id, int):
+                return self.fingers[self.right_fingers[finger_id]]
+            elif isinstance(finger_id, (tuple, list)):
+                return [self.fingers[self.right_fingers[finger]] for finger in finger_id]
         return [self.fingers[finger] for finger in self.right_fingers]

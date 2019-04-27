@@ -8,6 +8,14 @@ from pyrobolearn.robots.legged_robot import BipedRobot
 from pyrobolearn.robots.manipulator import BiManipulatorRobot
 from pyrobolearn.robots.sensors import CameraSensor
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class Walkman(BipedRobot, BiManipulatorRobot):
     r"""Walk-man robot
@@ -18,6 +26,7 @@ class Walkman(BipedRobot, BiManipulatorRobot):
 
     References:
         [1] "WALK-MAN: A High-Performance Humanoid Platform for Realistic Environments", Tsagarakis et al., 2017
+        [2] https://github.com/ADVRHumanoids/iit-walkman-ros-pkg
     """
 
     def __init__(self,
@@ -50,7 +59,7 @@ class Walkman(BipedRobot, BiManipulatorRobot):
         self.left_camera = CameraSensor(self.sim, self.id, 11, width=800, height=800, fovy=80, near=0.02, far=300,
                                         refresh_rate=30)  # 11
         self.right_camera = CameraSensor(self.sim, self.id, 13, width=800, height=800, fovy=80, near=0.02, far=300,
-                                        refresh_rate=30)  # 13
+                                         refresh_rate=30)  # 13
 
         # Laser (depth) sensor: Hokuyo sensor
         # link: "head_hokuyo_frame"
@@ -82,13 +91,6 @@ class Walkman(BipedRobot, BiManipulatorRobot):
         self.hands = [self.get_link_ids(link) for link in ['LSoftHand', 'RSoftHand'] if link in self.link_names]
 
 
-def WalkmanLowerBody(simulator, init_pos=(0, 0, 1.5), init_orient=(0, 0, 0, 1), useFixedBase=False, scaling=1.,
-                       urdf_path=os.path.dirname(__file__) + '/urdfs/walkman/walkman_lower_body.urdf'):
-    """Load Walkman Lower Body"""
-    return Walkman(simulator=simulator, position=init_pos, orientation=init_orient, fixed_base=useFixedBase,
-                   scaling=scaling, urdf=urdf_path)
-
-
 # Test
 if __name__ == "__main__":
     # Imports
@@ -101,8 +103,8 @@ if __name__ == "__main__":
 
     # Create world
     world = BasicWorld(sim)
-    world.loadSphere([2., 0, 2.], mass=0., color=(1, 0, 0, 1))
-    world.loadSphere([2., 1., 2.], mass=0., color=(0, 0, 1, 1))
+    world.load_sphere([2., 0, 2.], mass=0., color=(1, 0, 0, 1))
+    world.load_sphere([2., 1., 2.], mass=0., color=(0, 0, 1, 1))
 
     # load robot
     robot = Walkman(sim, fixed_base=False, lower_body=False)

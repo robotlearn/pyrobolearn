@@ -11,6 +11,14 @@ import sympy.physics.mechanics as mechanics
 from pyrobolearn.robots.robot import Robot
 from pyrobolearn.utils.orientation import get_symbolic_matrix_from_axis_angle, get_matrix_from_quaternion
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class CartPole(Robot):
     r"""CartPole robot
@@ -392,7 +400,7 @@ class CartPole(Robot):
         return M, f
 
     def linearize_equations_of_motion(self, point=None, verbose=False):
-        """
+        r"""
         Linearize the equation of motions around the given point (=state). That is, instead of having
         :math:`\dot{x} = f(x,u)` where :math:`f` is in general a non-linear function, it linearizes it around
         a certain point.
@@ -473,30 +481,32 @@ class LQR(object):
     """
 
     def __init__(self, A, B, Q=None, R=None, N=None):
-        if not self.isControllable(A, B):
+        if not self.is_controllable(A, B):
             raise ValueError("The system is not controllable")
         self.A = A
         self.B = B
-        if Q is None: Q = np.identity(A.shape[1])
+        if Q is None: 
+            Q = np.identity(A.shape[1])
         self.Q = Q
-        if R is None: R = np.identity(B.shape[1])
+        if R is None: 
+            R = np.identity(B.shape[1])
         self.R = R
         self.N = N
         self.K = None
 
     @staticmethod
-    def isControllable(A, B):
+    def is_controllable(A, B):
         return np.linalg.matrix_rank(control.ctrb(A, B)) == A.shape[0]
 
-    def getRiccatiSolution(self):
+    def get_riccati_solution(self):
         S = solve_continuous_are(self.A, self.B, self.Q, self.R, s=self.N)
         return S
 
-    def getGainK(self):
-        #S = self.getRiccatiSolution()
-        #S1 = self.B.T.dot(S)
-        #if self.N is not None: S1 += self.N.T
-        #K = np.linalg.inv(self.R).dot(S1)
+    def get_gain_k(self):
+        # S = self.get_riccati_solution()
+        # S1 = self.B.T.dot(S)
+        # if self.N is not None: S1 += self.N.T
+        # K = np.linalg.inv(self.R).dot(S1)
 
         if self.N is None:
             K, S, E = control.lqr(self.A, self.B, self.Q, self.R)
@@ -508,7 +518,7 @@ class LQR(object):
         """Return the u."""
 
         if self.K is None:
-            self.K = self.getGainK()
+            self.K = self.get_gain_k()
 
         if xd is None:
             return self.K.dot(x)
@@ -543,7 +553,7 @@ if __name__ == "__main__":
 
     # LQR controller
     lqr = LQR(A, B)
-    K = lqr.getGainK()
+    K = lqr.get_gain_k()
 
     for i in count():
         # control

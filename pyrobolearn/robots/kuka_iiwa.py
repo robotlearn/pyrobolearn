@@ -6,6 +6,14 @@ import os
 
 from pyrobolearn.robots.manipulator import ManipulatorRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class KukaIIWA(ManipulatorRobot):
     r"""Kuka IIWA robot
@@ -83,7 +91,7 @@ if __name__ == "__main__":
         dx = robot.get_link_world_linear_velocities(linkId)
 
         # get (linear) jacobian
-        J = robot.getLinearJacobian(linkId, q)
+        J = robot.get_linear_jacobian(linkId, q)
 
         # get coriolis, gravity compensation torques
         torques = robot.get_coriolis_and_gravity_compensation_torques(q, dq)
@@ -92,7 +100,7 @@ if __name__ == "__main__":
         F = K.dot(x_des - x) - D.dot(dx)
         # F = -D.dot(dx)
         tau = J.T.dot(F)
-        print(tau)
+        print("Torques: {}".format(tau))
         torques += tau
         robot.set_joint_torques(torques)
 

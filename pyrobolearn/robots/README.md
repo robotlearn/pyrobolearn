@@ -37,7 +37,7 @@ The folder contains different kind of robots including manipulators, legged robo
 - [Cubli](https://github.com/xinsongyan/cubli)
 - [Darwin](https://github.com/HumaRobotics/darwin_description)
 - [e.Do](https://github.com/Comau/eDO_description)
-- [epuck](https://github.com/gctronic/epuck_driver_cpp)
+- [E-puck](https://github.com/gctronic/epuck_driver_cpp)
 - [F10 racecar](https://github.com/erwincoumans/pybullet_robots/tree/master/data/f10_racecar)
 - [Fetch](https://github.com/fetchrobotics/fetch_ros)
 - [Franka Emika](https://github.com/frankaemika/franka_ros)
@@ -71,6 +71,7 @@ The folder contains different kind of robots including manipulators, legged robo
 - Sawyer: [1](https://github.com/RethinkRobotics/sawyer_robot), [2](https://github.com/erwincoumans/pybullet_robots)
 - [SEA hexapod](https://github.com/alexansari101/snake_ws)
 - [SEA snake]( https://github.com/alexansari101/snake_ws)
+- [Shadow hand](https://github.com/shadow-robot/sr_common)
 - [Soft hand](https://github.com/CentroEPiaggio/pisa-iit-soft-hand)
 - [Swimmer](https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_data/mjcf)
 - [Valkyrie](https://github.com/openhumanoids/val_description)
@@ -83,6 +84,7 @@ The folder contains different kind of robots including manipulators, legged robo
 Here is a list of robots that I plan to add at one point (some of them require to simulate some fluid dynamics, as done in the `quadcopter` class) but can interest already some people:
 - [ ] [ANYmal](https://www.anymal-research.org/): I am currently not sure if I can release the URDF of this robot, and thus I will not do it until it is officially released by ETH.
 - [ ] [ROS robots](https://robots.ros.org/): I plan to provide soon the robots listed on this website (I am currently cleaning the URDFs of some of them)
+- [ ] [Universal robots](https://github.com/ros-industrial/universal_robot)
 - [ ] [rotors-simulator](https://github.com/ethz-asl/rotors_simulator)
 - [ ] [uuv-simulator](https://github.com/uuvsimulator/uuv_simulator)
 - [ ] [usv-simulator](https://github.com/OUXT-Polaris/ros_ship_packages)

@@ -1272,7 +1272,7 @@ class Bullet(Simulator):
 
     def set_joint_motor_control(self, body_id, joint_ids, control_mode=pybullet.POSITION_CONTROL, positions=None,
                                 velocities=None, forces=None, kp=None, kd=None, max_velocity=None):
-        """
+        r"""
         Set the joint motor control.
 
         In position control:
@@ -1294,7 +1294,7 @@ class Bullet(Simulator):
 
         Args:
             body_id (int): body unique id.
-            joint_ids (int): joint/link id, or list of joint ids.
+            joint_ids ((list of) int): joint/link id, or list of joint ids.
             control_mode (int): POSITION_CONTROL (=2) (which is in fact CONTROL_MODE_POSITION_VELOCITY_PD),
                 VELOCITY_CONTROL (=0), TORQUE_CONTROL (=1) and PD_CONTROL (=3).
             positions (float, np.float[N]): target joint position(s) (used in POSITION_CONTROL).
@@ -1865,6 +1865,8 @@ class Bullet(Simulator):
             joint_ids (int, list of int): joint id, or list of joint ids.
             accelerations (float, np.float[N]): desired joint acceleration, or list of desired joint accelerations
                 [rad/s^2]
+            q (None, list of float, float): current joint positions.
+            dq (None, list of float, float): current joint velocities.
         """
         # check joint ids
         if isinstance(joint_ids, int):
@@ -2935,7 +2937,7 @@ class Bullet(Simulator):
         self.sim.changeDynamics(body_id, link_id, **kwargs)
 
     def calculate_jacobian(self, body_id, link_id, local_position, q, dq, des_ddq):
-        """
+        r"""
         Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q), J_{ang}(q)]^T`, such that:
 
         .. math:: v = [\dot{p}, \omega]^T = J(q) \dot{q}
@@ -2975,7 +2977,7 @@ class Bullet(Simulator):
         return np.vstack((lin_jac, ang_jac))
 
     def calculate_mass_matrix(self, body_id, q):
-        """
+        r"""
         Return the mass/inertia matrix :math:`H(q)`, which is used in the rigid-body equation of motion (EoM) in joint
         space given by (see [1]):
 
@@ -3002,7 +3004,7 @@ class Bullet(Simulator):
     def calculate_inverse_kinematics(self, body_id, link_id, position, orientation=None, lower_limits=None,
                                      upper_limits=None, joint_ranges=None, rest_poses=None, joint_dampings=None,
                                      solver=None, q_curr=None, max_iters=None, threshold=None):
-        """
+        r"""
         Compute the FULL Inverse kinematics; it will return a position for all the actuated joints.
 
         "You can compute the joint angles that makes the end-effector reach a given target position in Cartesian world

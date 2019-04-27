@@ -8,6 +8,14 @@ import numpy as np
 
 from pyrobolearn.robots.legged_robot import QuadrupedRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class Minitaur(QuadrupedRobot):
     r"""Minitaur robot
@@ -229,7 +237,7 @@ if __name__ == "__main__":
     # print("Robot feet ids: {}".format(robot.feet))
 
     # Position control using sliders
-    # robot.add_joint_slider(robot.getLeftFrontLegIds())
+    # robot.add_joint_slider(robot.left_front_leg)
 
     t = 0
     # run simulator

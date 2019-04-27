@@ -7,11 +7,22 @@ import os
 from pyrobolearn.robots.legged_robot import BipedRobot
 from pyrobolearn.robots.manipulator import BiManipulatorRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class ICub(BipedRobot, BiManipulatorRobot):
     r"""ICub robot
 
     References:
+        [1] http://www.icub.org/
+        [2] https://github.com/robotology-playground/icub-models
+        [3] https://github.com/robotology-playground/icub-model-generator
     """
 
     def __init__(self,
@@ -31,7 +42,7 @@ class ICub(BipedRobot, BiManipulatorRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(ICub, self).__init__(simulator, urdf, position, orientation, fixed_base)
+        super(ICub, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling=scaling)
         self.name = 'icub'
 
         self.head = self.get_link_ids('head') if 'head' in self.link_names else None

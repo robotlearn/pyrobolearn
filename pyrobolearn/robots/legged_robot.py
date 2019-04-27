@@ -5,9 +5,19 @@ Classes that are defined here: LeggedRobot, BipedRobot, QuadrupedRobot, HexapodR
 """
 
 import collections
+import itertools
 import numpy as np
 
 from pyrobolearn.robots.robot import Robot
+
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
 
 
 class LeggedRobot(Robot):
@@ -17,11 +27,17 @@ class LeggedRobot(Robot):
     in the standard regime are rhythmic movements.
     """
 
-    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.,
+                 foot_frictions=None):
         super(LeggedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling=scaling)
 
+        # leg and feet ids
         self.legs = []  # list of legs where a leg is a list of links
         self.feet = []  # list of feet ids
+
+        # set the foot frictions
+        if foot_frictions is not None:
+            self.set_foot_friction(foot_frictions)
 
     ##############
     # Properties #

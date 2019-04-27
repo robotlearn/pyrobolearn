@@ -7,10 +7,22 @@ import numpy as np
 
 from pyrobolearn.robots.legged_robot import QuadrupedRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class LittleDog(QuadrupedRobot):
     r"""Little Dog
 
+    References:
+        [1] "The LittleDog Robot", Murphy et al., 2010
+            https://journals.sagepub.com/doi/abs/10.1177/0278364910387457?journalCode=ijra
+        [2] https://github.com/RobotLocomotion/LittleDog
     """
 
     def __init__(self,

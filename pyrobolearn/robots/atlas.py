@@ -7,6 +7,14 @@ import os
 from pyrobolearn.robots.legged_robot import BipedRobot
 from pyrobolearn.robots.manipulator import BiManipulatorRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class Atlas(BipedRobot, BiManipulatorRobot):
     r"""Atlas robot
@@ -74,7 +82,7 @@ if __name__ == "__main__":
     robot.print_info()
 
     # position control using sliders
-    robot.add_joint_slider(robot.getLeftLegIds())
+    robot.add_joint_slider(robot.left_leg)
 
     # run simulator
     for _ in count():

@@ -6,9 +6,20 @@ import os
 
 from pyrobolearn.robots.legged_robot import QuadrupedRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class Ant(QuadrupedRobot):
     r"""Ant Mujoco Model
+
+    References:
+        [1] description: https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_data/mjcf
     """
 
     def __init__(self,
@@ -38,7 +49,7 @@ class Ant(QuadrupedRobot):
                                    ['link0_8', 'link0_10']]]
 
         self.feet = [self.get_link_ids(link) for link in ['front_left_foot', 'front_right_foot',
-                                                        'left_back_foot', 'right_back_foot']
+                                                          'left_back_foot', 'right_back_foot']
                      if link in self.link_names]
 
 
@@ -55,13 +66,13 @@ if __name__ == "__main__":
     world = BasicWorld(sim)
 
     # create robot
-    robot = Ant(sim)  # , useFixedBase=True)
+    robot = Ant(sim)  # , fixed_base=True)
 
     # print information about the robot
     robot.print_info()
 
     # Position control using sliders
-    # robot.add_joint_slider(robot.getLeftFrontLegIds() + robot.getRightFrontLegIds())
+    # robot.add_joint_slider(robot.left_front_leg + robot.right_front_leg)
 
     # run simulator
     for _ in count():

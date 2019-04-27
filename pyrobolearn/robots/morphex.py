@@ -6,6 +6,14 @@ import os
 
 from pyrobolearn.robots.legged_robot import HexapodRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class Morphex(HexapodRobot):
     r"""Morphex Hexapod robot

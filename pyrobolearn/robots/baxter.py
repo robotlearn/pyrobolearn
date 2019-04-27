@@ -6,6 +6,14 @@ import os
 
 from pyrobolearn.robots.manipulator import BiManipulatorRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class Baxter(BiManipulatorRobot):
     r"""Baxter robot
@@ -13,7 +21,8 @@ class Baxter(BiManipulatorRobot):
     Baxter robot built by Rethink Robotics.
 
     References:
-        [1] Rethink Robotics
+        [1] Rethink Robotics: https://www.rethinkrobotics.com/
+        [2] https://github.com/RethinkRobotics/baxter_common
     """
 
     def __init__(self,

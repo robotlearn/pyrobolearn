@@ -5,6 +5,15 @@
 import os
 
 from pyrobolearn.robots.robot import Robot
+from pyrobolearn.utils.orientation import get_rpy_from_quaternion
+
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
 
 
 class Cubli(Robot):
@@ -50,7 +59,7 @@ class Cubli(Robot):
 if __name__ == "__main__":
     import numpy as np
     from itertools import count
-    from pyrobolearn.simulators import BulletSim, pybullet
+    from pyrobolearn.simulators import BulletSim
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
@@ -77,9 +86,9 @@ if __name__ == "__main__":
 
     for i in count():
         # get state
-        quaternion = robot.get_base_orientation(False)
+        quaternion = robot.get_base_orientation()
         w = robot.get_base_angular_velocity()
-        euler = pybullet.getEulerFromQuaternion(quaternion.tolist())
+        euler = get_rpy_from_quaternion(quaternion)
 
         # PD control
         torques = [-Kp * (desired_roll - euler[0]) + Kd * w[0], 0., 0.]

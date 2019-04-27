@@ -6,6 +6,14 @@ import os
 
 from pyrobolearn.robots.hand import Hand
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 # TODO: correct the inertia matrices and masses; they are too big!
 class AllegroHand(Hand):
@@ -55,7 +63,7 @@ if __name__ == "__main__":
     world = BasicWorld(sim)
 
     # create robot
-    right_hand = AllegroHand(sim)  # , init_pos=(0.,0.,0.), init_orient=(0,0,1,0))
+    right_hand = AllegroHand(sim)  # , position=(0.,0.,0.), orientation=(0,0,1,0))
 
     # print information about the robot
     right_hand.print_info()
@@ -67,7 +75,7 @@ if __name__ == "__main__":
 
     for i in count():
         right_hand.update_joint_slider()
-        # right_hand.set_joint_positions([0.] * right_hand.getNumberOfDoFs())
+        # right_hand.set_joint_positions([0.] * right_hand.num_dofs)
 
         # step in simulation
         world.step(sleep_dt=1./240)

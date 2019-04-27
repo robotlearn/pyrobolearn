@@ -76,6 +76,7 @@ from .baxter import Baxter
 # Hands
 from .allegrohand import AllegroHand
 from .softhand import SoftHand
+from .shadowhand import ShadowHand
 
 # Wheeled
 from .epuck import Epuck

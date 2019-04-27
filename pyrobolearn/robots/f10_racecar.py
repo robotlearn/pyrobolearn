@@ -7,6 +7,14 @@ import numpy as np
 
 from pyrobolearn.robots.wheeled_robot import AckermannWheeledRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class F10Racecar(AckermannWheeledRobot):
     r"""F10Racecar robot
@@ -36,7 +44,7 @@ class F10Racecar(AckermannWheeledRobot):
         self.name = 'racecar'
 
         self.wheels = [self.get_link_ids(link) for link in ['left_front_wheel', 'right_front_wheel',
-                                                          'left_rear_wheel', 'right_rear_wheel']
+                                                            'left_rear_wheel', 'right_rear_wheel']
                        if link in self.link_names]
         self.wheel_directions = np.ones(len(self.wheels))
 

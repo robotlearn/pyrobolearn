@@ -9,8 +9,21 @@ from pyrobolearn.robots.legged_robot import QuadrupedRobot
 from pyrobolearn.robots.wheeled_robot import WheeledRobot
 from pyrobolearn.robots.manipulator import BiManipulatorRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class Centauro(WheeledRobot, QuadrupedRobot, BiManipulatorRobot):
+    r"""Centauro robot
+
+    References:
+        [1] https://github.com/ADVRHumanoids/centauro-simulator
+    """
 
     def __init__(self,
                  simulator,
@@ -32,7 +45,7 @@ class Centauro(WheeledRobot, QuadrupedRobot, BiManipulatorRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Centauro, self).__init__(simulator, urdf, position, orientation, fixed_base)
+        super(Centauro, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling=scaling)
         self.name = 'centauro'
 
         self.necks = [self.get_link_ids(link) for link in ['neck_' + str(i) for i in range(1, 4)]]
@@ -75,10 +88,10 @@ if __name__ == "__main__":
 
     # print information about the robot
     robot.print_info()
-    print("Number of Legs: {}".format(robot.getNumberOfLegs()))
-    print("Number of Arms: {}".format(robot.getNumberOfArms()))
+    print("Number of Legs: {}".format(robot.num_legs))
+    print("Number of Arms: {}".format(robot.num_arms))
 
-    # robot.add_joint_slider(robot.getRightFrontLegIds())
+    robot.add_joint_slider(robot.right_front_leg)
     robot.drive(speed=3)
 
     # run simulator

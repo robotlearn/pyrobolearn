@@ -7,6 +7,14 @@ import numpy as np
 
 from pyrobolearn.robots.legged_robot import QuadrupedRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class HyQ2Max(QuadrupedRobot):
     r"""HyQ2Max
@@ -15,6 +23,8 @@ class HyQ2Max(QuadrupedRobot):
 
     References:
         [1] "Design of the Hydraulically-Actuated,Torque-Controlled Quadruped Robot HyQ2Max", Semini et al., 2016
+        [2] https://dls.iit.it/robots/hyq2max
+        [3] https://github.com/iit-DLSLab/hyq2max-description
     """
 
     def __init__(self,

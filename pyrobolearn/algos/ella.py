@@ -83,7 +83,6 @@ class ELLA(object):
     it has been observed that the choice of only updating the current :math:`s^{(t)}` does not affect the quality of
     the model as the number of tasks grows large.
 
-
     ...
 
     Warnings:
@@ -91,7 +90,11 @@ class ELLA(object):
          the Hessian matrix of the loss function with respect to the parameters evaluated at the best found above
          parameters. Depending on the number of parameters that matrix can be big and expensive to compute.
         - The ELLA assumes that the input and output dimension of the model as well as its number of parameters is
-         constant between the various tasks.
+         constant between the various tasks. For different state and action spaces between the tasks, see inter-task
+         mappings [6], or ELLA using task groups where tasks in the same group share a common state and action space,
+         such that :math:`\theta^{(t)} = B^{(g)}s^{(t)}` with :math:`B^{(g)} = \Phi^{(g)} L` where :math:`g` denotes
+         the task group, :math:`B^{(g)}` is the latent model components shared withing :math:`g`, :math:`L` is the
+         global latent model components, and :math:`\Phi^{(g)}` is the mapping from :math:`L` to :math:`B^{(g)}` [7].
         - The complexity of each ELLA update is :math:`O(k^2 d^3, \xi(d, n_t))` where :math:`k` is the number of latent
          components, :math:`d` is the dimensionality of the parameters, :math:`n_t` is the number of data instances (in
          SL) or trajectories (in RL), and :math:`\xi` is the function that computes the complexity to compute the
@@ -115,6 +118,9 @@ class ELLA(object):
         [3] "Online Multi-Task Learning for Policy Gradient Methods", Ammar et al., 2014
         [4] Implementation of ELLA on Github (by Paul Ruvolo): https://github.com/paulruvolo/ELLA
         [5] Implementation of PG-ELLA on Github (by ): https://github.com/cdcsai/Online_Multi_Task_Learning
+        [6] "Transfer learning via inter-task mappings for temporal difference learning", Taylor et al., 2007
+        [7] "Autonomous cross-domain knowledge transfer in lifelong policy gradient reinforcement learning", Ammar et
+            al., 2015
     """
 
     def __init__(self, num_parameters, num_latent_component, l1_sparsity_coefficient=1., l2_library_coefficient=1.):

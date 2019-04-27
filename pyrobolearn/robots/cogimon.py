@@ -7,10 +7,20 @@ import os
 from pyrobolearn.robots.legged_robot import BipedRobot
 from pyrobolearn.robots.manipulator import BiManipulatorRobot
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
 
 class Cogimon(BipedRobot, BiManipulatorRobot):
     r"""Cogimon humanoid robot.
 
+    References:
+        [1] https://github.com/ADVRHumanoids/iit-cogimon-ros-pkg
     """
 
     def __init__(self,
@@ -53,13 +63,6 @@ class Cogimon(BipedRobot, BiManipulatorRobot):
         self.hands = [self.get_link_ids(link) for link in ['LSoftHand', 'RSoftHand'] if link in self.link_names]
 
 
-def CogimonLowerBody(simulator, init_pos=(0, 0, 1.), init_orient=(0, 0, 0, 1), useFixedBase=False, scaling=1.,
-                     urdf_path=os.path.dirname(__file__) + '/urdfs/cogimon/cogimon_lower_body.urdf'):
-    """Load Cogimon Lower Body"""
-    return Cogimon(simulator=simulator, position=init_pos, orientation=init_orient, fixed_base=useFixedBase,
-                   scaling=scaling, urdf=urdf_path)
-
-
 # Test
 if __name__ == "__main__":
     from itertools import count
@@ -73,7 +76,7 @@ if __name__ == "__main__":
     world = BasicWorld(sim)
 
     # create robot
-    robot = Cogimon(sim, lower_body=False)
+    robot = Cogimon(sim, lower_body=True)
 
     # print information about the robot
     robot.print_info()
