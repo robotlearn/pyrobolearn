@@ -6,7 +6,9 @@ These include IMU, contact, Camera, and other sensors.
 
 from abc import ABCMeta, abstractmethod
 
+from pyrobolearn.utils.orientation import get_quaternion_product
 from pyrobolearn.robots.sensors.sensor import Sensor
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -45,7 +47,7 @@ class LinkSensor(Sensor):
         """
         Return the link position in the Cartesian world frame.
         """
-        position = self.pos_converter(self.sim.getLinkState(self.body_id, self.link_id)[0])
+        position = self.sim.get_link_state(self.body_id, self.link_id)[0]
         position += self.local_position
         return position
 
@@ -54,8 +56,8 @@ class LinkSensor(Sensor):
         """
         Return the link orientation in the Cartesian world frame.
         """
-        orientation = self.orientation_converter(self.sim.getLinkState(self.body_id, self.link_id)[1])
-        orientation = self.local_orientation * orientation
+        orientation = self.sim.get_link_state(self.body_id, self.link_id)[1]
+        orientation = get_quaternion_product(self.local_orientation, orientation)
         return orientation
 
     @abstractmethod

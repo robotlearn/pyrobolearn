@@ -24,7 +24,7 @@ class ForceTorqueSensor(JointSensor):
 
     def __init__(self, simulator, body_id, joint_id, position, orientation, refresh_rate=1):
         super(ForceTorqueSensor, self).__init__(simulator, body_id, joint_id, position, orientation, refresh_rate)
-        self.sim.enableJointForceTorqueSensor(body_id, joint_id, enableSensor=True)
+        self.sim.enable_joint_force_torque_sensor(body_id, joint_id, enableSensor=True)
 
     def _sense(self):
         return np.array(self.sim.getJointState(self.body_id, self.joint_id)[2])

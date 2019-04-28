@@ -6,6 +6,7 @@ Cameras have one of the most richest sensory inputs (i.e. visual).
 
 import numpy as np
 
+from pyrobolearn.utils.orientation import get_rpy_from_quaternion
 from pyrobolearn.robots.sensors.links import LinkSensor
 
 __author__ = "Brian Delhaisse"
@@ -44,7 +45,7 @@ class CameraSensor(LinkSensor):
     Examples:
         sim = BulletClient(connection_mode=p.GUI)
         cam = Camera(sim, width=400, height=400, target_position=(0,0,0), eyePosition=(2,0,1))
-        img = cam.getRGBImage()
+        img = cam.get_rgb_image()
         plt.imshow(img)
         plt.show()
 
@@ -104,12 +105,12 @@ class CameraSensor(LinkSensor):
 
         # compute projection matrix (orthographic or perspective matrix)
         if left is not None and right is not None and bottom is not None and top is not None:  # orthographic
-            self._P = self.sim.computeProjectionMatrix(left, right, bottom, top, near, far)
+            self._P = self.sim.compute_projection_matrix(left, right, bottom, top, near, far)
         else:  # perspective
             # The aspect ratio parameter is the width divided by the height of the canvas window
             if aspect is None:
                 aspect = float(width) / height
-            self._P = self.sim.computeProjectionMatrixFOV(fovy, aspect, nearVal=near, farVal=far)
+            self._P = self.sim.compute_projection_matrix_fov(fovy, aspect, near=near, far=far)
 
         # compute view matrix
         self._V = self.getV()
@@ -136,7 +137,7 @@ class CameraSensor(LinkSensor):
         """
         Get the associated view matrix.
         """
-        roll, pitch, yaw = self.sim.getEulerFromQuaternion(self.orientation_converter(self.orientation))
+        roll, pitch, yaw = get_rpy_from_quaternion(self.orientation)
         self.up_vector = (0, 0, 1)
         up_axis_index = 2  # z axis
 
@@ -146,11 +147,10 @@ class CameraSensor(LinkSensor):
                                                                    -np.sin(pitch)])
 
         # compute view matrix
-        self._V = self.sim.computeViewMatrix(cameraEyePosition=self.position,
-                                             cameraTargetPosition=target_position,
-                                             cameraUpVector=self.up_vector)
+        self._V = self.sim.compute_view_matrix(eye_position=self.position, target_position=target_position,
+                                               up_vector=self.up_vector)
 
-        # self._V = self.sim.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=target_position,
+        # self._V = self.sim.compute_view_matrixFromYawPitchRoll(cameraTargetPosition=target_position,
         #                                                      distance=distance,
         #                                                      yaw=yaw,
         #                                                      pitch=pitch,
@@ -159,54 +159,54 @@ class CameraSensor(LinkSensor):
 
         return self._V
 
-    def getRGBImage(self):
+    def get_rgb_image(self):
         """
         Return the captured RGB image.
         """
-        return self.getRGBAImage()[:, :, :3]
+        return self.get_rgba_image()[:, :, :3]
 
-    def getRGBAImage(self):
+    def get_rgba_image(self):
         """
         Return the captured RGBA image. 'A' stands for alpha channel (for opacity/transparency)
         """
-        img = np.array(self.sim.getCameraImage(self.width, self.height, self.getV(), self._P,
-                                               shadow=1,  # lightDirection=[1,1,1],
-                                               # renderer=self.sim.ER_TINY_RENDERER)[2])
-                                               renderer=self.sim.ER_BULLET_HARDWARE_OPENGL)[2])
+        img = np.array(self.sim.get_camera_image(self.width, self.height, self.getV(), self._P,
+                                                 shadow=1,  # lightDirection=[1,1,1],
+                                                 # renderer=self.sim.ER_TINY_RENDERER)[2])
+                                                 renderer=self.sim.ER_BULLET_HARDWARE_OPENGL)[2])
         img = img.reshape(self.width, self.height, 4)  # RGBA
         return img
 
-    def getDepthImage(self):
+    def get_depth_image(self):
         """
         Return the depth image.
         """
-        img = np.array(self.sim.getCameraImage(self.width, self.height, self.getV(), self._P,
-                                               renderer=self.sim.ER_BULLET_HARDWARE_OPENGL)[3])
+        img = np.array(self.sim.get_camera_image(self.width, self.height, self.getV(), self._P,
+                                                 renderer=self.sim.ER_BULLET_HARDWARE_OPENGL)[3])
         img = img.reshape(self.width, self.height)
         return img
 
-    def getRGBADImage(self, concatenate=True):
+    def get_rgbad_image(self, concatenate=True):
         """
         Return the RGBA and depth images.
         """
-        rgba, depth = self.sim.getCameraImage(self.width, self.height, self.getV(), self._P)[2:4]
+        rgba, depth = self.sim.get_camera_image(self.width, self.height, self.getV(), self._P)[2:4]
         rgba = np.array(rgba).reshape(self.width, self.height, 4)
         depth = np.array(depth).reshape(self.width, self.height)
         if concatenate:
             return np.dstack((rgba, depth))
         return rgba, depth
 
-    _sense = getRGBADImage
+    _sense = get_rgbad_image
 
 
 class DepthCameraSensor(CameraSensor):
     r"""Depth Camera sensor.
     """
-    _sense = CameraSensor.getDepthImage
+    _sense = CameraSensor.get_depth_image
 
 
 class Camera2DSensor(CameraSensor):
     r"""2D camera sensor
     """
-    _sense = CameraSensor.getRGBImage
+    _sense = CameraSensor.get_rgb_image
 

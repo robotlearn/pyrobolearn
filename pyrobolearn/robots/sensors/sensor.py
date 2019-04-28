@@ -10,9 +10,8 @@ add some noise to the returned sense value. The type of noise can also be select
 
 from abc import ABCMeta, abstractmethod
 import numpy as np
-import quaternion
 
-from pyrobolearn.utils.converter import QuaternionListConverter, NumpyListConverter
+from pyrobolearn.utils.orientation import get_quaternion_product
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -47,15 +46,13 @@ class Sensor(object):  # sensor attached to a link or joint
         self.sim = simulator
         self.body_id = body_id
 
-        self.pos_converter = NumpyListConverter(convention=0)
         if position is None:
-            position = np.array([0., 0., 0.])
-        self.local_position = self.pos_converter.convertTo(position)
+            position = [0., 0., 0.]
+        self.local_position = np.array(position)
 
-        self.orientation_converter = QuaternionListConverter(convention=1)
         if orientation is None:
-            orientation = quaternion.quaternion(1., 0., 0., 0.)
-        self.local_orientation = self.orientation_converter.convertTo(orientation)
+            orientation = [0., 0., 0., 1.]
+        self.local_orientation = np.array(orientation)
 
         self.rate = refresh_rate
         self.cnt = -1
@@ -68,7 +65,7 @@ class Sensor(object):  # sensor attached to a link or joint
         """
         Return the body's CoM position in the Cartesian world frame.
         """
-        position = self.pos_converter(self.sim.getBasePositionAndOrientation(self.body_id)[0])
+        position = self.sim.get_base_position(self.body_id)
         position += self.local_position
         return position
 
@@ -77,8 +74,8 @@ class Sensor(object):  # sensor attached to a link or joint
         """
         Return the body's CoM orientation in the Cartesian world frame.
         """
-        orientation = self.orientation_converter(self.sim.getBasePositionAndOrientation(self.body_id)[1])
-        orientation = self.local_orientation * orientation
+        orientation = self.sim.get_base_orientation(self.body_id)
+        orientation = get_quaternion_product(self.local_orientation, orientation)
         return orientation
 
     @abstractmethod

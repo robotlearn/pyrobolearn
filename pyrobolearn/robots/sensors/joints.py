@@ -44,7 +44,7 @@ class JointSensor(Sensor):
         """
         Return the joint position
         """
-        return self.sim.JointState(self.body_id, self.joint_id)[0]
+        return self.sim.get_joint_state(self.body_id, self.joint_id)[0]
 
     @abstractmethod
     def _sense(self):

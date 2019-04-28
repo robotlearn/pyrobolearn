@@ -73,7 +73,7 @@ class HeightmapSensor(Sensor):
             np.array: Height map with shape [width, height] where the values are the heights (in meters).
         """
         # calculate width and height
-        collisions = self.sim.rayTestBatch(self.get_ray_from_positions(), self.get_ray_to_positions())
+        collisions = self.sim.ray_test_batch(self.get_ray_from_positions(), self.get_ray_to_positions())
         return collisions
 
 

@@ -29,7 +29,7 @@ class ContactSensor(LinkSensor):
         Returns:
             list: list of contacts
         """
-        contacts = self.sim.getContactPoints(bodyA=self.body_id, linkIndexA=self.link_id)
+        contacts = self.sim.get_contact_points(bodyA=self.body_id, linkIndexA=self.link_id)
         return contacts
 
     def is_in_contact(self):
@@ -55,9 +55,10 @@ class PressureSensor(LinkSensor):
         raise NotImplementedError
 
 
-class TourchSensor(LinkSensor):
+class TouchSensor(LinkSensor):
     r"""Touch Sensor
     """
+    pass
 
 
 # class SkinPressureSensor

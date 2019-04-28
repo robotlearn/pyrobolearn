@@ -27,6 +27,7 @@ class LaserSensor(LinkSensor):
 
     """
 
+
 class ProximityLaserSensor(LaserSensor):
     r"""Proximity Laser Sensor
 
