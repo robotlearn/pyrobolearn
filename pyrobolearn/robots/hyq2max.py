@@ -89,9 +89,16 @@ if __name__ == "__main__":
     # robot.add_joint_slider(robot.getLeftFrontLegIds())
 
     # run simulator
-    for _ in count():
+    for i in count():
         # robot.update_joint_slider()
         robot.compute_and_draw_com_position()
         robot.compute_and_draw_projected_com_position()
+
+        # draw friction cones and support polygon
+        if i == 500:
+            print("Draw friction cones")
+            robot.draw_friction_cone(floor_id=world.floor_id)
+            print("Draw support polygon")
+            robot.draw_support_polygon(floor_id=world.floor_id, lifetime=0)
 
         world.step(sleep_dt=1./240)

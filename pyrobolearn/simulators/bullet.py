@@ -577,7 +577,7 @@ class Bullet(Simulator):
                 If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
             mass (float): mass of the mesh (in kg). If mass = 0, it won't move even if there is a collision.
             scale (float[3]): scale the mesh in the (x,y,z) directions
-            color (int[4], None): color of the mesh (by default: white and opaque)
+            color (int[4], None): color of the mesh for red, green, blue, and alpha, each in range [0,1].
             with_collision (bool): If True, it will also create the collision mesh, and not only a visual mesh.
             flags (int, None): if flag = `sim.GEOM_FORCE_CONCAVE_TRIMESH` (=1), this will create a concave static
                 triangle mesh. This should not be used with dynamic/moving objects, only for static (mass=0) terrain.

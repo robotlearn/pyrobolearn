@@ -4,9 +4,10 @@
 Classes that are defined here: LeggedRobot, BipedRobot, QuadrupedRobot, HexapodRobot.
 """
 
+import os
 import collections
-import itertools
 import numpy as np
+from scipy.spatial import ConvexHull
 
 from pyrobolearn.robots.robot import Robot
 
@@ -137,44 +138,148 @@ class LeggedRobot(Robot):
                 raise TypeError("Expecting foot_id to be a list of int, or an int. Instead got: "
                                 "{}".format(type(foot_id)))
 
-    def center_of_pressure(self):
+    def center_of_pressure(self, use_simulator=False):
+        r"""
+        Center of Pressure (CoP).
+
+        "The CoP is the point on the ground where the resultant of the ground-reaction force acts". [1]
+
+        This is defined mathematically as:
+
+        .. math::
+
+            x_{CoP} = \frac{\sum_i x_i f^i_n}{\sum{i} f^i_n}
+            y_{CoP} = \frac{\sum_i y_i f^i_n}{\sum{i} f^i_n}
+            z_{CoP} = \frac{\sum_i z_i f^i_n}{\sum{i} f^i_n}
+
+        where :math:`[x_i, y_i, z_i]` are the coordinates of the contact point :math:`i` on which the normal force
+        :math:`f^i_n` acts.
+
+        Notes:
+            - the ZMP and CoP are equivalent for horizontal ground surfaces. For irregular ground surfaces they are
+            distinct. [2]
+
+        References:
+            [1] "Postural Stability of Biped Robots and Foot-Rotation Index (FRI) Point", Goswami, 1999
+            [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
+            Implications", Popovic et al., 2005
         """
-        Center of Pressure
-        """
-        # self.sim.getContactPoints(self.id, FootID) # use simulator
+        # self.sim.get_contact_points(self.id, foot_id)  # use simulator
         # use F/T sensor to get CoP
         pass
 
-    def zero_moment_point(self):
-        """
-        Zero Moment Point.
+    def zero_moment_point(self, update_com=False, use_simulator=False):
+        r"""
+        Zero Moment Point (ZMP).
+
+        "The ZMP is the point on the ground surface about which the horizontal component of the moment of ground
+        reaction force is zero. It resolves the ground reaction force distribution to a single point." [1]
+
         Assumptions: the contact area is planar and has sufficiently high friction to keep the feet from sliding.
+
+        .. math::
+
+            x_{ZMP} &= x_{CoM} - \frac{F_x}{F_z + Mg} z_{CoM} - \frac{\tau_{y}(\vec{r}_{CoM})}{F_z + Mg} \\
+            y_{ZMP} &= y_{CoM} - \frac{F_y}{F_z + Mg} z_{CoM} + \frac{\tau_{x}(\vec{r}_{CoM})}{F_z + Mg}
+
+        where :math:`[x_{CoM}, y_{CoM}, z_{CoM}]` is the center of mass position, :math:`F` is the net force acting
+        on the whole body, :math:`M` is the body mass, :math:`g` is the gravity value, :math:`\vec{r}_{CoM}` is the
+        body center of mass, and :math:`\tau(\vec{r}_{CoM})` is the net whole-body moment about the center of mass.
+
+        The ZMP constraints can be expressed as:
+
+        .. math::
+
+            d_x^{-} \leq \frac{n^i_y}{f^i_z} \leq d_x^{+} \\
+            d_y^{-} \leq -\frac{n^i_x}{f^i_z} \leq d_y^{+}
+
+        which ensures the stability of the foot/ground contact. The :math:`(d_x^{-}, d_x^{+})` and
+        :math:`(d_y^{-}, d_y^{+})` defines the size of the sole in the x and y directions respectively. Basically,
+        this means that the ZMP point must be inside the convex hull in order to have a static stability.
+        The :math:`n^i` are the contact spatial torques around the contact point :math:`i`, and :math:`f` is the
+        contact spatial force at the contact point :math:`i`.
+
+        Notes:
+            - the ZMP and CoP are equivalent for horizontal ground surfaces. For irregular ground surfaces they are
+            distinct. [1]
+            - the FRI coincides with the ZMP when the foot is stationary. [1]
+            - the CMP coincides with the ZMP, when the moment about the CoM is zero. [1]
+
+        References:
+            [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
+            Implications", Popovic et al., 2005
+            [2] "Biped Walking Pattern Generation by using Preview Control of ZMP", Kajita et al., 2003
         """
         pass
 
     def foot_rotation_index(self):
-        """
-        Foot Rotation Index
+        r"""
+        Foot Rotation Index (FRI).
+
+        "The FRI is the point (within or outside the support base) where the ground reaction force would have to act
+        to keep the foot from accelerating. When the foot is stationary, the FRI coincides with the ZMP." [1]
+
+        .. math::
+
+            x_{FRI} &= \frac{x_f \dot{p}^f_z - z_f \dot{p}^f_x - x_{ZMP} F_{G.R.Z} - \dot{L}^f_y(\vec{r}_f)}
+                {\dot{p}^f_z - F_{G.R.Z}} \\
+            y_{FRI} &= \frac{y_f \dot{p}^F_z - z_f \dot{p}^f_y - y_{ZMP} F_{G.R.Z} - \dot{L}^f_x(\vec{r}_f)}
+                {\dot{p}^f_z - F_{G.R.Z}}
+
+        where :math:`\vec{p}^f` is the linear momentum of the foot's CoM, :math:`F_{G.R}` are the ground reaction
+        forces, :math:`[x_f, y_f, z_f]` are the position coordinates of the foot, and :math:`L^f(\vec{r}_f)` is the
+        net angular momentum of the foot around the foot.
+
+        Notes:
+            - the FRI coincides with the ZMP when the foot is stationary. [1]
+
+        References:
+            [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
+            Implications", Popovic et al., 2005
         """
         pass
 
-    def divergent_component_motion(self):
-        """
-        Divergent Component of Motion, a.k.a 'eXtrapolated Center of Mass'
+    def centroidal_moment_pivot(self, update_com=False, use_simulator=False):
+        r"""
+        Centroidal Moment Pivot (CMP).
+
+        "The CMP is the point where the ground reaction force would have to act to keep the horizontal component of
+        the whole-body angular momentum constant. When the moment about the CoM is zero, the CMP coincides with the
+        ZMP." [1]
+
+        .. math::
+
+            x_{CMP} &= x_{CoM} - \frac{F_{G.R.X}}{F_{G.R.Z}} z_{CoM} \\
+            y_{CMP} &= y_{CoM} - \frac{F_{G.R.Y}}{F_{G.R.Z}} z_{CoM}
+
+        .. math::
+
+            x_{CMP} &= x_{ZMP} + \frac{\tau_y(\vec{r}_{CoM})}{F_{G.R.Z}} \\
+            y_{CMP} &= y_{ZMP} - \frac{\tau_x(\vec{r}_{CoM})}{F_{G.R.Z}}
+
+        Notes:
+            - the CMP coincides with the ZMP, when the moment about the CoM is zero. [1]
+
+        References:
+            [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
+            Implications", Popovic et al., 2005
         """
         pass
 
-    def centroidal_moment_pivot(self):
-        """
-        Centroidal Moment Pivot
-        """
-        pass
-
-    def draw_support_polygon(self):
-        """
-        draw the support polygon / convex hull
-        """
-        pass
+    # def divergent_component_motion(self):
+    #     r"""
+    #     Divergent Component of Motion, a.k.a 'eXtrapolated Center of Mass'.
+    #
+    #     .. math:: \xi = x + b \dot{x}
+    #
+    #     where :math:`\xi = [\xi_x, \xi_y, \xi_z]` is the DCM point, :math:`x = [x,y,z]` and :math:`\dot{x} = [\dot{x},
+    #     \dot{y}, \dot{z}]` are the CoM position and velocity, :math:`b > 0` is a time-constant of the DCM dynamics.
+    #
+    #     References:
+    #         [1] "Three-dimensional Bipedal Walking Control Based on Divergent Component of Motion", Englsberger et
+    #             al., 2015
+    #     """
+    #     pass
 
     # the following methods need to be overwritten in the children classes
 
@@ -182,21 +287,183 @@ class LeggedRobot(Robot):
         """Move the robot at the specified velocity."""
         pass
 
-    def walk_forward(self):
+    def walk_forward(self, speed):
         """Walk forward."""
         pass
 
-    def walk_backward(self):
+    def walk_backward(self, speed):
         """Walk backward."""
         pass
 
-    def turn_left(self):
+    def walk_left(self, speed):
+        """Walk sideways to the left."""
+        pass
+
+    def walk_right(self, speed):
+        """Walk sideways to the right."""
+        pass
+
+    def turn_left(self, speed):
         """Turn left."""
         pass
 
-    def turn_right(self):
+    def turn_right(self, speed):
         """Turn right."""
         pass
+
+    def draw_support_polygon(self, floor_id, lifetime=1.):  # TODO: improve this by remembering the previous hull
+        r"""
+        draw the support polygon / convex hull in the simulator.
+
+        Warnings:
+            - this is only valid in the simulator.
+            - do not call this at a high frequency.
+
+        Args:
+            floor_id (int): id of the floor in the simulator.
+            lifetime (float): lifetime of the support polygon before it disappears.
+
+        References:
+            [1] "A Universal Stability Criterion of the Foot Contact of Legged Robots- Adios ZMP"
+        """
+        # get contact points between the robot's links and the floor
+        points = self.sim.get_contact_points(body1=self.id, body2=floor_id)
+        # points = np.array([point[5] for point in points])  # contact position on robot in Cartesian world coordinates
+        points = np.array([point[6] for point in points])  # contact position on floor in Cartesian world coordinates
+
+        # compute convex hull
+        if len(points) > 2:  # we need at least 3 points to construct the convex hull
+            # compute convex hull
+            hull = ConvexHull(points[:, :2])
+            vertices = points[hull.vertices]  # get the vertices of the convex hull
+
+            # draw support polygon
+            for i in range(len(vertices)):
+                self.sim.add_user_debug_line(from_pos=vertices[i-1], to_pos=vertices[i], rgb_color=(0, 1, 0), width=3,
+                                             lifetime=lifetime)
+
+    # TODO: correct, consider irregular terrain, update visual shape of cones
+    def draw_friction_cone(self, floor_id, height=0.2):
+        r"""
+        Draw the friction cone.
+
+        The friction cone is defined as:
+
+        .. math:: C^i_s = {(f^i_x, f^i_y, f^i_z) \in \mathbb{R}^3 | \sqrt{(f^i_x)^2 + (f^i_y)^2} \leq \mu_i f^i_z }
+
+        where :math:`i` denotes the ith support/contact, :math:`f^i_s` is the contact spatial force exerted at
+        the contact point :math:`C_i`, and :math:`\mu_i` is the static friction coefficient at that contact point.
+
+        "A point contact remains in the fixed contact mode while its contact force f^i lies inside the friction cone"
+        [1]. Often, the friction pyramid which is the linear approximation of the friction cone is considered as it
+        is easier to manipulate it; e.g. present it as a linear constraint in a quadratic optimization problem.
+
+        Warnings:
+            - this is only valid in the simulator.
+            - do not call this at a high frequency.
+
+        Args:
+            floor_id (int): id of the floor in the simulator.
+            height (float): maximum height of the cone in the simulator.
+
+        References:
+            [1] https://scaron.info/teaching/friction-cones.html
+            [2] "Stability of Surface Contacts for Humanoid Robots: Closed-Form Formulae of the Contact Wrench Cone
+                for Rectangular Support Areas", Caron et al., 2015
+        """
+        filename = os.path.dirname(__file__) + '/../worlds/meshes/cone.obj'
+
+        # get contact points between the robot's links and the floor
+        points = self.sim.get_contact_points(body1=self.id, body2=floor_id)
+        mu = self.sim.get_dynamics_info(floor_id)[1]  # friction coefficient
+
+        ids = []
+        for point in points:
+            position = point[6]  # contact position on floor in Cartesian world coordinates
+            fz_dir = point[7]    # contact normal on floor pointing towards the robot
+            fz = point[9]        # normal force applied during the last step
+            fy = point[10]       # lateral friction force in the first lateral friction direction
+            fy_dir = point[11]   # first lateral friction direction
+            fx = point[12]       # lateral friction force in the second lateral friction direction
+            fx_dir = point[13]   # second lateral friction direction
+
+            # make sure that fz is bigger than 0
+            if not np.allclose(fz, 0):
+
+                # rescale fx, fy, fz
+                # TODO uncomment the original calculations
+                fx = height  # np.abs(fx / (mu*fz)) * height
+                fy = height  # np.abs(fy / (mu*fz)) * height
+                fz = height
+
+                position += np.array([0., 0., height * 0.5])
+                id_ = self.sim.load_mesh(filename, position, orientation=(0, 1, 0, 0), mass=0.,
+                                         scale=(fx, fy, fz), color=(0.5, 0., 0., 0.5), with_collision=False)
+                ids.append(id_)
+
+        return ids
+
+    # TODO: add pyramid 3D object, consider irregular terrains, update pyramid visual shape
+    def draw_friction_pyramid(self, floor_id, height=0.2):
+        r"""
+        Draw friction pyramid.
+
+        The friction pyramid is defined as:
+
+        .. math:: P^i_s = {(f^i_x, f^i_y, f^i_z) \in \mathbb{R}^3 | f^i_x \leq \mu_i f^i_z, f^i_y \leq \mu_i f^i_z}
+
+        where where :math:`i` denotes the ith support/contact, :math:`f^i_s` is the contact spatial force exerted at
+        the contact point :math:`C_i`, and :math:`\mu_i` is the static friction coefficient at that contact point.
+        If the static friction coefficient is given by :math:`\frac{\mu_i}{\sqrt{2}}`, then we are making an inner
+        approximation (i.e. the pyramid is inside the cone) instead of an outer approximation (i.e. the cone is inside
+        the pyramid). [1]
+
+        This linear approximation is often used as a linear constraint in a quadratic optimization problem along with
+        the unilateral constraint :math:`f^i_z \geq 0`.
+
+        Warnings:
+            - this is only valid in the simulator.
+            - do not call this at a high frequency.
+
+        Args:
+            floor_id (int): id of the floor in the simulator.
+            height (float): maximum height of the pyramid in the simulator.
+
+        References:
+            [1] https://scaron.info/teaching/friction-cones.html
+            [2] "Stability of Surface Contacts for Humanoid Robots: Closed-Form Formulae of the Contact Wrench Cone
+                for Rectangular Support Areas", Caron et al., 2015
+        """
+        filename = os.path.dirname(__file__) + '/../worlds/meshes/pyramid.obj'
+
+        # get contact points between the robot's links and the floor
+        points = self.sim.get_contact_points(body1=self.id, body2=floor_id)
+        mu = self.sim.get_dynamics_info(floor_id)[1]  # friction coefficient
+
+        ids = []
+        for point in points:
+            position = point[6]  # contact position on floor in Cartesian world coordinates
+            fz_dir = point[7]  # contact normal on floor pointing towards the robot
+            fz = point[9]  # normal force applied during the last step
+            fy = point[10]  # lateral friction force in the first lateral friction direction
+            fy_dir = point[11]  # first lateral friction direction
+            fx = point[12]  # lateral friction force in the second lateral friction direction
+            fx_dir = point[13]  # second lateral friction direction
+
+            # make sure that fz is bigger than 0
+            if not np.allclose(fz, 0):
+                # rescale fx, fy, fz
+                # TODO uncomment the original calculations
+                fx = height  # np.abs(fx / (mu*fz)) * height
+                fy = height  # np.abs(fy / (mu*fz)) * height
+                fz = height
+
+                position += np.array([0., 0., height * 0.5])
+                id_ = self.sim.load_mesh(filename, position, orientation=(0, 1, 0, 0), mass=0.,
+                                         scale=(fx, fy, fz), color=(0.5, 0., 0., 0.5), with_collision=False)
+                ids.append(id_)
+
+        return ids
 
 
 class BipedRobot(LeggedRobot):

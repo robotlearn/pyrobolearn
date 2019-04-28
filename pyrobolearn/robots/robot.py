@@ -3003,8 +3003,8 @@ class Robot(ControllableBody):
         """
         Draw the CoM in the simulator.
 
-        WARNING: `get_center_of_mass_position()` must be called before calling this method. Otherwise, check the other method
-        `compute_and_draw_com_position()`.
+        WARNING: `get_center_of_mass_position()` must be called before calling this method. Otherwise, check the other
+        method `compute_and_draw_com_position()`.
 
         Args:
             radius (float): radius of the sphere representing the CoM of the robot

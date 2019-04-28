@@ -1037,6 +1037,15 @@ class World(object):
         return self.floor_id
 
     def load_bot_lab(self, scaling=2.):
+        """
+        Load the robot laboratory.
+
+        Args:
+            scaling (float): scaling for the robot laboratory.
+
+        Returns:
+            int: unique id of the robot lab.
+        """
         return self.load_sdf('sdf/botlab/botlab.sdf', scaling=scaling)
 
     def load_stairs(self):
@@ -1081,7 +1090,7 @@ class World(object):
         Args:
             position (float[3]): position of the sphere in Cartesian world space (in meters)
             radius (float): radius of the sphere (in meters)
-            color (int[4]): color of the sphere (by default: white and opaque)
+            color (int[4], None): color of the sphere for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the visual sphere in the world
@@ -1099,7 +1108,7 @@ class World(object):
             position (float[3]): position of the sphere in Cartesian world space (in meters)
             mass (float): mass of the sphere (in kg). If mass = 0, the sphere won't move even if there is a collision.
             radius (float): radius of the sphere (in meters).
-            color (int[4]): color of the sphere (by default: white and opaque)
+            color (int[4], None): color of the sphere for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the sphere in the world
@@ -1123,7 +1132,7 @@ class World(object):
             position (float[3]): position of the box in the Cartesian world space (in meters)
             orientation (float[4]): orientation of the box using quaternion [x,y,z,w].
             dimensions (float[3]): dimensions of the box
-            color (int[4]): color of the box (by default: white and opaque)
+            color (int[4], None): color of the box for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the box in the world
@@ -1143,7 +1152,7 @@ class World(object):
             orientation (float[4]): orientation of the box using quaternion [x,y,z,w].
             mass (float): mass of the box (in kg). If mass = 0, the box won't move even if there is a collision.
             dimensions (float[3]): dimensions of the box
-            color (int[4]): color of the box (by default: white and opaque)
+            color (int[4], None): color of the box for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the box in the world
@@ -1170,7 +1179,7 @@ class World(object):
             orientation (float[4]): orientation of the cylinder using quaternion [x,y,z,w].
             radius (float): radius of the cylinder (in meters)
             height (float): height of the cylinder (in meters)
-            color (int[4]): color of the cylinder (by default: white and opaque)
+            color (int[4], None): color of the cylinder for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the cylinder in the world
@@ -1193,7 +1202,7 @@ class World(object):
             mass (float): mass of the cylinder (in kg). If mass = 0, it won't move even if there is a collision.
             radius (float): radius of the cylinder (in meters)
             height (float): height of the cylinder (in meters)
-            color (int[4]): color of the cylinder (by default: white and opaque)
+            color (int[4], None): color of the cylinder for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the cylinder in the world
@@ -1220,7 +1229,7 @@ class World(object):
             orientation (float[4]): orientation of the capsule using quaternion [x,y,z,w].
             radius (float): radius of the capsule (in meters)
             height (float): height of the capsule (in meters)
-            color (int[4]): color of the capsule (by default: white and opaque)
+            color (int[4], None): color of the capsule for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the capsule in the world
@@ -1245,7 +1254,7 @@ class World(object):
             mass (float): mass of the capsule (in kg). If mass = 0, it won't move even if there is a collision.
             radius (float): radius of the capsule (in meters)
             height (float): height of the capsule (in meters)
-            color (int[4]): color of the capsule (by default: white and opaque)
+            color (int[4], None): color of the capsule for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the capsule in the world
@@ -1274,7 +1283,7 @@ class World(object):
             position (float[3]): position of the mesh in the Cartesian world space (in meters)
             orientation (float[4]): orientation of the mesh using quaternion [x,y,z,w].
             scale (float[3]): scale the mesh in the (x,y,z) directions
-            color (int[4]): color of the mesh (by default: white and opaque)
+            color (int[4], None): color of the mesh for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the mesh in the world
@@ -1296,7 +1305,7 @@ class World(object):
             orientation (float[4]): orientation of the mesh using quaternion [x,y,z,w].
             mass (float): mass of the mesh (in kg). If mass = 0, it won't move even if there is a collision.
             scale (float[3]): scale the mesh in the (x,y,z) directions
-            color (int[4]): color of the mesh (by default: white and opaque)
+            color (int[4], None): color of the mesh for red, green, blue, and alpha, each in range [0,1]
             flags (int, None): if flag = `sim.GEOM_FORCE_CONCAVE_TRIMESH` (=1), this will create a concave static
                 triangle mesh. This should not be used with dynamic/moving objects, only for static (mass=0) terrain.
 
@@ -1321,7 +1330,7 @@ class World(object):
     #         position (float[3]): position of the plane in the Cartesian world space (in meters)
     #         orientation (float[4]): orientation of the plane using quaternion [x,y,z,w].
     #         normal (float[3]): normal to the plane
-    #         color (int[4]): color of the plane (by default: white and opaque)
+    #         color (int[4]): color of the plane
     #
     #     Returns:
     #         int: unique id of the plane in the world
@@ -1344,7 +1353,7 @@ class World(object):
     #         orientation (float[4]): orientation of the plane using quaternion [x,y,z,w].
     #         mass (float): mass of the plane (in kg). If mass = 0, it won't move even if there is a collision.
     #         normal (float[3]): normal to the plane
-    #         color (int[4]): color of the plane (by default: white and opaque)
+    #         color (int[4]): color of the plane
     #
     #     Returns:
     #         int: unique id of the plane in the world
@@ -1388,7 +1397,7 @@ class World(object):
             position (float[3]): position in the Cartesian world space (in meters)
             orientation (float[4]): orientation using quaternion [x,y,z,w].
             scale (float[3]): scale in the (x,y,z) directions
-            color (int[4]): color (by default: white and opaque)
+            color (int[4], None): color of the ellipsoid for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the ellipsoid in the world
@@ -1405,7 +1414,7 @@ class World(object):
             orientation (float[4]): orientation using quaternion [x,y,z,w].
             mass (float): mass [kg]
             scale (float[3]): scale in the (x,y,z) directions
-            color (int[4]): color (by default: white and opaque)
+            color (int[4], None): color of the ellipsoid for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the ellipsoid in the world
@@ -1422,7 +1431,7 @@ class World(object):
             position (float[3]): position in the Cartesian world space (in meters)
             orientation (float[4]): orientation using quaternion [x,y,z,w].
             scale (float[3]): scale in the (x,y,z) directions
-            color (int[4]): color (by default: white and opaque)
+            color (int[4], None): color of the prism for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the triangular prism in the world
@@ -1440,7 +1449,7 @@ class World(object):
             orientation (float[4]): orientation using quaternion [x,y,z,w].
             mass (float): mass [kg]
             scale (float[3]): scale in the (x,y,z) directions
-            color (int[4]): color (by default: white and opaque)
+            color (int[4], None): color of the prism for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the triangular prism in the world
@@ -1456,7 +1465,7 @@ class World(object):
             position (float[3]): position in the Cartesian world space (in meters)
             orientation (float[4]): orientation using quaternion [x,y,z,w].
             scale (float[3]): scale in the (x,y,z) directions
-            color (int[4]): color (by default: white and opaque)
+            color (int[4], None): color of the cone for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the cone in the world
@@ -1473,7 +1482,7 @@ class World(object):
             orientation (float[4]): orientation using quaternion [x,y,z,w].
             mass (float): mass [kg]
             scale (float[3]): scale in the (x,y,z) directions
-            color (int[4]): color (by default: white and opaque)
+            color (int[4], None): color of the cone for red, green, blue, and alpha, each in range [0,1]
 
         Returns:
             int: unique id of the cone in the world
@@ -1638,7 +1647,7 @@ if __name__ == '__main__':
     #                 color=[1, 0, 0, 1])
 
     # world.load_ellipsoid([0,0,2], mass=0, scale=[2.,1.,1.], color=(0,0,1,1))
-    # world.load_cone([1,1,2])
+    world.load_visual_cone([0, 0, 0.1*0.5], orientation=(0, 1, 0, 0), scale=(0.1, 0.1, 0.1), color=(0.5, 0, 0, 0.5))
     world.load_right_triangular_prism([-1, -1, 2])
     # floor = world.load_mesh(filename='box', [1, 0, 2], mass=0, color=None)
 
