@@ -6,7 +6,7 @@ These include IMU, contact, Camera, and other sensors.
 
 from abc import ABCMeta, abstractmethod
 
-from pyrobolearn.utils.orientation import get_quaternion_product
+from pyrobolearn.utils.transformation import get_quaternion_product
 from pyrobolearn.robots.sensors.sensor import Sensor
 
 

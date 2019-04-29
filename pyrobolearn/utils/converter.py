@@ -1,10 +1,20 @@
-# This file describes converter classes which allows to convert from one certain data type to another.
+#!/usr/bin/env python
+"""Provide converter classes which allows to convert from one certain data type to another.
+"""
 
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import torch
 import quaternion
 import collections
+
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
 
 
 def roll(lst, shift):
@@ -13,10 +23,12 @@ def roll(lst, shift):
 
 
 def numpy_to_torch(tensor):
-    return torch.from_numpy(tensor)
+    """Convert from numpy array to pytorch tensor."""
+    return torch.from_numpy(tensor).float()
 
 
 def torch_to_numpy(tensor):
+    """Convert from pytorch tensor to numpy array."""
     if tensor.requires_grad:
         return tensor.detach().numpy()
     return tensor.numpy()
@@ -67,12 +79,12 @@ class TypeConverter(object):
         self._to_type = to_type
 
     @abstractmethod
-    def convertFrom(self, data):
+    def convert_from(self, data):
         """Convert to the 'from_type'"""
         raise NotImplementedError
 
     @abstractmethod
-    def convertTo(self, data):
+    def convert_to(self, data):
         """Convert to the 'to_type'"""
         raise NotImplementedError
 
@@ -81,8 +93,8 @@ class TypeConverter(object):
         Convert the data to the other type.
         """
         if isinstance(data, self.from_type): # or self.from_type is None:
-            return self.convertTo(data)
-        return self.convertFrom(data)
+            return self.convert_to(data)
+        return self.convert_from(data)
 
     def __call__(self, data):
         """
@@ -100,10 +112,10 @@ class IdentityConverter(TypeConverter):
     def __init__(self):
         super(IdentityConverter, self).__init__(None, None)
 
-    def convertFrom(self, data):
+    def convert_from(self, data):
         return data
 
-    def convertTo(self, data):
+    def convert_to(self, data):
         return data
 
 
@@ -129,7 +141,7 @@ class NumpyListConverter(TypeConverter):
             raise ValueError("Expecting the convention to belong to {0,1,2}")
         self.convention = convention
 
-    def convertFrom(self, data):
+    def convert_from(self, data):
         """Convert to list"""
         if isinstance(data, self.from_type):
             return list(data)
@@ -140,7 +152,7 @@ class NumpyListConverter(TypeConverter):
         else:
             raise TypeError("Type not known: {}".format(type(data)))
 
-    def convertTo(self, data):
+    def convert_to(self, data):
         """Convert to numpy array"""
         if isinstance(data, self.to_type):
             return data
@@ -159,13 +171,13 @@ class NumpyListConverter(TypeConverter):
     def reshape(self, data, shape):
         """Reshape the data using the converter. Only valid if data is numpy array."""
         if not isinstance(data, self.to_type):
-            data = self.convertTo(data)
+            data = self.convert_to(data)
         return data.reshape(shape)
 
     def transpose(self, data):
         """Transpose the data using the converter"""
         if not isinstance(data, self.to_type):
-            data = self.convertTo(data)
+            data = self.convert_to(data)
         return data.T
 
 
@@ -187,7 +199,7 @@ class QuaternionListConverter(TypeConverter):
             raise TypeError("Expecting convention to be 0 or 1.")
         self.convention = convention
 
-    def convertFrom(self, data):
+    def convert_from(self, data):
         """Convert to list"""
         if isinstance(data, self.from_type):
             return list(data)
@@ -196,7 +208,7 @@ class QuaternionListConverter(TypeConverter):
         else:
             raise TypeError("Type not known: {}".format(type(data)))
 
-    def convertTo(self, data):
+    def convert_to(self, data):
         """Convert to quaternion"""
         if isinstance(data, self.to_type):
             return data
@@ -224,7 +236,7 @@ class QuaternionNumpyConverter(TypeConverter):
             raise TypeError("Expecting convention to be 0 or 1.")
         self.convention = convention
 
-    def convertFrom(self, data):
+    def convert_from(self, data):
         """Convert to numpy array"""
         if isinstance(data, self.from_type):
             return data
@@ -233,7 +245,7 @@ class QuaternionNumpyConverter(TypeConverter):
         else:
             raise TypeError("Type not known: {}".format(type(data)))
 
-    def convertTo(self, data):
+    def convert_to(self, data):
         """Convert to quaternion"""
         if isinstance(data, self.to_type):
             return data
@@ -245,13 +257,13 @@ class QuaternionNumpyConverter(TypeConverter):
     def reshape(self, data, shape):
         """Reshape the data using the converter. Only valid if data is numpy array."""
         if not isinstance(data, self.from_type):
-            data = self.convertFrom(data)
+            data = self.convert_from(data)
         return data.reshape(shape)
 
     def transpose(self, data):
         """Transpose the data using the converter"""
         if not isinstance(data, self.from_type):
-            data = self.convertFrom(data)
+            data = self.convert_from(data)
         return data.T
 
 
@@ -274,7 +286,7 @@ class QuaternionPyTorchConverter(TypeConverter):
             raise TypeError("Expecting convention to be 0 or 1.")
         self.convention = convention
 
-    def convertFrom(self, data):
+    def convert_from(self, data):
         """Convert to pytorch tensor"""
         if isinstance(data, self.from_type):
             return data
@@ -283,7 +295,7 @@ class QuaternionPyTorchConverter(TypeConverter):
         else:
             raise TypeError("Type not known: {}".format(type(data)))
 
-    def convertTo(self, data):
+    def convert_to(self, data):
         """Convert to quaternion"""
         if isinstance(data, self.to_type):
             return data
@@ -295,13 +307,13 @@ class QuaternionPyTorchConverter(TypeConverter):
     def reshape(self, data, shape):
         """Reshape the data using the converter. Only valid if data is numpy array."""
         if not isinstance(data, self.from_type):
-            data = self.convertFrom(data)
+            data = self.convert_from(data)
         return data.view(shape)
 
     def transpose(self, data):
         """Transpose the data using the converter"""
         if not isinstance(data, self.from_type):
-            data = self.convertFrom(data)
+            data = self.convert_from(data)
         return data.t()
 
 
@@ -321,7 +333,7 @@ class NumpyNumberConverter(TypeConverter):
             raise ValueError("The 'dim_array' argument should be 0 or 1.")
         self.dim_array = dim_array
 
-    def convertFrom(self, data):
+    def convert_from(self, data):
         """Convert to a number"""
         if isinstance(data, self.from_type):
             return data
@@ -336,7 +348,7 @@ class NumpyNumberConverter(TypeConverter):
         else:
             raise TypeError("Type not known: {}".format(type(data)))
 
-    def convertTo(self, data):
+    def convert_to(self, data):
         """Convert to numpy array"""
         if isinstance(data, self.to_type):
             return data
@@ -370,7 +382,7 @@ class PyTorchListConverter(TypeConverter):
             raise ValueError("Expecting the convention to belong to {0,1,2}")
         self.convention = convention
 
-    def convertFrom(self, data):
+    def convert_from(self, data):
         """Convert to list"""
         if isinstance(data, self.from_type):
             return list(data)
@@ -382,7 +394,7 @@ class PyTorchListConverter(TypeConverter):
         else:
             raise TypeError("Type not known: {}".format(type(data)))
 
-    def convertTo(self, data):
+    def convert_to(self, data):
         """Convert to pytorch tensor"""
         if isinstance(data, self.to_type):
             return data
@@ -400,13 +412,13 @@ class PyTorchListConverter(TypeConverter):
     def reshape(self, data, shape):
         """Reshape the data using the converter. Only valid if data is numpy array."""
         if not isinstance(data, self.to_type):
-            data = self.convertTo(data)
+            data = self.convert_to(data)
         return data.view(shape)
 
     def transpose(self, data):
         """Transpose the data using the converter"""
         if not isinstance(data, self.to_type):
-            data = self.convertTo(data)
+            data = self.convert_to(data)
         return data.t()
 
 
@@ -419,7 +431,7 @@ class PyTorchNumpyConverter(TypeConverter):
     def __init__(self):
         super(PyTorchNumpyConverter, self).__init__(from_type=np.ndarray, to_type=torch.Tensor)
 
-    def convertFrom(self, data):
+    def convert_from(self, data):
         """Convert to numpy array"""
         if isinstance(data, self.from_type):
             return data
@@ -430,7 +442,7 @@ class PyTorchNumpyConverter(TypeConverter):
         else:
             raise TypeError("Type not known: {}".format(type(data)))
 
-    def convertTo(self, data):
+    def convert_to(self, data):
         """Convert to pytorch tensor"""
         if isinstance(data, self.to_type):
             return data
@@ -469,16 +481,16 @@ if __name__ == '__main__':
     print("on np.array: a={} with type {}".format(a, type(a)))
     b = converter(a)
     print("converter(a) gives: {} with type {}".format(b, type(b)))
-    b = converter.convertFrom(a)
-    print("converter.convertFrom(a) gives: {} with type {}".format(b, type(b)))
-    b = converter.convertTo(a)
-    print("converter.convertTo(a) gives: {} with type {}".format(b, type(b)))
+    b = converter.convert_from(a)
+    print("converter.convert_from(a) gives: {} with type {}".format(b, type(b)))
+    b = converter.convert_to(a)
+    print("converter.convert_to(a) gives: {} with type {}".format(b, type(b)))
 
     A = np.array(range(4)).reshape(2, 2)
     print("on numpy matrix: \nA={} with type {}".format(A, type(A)))
     b = converter(A)
     print("converter(a) gives: {} with type {}".format(b, type(b)))
-    b = converter.convertFrom(A)
-    print("converter.convertFrom(a) gives: {} with type {}".format(b, type(b)))
-    b = converter.convertTo(A)
-    print("converter.convertTo(a) gives: \n{} with type {}".format(b, type(b)))
+    b = converter.convert_from(A)
+    print("converter.convert_from(a) gives: {} with type {}".format(b, type(b)))
+    b = converter.convert_to(A)
+    print("converter.convert_to(a) gives: \n{} with type {}".format(b, type(b)))

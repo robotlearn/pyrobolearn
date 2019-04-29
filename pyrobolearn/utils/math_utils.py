@@ -1,21 +1,35 @@
-# This file defines mathematical operations
+#!/usr/bin/env python
+"""Defines mathematical operations.
+"""
 
 import numpy as np
 import copy
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
+
 def exp(x):
     if callable(x):
         y = copy.copy(x)
-        def exp():
+
+        def exp_():
             return np.exp(x())
-        y.__call__ = exp
+
+        y.__call__ = exp_
         return y
     else:
         return np.exp(x)
 
 
 class Plane(object):
-    """Plane class.
+    r"""Plane class.
 
     A plane is defined by its initial point and its normal vector.
     .. math:: \pi \equiv \overline{n} \cdot (\overline{x} - \overline{x}_0) = 0
@@ -38,7 +52,8 @@ class Plane(object):
         self.x0 = x0
         self.normal = normal
 
-    def convertToArray(self, pt):
+    @staticmethod
+    def convert_to_array(pt):
         if isinstance(pt, (tuple, list)):
             pt = np.array(pt)
         if not isinstance(pt, np.ndarray):
@@ -56,7 +71,7 @@ class Plane(object):
 
     @x0.setter
     def x0(self, x0):
-        self._x0 = self.convertToArray(x0)
+        self._x0 = self.convert_to_array(x0)
 
     @property
     def normal(self):
@@ -64,7 +79,7 @@ class Plane(object):
 
     @normal.setter
     def normal(self, normal):
-        normal = self.convertToArray(normal)
+        normal = self.convert_to_array(normal)
         # normalize
         norm = np.linalg.norm(normal)
         if norm < self.threshold:
@@ -73,7 +88,7 @@ class Plane(object):
 
     def __contains__(self, point):
         """Check if the given point is in the plane."""
-        point = self.convertToArray(point)
+        point = self.convert_to_array(point)
 
         # scalar product between the normal and (point-x0) vectors
         val = self.normal.T.dot(point - self.x0)
@@ -82,9 +97,9 @@ class Plane(object):
             return True
         return False
 
-    def getIntersectionPoint(self, point):
+    def get_intersection_point(self, point):
         """
         Get the intersection of the plane with a line that starts at the given point and is parallel to the normal.
         """
-        point = self.convertToArray(point)
+        point = self.convert_to_array(point)
         return point + self.normal.T.dot(self.x0 - point) * self.normal

@@ -9,7 +9,7 @@ import sympy
 import sympy.physics.mechanics as mechanics
 
 from pyrobolearn.robots.robot import Robot
-from pyrobolearn.utils.orientation import get_symbolic_matrix_from_axis_angle, get_matrix_from_quaternion
+from pyrobolearn.utils.transformation import get_symbolic_matrix_from_axis_angle, get_matrix_from_quaternion
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

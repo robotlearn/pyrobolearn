@@ -6,7 +6,7 @@ Cameras have one of the most richest sensory inputs (i.e. visual).
 
 import numpy as np
 
-from pyrobolearn.utils.orientation import get_rpy_from_quaternion
+from pyrobolearn.utils.transformation import get_rpy_from_quaternion
 from pyrobolearn.robots.sensors.links import LinkSensor
 
 __author__ = "Brian Delhaisse"

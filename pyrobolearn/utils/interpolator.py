@@ -1,5 +1,17 @@
+#!/usr/bin/env python
+"""Provide some other interpolators that are not in `scipy`.
+"""
 
 import numpy as np
+
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
 
 
 class HermiteInterpolator(object):
@@ -8,12 +20,14 @@ class HermiteInterpolator(object):
     """
 
     def __init__(self, t, x):
-        """Calculate the coefficients for the interpolation.
+        r"""Calculate the coefficients for the interpolation.
 
         Assuming a trajectory x(t) is described by a fifth order polynomial such that:
+
         .. math:: x(t) = a_5 t^5 + a_4 t^4 + a_3 t^3 + a_2 t^2 + a_1 t + a_0
 
         then taking the derivatives with respect to time give us:
+
         .. math::
             \dot{x}(t) = 5 a_5 t^4 + 4 a_4 t^3 + 3 a_3 t^2 + 2 a_2 t + a_1
             \ddot{x}(t) = 20 a_5 t^3 + 12 a_4 t^2 + 6 a_3 t + 2 a_2
@@ -47,7 +61,7 @@ class HermiteInterpolator(object):
             b = np.array([x[-1], 0, 0, 0, 0, x[0]] + list(x[1:-1]))
         else:
             b = np.array([x[-1], 0, 0, 0, 0, x[0]])
-        #coeff = np.linalg.solve(A,b)[0]
+        # coeff = np.linalg.solve(A,b)[0]
         self.coeff = np.linalg.lstsq(A, b, rcond=None)[0]
 
     def __call__(self, t):
@@ -61,7 +75,7 @@ class HermiteInterpolator(object):
             float, float[T]: velocity
             float, float[T]: acceleration
         """
-        x = np.sum(self.coeff * np.array([[ti**i for i in range(5,-1,-1)] for ti in t]), axis=1)
+        x = np.sum(self.coeff * np.array([[ti**i for i in range(5, -1, -1)] for ti in t]), axis=1)
         xd = np.sum(self.coeff[:-1] * np.array([[5*ti**4, 4*ti**3, 3*ti**2, 2*ti, 1] for ti in t]), axis=1)
         xdd = np.sum(self.coeff[:-2] * np.array([[20*ti**3, 12*ti**2, 6*ti, 2] for ti in t]), axis=1)
         return x, xd, xdd
@@ -82,19 +96,19 @@ if __name__ == '__main__':
 
     # interpolate the data
     t = np.linspace(0., 1., 100)
-    x,xd,xdd = x_interpolator(t)
-    y,yd,ydd = y_interpolator(t)
+    x, dx, ddx = x_interpolator(t)
+    y, dy, ddy = y_interpolator(t)
 
     # plot figures
-    gs = gridspec.GridSpec(4,4)
+    gs = gridspec.GridSpec(4, 4)
     plt.subplot(gs[0, 1:3])
     plt.title('Hermite Interpolator')
-    plt.plot(x,y)
+    plt.plot(x, y)
     plt.xlabel('x(t)')
     plt.ylabel('y(t)')
 
     y_labels = ['x(t)', 'y(t)', 'dx/dt', 'dy/dt', 'd^2x/dt^2', 'd^2y/dt^2']
-    for i, (x_traj, y_traj) in enumerate(zip([x, xd, xdd], [y, yd, ydd])):
+    for i, (x_traj, y_traj) in enumerate(zip([x, dx, ddx], [y, dy, ddy])):
         plt.subplot(gs[i+1, :2])
         plt.plot(t, x_traj)
         plt.ylabel(y_labels[2*i])

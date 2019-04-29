@@ -7,7 +7,7 @@ import numpy as np
 from pyrobolearn.robots import Robot
 from pyrobolearn.states import LinkState
 
-from pyrobolearn.utils.orientation import *
+from pyrobolearn.utils.transformation import *
 
 
 __author__ = "Brian Delhaisse"

@@ -9,7 +9,7 @@ Dependencies:
 
 import numpy as np
 
-from pyrobolearn.utils.orientation import get_quaternion_from_matrix, get_rpy_from_matrix, get_rpy_from_quaternion
+from pyrobolearn.utils.transformation import get_quaternion_from_matrix, get_rpy_from_matrix, get_rpy_from_quaternion
 from pyrobolearn.simulators import Simulator
 
 

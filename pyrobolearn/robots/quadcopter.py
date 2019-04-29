@@ -6,7 +6,7 @@ import os
 import numpy as np
 
 from pyrobolearn.robots.uav import RotaryWingUAV
-from pyrobolearn.utils.orientation import get_matrix_from_quaternion
+from pyrobolearn.utils.transformation import get_matrix_from_quaternion
 from pyrobolearn.utils.units import inches_to_meters, rpm_to_rad_per_second
 
 __author__ = "Brian Delhaisse"

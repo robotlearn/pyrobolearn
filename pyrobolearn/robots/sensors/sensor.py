@@ -11,7 +11,7 @@ add some noise to the returned sense value. The type of noise can also be select
 from abc import ABCMeta, abstractmethod
 import numpy as np
 
-from pyrobolearn.utils.orientation import get_quaternion_product
+from pyrobolearn.utils.transformation import get_quaternion_product
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

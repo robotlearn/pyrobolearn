@@ -10,7 +10,7 @@ import numpy as np
 # import quaternion
 
 from pyrobolearn.simulators import Simulator
-from pyrobolearn.utils.orientation import get_rpy_from_quaternion, get_matrix_from_quaternion
+from pyrobolearn.utils.transformation import get_rpy_from_quaternion, get_matrix_from_quaternion
 
 
 __author__ = "Brian Delhaisse"

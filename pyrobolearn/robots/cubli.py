@@ -5,7 +5,7 @@
 import os
 
 from pyrobolearn.robots.robot import Robot
-from pyrobolearn.utils.orientation import get_rpy_from_quaternion
+from pyrobolearn.utils.transformation import get_rpy_from_quaternion
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

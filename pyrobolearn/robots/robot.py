@@ -16,7 +16,7 @@ import numpy as np
 import collections
 import os
 
-from pyrobolearn.utils.orientation import *
+from pyrobolearn.utils.transformation import *
 from pyrobolearn.robots.base import ControllableBody
 
 
@@ -3195,7 +3195,7 @@ class Robot(ControllableBody):
 
         # evals, evecs = np.linalg.eigh(X)
         # evals, evecs = evals[::-1], evecs[:,::-1]
-        # #S, orientation = np.sqrt(evals), self.angular_converter.convertFrom(quaternion.from_rotation_matrix(evecs.T))
+        # #S, orientation = np.sqrt(evals), self.angular_converter.convert_from(quaternion.from_rotation_matrix(evecs.T))
         #
         # print(V[0])
         # print(V[1])

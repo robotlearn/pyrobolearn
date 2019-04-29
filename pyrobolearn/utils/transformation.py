@@ -610,7 +610,7 @@ def logarithm_map(q):
     Returns:
         float[3]: resulting 3d vector
     """
-    q = quat_converter.convertTo(q)
+    q = quat_converter.convert_to(q)
     v, u = q.w,  np.array([q.x, q.y, q.z])
 
     zero = np.zeros(3)
@@ -647,8 +647,8 @@ def angular_velocity_from_quaternion(q1, q2):
     Returns:
         float[3]: angular velocity (angular error in :math:`R^3`)
     """
-    q1 = quat_converter.convertTo(q1)
-    q2 = quat_converter.convertTo(q2)
+    q1 = quat_converter.convert_to(q1)
+    q2 = quat_converter.convert_to(q2)
     return 2 * logarithm_map(q1 * q2)
 
 

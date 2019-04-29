@@ -377,7 +377,7 @@ class BridgeMouseKeyboardWorld(Bridge):
                 # plane
                 x_screen = np.array([self.interface.mouse_x, self.interface.mouse_y, self.depth, 1])
                 x_world = self.world_camera.screen_to_world(x_screen, Vp_inv, P_inv, V_inv)[:3]
-                point = self.plane.getIntersectionPoint(x_world)
+                point = self.plane.get_intersection_point(x_world)
 
             # # draw some spheres on the plane
             # if self.display_trajectories:

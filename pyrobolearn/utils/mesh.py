@@ -1,19 +1,36 @@
+#!/usr/bin/env python
+"""Provide the code to create meshes using the `Mayavi` library.
+
+Most of the meshes in the world such as the `cone`, `ellipsoid`, and others were created using the hereby code.
+"""
 
 import numpy as np
+
 try:
     from mayavi import mlab
 except ImportError as e:
     raise ImportError(repr(e) + '\nTry to install Mayavi: pip install mayavi')
+
 try:
     import gdal
 except ImportError as e:
-    raise ImportError(repr(e) + '\nTry to install gdal: pip install gdal')
+    pass
+    # raise ImportError(repr(e) + '\nTry to install gdal: pip install gdal')
 
 import subprocess
 import fileinput
 import sys
 import os
 import scipy.interpolate
+
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "MIT"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
 
 
 def recenter(coords):
@@ -37,10 +54,10 @@ def recenter(coords):
 
     c_min, c_max = coords.min(), coords.max()
     c_center = c_min + (c_max - c_min) / 2.
-    return (coords - c_center)
+    return coords - c_center
 
 
-def createMesh(x, y, z, filename=None, show=False, center=True):
+def create_mesh(x, y, z, filename=None, show=False, center=True):
     """
     Create mesh from x,y,z arrays, and save it in the obj format.
 
@@ -61,32 +78,32 @@ def createMesh(x, y, z, filename=None, show=False, center=True):
 
         x, y, z = a * np.cos(theta) * np.cos(phi), b * np.cos(theta) * np.sin(phi), c * np.sin(theta)
 
-        createMesh(x, y, z, show=True)
+        create_mesh(x, y, z, show=True)
     """
-    #if not (isinstance(x, np.ndarray) and isinstance(y, np.ndarray) and isinstance(z, np.ndarray)):
-    #    raise TypeError("Expecting x, y, and z to be numpy arrays")
+    # if not (isinstance(x, np.ndarray) and isinstance(y, np.ndarray) and isinstance(z, np.ndarray)):
+    #     raise TypeError("Expecting x, y, and z to be numpy arrays")
 
     if isinstance(x, list) and isinstance(y, list) and isinstance(z, list):
         # create several 3D mesh
-        for i,j,k in zip(x,y,z):
+        for i, j, k in zip(x, y, z):
             # if we need to recenter
             if center:
-                i,j,k = recenter([i,j,k])
-            mlab.mesh(i,j,k)
+                i, j, k = recenter([i, j, k])
+            mlab.mesh(i, j, k)
     else:
         # if we need to recenter the data
         if center:
-            x,y,z = recenter([x,y,z])
+            x, y, z = recenter([x, y, z])
 
         # create 3D mesh
-        mlab.mesh(x,y,z)
+        mlab.mesh(x, y, z)
 
     # save mesh
     if filename is not None:
-        if filename[-4:] == '.obj': # This is because the .obj saved by Mayavi is not correct (see in Meshlab)
+        if filename[-4:] == '.obj':  # This is because the .obj saved by Mayavi is not correct (see in Meshlab)
             x3dfile = filename[:-4] + '.x3d'
             mlab.savefig(x3dfile)
-            convertX3dToObj(x3dfile, removeX3d=True)
+            convert_x3d_to_obj(x3dfile, removeX3d=True)
         else:
             mlab.savefig(filename)
 
@@ -97,8 +114,8 @@ def createMesh(x, y, z, filename=None, show=False, center=True):
         mlab.close()
 
 
-def createSurfMesh(surface, filename=None, show=False, subsample=None, interpolate_fct='multiquadric',
-                   lower_bound=None, upper_bound=None, dtype=None):
+def create_surf_mesh(surface, filename=None, show=False, subsample=None, interpolate_fct='multiquadric',
+                     lower_bound=None, upper_bound=None, dtype=None):
     """
     Create surface (heightmap) mesh, and save it in the obj format.
 
@@ -132,10 +149,10 @@ def createSurfMesh(surface, filename=None, show=False, subsample=None, interpola
         import numpy as np
 
         height = np.random.rand(100,100) # in meters
-        createSurfMesh(height, show=True)
+        create_surf_mesh(height, show=True)
     """
     if isinstance(surface, str):
-        from utils.heightmap_generator import heightmap_gdal
+        from pyrobolearn.worlds.utils.heightmap_generator import heightmap_gdal
         surface = heightmap_gdal(surface, subsample=subsample, interpolate_fct=interpolate_fct,
                                  lower_bound=lower_bound, upper_bound=upper_bound, dtype=dtype)
 
@@ -152,7 +169,7 @@ def createSurfMesh(surface, filename=None, show=False, subsample=None, interpola
         if filename[-4:] == '.obj':  # This is because the .obj saved by Mayavi is not correct (see in Meshlab)
             x3dfile = filename[:-4] + '.x3d'
             mlab.savefig(x3dfile)
-            convertX3dToObj(x3dfile, removeX3d=True)
+            convert_x3d_to_obj(x3dfile, removeX3d=True)
         else:
             mlab.savefig(filename)
 
@@ -163,8 +180,8 @@ def createSurfMesh(surface, filename=None, show=False, subsample=None, interpola
         mlab.close()
 
 
-def create3DMesh(heightmap, x=None, y=None, depth_level=1., filename=None, show=False, subsample=None,
-                 interpolate_fct='multiquadric', lower_bound=None, upper_bound=None, dtype=None, center=True):
+def create_3d_mesh(heightmap, x=None, y=None, depth_level=1., filename=None, show=False, subsample=None,
+                   interpolate_fct='multiquadric', lower_bound=None, upper_bound=None, dtype=None, center=True):
     """
     Create 3D mesh from heightmap (which can be a 2D array or an image (.tif, .png, .jpg, etc), and save it in
     the obj format.
@@ -206,7 +223,7 @@ def create3DMesh(heightmap, x=None, y=None, depth_level=1., filename=None, show=
         import numpy as np
 
         height = np.random.rand(100,100) # in meters
-        create3DMesh(height, show=True)
+        create_3d_mesh(height, show=True)
     """
     if isinstance(heightmap, str):
         # load data (raster)
@@ -221,8 +238,8 @@ def create3DMesh(heightmap, x=None, y=None, depth_level=1., filename=None, show=
         # 4 = column rotation (typically zero)
         # 5 = height of a pixel (typically negative)
 
-        # numpy array of shape: (channel, height, width)
-        #dem = data.ReadAsArray()
+        # # numpy array of shape: (channel, height, width)
+        # dem = data.ReadAsArray()
 
         # get elevation values (i.e. height values) with shape (height, width)
         band = data.GetRasterBand(1)
@@ -275,7 +292,7 @@ def create3DMesh(heightmap, x=None, y=None, depth_level=1., filename=None, show=
 
     # center the coordinates if specified
     if center:
-        x,y = recenter([x,y])
+        x, y = recenter([x, y])
 
     # create lower plane
     z0 = np.min(z) * np.ones(z.shape) - depth_level
@@ -287,16 +304,16 @@ def create3DMesh(heightmap, x=None, y=None, depth_level=1., filename=None, show=
     c4 = (np.vstack((x[:, -1], x[:, -1])), np.vstack((y[:, -1], y[:, -1])), np.vstack((z0[:, -1], z[:, -1])))
     c = [c1, c2, c3, c4]
 
-    # createMesh([x, x] + [i[0] for i in c], [y, y] + [i[1] for i in c], [z, z0] + [i[2] for i in c],
+    # create_mesh([x, x] + [i[0] for i in c], [y, y] + [i[1] for i in c], [z, z0] + [i[2] for i in c],
     #            filename=filename, show=show, center=False)
-    createMesh([x, x] + [i[0] for i in c], [y, y] + [i[1] for i in c], [z, z0] + [i[2] for i in c],
-               filename=filename, show=show, center=False)
+    create_mesh([x, x] + [i[0] for i in c], [y, y] + [i[1] for i in c], [z, z0] + [i[2] for i in c],
+                filename=filename, show=show, center=False)
 
 
-def createURDFFromMesh(meshfile, filename, position=(0.,0.,0.), orientation=(0.,0.,0.), scale=(1.,1.,1.),
-                       color=(1,1,1,1), texture=None, mass=0., inertia=(0.,0.,0.,0.,0.,0.),
-                       lateral_friction=0.5, rolling_friction=0., spinning_friction=0., restitution=0.,
-                       kp=None, kd=None): #, cfm=0., erf=0.):
+def create_urdf_from_mesh(meshfile, filename, position=(0., 0., 0.), orientation=(0., 0., 0.), scale=(1., 1., 1.),
+                          color=(1, 1, 1, 1), texture=None, mass=0., inertia=(0., 0., 0., 0., 0., 0.),
+                          lateral_friction=0.5, rolling_friction=0., spinning_friction=0., restitution=0.,
+                          kp=None, kd=None):  # , cfm=0., erf=0.):
     """
     Create a URDF file and insert the specified mesh inside.
 
@@ -314,6 +331,7 @@ def createURDFFromMesh(meshfile, filename, position=(0.,0.,0.), orientation=(0.,
         lateral_friction (float): friction coefficient
         rolling_friction (float): rolling friction coefficient orthogonal to contact normal
         spinning_friction (float): spinning friction coefficient around contact normal
+        restitution (float): restitution coefficient
         kp (float, None): contact stiffness (useful to make surfaces soft). Set it to None/-1 if not using it.
         kd (float, None): contact damping (useful to make surfaces soft). Set it to None/-1 if not using it.
         #cfm: constraint force mixing
@@ -328,13 +346,13 @@ def createURDFFromMesh(meshfile, filename, position=(0.,0.,0.), orientation=(0.,
         - "Tutorial: Using a URDF in Gazebo": http://gazebosim.org/tutorials/?tut=ros_urdf
         - SDF format: http://sdformat.org/spec
     """
-    def getStr(lst):
+    def get_str(lst):
         return ' '.join([str(i) for i in lst])
 
-    position = getStr(position)
-    orientation = getStr(orientation)
-    color = getStr(color)
-    scale = getStr(scale)
+    position = get_str(position)
+    orientation = get_str(orientation)
+    color = get_str(color)
+    scale = get_str(scale)
     name = meshfile.split('/')[-1][:-4]
     ixx, ixy, ixz, iyy, iyz, izz = [str(i) for i in inertia]
 
@@ -388,8 +406,7 @@ def createURDFFromMesh(meshfile, filename, position=(0.,0.,0.), orientation=(0.,
         f.write('</robot>')
 
 
-
-def convertX3dToObj(filename, removeX3d=True):
+def convert_x3d_to_obj(filename, removeX3d=True):
     """
     Convert a .x3d into an .obj file.
 
@@ -424,7 +441,7 @@ def convertX3dToObj(filename, removeX3d=True):
             raise OSError("Error while running the command `meshlabserver`: {}".format(e))
 
 
-def convertMesh(fromFilename, toFilename, removeFile=True):
+def convert_mesh(fromFilename, toFilename, removeFile=True):
     """
     Convert the given file containing the original mesh to the other specified format.
     The available formats are the ones supported by `meshlab`.
@@ -457,7 +474,7 @@ def convertMesh(fromFilename, toFilename, removeFile=True):
             raise OSError("Error while running the command `meshlabserver`: {}".format(e))
 
 
-def readObjFile(filename):
+def read_obj_file(filename):
     r"""
     Read an .obj file and returns the whole file, as well as the list of vertices, and faces.
 
@@ -493,7 +510,7 @@ def readObjFile(filename):
     return data, vertices, faces
 
 
-def flipFaceNormalsInObj(filename):
+def flip_face_normals_in_obj(filename):
     """
     Flip all the face normals in .obj file.
 
@@ -516,7 +533,7 @@ def flipFaceNormalsInObj(filename):
         f.writelines(data)
 
 
-def flipFaceNormalsForConvexObj(filename, outward=True):
+def flip_face_normals_for_convex_obj(filename, outward=True):
     """
     Flip the face normals for convex objects, and rewrite the obj file
 
@@ -526,7 +543,7 @@ def flipFaceNormalsForConvexObj(filename, outward=True):
             inward the object.
     """
     # read the obj file
-    data, vertices, faces = readObjFile(filename)
+    data, vertices, faces = read_obj_file(filename)
 
     # compute the center of the object
     center = np.mean(vertices, axis=0)
@@ -568,7 +585,7 @@ def flipFaceNormalsForConvexObj(filename, outward=True):
         f.writelines(data)
 
 
-def flipFaceNormalsForExpandedObj(filename, expanded_filename, outward=True, remove_expanded_file=False):
+def flip_face_normals_for_expanded_obj(filename, expanded_filename, outward=True, remove_expanded_file=False):
     r"""
     By comparing the expanded object with the original object, we can compute efficiently the normal vector to each
     face such that it points outward. Then comparing the direction of these obtained normal vectors with the ones
@@ -580,10 +597,11 @@ def flipFaceNormalsForExpandedObj(filename, expanded_filename, outward=True, rem
             has been expanded in every dimension.
         outward (bool): if the face normals should point outward. If False, they will be flipped such that they point
             inward the object.
+        remove_expanded_file (bool): if True, it will remove the expanded file.
     """
     # read the obj files
-    d1, v1, f1 = readObjFile(filename)
-    d2, v2, f2 = readObjFile(expanded_filename)
+    d1, v1, f1 = read_obj_file(filename)
+    d2, v2, f2 = read_obj_file(expanded_filename)
 
     # check the size of the obj files (they have to match)
     if len(v1) != len(v2) or len(f1) != len(f2):
@@ -633,52 +651,50 @@ def flipFaceNormalsForExpandedObj(filename, expanded_filename, outward=True, rem
 if __name__ == '__main__':
 
     # 1. create 3D ellipsoid mesh (see `https://en.wikipedia.org/wiki/Ellipsoid` for more info)
-    a,b,c,n = 1., 0.5, 0.5, 50
-    #a,b,c,n = .5, .5, .5, 37
+    a, b, c, n = 1., 0.5, 0.5, 50
+    # a, b, c, n = .5, .5, .5, 37
     theta, phi = np.meshgrid(np.linspace(-np.pi/2, np.pi/2, n), np.linspace(-np.pi, np.pi, n))
 
     x = a * np.cos(theta) * np.cos(phi)
     y = b * np.cos(theta) * np.sin(phi)
     z = c * np.sin(theta)
 
-    createMesh(x, y, z, show=True)
-    #createMesh(x, y, z, filename='ellipsoid.obj', show=True)
+    create_mesh(x, y, z, show=True)
+    # create_mesh(x, y, z, filename='ellipsoid.obj', show=True)
 
     # 2. create heightmap mesh
     height = np.random.rand(100,100) # in meters
-    createSurfMesh(height, show=True)
+    create_surf_mesh(height, show=True)
 
     # 3. create right triangular prism
-    x = np.array([[-0.5,-0.5],
+    x = np.array([[-0.5, -0.5],
                   [0.5, 0.5],
-                  [-0.5,-0.5],
-                  [-0.5,-0.5],
-                  [-0.5,0.5],
-                  [0.5,-0.5],
+                  [-0.5, -0.5],
+                  [-0.5, -0.5],
+                  [-0.5, 0.5],
+                  [0.5, -0.5],
                   [-0.5, 0.5],
                   [0.5, -0.5]])
-    y = np.array([[-0.5,0.5],
-                  [-0.5,0.5],
-                  [-0.5,0.5],
-                  [-0.5,0.5],
-                  [-0.5,-0.5],
-                  [-0.5,-0.5],
+    y = np.array([[-0.5, 0.5],
+                  [-0.5, 0.5],
+                  [-0.5, 0.5],
+                  [-0.5, 0.5],
+                  [-0.5, -0.5],
+                  [-0.5, -0.5],
                   [0.5, 0.5],
                   [0.5, 0.5]])
-    z = np.array([[0.,0.],
-                  [0.,0.],
-                  [1.,1.],
-                  [0.,0.],
-                  [0.,0.],
-                  [0.,1.],
+    z = np.array([[0., 0.],
+                  [0., 0.],
+                  [1., 1.],
+                  [0., 0.],
+                  [0., 0.],
+                  [0., 1.],
                   [0., 0.],
                   [0., 1.]])
 
-    #createMesh(x, y, z, show=True)
-    createMesh(x, y, z, filename='right_triangular_prism.obj', show=True)
-    flipFaceNormalsForConvexObj('right_triangular_prism.obj', outward=True)
-
-    exit()
+    # create_mesh(x, y, z, show=True)
+    create_mesh(x, y, z, filename='right_triangular_prism.obj', show=True)
+    flip_face_normals_for_convex_obj('right_triangular_prism.obj', outward=True)
 
     # 4. create cone
     radius, height, n = 0.5, 1., 50
@@ -686,17 +702,17 @@ if __name__ == '__main__':
     [h, theta] = np.meshgrid((0., height), np.linspace(0, 2*np.pi, n))
     x, y, z = r * np.cos(theta), r * np.sin(theta), h
     # close the cone at the bottom
-    [r, theta] =  np.meshgrid((0., radius), np.linspace(0, 2*np.pi, n))
+    [r, theta] = np.meshgrid((0., radius), np.linspace(0, 2*np.pi, n))
     x = np.vstack((x, r * np.cos(theta)))
     y = np.vstack((y, r * np.sin(theta)))
     z = np.vstack((z, np.zeros(r.shape)))
 
-    createMesh(x, y, z, show=True)
-    #createMesh(x, y, z, filename='cone.obj', show=True)
+    create_mesh(x, y, z, show=True)
+    # create_mesh(x, y, z, filename='cone.obj', show=True)
 
     # 5. create 3D heightmap
     dx, dy, dz = 5., 5., 0.01
-    x,y = np.meshgrid(np.linspace(-dx, dx, int(2*dx)), np.linspace(-dy, dy, int(2*dy)))
+    x, y = np.meshgrid(np.linspace(-dx, dx, int(2*dx)), np.linspace(-dy, dy, int(2*dy)))
     z = np.random.rand(*x.shape) + dz
 
     # z0 = np.zeros(x.shape)
@@ -709,6 +725,6 @@ if __name__ == '__main__':
     # c4 = (np.vstack((x[:,-1], x[:,-1])), np.vstack((y[:,-1], y[:,-1])), np.vstack((z0[:,-1], z[:,-1])))
     # c = [c1,c2,c3,c4]
     #
-    # createMesh([x,x]+[i[0] for i in c], [y,y]+[i[1] for i in c], [z,z0]+[i[2] for i in c], show=True)
+    # create_mesh([x,x]+[i[0] for i in c], [y,y]+[i[1] for i in c], [z,z0]+[i[2] for i in c], show=True)
 
-    create3DMesh(z, x, y, dz, show=True)
+    create_3d_mesh(z, x, y, dz, show=True)

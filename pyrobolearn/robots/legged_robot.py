@@ -138,7 +138,7 @@ class LeggedRobot(Robot):
                 raise TypeError("Expecting foot_id to be a list of int, or an int. Instead got: "
                                 "{}".format(type(foot_id)))
 
-    def center_of_pressure(self, use_simulator=False):
+    def center_of_pressure(self, floor_id=None):
         r"""
         Center of Pressure (CoP).
 
@@ -164,9 +164,16 @@ class LeggedRobot(Robot):
             [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
             Implications", Popovic et al., 2005
         """
-        # self.sim.get_contact_points(self.id, foot_id)  # use simulator
-        # use F/T sensor to get CoP
-        pass
+        if floor_id is not None:
+            # get contact points between the robot's links and the floor
+            points = self.sim.get_contact_points(body1=self.id, body2=floor_id)
+            positions = np.array([point[6] for point in points])  # contact positions in world frame
+            forces = np.array([point[9] for point in points]).reshape(-1, 1)  # normal force at contact points
+            cop = forces * positions / np.sum(forces)
+            return cop
+
+        # check if there are force/pressure sensors at the links/joints
+        raise NotImplementedError
 
     def zero_moment_point(self, update_com=False, use_simulator=False):
         r"""
