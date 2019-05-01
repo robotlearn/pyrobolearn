@@ -40,6 +40,12 @@ class LeggedRobot(Robot):
         if foot_frictions is not None:
             self.set_foot_friction(foot_frictions)
 
+        # visual debug
+        self.cop_visual = None  # visual sphere for center of pressure
+        self.zmp_visual = None  # visual sphere for zero-moment point
+        self.fri_visual = None  # visual sphere for foot rotation index
+        self.cmp_visual = None  # visual sphere for centroidal moment pivot
+
     ##############
     # Properties #
     ##############
@@ -140,7 +146,7 @@ class LeggedRobot(Robot):
 
     def center_of_pressure(self, floor_id=None):
         r"""
-        Center of Pressure (CoP).
+        Compute and return the center of Pressure (CoP).
 
         "The CoP is the point on the ground where the resultant of the ground-reaction force acts". [1]
 
@@ -159,6 +165,12 @@ class LeggedRobot(Robot):
             - the ZMP and CoP are equivalent for horizontal ground surfaces. For irregular ground surfaces they are
             distinct. [2]
 
+        Args:
+            floor_id (int, None): id of the floor in the simulator. If None, it will use the force/pressure sensors.
+
+        Returns:
+            np.array[3], None: center of pressure. None if the robot is not in contact with the ground.
+
         References:
             [1] "Postural Stability of Biped Robots and Foot-Rotation Index (FRI) Point", Goswami, 1999
             [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
@@ -167,15 +179,25 @@ class LeggedRobot(Robot):
         if floor_id is not None:
             # get contact points between the robot's links and the floor
             points = self.sim.get_contact_points(body1=self.id, body2=floor_id)
+
+            # if no contact points
+            if len(points) == 0:
+                return None
+
+            # compute contact positions (in world frame) and normal force at these points
             positions = np.array([point[6] for point in points])  # contact positions in world frame
             forces = np.array([point[9] for point in points]).reshape(-1, 1)  # normal force at contact points
+
+            # compute CoP and return it
             cop = forces * positions / np.sum(forces)
+            cop = np.sum(cop, axis=0)
+
             return cop
 
         # check if there are force/pressure sensors at the links/joints
         raise NotImplementedError
 
-    def zero_moment_point(self, update_com=False, use_simulator=False):
+    def zero_moment_point(self, update_com=False, floor_id=None):
         r"""
         Zero Moment Point (ZMP).
 
@@ -189,9 +211,21 @@ class LeggedRobot(Robot):
             x_{ZMP} &= x_{CoM} - \frac{F_x}{F_z + Mg} z_{CoM} - \frac{\tau_{y}(\vec{r}_{CoM})}{F_z + Mg} \\
             y_{ZMP} &= y_{CoM} - \frac{F_y}{F_z + Mg} z_{CoM} + \frac{\tau_{x}(\vec{r}_{CoM})}{F_z + Mg}
 
-        where :math:`[x_{CoM}, y_{CoM}, z_{CoM}]` is the center of mass position, :math:`F` is the net force acting
-        on the whole body, :math:`M` is the body mass, :math:`g` is the gravity value, :math:`\vec{r}_{CoM}` is the
-        body center of mass, and :math:`\tau(\vec{r}_{CoM})` is the net whole-body moment about the center of mass.
+        where :math:`[x_{CoM}, y_{CoM}, z_{CoM}]` is the center of mass position, :math:`M` is the body mass,
+        :math:`g` is the gravity value, :math:`F = Ma_{CoM}` is the net force acting on the whole body (including the
+        gravity force :math:`-Mg`), :math:`\vec{r}_{CoM}` is the body center of mass, and :math:`\tau(\vec{r}_{CoM})`
+        is the net whole-body moment about the center of mass.
+
+        In the case where there are only ground reaction forces (+ the gravity force) acting on the robot, then the
+        ZMP point is given by [3]:
+
+        .. math::
+
+            x_{ZMP} &= x_{CoM} - \frac{F_{G.R.X}}{F_{G.R.Z}} z_{CoM} - \frac{\tau_{y}(\vec{r}_{CoM})}{F_{G.R.Z}} \\
+            y_{ZMP} &= y_{CoM} - \frac{F_{G.R.Y}}{F_{G.R.Z}} z_{CoM} + \frac{\tau_{x}(\vec{r}_{CoM})}{F_{G.R.Z}}
+
+        where :math:`F_{G.R}` are the ground reaction forces, and the net moment about the CoM
+        :math:`\tau(\vec{r}_{CoM})` is computed using the ground reaction forces.
 
         The ZMP constraints can be expressed as:
 
@@ -212,16 +246,68 @@ class LeggedRobot(Robot):
             - the FRI coincides with the ZMP when the foot is stationary. [1]
             - the CMP coincides with the ZMP, when the moment about the CoM is zero. [1]
 
+        Args:
+            update_com (bool): if True, it will compute and update the CoM position.
+            floor_id (int, None): id of the floor in the simulator. If None, it will use the force/pressure sensors.
+
+        Returns:
+            np.array[3], None: zero-moment point. None if the ground reaction force in z is 0.
+
         References:
             [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
             Implications", Popovic et al., 2005
             [2] "Biped Walking Pattern Generation by using Preview Control of ZMP", Kajita et al., 2003
+            [3] "Exploiting Angular Momentum to Enhance Bipedal Center-of-Mass Control", Hofmann et al., 2009
         """
-        pass
+        # if we need to update the CoM
+        if update_com:
+            self.com = self.get_center_of_mass_position()
 
-    def foot_rotation_index(self):
+        # if the floor id is given, use the simulator to compute the ZMP (using the contact points)
+        if floor_id is not None:
+            # get contact points between the robot's links and the floor
+            points = self.sim.get_contact_points(body1=self.id, body2=floor_id)
+
+            # if no contact points
+            if len(points) == 0:
+                return None
+
+            # compute contact positions in world frame
+            positions = np.array([point[6] for point in points])
+
+            # get all the ground reaction forces
+            forces_z = np.array([point[9] * point[7] for point in points])  # normal force
+            forces_y = np.array([point[10] * point[11] for point in points])  # first lateral friction force
+            forces_x = np.array([point[12] * point[13] for point in points])  # second lateral friction force
+            forces = forces_x + forces_y + forces_z  # ground reaction forces
+
+            # compute all the moments with respect to the CoM
+            moments = np.cross(positions - self.com, forces)
+
+            # sum all the ground reaction forces and moments
+            forces = np.sum(forces, axis=0)
+            moments = np.sum(moments, axis=0)
+
+            # if no ground reaction forces in z, return None
+            if np.isclose(forces[2], 0):
+                return None
+
+            # compute ZMP
+            zmp = np.copy(self.com)
+            zmp[2] = np.mean(positions, axis=0)[2]
+
+            zmp[0] += -forces[0]/forces[2] * self.com[2] - moments[1]/forces[2]
+            zmp[1] += -forces[1]/forces[2] * self.com[2] + moments[0]/forces[2]
+
+            # return ZMP
+            return zmp
+
+        # check if there are force/pressure sensors at the links/joints
+        raise NotImplementedError
+
+    def foot_rotation_indicator(self):
         r"""
-        Foot Rotation Index (FRI).
+        Foot Rotation Indicator (FRI).
 
         "The FRI is the point (within or outside the support base) where the ground reaction force would have to act
         to keep the foot from accelerating. When the foot is stationary, the FRI coincides with the ZMP." [1]
@@ -241,12 +327,13 @@ class LeggedRobot(Robot):
             - the FRI coincides with the ZMP when the foot is stationary. [1]
 
         References:
-            [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
+            [1] "Postural Stability of Biped Robots and the Foot-Rotation Indicator (FRI) Point", Goswami, 1999
+            [2] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
             Implications", Popovic et al., 2005
         """
-        pass
+        raise NotImplementedError
 
-    def centroidal_moment_pivot(self, update_com=False, use_simulator=False):
+    def centroidal_moment_pivot(self, update_com=False, floor_id=None):
         r"""
         Centroidal Moment Pivot (CMP).
 
@@ -267,11 +354,51 @@ class LeggedRobot(Robot):
         Notes:
             - the CMP coincides with the ZMP, when the moment about the CoM is zero. [1]
 
+        Args:
+            update_com (bool): if True, it will compute and update the CoM position.
+            floor_id (int, None): id of the floor in the simulator. If None, it will use the force/pressure sensors.
+
+        Returns:
+            np.array[3], None: centroidal moment pivot point. None if the ground reaction force in z is 0.
+
         References:
             [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
             Implications", Popovic et al., 2005
         """
-        pass
+        # update the CoM
+        if update_com:
+            self.get_center_of_mass_position()
+
+        if floor_id is not None:
+            # get contact points between the robot's links and the floor
+            points = self.sim.get_contact_points(body1=self.id, body2=floor_id)
+
+            # if no contact points
+            if len(points) == 0:
+                return None
+
+            # compute contact positions in world frame
+            positions = np.array([point[6] for point in points])
+
+            # get all the ground reaction forces
+            forces_z = np.array([point[9] * point[7] for point in points])  # normal force
+            forces_y = np.array([point[10] * point[11] for point in points])  # first lateral friction force
+            forces_x = np.array([point[12] * point[13] for point in points])  # second lateral friction force
+            forces = forces_x + forces_y + forces_z  # ground reaction forces
+            forces = np.sum(forces, axis=0)  # sum all the ground reaction forces
+
+            # if no ground reaction forces in z, return None
+            if np.isclose(forces[2], 0):
+                return None
+
+            # compute CMP
+            cmp = np.copy(self.com)
+            cmp[2] = np.mean(positions, axis=0)[2]
+            cmp[0] -= forces[0] / forces[2] * self.com[2]
+            cmp[1] -= forces[1] / forces[2] * self.com[2]
+
+            # return CMP
+            return cmp
 
     # def divergent_component_motion(self):
     #     r"""
@@ -471,6 +598,129 @@ class LeggedRobot(Robot):
                 ids.append(id_)
 
         return ids
+
+    def draw_cop(self, cop=None, radius=0.05, color=(0, 1, 0, 0.8)):
+        """
+        Draw the CoP in the simulator.
+
+        Args:
+            cop (np.array[3], None, int): center of pressure. If None or int, it will compute the CoP. If None, it
+                will compute it using the force sensors. If int, it will be assumed to be the floor's id, and will
+                use the simulator to compute the CoP.
+            radius (float): radius of the sphere representing the CoP of the robot
+            color (tuple of 4 floats): rgba color of the sphere (each value is between 0 and 1). By default it is red.
+        """
+        if cop is None or isinstance(cop, (int, long)):
+            cop = self.center_of_pressure(floor_id=cop)
+        if self.cop_visual is None and cop is not None:  # create visual shape if not already created
+            cop_visual_shape = self.sim.create_visual_shape(self.sim.GEOM_SPHERE, radius=radius, rgba_color=color)
+            self.cop_visual = self.sim.create_body(mass=0, visual_shape_id=cop_visual_shape, position=cop)
+        else:  # set CoP position
+            if cop is None:
+                self.remove_cop()
+            else:
+                self.sim.reset_base_pose(self.cop_visual, cop, [0, 0, 0, 1])
+
+    def draw_zmp(self, zmp=None, radius=0.05, color=(1, 1, 0, 0.8), update_com=False):
+        """
+        Draw the ZMP in the simulator.
+
+        Args:
+            zmp (np.array[3], None, int): zero-moment point. If None or int, it will compute the ZMP. If None, it
+                will compute it using the force sensors. If int, it will be assumed to be the floor's id, and will
+                use the simulator to compute the ZMP.
+            radius (float): radius of the sphere representing the ZMP of the robot
+            color (float[4]): rgba color of the sphere (each value is between 0 and 1). By default it is red.
+            update_com (bool): if we should compute the CoM, if None or int is given for the :attr:`zmp`.
+        """
+        if zmp is None or isinstance(zmp, (int, long)):
+            zmp = self.zero_moment_point(update_com=update_com, floor_id=zmp)
+        if self.zmp_visual is None and zmp is not None:  # create visual shape if not already created
+            zmp_visual_shape = self.sim.create_visual_shape(self.sim.GEOM_SPHERE, radius=radius, rgba_color=color)
+            self.zmp_visual = self.sim.create_body(mass=0, visual_shape_id=zmp_visual_shape, position=zmp)
+        else:  # set ZMP position
+            if zmp is None:
+                self.remove_zmp()
+            else:
+                self.sim.reset_base_pose(self.zmp_visual, zmp, [0, 0, 0, 1])
+
+    def draw_cmp(self, cmp=None, radius=0.05, color=(1, 0, 0, 0.8), update_com=False):
+        """
+        Draw the CMP in the simulator.
+
+        Args:
+            cmp (np.array[3], None, int): central moment pivot. If None or int, it will compute the CMP. If None, it
+                will compute it using the force sensors. If int, it will be assumed to be the floor's id, and will
+                use the simulator to compute the CMP.
+            radius (float): radius of the sphere representing the CMP of the robot
+            color (float[4]): rgba color of the sphere (each value is between 0 and 1). By default it is red.
+            update_com (bool): if we should compute the CoM, if None or int is given for the :attr:`cmp`.
+        """
+        if cmp is None or isinstance(cmp, (int, long)):
+            cmp = self.centroidal_moment_pivot(update_com=update_com, floor_id=cmp)
+        if self.cmp_visual is None and cmp is not None:  # create visual shape if not already created
+            cmp_visual_shape = self.sim.create_visual_shape(self.sim.GEOM_SPHERE, radius=radius, rgba_color=color)
+            self.cmp_visual = self.sim.create_body(mass=0, visual_shape_id=cmp_visual_shape, position=cmp)
+        else:  # set ZMP position
+            if cmp is None:
+                self.remove_cmp()
+            else:
+                self.sim.reset_base_pose(self.cmp_visual, cmp, [0, 0, 0, 1])
+
+    def draw_fri(self, fri=None, radius=0.05, color=(1, 0, 0, 0.8), update_com=False):
+        """
+        Draw the FRI in the simulator.
+
+        Args:
+            fri (np.array[3], None, int): central moment pivot. If None or int, it will compute the FRI. If None, it
+                will compute it using the force sensors. If int, it will be assumed to be the floor's id, and will
+                use the simulator to compute the FRI.
+            radius (float): radius of the sphere representing the FRI of the robot
+            color (float[4]): rgba color of the sphere (each value is between 0 and 1). By default it is red.
+            update_com (bool): if we should compute the CoM, if None or int is given for the :attr:`fri`.
+        """
+        if fri is None or isinstance(fri, (int, long)):
+            fri = self.centroidal_moment_pivot(update_com=update_com, floor_id=fri)
+        if self.fri_visual is None and fri is not None:  # create visual shape if not already created
+            fri_visual_shape = self.sim.create_visual_shape(self.sim.GEOM_SPHERE, radius=radius, rgba_color=color)
+            self.fri_visual = self.sim.create_body(mass=0, visual_shape_id=fri_visual_shape, position=fri)
+        else:  # set FRI position
+            if fri is None:
+                self.remove_cmp()
+            else:
+                self.sim.reset_base_pose(self.fri_visual, fri, [0, 0, 0, 1])
+
+    def remove_cop(self):
+        """
+        Remove the CoP from the simulator.
+        """
+        if self.cop_visual is not None:
+            self.sim.remove_body(self.cop_visual)
+            self.cop_visual = None
+
+    def remove_zmp(self):
+        """
+        Remove the ZMP from the simulator.
+        """
+        if self.zmp_visual is not None:
+            self.sim.remove_body(self.zmp_visual)
+            self.zmp_visual = None
+
+    def remove_cmp(self):
+        """
+        Remove the CMP from the simulator.
+        """
+        if self.cmp_visual is not None:
+            self.sim.remove_body(self.cmp_visual)
+            self.cmp_visual = None
+
+    def remove_fri(self):
+        """
+        Remove the FRI from the simulator.
+        """
+        if self.fri_visual is not None:
+            self.sim.remove_body(self.fri_visual)
+            self.fri_visual = None
 
 
 class BipedRobot(LeggedRobot):

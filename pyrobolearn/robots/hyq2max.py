@@ -27,6 +27,8 @@ class HyQ2Max(QuadrupedRobot):
         [3] https://github.com/iit-DLSLab/hyq2max-description
     """
 
+    default_height = 0.8
+
     def __init__(self,
                  simulator,
                  position=(0, 0, 0.8),
@@ -77,7 +79,7 @@ if __name__ == "__main__":
 
     # create world
     world = BasicWorld(sim)
-    world.load_japanese_monastery()
+    # world.load_japanese_monastery()
 
     # create robot
     robot = HyQ2Max(sim)
@@ -93,6 +95,9 @@ if __name__ == "__main__":
         # robot.update_joint_slider()
         robot.compute_and_draw_com_position()
         robot.compute_and_draw_projected_com_position()
+        # robot.draw_cop(cop=world.floor_id)
+        # robot.draw_zmp(zmp=world.floor_id)
+        # robot.draw_cmp(cmp=world.floor_id)
 
         # draw friction cones and support polygon
         if i == 500:

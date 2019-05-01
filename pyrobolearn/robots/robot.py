@@ -2984,7 +2984,7 @@ class Robot(ControllableBody):
         """
         pass
 
-    def compute_and_draw_com_position(self, radius=0.05, color=(1, 0, 0, 1)):
+    def compute_and_draw_com_position(self, radius=0.05, color=(1, 0, 0, 0.8)):
         """
         Compute the CoM and draw it as a sphere in the simulator.
 
@@ -2999,7 +2999,7 @@ class Robot(ControllableBody):
         self.draw_com_position(radius=radius, color=color)
         return self.com
 
-    def draw_com_position(self, radius=0.05, color=(1, 0, 0, 1)):
+    def draw_com_position(self, radius=0.05, color=(1, 0, 0, 0.8)):
         """
         Draw the CoM in the simulator.
 
@@ -3010,7 +3010,7 @@ class Robot(ControllableBody):
             radius (float): radius of the sphere representing the CoM of the robot
             color (float[4]): rgba color of the sphere. By default it is red.
         """
-        if self.com_visual is None: # create visual shape if not already created
+        if self.com_visual is None:  # create visual shape if not already created
             com_visual_shape = self.sim.create_visual_shape(self.sim.GEOM_SPHERE, radius=radius, rgba_color=color)
             self.com_visual = self.sim.create_body(mass=0, visual_shape_id=com_visual_shape, position=self.com)
         else:  # set CoM position
@@ -3043,7 +3043,7 @@ class Robot(ControllableBody):
         else:
             return None
 
-    def compute_and_draw_projected_com_position(self, radius=0.05, color=(0, 0, 1, 1)):
+    def compute_and_draw_projected_com_position(self, radius=0.05, color=(0, 0, 1, 0.8)):
         """
         Compute and draw the projected center of mass.
 
