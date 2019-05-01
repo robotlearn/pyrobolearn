@@ -16,11 +16,14 @@ import time
 
 from pyrobolearn.simulators import Simulator
 from pyrobolearn.worlds.world_camera import WorldCamera
-
-# from pyrobolearn.utils.heightmap_generator import *  # TODO: problem with gdal installation
 from pyrobolearn.utils import has_method, has_variable
-
 from pyrobolearn.robots import Body, Robot, robot_names_to_classes
+# TODO: to install the `gdal` library, run the script `pyrobolearn/scripts/install_gdal.sh`, by default do not
+#  import it
+from pyrobolearn.worlds.utils.heightmaps.diamond_square import diamond_square_heightmap, diamond_square_heightmap_2
+from pyrobolearn.worlds.utils.heightmaps.rbf import rbf_heightmap
+from pyrobolearn.worlds.utils.heightmaps.equation import equation_heightmap
+from pyrobolearn.worlds.utils.obj_generator import create_obj_from_heightmap
 
 
 __author__ = "Brian Delhaisse"
@@ -369,6 +372,10 @@ class World(object):
             Robot: instance of the Robot class
         """
         # TODO check the height of the terrain where we wish to load the robot
+        def check_height(position):
+            """check that the position of the robot is in accordance with the height of the terrain for that
+            position."""
+            return position
 
         if isinstance(robot, Robot):  # the robot is already loaded, then add it to the list
             pass
@@ -381,9 +388,12 @@ class World(object):
                 robot = robot_class(self.sim, position=position, orientation=orientation, fixed_base=fixed_base,
                                     *args, **kwargs)
 
-            else:  # robot is the path to the urdf
+            elif robot[-4:] == 'urdf':  # robot is the path to the urdf
                 robot = Robot(self.sim, urdf=robot, position=position, orientation=orientation, fixed_base=fixed_base,
                               *args, **kwargs)
+
+            else:
+                raise ValueError("The given string does not correspond to any robots or urdfs: {}".format(robot))
 
         elif inspect.isclass(robot):  # robot class
             robot = robot(self.sim, position=position, orientation=orientation, fixed_base=fixed_base, *args, **kwargs)
@@ -542,9 +552,6 @@ class World(object):
             object_id (int): object id
             position (float[3]): new position of the object. If None, it will keep the old position.
             orientation (float[4]): new orientation of the object. If None, it will keep the old orientation.
-
-        Returns:
-            None
         """
         if position is None:
             position = self.sim.get_base_pose(object_id)[0]
@@ -568,9 +575,6 @@ class World(object):
                 of the object (or the link if specified)
             frame (int): allows to specify the coordinate system of force/position. sim.LINK_FRAME (=1) for local
                 link frame, and sim.WORLD_FRAME (=2) for world frame. By default, it is the world frame.
-
-        Returns:
-            None
         """
         if position is None:
             if link_id != -1:
@@ -599,9 +603,6 @@ class World(object):
             object_id (int): object id
             color (float[4]): RGBA color
             link_id (int): link id
-
-        Returns:
-            None
         """
         self.sim.change_visual_shape(object_id, link_id, rgba_color=color)
 
@@ -672,9 +673,6 @@ class World(object):
 
         Args:
             object_id (int): object id
-
-        Returns:
-            None
         """
         color = self.get_object_color(object_id)
         color[-1] = 0.
@@ -686,9 +684,6 @@ class World(object):
 
         Args:
             object_id (int): object id
-
-        Returns:
-            None
         """
         color = self.get_object_color(object_id)
         color[-1] = 1.
@@ -739,9 +734,6 @@ class World(object):
         Args:
             object_id (int): object id
             scale (float[3]): scaling factors in each direction
-
-        Returns:
-            None
         """
         # TODO: currently not possible in PyBullet
         pass
@@ -846,18 +838,22 @@ class World(object):
         self.floor_id = self.sim.load_urdf('plane.urdf', use_fixed_base=True, scale=scaling)
         return self.floor_id
 
-    def load_terrain(self, heightmap, position=(0., 0., 0.), scaling=1., replace_floor=True):
+    def load_terrain(self, heightmap, position=(0., 0., 0.), orientation=(.707, 0, 0, .707), scaling=1.,
+                     replace_floor=True, remove_obj=False, texture=None):
         """
-        Load the given terrain/heightmap.
+        Load the given terrain/heightmap into the world.
 
         Args:
-            heightmap (str, np.array[heigth,width]): path to the urdf, sdf, xml, or obj file of the terrain. It can
+            heightmap (str, np.array[heigth, width]): path to the urdf, sdf, xml, or obj file of the terrain. It can
                 also be the path to a heightmap in tif, jpg, or png format. Alternatively, it can represents
                 the heightmap as a 2D numpy array where the values represent the height in meters.
             position (float[3]): position of the terrain. By default, origin of the world.
-            scaling (float): scaling factor of the terrain
+            orientation (tuple of 4 float): orientation of the terrain (expressed as quaternion [x,y,z,w]).
+            scaling (float, tuple of 3 float): scaling factor of the terrain.
             replace_floor (bool): if True, it will replace the existing floor. Be careful, that it can cause
                 problems with collision.
+            remove_obj (bool): if True, it will remove the obj file.
+            texture (str, None): texture to apply.
 
         Returns:
             int: unique id of the terrain.
@@ -867,111 +863,101 @@ class World(object):
         - `openmesh`: https://www.openmesh.org/media/Documentations/OpenMesh-6.2-Documentation/a00036.html
         - `bpy`: Blender python API - https://docs.blender.org/api/current/
         """
-        if self.floor_id > -1:  # there is already a floor defined
+        # if there is already a floor, remove it if specified
+        if self.floor_id > -1:
             if replace_floor:
                 self.sim.remove_body(self.floor_id)
 
-        if heightmap[-4:] == 'obj':  # obj (mesh)
-            self.floor_id = self.load_mesh(heightmap, position, mass=0., scale=[scaling] * 3, flags=1,
-                                           object_type='terrain')
-        elif heightmap[-4:] == '.sdf':  # SDF
-            self.floor_id = self.load_sdf(filename=heightmap, scaling=scaling)
-        elif heightmap[-4:] == '.xml':  # MJCF
-            self.floor_id = self.load_mjcf(filename=heightmap, scaling=scaling)
-        elif heightmap[-5:] == '.urdf':  # URDF
-            self.floor_id = self.sim.load_urdf(heightmap, position, use_fixed_base=True, scale=scaling)
-        else:  # heightmap (.tif, .jpg, .png, etc)
-            def create_mesh(heightmap):
-                # create 3D mesh
-                # create3DMesh(heightmap, filename=, subsample=, interpolate_fct=)
-                pass
+        # if heightmap is a 2D array
+        if isinstance(heightmap, np.ndarray):
+            self.generate_terrain(heightmap, filename='heightmap.obj')
+            heightmap = 'heightmap.obj'
 
-            # create process to create the 3D mesh
-            process = multiprocessing.Process(target=create_mesh, args=(heightmap,))
-            process.start()
-            process.join()
+        filename = heightmap
 
+        # if heightmap is a string, it is the path to the 3d terrain or image
+        if isinstance(filename, str):
+
+            if filename[-3:] == 'obj':  # obj (mesh)
+                if not isinstance(scaling, (list, tuple)):
+                    scaling = [scaling] * 3
+                self.floor_id = self.load_mesh(filename, position, orientation, mass=0., scale=scaling, flags=1,
+                                               object_type='terrain')
+
+            elif filename[-3:] == 'sdf':  # SDF
+                self.floor_id = self.load_sdf(filename=filename, scaling=scaling)
+
+            elif filename[-3:] == 'xml':  # MJCF
+                self.floor_id = self.load_mjcf(filename=filename, scaling=scaling)
+
+            elif filename[-4:] == 'urdf':  # URDF
+                self.floor_id = self.sim.load_urdf(filename, position, use_fixed_base=True, scale=scaling)
+
+            else:  # heightmap (.tif, .jpg, .png, etc)
+                # if extension is jpg or png
+                if filename[-3:] == 'png' or filename[-3:] == 'jpg':
+                    heightmap = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
+                else:  # use gdal to open the heightmap
+                    heightmap = self.generate_heightmap(algo=6, filename=filename)
+
+                self.generate_terrain(heightmap, filename=filename)
+
+                # load the obj
+                if not isinstance(scaling, (list, tuple)):
+                    scaling = [scaling] * 3
+                self.floor_id = self.load_mesh(filename, position, orientation, mass=0., scale=scaling, flags=1,
+                                               object_type='terrain')
+        else:
+            raise TypeError("Expecting the given 'heightmap' to be a string or a numpy array, instead got: "
+                            "{}".format(type(heightmap)))
+
+        if filename[-3:] == 'obj' and remove_obj:
             # remove mesh from memory
             os.remove(filename + '.obj')  # remove mesh from memory
             # os.remove(filename + '.mtl')
 
-            # apply the given texture if provided
-            if isinstance(texture, str):
-                texture = self.sim.load_texture(texture)
-                self.sim.change_visual_shape(heightmap, -1, texture_id=texture)
+        # apply the given texture if provided
+        if isinstance(texture, str):
+            texture = self.sim.load_texture(texture)
+            self.sim.change_visual_shape(object_id=self.floor_id, link_id=-1, texture_id=texture)
 
+        # return the floor id
         return self.floor_id
 
-    def load_heightmap(self, heightmap, texture=None, position=(0., 0., 0.), scale=1.):
+    def load_heightmap(self, filename):
         """
-        Load a heightmap for the terrain.
+        Load a heightmap from an image.
 
         Args:
-            heightmap (str, np.ndarray[M,M]): if string, filename containing the heightmap in  the png, jpg, obj format
-                if a 2D numpy arrays, the values represent the height in meters.
-            texture: texture to apply
-            position (float[3]): position of the terrain
-            scale (float): scaling factor
+            filename (str): filename containing the heightmap in the png, jpg, tif, bmp format
 
         Returns:
-            int: unique id of the floor
+            np.array[H,W]: heightmap (height, width)
 
         Modules to create mesh files (.obj):
         - `mayavi`: https://docs.enthought.com/mayavi/mayavi/
         - `openmesh`: https://www.openmesh.org/media/Documentations/OpenMesh-6.2-Documentation/a00036.html
         - `bpy`: Blender python API - https://docs.blender.org/api/current/
         """
+        if not isinstance(filename, str):
+            raise TypeError("Expecting the given 'filename' to be a string (i.e. the path to the heightmap image), "
+                            "instead got: {}".format(type(filename)))
 
-        extension, filename = None, 'generated_file'
+        # load heightmap
+        if filename[-3:] == 'png' or filename[-3:] == 'jpg':
+            heightmap = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
+        else:  # use gdal to open the heightmap
+            heightmap = self.generate_heightmap(algo=6, filename=filename)
 
-        # if string, get the extension and name of the file
-        if isinstance(heightmap, str):
-            extension = heightmap.split('.')[-1]
-            filename = heightmap[:-4]
-
-            # if picture (png/jpg), load 2D array (grayscale values)
-            if extension == 'png' or extension == 'jpg':
-                heightmap = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
-
-        # if 2D numpy array, create the mesh (in the .obj format)
-        if isinstance(heightmap, np.ndarray):
-            heightmap = heightmap.astype(np.float)
-            mlab.surf(heightmap)
-            mlab.savefig(filename + '.obj')
-            mlab.close()
-            # TODO: set the map of the world
-
-        elif extension != 'obj':
-            raise ValueError("Expecting heightmap in a png/jpg/obj format")
-
-        # load the mesh of the terrain
-        heightmap = self.load_terrain(filename, position=position, scaling=scale)
-
-        # change the dynamic properties of the terrain based on the given type (grass, mud, bumpy
-        # WARNING: only 1 type can be specified. Currently, it is not possible to have different dynamic properties
-        # for different parts of the terrain. Loading multiple terrains is currently not supported (there is only
-        # 1 unique id for the floor).
-
-        # apply the given texture if provided
-        if isinstance(texture, str):
-            texture = self.sim.load_texture(texture)
-            self.sim.change_visual_shape(heightmap, -1, texture_id=texture)
-
-        # remove mesh from memory
-        os.remove(filename + '.obj')  # remove mesh from memory
-        os.remove(filename + '.mtl')
-
-        # replace the floor if there is already one present
-        if self.floor_id > -1:
-            self.sim.remove_body(self.floor_id)
-        self.floor_id = heightmap
-
-        return self.floor_id
+        return heightmap
 
     # aliases
     loadDEM = load_heightmap
 
-    def generate_heightmap(self, filename=None, algo=None):
+    @staticmethod
+    def generate_heightmap(algo=2, filename=None, width=256, height=256, n=8, min_height=0, max_height=255, noise=0,
+                           noise_factor=1, init_values=None, x=None, y=None, z=None, function='multiquadric',
+                           dtype=np.int):
         """
         Generate a heightmap (png) using the specified algorithm. We provide 4 algorithms to generate this last one:
         1. by generating it randomly (not advised)
@@ -987,23 +973,85 @@ class World(object):
         approaches.
 
         Args:
-            filename (None, str): if not None, it will save the heightmap in the format specified by the filename.
-                The format is inferred from the filename. Supported ones include '.png', '.jpg', and '.obj'.
+            algo (int): specifies which algorithm to use to generate the heightmap.
+                1. randomly
+                2. diamond-square algorithm
+                3. diamond-square algorithm (version 2)
+                4. RBF interpolation
+                5. 3d equation
+                6. geospatial
+            filename (str, None): if algo=6, path to a DEM, GIS, or image file (e.g. png) to open.
+            n (int): used to create a square array of width and height of 2**n + 1. It also specifies the number of
+                diamond and square steps.
+            min_height (int,float): lower bound; each value in the heightmap will be higher than or equal to this bound
+            max_height (int,float): upper bound; each value in the heightmap will be lower than or equal to this bound
+            noise (float): magnitude of the noise added to the computed height.
+            noise_factor (float): after each step, the jitter is divided by the given factor.
+            init_values (np.array[M,3]): list of `M` 3D points which corresponds to initial values that are used to fit
+                the gaussian process.
+            x (np.array[N], np.array[N,O]): If 1d array, it will compute the meshgrid. Otherwise, the resulting 2D
+                array from the meshgrid is expected. This is used to predict the heightmap at the given points.
+            y (np.array[0], np.array[N,O]): If 1d array, it will compute the meshgrid. Otherwise, the resulting 2D
+                array from the meshgrid is expected. This is used to predict the heightmap at the given points.
+            z (callable): it must be a function that accepts two arguments `x` and `y` which will be the arrays from
+                the meshgrid.
+            function (str, callable): "The radial basis function, based on the radius, r, given by the norm
+                (default is Euclidean distance);
+                    'multiquadric': sqrt((r/self.epsilon)**2 + 1)
+                    'inverse': 1.0/sqrt((r/self.epsilon)**2 + 1)
+                    'gaussian': exp(-(r/self.epsilon)**2)
+                    'linear': r
+                    'cubic': r**3
+                    'quintic': r**5
+                    'thin_plate': r**2 * log(r)
+                If callable, then it must take 2 arguments (self, r). The epsilon parameter will be available as
+                self.epsilon. Other keyword arguments passed in will be available as well."
+            dtype (np.int, np.float): type of the returned array for the heightmap
 
         Returns:
-            np.array[W,H]: heightmap (with, height)
+            np.array[H,W]: heightmap (height, width)
         """
-        pass
+        if algo == 1:  # random
+            heightmap = np.random.randint(min_height, max_height)
+        elif algo == 2:  # diamond-square
+            heightmap = diamond_square_heightmap(n=n, min_height=min_height, max_height=max_height, noise=noise,
+                                                 noise_factor=noise_factor)
+        elif algo == 3:  # diamond-square (version 2)
+            heightmap = diamond_square_heightmap_2(n=n, min_height=min_height, max_height=max_height, noise=noise,
+                                                   noise_factor=noise_factor)
+        elif algo == 4:  # RBF interpolation
+            heightmap = rbf_heightmap(init_values=init_values, x=x, y=y, function=function, min_height=min_height,
+                                      max_height=max_height, dtype=dtype)
+        elif algo == 5:  # 3D equation
+            heightmap = equation_heightmap(x=x, y=y, z=z, min_height=min_height, max_height=max_height, dtype=dtype)
+        elif algo == 6:  # geospatial
+            from pyrobolearn.worlds.utils.heightmaps.geospatial import gdal_heightmap
+            heightmap = gdal_heightmap(filename=filename)
+        else:
+            raise NotImplementedError("The algo should be between 1 and 6 (see documentation).")
+        return heightmap
 
-    def generate_terrain(self, heightmap, filename):
+    @staticmethod
+    def generate_terrain(heightmap, filename, scale=600, smooth=True, verbose=True):
         """
-        Generate the terrain (obj) file and load it in the world.
+        Generate the terrain (obj) file; that is, create the OBJ file from the heightmap.
 
         Args:
             heightmap (np.array[W,H]): 2D heightmap.
             filename (str): filename.
+            scale (float): scaling factor.
+            smooth (bool): if the normals should be smooth.
+            verbose (bool): if True, it will output information about the creation of the terrain.
+
+        Returns:
+            str: content of the OBJ file.
+
+        References:
+            [1] Wavefront .obj file (Wikipedia): https://en.wikipedia.org/wiki/Wavefront_.obj_file
         """
-        pass
+        obj = create_obj_from_heightmap(heightmap=heightmap, scale=scale, smooth=smooth, verbose=verbose,
+                                        filename=filename)
+        return obj
 
     def load_stadium(self, scaling=1.):
         """
@@ -1065,7 +1113,7 @@ class World(object):
         Returns:
             int: unique id of the table
         """
-        table = self.sim.load_urdf('table/table.urdf', scale=scaling)
+        table = self.sim.load_urdf('table/table.urdf', position=position, scale=scaling)
         self.movable_bodies[table] = 'table'
         return table
 
@@ -1618,18 +1666,19 @@ if __name__ == '__main__':
     sim = BulletSim()
 
     # create world
-    world = BasicWorld(sim)
-    # world = World(sim)
+    # world = BasicWorld(sim)
+    world = World(sim)
     # world.load_bot_lab()
 
-    # # load meshes
-    # world.load_mesh('meshes/terrain.obj',
-    #                position=[0, 0, -2],
-    #                orientation=[.707, 0, 0, .707],
-    #                mass=0.,
-    #                scale=(.1, .1, .1),
-    #                # color=[1, 0, 0, 1],
-    #                flags=1)
+    # load meshes
+    world.load_mesh('utils/terrains/terrain_map.obj',
+                    position=[0, 0, -2],
+                    orientation=[.707, 0, 0, .707],
+                    mass=0.,
+                    scale=(.1, .1, .1),
+                    # color=[1, 0, 0, 1],
+                    flags=1)
+    # world.load_visual_mesh('meshes/cube_color.dae', position=[0, 0, 1])
     # world.load_mesh('bedroom.obj', [0, 0, 0], mass=0., color=[0.4, 0.4, 0.4, 1], flags=1) #, scale=(0.01, 0.01, 0.01))
     # world.load_mesh('mtsthelens.obj', [0, 0, -8], mass=0., color=[0.2, 0.5, 0.2, 1], flags=1, scale=(0.01,0.01,0.01))
     # world.load_mesh('meshes/terrain.obj', [0,0,0], mass=0., color=[1,1,1,1], flags=1)
