@@ -56,7 +56,9 @@ class GP(object):
         [4] GPy: https://gpy.readthedocs.io/en/deploy/
         [5] GPFlow: http://gpflow.readthedocs.io/en/latest/intro.html
     """
-    pass
+
+    def fit(self, *args, **kwargs):
+        pass
 
 
 class GPC(GP):
@@ -72,9 +74,23 @@ class GPC(GP):
 
 class ExactGPModel(gpytorch.models.ExactGP):
     r"""Create GP prior model.
+
+    That is, it computes :math:`f|X ~ GP(\mu(X), K(X,X))`, or more concretely, it returns the probability
+    distribution over the functions given by :math:`N(\mu(x), K(x,x))`. Functions can then be sampled from it;
+    :math:`f|X ~ N(\mu(x), K(x,x))`.
     """
 
     def __init__(self, mean, kernel, likelihood=None, x=None, y=None):
+        """
+        Initialize the exact Gaussian process model.
+
+        Args:
+            mean (gpytorch.means.Mean): mean for the GP prior.
+            kernel (gpytorch.kernels.Kernel): kernel function for the GP prior.
+            likelihood (None, gpytorch.likelihoods.Likelihood): likelihood pdf.
+            x (None, torch.Tensor): training input data.
+            y (None, torch.Tensor): training output target data.
+        """
         # create likelihood if not already set.
         if likelihood is None:
             likelihood = gpytorch.likelihoods.GaussianLikelihood()
@@ -124,7 +140,7 @@ class ExactGPModel(gpytorch.models.ExactGP):
     ###########
 
     def forward(self, x):
-        r"""Return the prior probability density function :math:`p(f|x) = \mathcal{N}(. | \mu(x), K(x,x))`."""
+        r"""Return the prior probability density function :math:`p(f|x) = \mathcal{N}(\cdot | \mu(x), K(x,x))`."""
         mean_x = self.mean(x)
         covar_x = self.kernel(x)
         # return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
@@ -141,19 +157,30 @@ class GPR(GP):
 
     .. math:: f|X ~ GP(0, K(X,X))
 
-    where :math:`K(.,.)` is the kernel matrix where each entry contains :math:`k(x_i, x_j)`, i.e. the kernel function
-    evaluated at the corresponding points. As it can be seen the kernel matrix grows with the number of samples.
+    where :math:`K(\cdot, \cdot)` is the kernel matrix where each entry contains :math:`k(x_i, x_j)`, i.e. the kernel
+    function evaluated at the corresponding points. As it can be seen the kernel matrix grows with the number of
+    samples. The kernel function often has hyperparameters :math:`\Phi` that will be optimized.
 
-    The log likelihood is given by:
+    The likelihood is given by:
 
-    .. math:: \log p(y | f) = \mathcal{N}(y | 0, K(X,X) + \sigma I)
+    .. math:: p(y | f) = \mathcal{N}(y | f, \sigma^2 I)
 
     Learning the hyperparameters of the kernel are carried out by maximizing the marginal log likelihood, which is
     given by:
 
-    .. math:: \log p(y | X) = \int p(y | f) p(f | X) df
+    .. math::
 
-    The predictive distribution is carried out by assuming that the observed target values :math:`y` and
+        \log p(y | X; \Phi) &= \int p(y | f) p(f | X; \Phi) df \\
+        \log p(y | X; \Phi) &= -\frac{1}{2} y^\top (K + \sigma^2 I)^{-1} y - \frac{1}{2} \log |K + \sigma^2 I| -
+            \frac{n}{2} \log 2\pi
+
+    That is, we optimize the hyperparameters of the kernel function by maximizing the marginal log likelihood:
+
+    .. math::
+
+        \Phi^* = \arg \max_{\Phi} p(Y | X; \Phi)
+
+    The predictive distribution is then carried out by assuming that the observed target values :math:`y` and
     the function values :math:`f^*` at the test locations :math:`X^*` are from the same joint Gaussian distribution.
     By conditioning this distribution with respect to the old dataset :math:`X, y` and the test locations :math:`X^*`,
     we can derive :math:`p(f^* | X, y, X^*)` which is the predictive output distribution given the new data points
@@ -384,6 +411,9 @@ class GPR(GP):
         self.model.eval()
         self.likelihood_prob.eval()
 
+    def parameters(self):
+        return self.model.parameters()
+
     def hyperparameters(self):
         """Return an iterator over the hyperparameters"""
         return self.model.hyperparameters()
@@ -419,14 +449,24 @@ class GPR(GP):
         return self._convert(mll[0], to_numpy=to_numpy)
 
     def fit(self, x, y, num_iters=100, tolerance=1e-5, optimizer=None, verbose=False):
-        r"""Fit the input and output data; find optimal model hyperparameters."""
+        r"""Fit the input and output data; find optimal model hyperparameters.
+
+        Args:
+            x (torch.Tensor, np.array): input data.
+            y (torch.Tensor, np.array): output data.
+            num_iters (int): number of iterations to optimize the marginal likelihood.
+            tolerance (float): termination tolerance on function value/parameter changes (default: 1e-5).
+            optimizer (None, torch.optim.Optimizer): optimizer to use to optimize the marginal likelihood. By default,
+                it will use L-BFGS.
+            verbose (bool): if True, it will print information during the optimization.
+        """
         # check input and output data
         x = self._convert_to_torch(x)
         y = self._convert_to_torch(y)
 
         # set training data
         # self.model.set_train_data(x, y)
-        self.model = ExactGPModel(self.mean, self.kernel, self.likelihood_prob, x, y)
+        self.model = ExactGPModel(self.mean, self.kernel, self.likelihood_prob, x, y)  # TODO
 
         # set into training mode
         self.train(mode=True)
@@ -434,7 +474,7 @@ class GPR(GP):
         # define optimizer
         need_closure = False
         if optimizer is None or (isinstance(optimizer, str) and optimizer.lower() == 'lbfgs'):
-            optimizer = torch.optim.LBFGS([{'params': self.model.parameters()}], max_iter=num_iters,
+            optimizer = torch.optim.LBFGS([{'params': self.parameters()}], max_iter=num_iters,
                                           tolerance_change=tolerance)
             need_closure = True
 
