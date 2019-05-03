@@ -8,6 +8,36 @@
   <material name="WAMGrey">
     <color rgba="0.6 0.6 0.6 1.0"/>
   </material>
+  <material name="black">
+    <color rgba="0.2 0.2 0.2 1"/>
+  </material>
+  <material name="white">
+    <color rgba="0.9 0.9 0.9 1"/>
+  </material>
+  <material name="dark_gray">
+    <color rgba="0.3 0.3 0.3 1"/>
+  </material>
+  <material name="gray">
+    <color rgba="0.5 0.5 0.5 1"/>
+  </material>
+  <material name="light_gray">
+    <color rgba="0.6 0.6 0.6 1"/>
+  </material>
+  <material name="pure_red">
+    <color rgba="1.0 0.0 0.0 1"/>
+  </material>
+  <material name="red">
+    <color rgba="0.5 0.1 0.2 1"/>
+  </material>
+  <material name="pure_green">
+    <color rgba="0.0 1.0 0.0 1"/>
+  </material>
+  <material name="pure_blue">
+    <color rgba="0.0 0.0 1.0 1"/>
+  </material>
+  <material name="blue">
+    <color rgba="0.0 0.2 0.8 1"/>
+  </material>
   <!-- Root link is in the world frame-->
   <!--link name="world">
     <inertial>
@@ -28,9 +58,7 @@
       <inertia ixx="0.1" ixy="0" ixz="0" iyy="0.1" iyz="0" izz="0.1"/>
     </inertial>
     <visual>
-      <material name="WAMGrey">
-        <color rgba="0.6 0.6 0.6 1.0"/>
-      </material>
+      <material name="gray"/>
       <geometry>
         <mesh filename="meshes/base_link_fine.stl"/>
       </geometry>
@@ -65,7 +93,7 @@
     </inertial>
     <visual>
       <material name="WAMGrey">
-        <color rgba="0.6 0.6 0.6 1.0"/>
+        <color rgba="0.3 0.3 0.3 1.0"/>
       </material>
       <geometry>
         <mesh filename="meshes/shoulder_link_fine.stl"/>
@@ -96,7 +124,7 @@
   <link name="wam/shoulder_pitch_link">
     <visual>
       <material name="WAMGrey">
-        <color rgba="0.6 0.6 0.6 1.0"/>
+        <color rgba="0.3 0.3 0.3 1.0"/>
       </material>
       <geometry>
         <mesh filename="meshes/shoulder_pitch_link_fine.stl"/>

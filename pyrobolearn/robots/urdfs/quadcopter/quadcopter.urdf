@@ -4,6 +4,37 @@
 <!-- |    EDITING THIS FILE BY HAND IS NOT RECOMMENDED                                 | -->
 <!-- =================================================================================== -->
 <robot name="quad" xmlns:xacro="http://ros.org/wiki/xacro">
+  <material name="black">
+    <color rgba="0.2 0.2 0.2 1"/>
+  </material>
+  <material name="white">
+    <color rgba="0.9 0.9 0.9 1"/>
+  </material>
+  <material name="dark_gray">
+    <color rgba="0.3 0.3 0.3 1"/>
+  </material>
+  <material name="gray">
+    <color rgba="0.5 0.5 0.5 1"/>
+  </material>
+  <material name="light_gray">
+    <color rgba="0.7 0.7 0.7 1"/>
+  </material>
+  <material name="pure_red">
+    <color rgba="1.0 0.0 0.0 1"/>
+  </material>
+  <material name="red">
+    <color rgba="0.5 0.1 0.2 1"/>
+  </material>
+  <material name="pure_green">
+    <color rgba="0.0 1.0 0.0 1"/>
+  </material>
+  <material name="pure_blue">
+    <color rgba="0.0 0.0 1.0 1"/>
+  </material>
+  <material name="blue">
+    <color rgba="0.0 0.2 0.8 1"/>
+  </material>
+
   <!-- Properties -->
   <!-- "propeller" -->
   <!-- [kg] -->
@@ -44,6 +75,7 @@
       <inertia ixx="0.05" ixy="0.0" ixz="0.0" iyy="0.05" iyz="0.0" izz="0.24"/>
     </inertial>
     <visual>
+      <material name="black"/>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <mesh filename="meshes/hummingbird.dae" scale="1 1 1"/>
@@ -89,6 +121,7 @@
       <inertia ixx="9.75e-07" ixy="0.0" ixz="0.0" iyy="0.000326704166667" iyz="0.0" izz="0.000327604166667"/>
     </inertial>
     <visual>
+      <material name="blue"/>
       <geometry>
         <!-- <cylinder length="0.005" radius="${radius_rotor}"/> -->
         <!-- [m] -->
@@ -144,6 +177,7 @@
       <inertia ixx="9.75e-07" ixy="0.0" ixz="0.0" iyy="0.000326704166667" iyz="0.0" izz="0.000327604166667"/>
     </inertial>
     <visual>
+      <material name="blue"/>
       <geometry>
         <!-- <cylinder length="0.005" radius="${radius_rotor}"/> -->
         <!-- [m] -->
@@ -199,6 +233,7 @@
       <inertia ixx="9.75e-07" ixy="0.0" ixz="0.0" iyy="0.000326704166667" iyz="0.0" izz="0.000327604166667"/>
     </inertial>
     <visual>
+      <material name="blue"/>
       <geometry>
         <!-- <cylinder length="0.005" radius="${radius_rotor}"/> -->
         <!-- [m] -->
@@ -254,6 +289,7 @@
       <inertia ixx="9.75e-07" ixy="0.0" ixz="0.0" iyy="0.000326704166667" iyz="0.0" izz="0.000327604166667"/>
     </inertial>
     <visual>
+      <material name="blue"/>
       <geometry>
         <!-- <cylinder length="0.005" radius="${radius_rotor}"/> -->
         <!-- [m] -->
