@@ -23,8 +23,9 @@ class Minitaur(QuadrupedRobot):
     Minitaur robot from Ghost Robotics (https://www.ghostrobotics.io/)
 
     References:
-        [1] pybullet_envs/bullet/minitaur.py
-        [2] https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/gym/pybullet_envs/bullet/minitaur.py
+        [1] "Design Principles for a Family of Direct-Drive Legged Robots", Kenneally et al., 2016
+        [2] pybullet/gym/pybullet_envs/bullet/minitaur.py
+        [3] https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/gym/pybullet_envs/bullet/minitaur.py
     """
 
     def __init__(self,

@@ -1102,18 +1102,19 @@ class World(object):
     def create_city(self):
         pass
 
-    def load_table(self, position, scaling=1.):
+    def load_table(self, position, orientation=(0, 0, 0, 1), scaling=1.):
         """
         Load a table in the world.
 
         Args:
             position (float[3]): position of the table
+            orientation (float[4]): orientation of the table (quaternion [x,y,z,w])
             scaling (float): scaling for the table
 
         Returns:
             int: unique id of the table
         """
-        table = self.sim.load_urdf('table/table.urdf', position=position, scale=scaling)
+        table = self.sim.load_urdf('table/table.urdf', position=position, orientation=orientation, scale=scaling)
         self.movable_bodies[table] = 'table'
         return table
 

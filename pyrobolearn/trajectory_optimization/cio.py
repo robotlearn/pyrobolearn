@@ -5,11 +5,9 @@ References:
     [1] "Automated Discovery and Learning of Complex Movement Behaviors" (PhD thesis), Mordatch, 2015
     [2] Mordatch's presentation given in CS294
 """
-# TODO: this is not an optimizer, but more an optimization process. It should be in another directory, maybe in
-#  `trajectory_optimization`??
 
 import numpy as np
-from scipy.interpolate as interp1d
+from scipy.interpolate import interp1d
 
 
 class CIO(object):
@@ -31,6 +29,52 @@ class CIO(object):
     - :math:`L_{task}` describes the task objectives (i.e. high-level goals of the movement)
     - :math:`L_{hint}` provides hints to accelerate the optimization. This term is optional.
 
+    We now describe each cost more specifically.
+
+
+    * The contact invariant cost is given by:
+
+    .. math:: L_{CI}(s) = \sum_i^N \sum_t^T c_{i, \phi(t)} (||e_{i,t}(s)||^2 + ||\dot{e}_{i,t}(s)||^2)
+
+    where :math:`e_{i,t} = [p_i(q_t) - n'(p), 0]` is the 4D contact-violation vector.
+
+    * The physics violation cost is formulated as:
+
+    .. math:: L_{physics}(s) = \sum_t^T || J_t(s)^T f_t(s) + B u_t(s) - \tau_t(s) ||^2
+
+    where the external contact forcing terms :math:`f_t = [f_1, ..., f_N]^\top \in \mathbb{R}^{6N}` (with each forcing
+    term  (for each end-effector) is given by :math:`f_i = [f_c, \tau_c]` where :math:`f_c` is the translational
+    contact force, and :math:`\tau_c` is the torsion around the surface normal) and joint actuation
+    :math:`u_t \in \mathbb{R}^{D_a}` (where :math:`D_a` are the number of actuated joints and  are computed according to:
+
+    .. math::
+
+        f_t, u_t =& \arg \min_{f, u} || J_t(q_t)^\top f - Bu - \tau_t(q_t, \dot{q}_t, \ddot{q}_t)||^2 + f^\top W_t f +
+            u^\top R u \\
+            \mbox{subject to } \quad A f \leq b
+
+    which is solved using quadratic programming (QP). The linear constraint is the linear approximation to the friction
+    cone (i.e. the friction pyramid). The torques :math:`\tau_t(q_t, \dot{q}_t, \ddot{q}_t)` are given by the whole
+    body dynamic equation:
+
+    .. math:: \tau_t(q_t, \dot{q}_t, \ddot{q}_t) = H(q_t) \ddot{q}_t + C(q_t, \dot{q}_t) \dot{q}_t + g(q_t)
+
+
+    * The task cost is expressed as:
+
+    .. math:: L_{task}(s) = \sum_b l_b(q_T(s)) + \sum_t^T ||f_t(s)||^2 + ||u_t(s)||^2 + ||\ddot{q}_t(s)||^2
+
+    where :math:`b` is an index over different tasks, :math:`l_b` are task specific terms which only depends on the
+    final pose :math:`q_T(s)`.
+
+
+    * The optional hint cost is given by:
+
+    .. math:: L_{hint}(s) = \sum_t \max(||z_t(s) - n(z_t(s))|| - \epsilon, 0)^2
+
+    where :math:`z_t(s) = z_t(q, \ddot{q})` is the zero-moment point (ZMP).
+
+
     The CIO consists of 3 phases:
     1. only :math:`L_{task}` is enabled
     2. All 4 terms (:math:`L_{task}`, :math:`L_{physics}`, :math:`L_{CI}`, :math:`L_{hint}`) are enabled but with
@@ -40,10 +84,10 @@ class CIO(object):
     Note that the solution obtained at the end of each phase is perturbed with small zero-mean Gaussian noise to
     break any symmetries, and used to initialize the next phase.
 
-    From the optimized state :math:`s^*`, the optimal joints :math:`q^*` at each time step can be computed (using IK).
-    Then, a PD controller can be used to move the joints to their desired configuration.
+    From the optimized state :math:`s^*`, the optimal joints :math:`q^*` at each time step can be computed (using IK
+    and cubic spline interpolation). A PD controller can then be used to move the joints to their desired configuration.
 
-    Note that the framework do not take into account any sensory feedbacks.
+    Note that the framework does not take into account any sensory feedback.
 
     References:
         [1] "Automated Discovery and Learning of Complex Movement Behaviors" (PhD thesis), Mordatch, 2015

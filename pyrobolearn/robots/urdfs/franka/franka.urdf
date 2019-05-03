@@ -4,6 +4,37 @@
 <!-- |    EDITING THIS FILE BY HAND IS NOT RECOMMENDED                                 | -->
 <!-- =================================================================================== -->
 <robot name="panda" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <material name="black">
+    <color rgba="0.0 0.0 0.0 1"/>
+  </material>
+  <material name="white">
+    <color rgba="0.9 0.9 0.9 1"/>
+  </material>
+  <material name="dark_gray">
+    <color rgba="0.3 0.3 0.3 1"/>
+  </material>
+  <material name="gray">
+    <color rgba="0.5 0.5 0.5 1"/>
+  </material>
+  <material name="light_gray">
+    <color rgba="0.7 0.7 0.7 1"/>
+  </material>
+  <material name="pure_red">
+    <color rgba="1.0 0.0 0.0 1"/>
+  </material>
+  <material name="red">
+    <color rgba="0.5 0.1 0.2 1"/>
+  </material>
+  <material name="pure_green">
+    <color rgba="0.0 1.0 0.0 1"/>
+  </material>
+  <material name="pure_blue">
+    <color rgba="0.0 0.0 1.0 1"/>
+  </material>
+  <material name="blue">
+    <color rgba="0.0 0.2 0.3 1"/>
+  </material>
+
   <link name="panda_link0">
     <inertial> <!-- these inertia are calculated based on the visual meshes using Meshlab, and using a density of 1kg/m^3 (http://gazebosim.org/tutorials?tut=inertia) -->
       <mass value="1"/> <!-- volume = 0.002442 -->
@@ -12,6 +43,7 @@
       <inertia ixx="0.00286650" ixy="0.0" ixz="-0.0004095" iyy="0.00368550" iyz="0.0" izz="0.00368550"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
+      <material name="white"/>
       <geometry>
         <mesh filename="meshes/visual/link0.stl"/>
       </geometry>
@@ -30,6 +62,7 @@
       <inertia ixx="0.00654165" ixy="0.0" ixz="0.0" iyy="0.00566943" iyz="0.00174444" izz="0.00218055"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
+      <material name="white"/>
       <geometry>
         <mesh filename="meshes/visual/link1.stl"/>
       </geometry>
@@ -56,6 +89,7 @@
       <inertia ixx="0.00648789" ixy="0.0" ixz="0.0" iyy="0.00216263" iyz="0.0017301" izz="0.00605536"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
+      <material name="white"/>
       <geometry>
         <mesh filename="meshes/visual/link2.stl"/>
       </geometry>
@@ -82,6 +116,8 @@
       <inertia ixx="0.00346363" ixy="-0.0009896" ixz="-0.00148441" iyy="0.00395844" iyz="-0.0009896" izz="0.00346363"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
+      <!-- <material name="light_gray"/> -->
+      <material name="white"/>
       <geometry>
         <mesh filename="meshes/visual/link3.stl"/>
       </geometry>
@@ -108,6 +144,7 @@
       <inertia ixx="0.00349301" ixy="0.00149701" ixz="-0.00099800" iyy="0.00349301" iyz="0.00099800" izz="0.00449102"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
+      <material name="white"/>
       <geometry>
         <mesh filename="meshes/visual/link4.stl"/>
       </geometry>
@@ -134,6 +171,7 @@
       <inertia ixx="0.01098901" ixy="0.000000" ixz="0.000000" iyy="0.01054945" iyz="-0.00263736" izz="0.00175824"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
+      <material name="white"/>
       <geometry>
         <mesh filename="meshes/visual/link5.stl"/>
       </geometry>
@@ -160,6 +198,7 @@
       <inertia ixx="0.00139373" ixy="0.000000" ixz="0.000000" iyy="0.00278745" iyz="0.000000" izz="0.00278745"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
+      <material name="white"/>
       <geometry>
         <mesh filename="meshes/visual/link6.stl"/>
       </geometry>
@@ -186,6 +225,7 @@
       <inertia ixx="0.00220264" ixy="0.000000" ixz="0.000000" iyy="0.00220264" iyz="0.000000" izz="0.00220264"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
+      <material name="white"/>
       <geometry>
         <mesh filename="meshes/visual/link7.stl"/>
       </geometry>
@@ -230,6 +270,7 @@
       <inertia ixx="0.00409836" ixy="0.000000" ixz="0.000000" iyy="0.00061475" iyz="0.000000" izz="0.00409836"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
+      <material name="white"/>
       <geometry>
         <mesh filename="meshes/visual/hand.stl"/>
       </geometry>
@@ -248,6 +289,7 @@
       <inertia ixx="0.00030727" ixy="0.000000" ixz="0.000000" iyy="0.00003018" iyz="0.00005455" izz="0.00007091"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
+      <material name="light_gray"/>
       <geometry>
         <mesh filename="meshes/visual/finger.stl"/>
       </geometry>
@@ -266,6 +308,7 @@
       <inertia ixx="0.00030727" ixy="0.000000" ixz="0.000000" iyy="0.00003018" iyz="0.00005455" izz="0.00007091"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
+      <material name="light_gray"/>
       <origin rpy="0 0 3.14159265359" xyz="0 0 0"/>
       <geometry>
         <mesh filename="meshes/visual/finger.stl"/>
