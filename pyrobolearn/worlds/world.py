@@ -447,14 +447,14 @@ class World(object):
             for joint_id, position, velocity in zip(robot.joints, positions, velocities):
                 self.sim.reset_joint_state(robot_id, joint_id, position, velocity)
 
-    def load_urdf(self, filename, position, orientation, fixed_base=False, scale=1., name=None):
+    def load_urdf(self, filename, position, orientation=(0, 0, 0, 1), fixed_base=False, scale=1., name=None):
         """
         Load URDF specified by the given path. This is basically a wrapper around the simulator's `load_urdf` method.
 
         Args:
             filename (str): path to the URDF file
             position (float[3]): position of the object described in the URDF
-            orientation (float[4]): orientation represented as a quaternion
+            orientation (float[4]): orientation represented as a quaternion [x,y,z,w]
             fixed_base (bool): if the base of the object should be fixed or not
             scale (float): scale factor for the object
             name (str, None): name of the object. If None, it will extract it from the URDF.
@@ -510,6 +510,42 @@ class World(object):
         else:
             raise ValueError('Extension name of the file is not known; this method only accepts URDF/SDF files.')
         return object_id
+
+    def get_available_sdfs(self, fullpath=False):
+        """Return the list of available SDFs from the `pybullet_data.getDataPath()` method.
+
+        Args:
+            fullpath (bool): If True, it will return the full path to the SDFs. If False, it will just return the
+                name of the SDF files (without the extension).
+        """
+        return self.sim.get_available_sdfs(fullpath=fullpath)
+
+    def get_available_urdfs(self, fullpath=False):
+        """Return the list of available URDFs from the `pybullet_data.getDataPath()` method.
+
+        Args:
+            fullpath (bool): If True, it will return the full path to the URDFs. If False, it will just return the
+                name of the URDF files (without the extension).
+        """
+        return self.sim.get_available_urdfs(fullpath=fullpath)
+
+    def get_available_mjcfs(self, fullpath=False):
+        """Return the list of available MJCFs (=XMLs) from the `pybullet_data.getDataPath()` method.
+
+        Args:
+            fullpath (bool): If True, it will return the full path to the MJCFs/XMLs. If False, it will just return
+                the name of the MJCF/XML files (without the extension).
+        """
+        return self.sim.get_available_mjcfs(fullpath=fullpath)
+
+    def get_available_objs(self, fullpath=False):
+        """Return the list of available OBJs from the `pybullet_data.getDataPath()` method.
+
+        Args:
+            fullpath (bool): If True, it will return the full path to the OBJs. If False, it will just return the
+                name of the OBJ files (without the extension).
+        """
+        return self.sim.get_available_objs(fullpath=fullpath)
 
     def load_object(self, object_type, path=None, position=(0, 0, 0), orientation=(0, 0, 0, 1), scaling=1.):
         """
@@ -1102,7 +1138,7 @@ class World(object):
     def create_city(self):
         pass
 
-    def load_table(self, position, orientation=(0, 0, 0, 1), scaling=1.):
+    def load_table(self, position, orientation=None, scaling=1.):
         """
         Load a table in the world.
 
@@ -1613,6 +1649,21 @@ class World(object):
                                  angular_damping=angular_damping, contact_stiffness=contact_stiffness,
                                  contact_damping=contact_damping)
 
+    def apply_texture(self, texture, body_id, link_id=-1):
+        """
+        Apply the texture to the given object.
+
+        Args:
+            texture (str): path to the texture.
+            body_id (int): unique body id.
+            link_id (int): link id. If -1, it will be the base.
+
+        Returns:
+
+        """
+        texture = self.sim.load_texture(texture)
+        self.sim.change_visual_shape(object_id=body_id, link_id=link_id, texture_id=texture)
+
 
 class BasicWorld(World):
     r"""Basic World class.
@@ -1667,19 +1718,19 @@ if __name__ == '__main__':
     sim = BulletSim()
 
     # create world
-    # world = BasicWorld(sim)
-    world = World(sim)
+    world = BasicWorld(sim)
+    # world = World(sim)
     # world.load_bot_lab()
 
     # load meshes
-    world.load_mesh('utils/terrains/terrain_map.obj',
-                    position=[0, 0, -2],
-                    orientation=[.707, 0, 0, .707],
-                    mass=0.,
-                    scale=(.1, .1, .1),
-                    # color=[1, 0, 0, 1],
-                    flags=1)
-    # world.load_visual_mesh('meshes/cube_color.dae', position=[0, 0, 1])
+    # world.load_mesh('utils/terrains/terrain_map.obj',
+    #                 position=[0, 0, -2],
+    #                 orientation=[.707, 0, 0, .707],
+    #                 mass=0.,
+    #                 scale=(.1, .1, .1),
+    #                 # color=[1, 0, 0, 1],
+    #                 flags=1)
+    # world.load_mesh('cube.obj', position=[0, 0, 2], scale=(.1, .1, .1), flags=0)
     # world.load_mesh('bedroom.obj', [0, 0, 0], mass=0., color=[0.4, 0.4, 0.4, 1], flags=1) #, scale=(0.01, 0.01, 0.01))
     # world.load_mesh('mtsthelens.obj', [0, 0, -8], mass=0., color=[0.2, 0.5, 0.2, 1], flags=1, scale=(0.01,0.01,0.01))
     # world.load_mesh('meshes/terrain.obj', [0,0,0], mass=0., color=[1,1,1,1], flags=1)
@@ -1698,7 +1749,7 @@ if __name__ == '__main__':
 
     # world.load_ellipsoid([0,0,2], mass=0, scale=[2.,1.,1.], color=(0,0,1,1))
     world.load_visual_cone([0, 0, 0.1*0.5], orientation=(0, 1, 0, 0), scale=(0.1, 0.1, 0.1), color=(0.5, 0, 0, 0.5))
-    world.load_right_triangular_prism([-1, -1, 2])
+    # world.load_right_triangular_prism([-1, -1, 2])
     # floor = world.load_mesh(filename='box', [1, 0, 2], mass=0, color=None)
 
     # floor = world.load_floor()

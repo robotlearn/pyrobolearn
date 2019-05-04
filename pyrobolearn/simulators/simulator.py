@@ -406,6 +406,46 @@ class Simulator(object):
         """
         pass
 
+    @staticmethod
+    def get_available_sdfs(fullpath=False):
+        """Return the list of available SDFs in the simulator.
+
+        Args:
+            fullpath (bool): If True, it will return the full path to the SDFs. If False, it will just return the
+                name of the SDF files (without the extension).
+        """
+        return []
+
+    @staticmethod
+    def get_available_urdfs(fullpath=False):
+        """Return the list of available URDFs in the simulator.
+
+        Args:
+            fullpath (bool): If True, it will return the full path to the URDFs. If False, it will just return the
+                name of the URDF files (without the extension).
+        """
+        return []
+
+    @staticmethod
+    def get_available_mjcfs(fullpath=False):
+        """Return the list of available MJCFs in the simulator.
+
+        Args:
+            fullpath (bool): If True, it will return the full path to the MJCFs. If False, it will just return the
+            name of the MJCF files (without the extension).
+        """
+        return []
+
+    @staticmethod
+    def get_available_objs(fullpath=False):
+        """Return the list of available OBJs in the simulator.
+
+        Args:
+            fullpath (bool): If True, it will return the full path to the OBJs. If False, it will just return the
+                name of the OBJ files (without the extension).
+        """
+        return []
+
     # bodies
 
     def create_body(self, visual_shape_id=-1, collision_shape_id=-1, mass=0., position=(0., 0., 0.),

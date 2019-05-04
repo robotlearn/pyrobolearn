@@ -18,15 +18,19 @@ References:
     [3] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
 
+# general imports
+import os
+import inspect
 import time
 import numpy as np
 import quaternion
 
+# import pybullet
 import pybullet
 import pybullet_data
 from pybullet_envs.bullet.bullet_client import BulletClient
 
-from pyrobolearn.utils.converter import NumpyListConverter, QuaternionListConverter
+# import PRL simulator
 from pyrobolearn.simulators.simulator import Simulator
 
 
@@ -77,21 +81,29 @@ class Bullet(Simulator):
             Erwin Coumans and Yunfei Bai, 2017/2018
     """
 
-    def __init__(self, render=True, **kwargs):  # , converter=None):
+    def __init__(self, render=True, **kwargs):
         super(Bullet, self).__init__()
 
         # parse the kwargs
 
         # Connect to pybullet
-        if render:
-            self.sim = BulletClient(connection_mode=pybullet.GUI)
+        if render:  # GUI
+            self.connection_mode = pybullet.GUI
+            self.sim = BulletClient(connection_mode=self.connection_mode)
             self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_GUI, 0)
-        else:
-            self.sim = BulletClient(connection_mode=pybullet.DIRECT)
+        else:  # without GUI
+            self.connection_mode = pybullet.DIRECT
+            self.sim = BulletClient(connection_mode=self.connection_mode)
+
+        # set simulator ID
         self.id = self.sim._client
 
         # add additional search path when loading URDFs, SDFs, MJCFs, etc.
         self.sim.setAdditionalSearchPath(pybullet_data.getDataPath())
+
+        # TODO: add gazebo_models path
+
+        self.models = {}
 
         # go through the global variables / attributes defined in pybullet and set them here
         # this includes for instance: JOINT_REVOLUTE, POSITION_CONTROL, etc.
@@ -136,6 +148,24 @@ class Bullet(Simulator):
     # Simulators #
     ##############
 
+    def __init(self, connection_mode):
+        """Initialize the simulator with the specified connection mode."""
+        # close the previous simulator
+        if self.sim is not None:
+            self.close()
+
+        # initialize the simulator (create it, set its id, and set the path to the models)
+        # self.sim.connect(connection_mode)
+        self.sim = BulletClient(connection_mode=connection_mode)
+        self.id = self.sim._client
+        self.sim.setAdditionalSearchPath(pybullet_data.getDataPath())
+
+        # reload the models
+        models = self.models.copy()
+        for idx in models:
+            kwargs = models[idx]
+            self.load_urdf(**kwargs)
+
     def reset(self):
         """Reset the simulator.
 
@@ -145,10 +175,11 @@ class Bullet(Simulator):
 
     def close(self):
         """Close the simulator."""
-        try:
-            self.sim.disconnect(physicsClientId=self.id)
-        except pybullet.error:
-            pass
+        del self.sim
+        # try:
+        #     self.sim.disconnect(physicsClientId=self.id)
+        # except pybullet.error:
+        #     pass
 
     def step(self, sleep_time=0.):
         """Perform a step in the simulator.
@@ -170,9 +201,30 @@ class Bullet(Simulator):
             flag (bool): If True, it will render the simulator by enabling the GUI.
         """
         if flag:
-            self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING,  1)
+            # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING,  1)
+            if self.connection_mode == pybullet.DIRECT:
+                # save the state of the simulator
+                filename = 'PYROBOLEARN_RENDERING_STATE.bullet'
+                self.save(filename=filename)
+                # change the connection mode
+                self.connection_mode = pybullet.GUI
+                self.__init(self.connection_mode)
+                # load the state of the world in the simulator
+                self.load(filename)
+                os.remove(filename)
         else:
-            self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING, 0)
+            # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING, 0)
+            if self.connection_mode == pybullet.GUI:
+                # save the state of the simulator
+                filename = 'PYROBOLEARN_RENDERING_STATE.bullet'
+                self.save(filename=filename)
+                # change the connection mode
+                self.connection_mode = pybullet.DIRECT
+                self.__init(self.connection_mode)
+                # load the state of the world in the simulator
+                self.load(filename)
+                os.remove(filename)
+                # TODO: reset the camera
 
     def set_time_step(self, time_step):
         """Set the specified time step in the simulator.
@@ -532,7 +584,11 @@ class Bullet(Simulator):
         if scale is not None:
             kwargs['globalScaling'] = scale
 
-        return self.sim.loadURDF(filename, **kwargs)
+        model_id = self.sim.loadURDF(filename, **kwargs)
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        self.models[model_id] = {arg: values[arg] for arg in args[1:]}
+        return model_id
 
     def load_sdf(self, filename, scaling=1., *args, **kwargs):
         """Load the given SDF file.
@@ -568,6 +624,11 @@ class Bullet(Simulator):
                   color=None, with_collision=True, flags=None, *args, **kwargs):
         """
         Load a mesh in the world (only available in the simulator).
+
+        Warnings (see https://github.com/bulletphysics/bullet3/issues/1813):
+            - it only accepts wavefront obj files
+            - wavefront obj files can have at most 1 texture
+            - there is a limited pre-allocated memory for visual meshes
 
         Args:
             filename (str): path to file for the mesh. Currently, only Wavefront .obj. It will create convex hulls
@@ -615,6 +676,69 @@ class Bullet(Simulator):
                                             baseOrientation=orientation)
 
         return mesh
+
+    @staticmethod
+    def _get_3d_models(extension, fullpath=False):
+        """Return the list of 3d models (urdf, sdf, mjcf/xml, obj).
+
+        Args:
+            extension (str): extension of the 3D models (urdf, sdf, mjcf/xml, obj).
+            fullpath (bool): If True, it will return the full path to the 3D objects. If False, it will just return
+                the name of the files (without the extension).
+        """
+        extension = '.' + extension
+        path = pybullet_data.getDataPath()
+        results = []
+        for dir_path, dir_names, filenames in os.walk(path):
+            for filename in filenames:
+                if os.path.splitext(filename)[1] == extension:
+                    if fullpath:
+                        results.append(os.path.join(dir_path, filename))  # append the fullpath
+                    else:
+                        results.append(filename[:-len(extension)])  # remove extension
+        return results
+
+    @staticmethod
+    def get_available_sdfs(fullpath=False):
+        """Return the list of available SDFs from the `pybullet_data.getDataPath()` method.
+
+        Args:
+            fullpath (bool): If True, it will return the full path to the SDFs. If False, it will just return the
+                name of the SDF files (without the extension).
+        """
+        return Bullet._get_3d_models(extension='sdf', fullpath=fullpath)
+
+    @staticmethod
+    def get_available_urdfs(fullpath=False):
+        """Return the list of available URDFs from the `pybullet_data.getDataPath()` method.
+
+        Args:
+            fullpath (bool): If True, it will return the full path to the URDFs. If False, it will just return the
+                name of the URDF files (without the extension).
+        """
+        return Bullet._get_3d_models(extension='urdf', fullpath=fullpath)
+
+    @staticmethod
+    def get_available_mjcfs(fullpath=False):
+        """Return the list of available MJCFs (=XMLs) from the `pybullet_data.getDataPath()` method.
+
+        Args:
+            fullpath (bool): If True, it will return the full path to the MJCFs/XMLs. If False, it will just return
+                the name of the MJCF/XML files (without the extension).
+        """
+        results1 = Bullet._get_3d_models(extension='mjcf', fullpath=fullpath)
+        results2 = Bullet._get_3d_models(extension='xml', fullpath=fullpath)
+        return results1 + results2
+
+    @staticmethod
+    def get_available_objs(fullpath=False):
+        """Return the list of available OBJs from the `pybullet_data.getDataPath()` method.
+
+        Args:
+            fullpath (bool): If True, it will return the full path to the OBJs. If False, it will just return the
+                name of the OBJ files (without the extension).
+        """
+        return Bullet._get_3d_models(extension='obj', fullpath=fullpath)
 
     ##########
     # Bodies #
