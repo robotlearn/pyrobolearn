@@ -155,6 +155,11 @@ class GymEnvWrapper(gym.Env):
         return self._reward
 
     @property
+    def reward_range(self):
+        """Return the range of the reward function; a tuple corresponding to the min and max possible rewards"""
+        return self.env.reward_range
+
+    @property
     def state_processors(self):
         """Return the processors that have to be applied on the state."""
         return self._state_processors
@@ -227,13 +232,14 @@ class GymEnvWrapper(gym.Env):
         return states
 
     def reset(self):
+        """Reset the gym environment."""
         observation = self.env.reset()
         self.state.data = observation
         self.reward_processors.reset()
         return self._convert_state_to_data(self.state)
 
     def step(self, actions):
-        """perform a step in the environment and set the data for the GymState and GymAction"""
+        """perform a step in the gym environment and set the data for the GymState and GymAction"""
         if isinstance(actions, Action):  # convert from `Action` to numpy
             actions = actions.merged_data[0]
         elif isinstance(actions, torch.Tensor):  # convert from torch to numpy
@@ -263,10 +269,20 @@ class GymEnvWrapper(gym.Env):
         return observations, reward, done, info
 
     def render(self, mode='human'):
+        """Render the gym environment."""
         self.env.render(mode)
 
     def hide(self):
+        """Hide the gym environment (not used)."""
         pass
+
+    def close(self):
+        """Close the gym environment."""
+        self.env.close()
+
+    def seed(self, seed=None):
+        """Set the given seed to the gym environment."""
+        self.env.seed(seed)
 
     #############
     # Operators #

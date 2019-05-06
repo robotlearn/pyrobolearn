@@ -32,7 +32,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Env(object):  # gym.Env):
+class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
     r"""Environment class.
 
     This class defines the environment as it described in a reinforcement learning setting [1]. That is, given an
@@ -51,11 +51,10 @@ class Env(object):  # gym.Env):
         [1] "Reinforcement Learning: An Introduction", Sutton and Barto, 1998
         [2] "Wikipedia: Composition over Inheritance", https://en.wikipedia.org/wiki/Composition_over_inheritance
         [3] "OpenAI gym": https://gym.openai.com/   and    https://github.com/openai/gym
-
     """
 
     def __init__(self, world, states, rewards=None, terminal_conditions=None, initial_state_generators=None,
-                 physics_randomizers=None, extra_info=None):
+                 physics_randomizers=None, extra_info=None, actions=None):
         """
         Initialize the environment.
 
@@ -72,6 +71,9 @@ class Env(object):  # gym.Env):
             physics_randomizers (None, PhysicsRandomizer, list of PhysicsRandomizer): physics randomizers. This will be
                 called each time you reset the environment.
             extra_info (None, callable): Extra info returned by the environment at each time step.
+            actions (Action): actions that are given to the environment. Note that this is not used here in the current
+                environment as it should be the policy that performs the action. This is useful when creating policies
+                after the environment (that is, the policy can uses the environment's states and actions).
         """
         # Check and set parameters (see corresponding properties)
         self.world = world
@@ -81,6 +83,7 @@ class Env(object):  # gym.Env):
         self.physics_randomizers = physics_randomizers
         self.state_generators = initial_state_generators
         self.extra_info = extra_info if extra_info is not None else lambda: False
+        self.actions = actions
 
         self.rendering = False  # check with simulator
 
@@ -115,19 +118,53 @@ class Env(object):  # gym.Env):
         return self._states
 
     @states.setter
-    def states(self, states):  # TODO: make it a list of states
+    def states(self, states):
         """Set the states."""
         if isinstance(states, State):
             states = [states]
         elif isinstance(states, (list, tuple)):
             for idx, state in enumerate(states):
                 if not isinstance(state, State):
-                    raise TypeError("The {} item is not an instance of `State`, but instead: "
+                    raise TypeError("The {}th item is not an instance of `State`, but instead: "
                                     "{}".format(idx, type(state)))
         else:
             raise TypeError("Expecting the 'states' argument to be an instance of `State` or a list of `State`, "
                             "instead got: {}".format(type(states)))
         self._states = states
+
+    @property
+    def state(self):
+        """Return the first (combined) state."""
+        return self._states[0]
+
+    @property
+    def actions(self):
+        """Return the actions."""
+        return self._actions
+
+    @actions.setter
+    def actions(self, actions):
+        """Set the actions."""
+        if actions is not None:
+            # if actions is not a list/tuple, make it a list
+            if not isinstance(actions, (list, tuple)):
+                actions = [actions]
+
+            # verify the type of each action
+            for idx, action in enumerate(actions):
+                if not isinstance(action, Action):
+                    raise TypeError("The {}th item in 'actions' is not an instance of `Action`, instead got: "
+                                    "{}".format(idx, type(action)))
+
+        # set the actions
+        self._actions = actions
+
+    @property
+    def action(self):
+        """Return the first (combined) action."""
+        if self.actions is None:
+            return None
+        return self.actions[0]
 
     @property
     def rewards(self):
@@ -143,6 +180,11 @@ class Env(object):  # gym.Env):
         else:
             rewards = lambda: None
         self._rewards = rewards
+
+    @property
+    def reward_range(self):
+        """Return the range of the reward function; a tuple corresponding to the min and max possible rewards"""
+        return self._rewards.range
 
     @property
     def terminal_conditions(self):
@@ -304,22 +346,15 @@ class Env(object):  # gym.Env):
 
     def render(self, mode='human'):
         """Renders the environment (show the GUI)."""
-        # This is dependent on the simulator. Some simulators allow to show the GUI at any point in time,
-        # while others like pybullet requires to specify it at the beginning (thus see SimuRealInterface).
-
-        # Bullet: do nothing
-        # if isinstance(self.sim, Bullet): pass
-        # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING, 1)
-        pass
+        self.sim.render()
 
     def hide(self):
         """hide the GUI."""
-        # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING, 0)
-        pass
+        self.sim.hide()
 
     def close(self):
         """Close the environment."""
-        pass
+        self.sim.close()
 
     def seed(self, seed=None):
         """
@@ -343,10 +378,10 @@ class BasicEnv(Env):
     """
 
     def __init__(self, sim, states=None, rewards=None, terminal_conditions=None, initial_state_generators=None,
-                 physics_randomizers=None, extra_info=None):
+                 physics_randomizers=None, extra_info=None, actions=None):
         world = BasicWorld(sim)
         super(BasicEnv, self).__init__(world, states, rewards, terminal_conditions, initial_state_generators,
-                                       physics_randomizers, extra_info)
+                                       physics_randomizers, extra_info, actions)
 
 
 # Tests
