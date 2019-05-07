@@ -21,20 +21,39 @@ __status__ = "Development"
 class RewardProcessor(Reward):
     r"""Reward Processor
 
-    Wraps the reward and process it. It also acts as a memory of the last received reward signal.
+    Wraps the reward and process it. It also acts as a memory of the last received reward signal, which can be
+    accessed via the `value` attribute.
 
     Examples:
         reward = Reward1() + Reward2()
         reward = RewardProcessor(reward, <args>)
     """
 
-    def __init__(self, reward):
-        super(RewardProcessor, self).__init__()
-        self.reward = reward
-        self.value = 0
+    def __init__(self, reward, range=None):
+        """
+        Initialize the reward processor.
 
-    def compute(self):
-        self.value = self.reward()
+        Args:
+            reward (Reward): reward to process.
+            range (tuple of float/int, None): range of the reward processor.
+        """
+        super(RewardProcessor, self).__init__()
+
+        # set the reward to process
+        if not isinstance(reward, Reward):
+            raise TypeError("Expecting the given 'reward' to be an instance of `Reward`, instead got: "
+                            "{}".format(type(reward)))
+        self.reward = reward
+
+        # set the range
+        self.range = self.reward.range if range is None else range
+
+        # set the initial value (randomly)
+        self.value = np.random.uniform(low=self.range[0], high=self.range[1])
+
+    def _compute(self):
+        """Compute the reward and cache its value."""
+        self.value = self.reward._compute()
         return self.value
 
 
@@ -47,17 +66,20 @@ class ShiftRewardProcessor(RewardProcessor):
 
     def __init__(self, reward, x):
         """
-        Initialize the Center Reward Processor.
+        Initialize the shift reward processor.
 
         Args:
-            reward (Reward): Reward instance to process.
+            reward (Reward): Reward instance to shift.
             x (int, float): amount to be shifted.
         """
-        super(ShiftRewardProcessor, self).__init__(reward)
+        if not isinstance(x, (int, float)):
+            raise TypeError("Expecting the given 'x' (=the amount to be shifted) to be an int or float, instead got: "
+                            "{}".format(type(x)))
         self.x = x
+        super(ShiftRewardProcessor, self).__init__(reward, range=self.reward.range + x)
 
-    def compute(self):
-        reward = self.reward()
+    def _compute(self):
+        reward = self.reward._compute()
         self.value = reward + self.x
         return self.value
 
@@ -74,7 +96,7 @@ class ClipRewardProcessor(RewardProcessor):
         Initialize the Clip processor.
 
         Args:
-            reward (Reward): Reward instance to process.
+            reward (Reward): Reward instance to clip.
             low (int, float): lower bound
             high (int, float): higher bound
         """
@@ -82,8 +104,8 @@ class ClipRewardProcessor(RewardProcessor):
         self.low = low
         self.high = high
 
-    def compute(self):
-        reward = self.reward()
+    def _compute(self):
+        reward = self.reward._compute()
         self.value = np.clip(reward, self.low, self.high)
         return self.value
 
@@ -95,6 +117,12 @@ class CenterRewardProcessor(RewardProcessor):
     """
 
     def __init__(self, reward):
+        """
+        Initialize the center reward processor.
+
+        Args:
+            reward (Reward): Reward instance to center.
+        """
         super(CenterRewardProcessor, self).__init__(reward)
         self.mean = 0
         self.N = 0
@@ -104,8 +132,8 @@ class CenterRewardProcessor(RewardProcessor):
         self.N = 0
         self.reward.reset()
 
-    def compute(self):
-        reward = self.reward()
+    def _compute(self):
+        reward = self.reward._compute()
         # update the mean
         self.mean = self.N / (self.N + 1.) * self.mean + 1. / (self.N + 1) * reward
         self.N += 1
@@ -124,6 +152,12 @@ class NormalizeRewardProcessor(RewardProcessor):
     """
 
     def __init__(self, reward):
+        """
+        Initialize the normalizer reward processor.
+
+        Args:
+            reward (Reward): Reward instance to normalize.
+        """
         super(NormalizeRewardProcessor, self).__init__(reward)
         self.min = np.infty
         self.max = -np.infty
@@ -133,8 +167,8 @@ class NormalizeRewardProcessor(RewardProcessor):
         self.max = -np.infty
         self.reward.reset()
 
-    def compute(self):
-        reward = self.reward()
+    def _compute(self):
+        reward = self.reward._compute()
         self.min = np.minimum(reward, self.min)
         self.max = np.maximum(reward, self.max)
         den = self.max - self.min
@@ -153,6 +187,14 @@ class StandardizeRewardProcessor(RewardProcessor):
     """
 
     def __init__(self, reward, epsilon=1.e-4, center=True):
+        """
+        Initialize the standardizer reward processor.
+
+        Args:
+            reward (Reward): Reward instance to standardize.
+            epsilon (float): threshold to be added to the standard deviation in order to avoid a division by 0.
+            center (bool): if we should center the data.
+        """
         super(StandardizeRewardProcessor, self).__init__(reward)
         self.eps = epsilon
         self.mean = 0
@@ -166,16 +208,16 @@ class StandardizeRewardProcessor(RewardProcessor):
         self.N = 0
         self.reward.reset()
 
-    def compute(self):
-        reward = self.reward()
+    def _compute(self):
+        reward = self.reward._compute()
 
         # update the mean
         old_mean = self.mean
         self.mean = self.N / (self.N + 1.) * self.mean + 1. / (self.N + 1) * reward
 
         # update the var / stddev
-        self.var = self.N / (self.N + 1) * self.var + \
-                   1. / (self.N + 1) * (self.value - old_mean) * (self.value - self.mean)
+        frac = 1. / (self.N + 1)
+        self.var = self.N * frac * self.var + frac * (self.value - old_mean) * (self.value - self.mean)
         std = np.sqrt(self.var)
 
         # update total number of data points
@@ -196,18 +238,25 @@ class GammaAccumulatedRewardProcessor(RewardProcessor):
     """
 
     def __init__(self, reward, gamma=0.99):
+        """
+        Initialize the gamma accumulator reward processor.
+
+        Args:
+            reward (Reward): Reward instance to process.
+            gamma (float): discount factor.
+        """
         super(GammaAccumulatedRewardProcessor, self).__init__(reward)
         self.gamma = gamma
-        self.ret = 0.
+        self.value = 0.  # return value
 
     def reset(self):
-        self.ret = 0.
+        self.value = 0.
         self.reward.reset()
 
-    def compute(self):
-        reward = self.reward()
-        self.ret = reward + self.gamma * self.ret
-        return self.ret
+    def _compute(self):
+        reward = self.reward._compute()
+        self.value = reward + self.gamma * self.value
+        return self.value
 
 
 class GammaStandardizeRewardProcessor(RewardProcessor):
@@ -218,6 +267,14 @@ class GammaStandardizeRewardProcessor(RewardProcessor):
     """
 
     def __init__(self, reward, gamma=0.99, epsilon=1.e-4):
+        """
+        Initialize the gamma standardizer reward processor.
+
+        Args:
+            reward (Reward): Reward instance to process.
+            gamma (float): discount factor.
+            epsilon (float): threshold to be added to the standard deviation in order to avoid a division by 0.
+        """
         super(GammaStandardizeRewardProcessor, self).__init__(reward)
         self.gamma = gamma
         self.eps = epsilon
@@ -233,8 +290,8 @@ class GammaStandardizeRewardProcessor(RewardProcessor):
         self.N = 0
         self.reward.reset()
 
-    def compute(self):
-        reward = self.reward()
+    def _compute(self):
+        reward = self.reward._compute()
 
         # update return
         self.ret = reward + self.gamma * self.ret
@@ -265,7 +322,7 @@ class ScaleRewardProcessor(RewardProcessor):
         Initialize the scale reward processor
 
         Args:
-            reward (Reward): reward function to process.
+            reward (Reward): reward function to scale.
             x1 (int, float): lower bound of the original reward
             x2 (int, float): upper bound of the original reward
             y1 (int, float): lower bound of the final reward
@@ -277,8 +334,9 @@ class ScaleRewardProcessor(RewardProcessor):
         self.y1 = y1
         self.y2 = y2
         self.ratio = (self.y2 - self.y1) / (self.x2 - self.x1)
+        self.range = (self.y1, self.y2)
 
-    def compute(self):
-        reward = self.reward()
+    def _compute(self):
+        reward = self.reward._compute()
         self.value = self.y1 + (reward - self.x1) * self.ratio
         return self.value
