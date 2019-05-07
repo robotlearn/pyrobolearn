@@ -82,6 +82,13 @@ class Bullet(Simulator):
     """
 
     def __init__(self, render=True, **kwargs):
+        """
+        Initialize PyBullet simulator.
+
+        Args:
+            render (bool): if True, it will open the GUI, otherwise, it will just run the server.
+            **kwargs (dict): optional arguments (this is not used here).
+        """
         super(Bullet, self).__init__()
 
         # parse the kwargs
@@ -103,7 +110,20 @@ class Bullet(Simulator):
 
         # TODO: add gazebo_models path
 
-        self.models = {}
+        # create history container that keeps track of what we created in the simulator (including collision and visual
+        # shapes, bodies, URDFs, SDFs, MJCFs, etc), the textures we applied, the constraints we created, the dynamical
+        # properties we changed, etc. This is useful when we need to create an other instance of the simulator,
+        # or when we need to change the connection type (by rendering or hiding the GUI).
+        # The items in the history container are in the same order there were called. Each item is a tuple where the
+        # first item is the name of the method called, and the second item is the parameters that were passed to that
+        # method.
+        self.history = []
+
+        # main camera in the simulator
+        self._camera = None
+
+        # given parameters
+        self.kwargs = {'render': render, 'kwargs': kwargs}
 
         # go through the global variables / attributes defined in pybullet and set them here
         # this includes for instance: JOINT_REVOLUTE, POSITION_CONTROL, etc.
@@ -140,6 +160,11 @@ class Bullet(Simulator):
         """Return the version of the simulator in a year-month-day format."""
         return self.sim.getAPIVersion()
 
+    @property
+    def gravity(self):
+        """Return the gravity in the simulator."""
+        return self.get_physics_properties()['gravity']
+
     ###########
     # Methods #
     ###########
@@ -147,6 +172,43 @@ class Bullet(Simulator):
     ##############
     # Simulators #
     ##############
+
+    # @staticmethod
+    # def copy(other, copy_models=True, copy_properties=True):
+    #     """Create another simulator.
+    #
+    #     Args:
+    #         other (Bullet): the other simulator.
+    #         copy_models (bool): if True, it will load the various 3d models in the simulator.
+    #         copy_properties (bool): if True, it will copy the physical properties (gravity, friction, etc).
+    #     """
+    #     # create another simulator
+    #     if not isinstance(other, Bullet):
+    #         raise TypeError("Expecting the given 'other' simulator to be an instance of `Bullet`, instead got: "
+    #                         "{}".format(type(other)))
+    #     sim = Bullet(render=(other.connection_mode == pybullet.GUI))
+    #
+    #     # load the models if specified
+    #     if copy_models:
+    #         for item in other.history:
+    #             if item[0] == 'visual':
+    #                 sim.create_visual_shape(**item[1])
+    #             elif item[0] == 'collision':
+    #                 sim.create_collision_shape(**item[1])
+    #             elif item[0] == 'body':
+    #                 sim.create_body(**item[1])
+    #             elif item[0] == 'urdf':
+    #                 sim.load_urdf(**item[1])
+    #             elif item[0] == 'sdf':
+    #                 sim.load_sdf(**item[1])
+    #             elif item[0] == 'mjcf':
+    #                 sim.load_mjcf(**item[1])
+    #             elif item[0] == 'texture':
+    #                 sim.load_texture(**item[1])
+    #             else:
+    #                 pass
+    #
+    #     return sim
 
     def __init(self, connection_mode):
         """Initialize the simulator with the specified connection mode."""
@@ -160,11 +222,12 @@ class Bullet(Simulator):
         self.id = self.sim._client
         self.sim.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-        # reload the models
-        models = self.models.copy()
-        for idx in models:
-            kwargs = models[idx]
-            self.load_urdf(**kwargs)
+        # execute each method in the history
+        history = list(self.history)
+        self.history = []
+        for item in history:
+            method = getattr(self, item[0])
+            method(**item[1])
 
     def reset(self):
         """Reset the simulator.
@@ -194,37 +257,65 @@ class Bullet(Simulator):
         self.sim.stepSimulation()
         time.sleep(sleep_time)
 
-    def render(self, flag=True):
+    def render(self, flag=True, mode='human'):
         """Render the GUI.
+
+        Warnings: note that this operation can be time consuming with the pybullet simulator if we need to change the
+        connection type. This is because we need to close the previous simulator, create a new one with the new
+        connection type, and reload everything into that new simulator. I would not advise to use it frequently in the
+        'human' mode. If the 'rgb' mode is used, you have to call this method frequently to get a new picture, however
+        do not call at a high frequency rate (depending on the picture size).
 
         Args:
             flag (bool): If True, it will render the simulator by enabling the GUI.
+            mode (str): specify the rendering mode. If mode=='human', it will render it in the simulator, if
+                mode=='rgb', it will return a picture taken with the main camera of the simulator.
+
+        Returns:
+            if mode == 'human':
+                None
+            if mode == 'rgb':
+                np.array[W,H,D]: RGB image
         """
         if flag:
-            # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING,  1)
-            if self.connection_mode == pybullet.DIRECT:
-                # save the state of the simulator
-                filename = 'PYROBOLEARN_RENDERING_STATE.bullet'
-                self.save(filename=filename)
-                # change the connection mode
-                self.connection_mode = pybullet.GUI
-                self.__init(self.connection_mode)
-                # load the state of the world in the simulator
-                self.load(filename)
-                os.remove(filename)
+            if mode == 'human':
+                # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING,  1)
+                if self.connection_mode == pybullet.DIRECT:
+                    # save the state of the simulator
+                    filename = 'PYROBOLEARN_RENDERING_STATE.bullet'
+                    self.save(filename=filename)
+                    # change the connection mode
+                    self.connection_mode = pybullet.GUI
+                    self.__init(self.connection_mode)
+                    # load the state of the world in the simulator
+                    self.load(filename)
+                    os.remove(filename)
+                    # reset the camera
+                    if self._camera is not None:
+                        yaw, pitch, distance, target = self._camera
+                        self.reset_debug_visualizer(distance=distance, yaw=yaw, pitch=pitch, target_position=target)
+            elif mode == 'rgb' or mode == 'rgba':
+                width, height, view_matrix, projection_matrix = self.sim.get_debug_visualizer()[:4]
+                img = np.array(self.sim.get_camera_image(width, height, view_matrix, projection_matrix)[2])
+                img = img.reshape(width, height, 4)  # RGBA
+                if mode == 'rgb':
+                    return img[:, :, :3]
+                return img
         else:
-            # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING, 0)
-            if self.connection_mode == pybullet.GUI:
-                # save the state of the simulator
-                filename = 'PYROBOLEARN_RENDERING_STATE.bullet'
-                self.save(filename=filename)
-                # change the connection mode
-                self.connection_mode = pybullet.DIRECT
-                self.__init(self.connection_mode)
-                # load the state of the world in the simulator
-                self.load(filename)
-                os.remove(filename)
-                # TODO: reset the camera
+            if mode == 'human':
+                # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING, 0)
+                if self.connection_mode == pybullet.GUI:
+                    # save the state of the simulator
+                    filename = 'PYROBOLEARN_RENDERING_STATE.bullet'
+                    self.save(filename=filename)
+                    # save main camera configuration (for later)
+                    self._camera = self.get_debug_visualizer()[-4:]
+                    # change the connection mode
+                    self.connection_mode = pybullet.DIRECT
+                    self.__init(self.connection_mode)
+                    # load the state of the world in the simulator
+                    self.load(filename)
+                    os.remove(filename)
 
     def set_time_step(self, time_step):
         """Set the specified time step in the simulator.
@@ -240,6 +331,7 @@ class Bullet(Simulator):
         Args:
             time_step (float): Each time you call 'step' the time step will proceed with 'time_step'.
         """
+        self.history.append(('set_time_step', {'time_step': time_step}))
         self.sim.setTimeStep(timeStep=time_step)
 
     def set_real_time(self, enable=True):
@@ -585,9 +677,10 @@ class Bullet(Simulator):
             kwargs['globalScaling'] = scale
 
         model_id = self.sim.loadURDF(filename, **kwargs)
-        frame = inspect.currentframe()
-        args, _, _, values = inspect.getargvalues(frame)
-        self.models[model_id] = {arg: values[arg] for arg in args[1:]}
+        if model_id > -1:
+            frame = inspect.currentframe()
+            args, _, _, values = inspect.getargvalues(frame)
+            self.history.append(('load_urdf', {arg: values[arg] for arg in args[1:]}))
         return model_id
 
     def load_sdf(self, filename, scaling=1., *args, **kwargs):
@@ -3648,26 +3741,31 @@ class Bullet(Simulator):
 
 # Tests
 if __name__ == "__main__":
-    pass
-    # import inspect
-    # import pybullet as p
-    #
-    # f = p.createCollisionShape
-    # print(f)
-    # print(dir(f))
-    # specs = inspect.getargspec(f)
-    # print(zip(specs.args[-len(specs.defaults):], specs.defaults))
-    # print('')
-    #
-    # exit()
-    # sim = Bullet()
-    # s = sim.sim._client
-    # print('')
-    # # print(sim.get_physics_properties())
-    # f = s.createCollisionShape
-    # print(f)
-    # print(f.keywords)
-    # print(dir(f))
-    # specs = inspect.getargspec(f)
-    # print(zip(specs.args[-len(specs.defaults):], specs.defaults))
-    # print('')
+
+    # create simulator
+    sim = Bullet()
+    sim.configure_debug_visualizer(sim.COV_ENABLE_GUI, 0)
+    sim.set_gravity([0., 0., -9.81])
+
+    # load floor and sphere
+    sim.load_urdf('plane.urdf', use_fixed_base=True, scale=1.)
+    sim.load_urdf("sphere_small.urdf", position=[0, 0, 3])
+
+    # print info
+    print("Available URDFs: {}".format(sim.get_available_urdfs(fullpath=False)))
+    # print("Available SDFs: {}".format(sim.get_available_sdfs(fullpath=False)))
+    # print("Available MJCFs: {}".format(sim.get_available_mjcfs(fullpath=False)))
+    # print("Available OBJs: {}".format(sim.get_available_objs(fullpath=False)))
+
+    # perform few steps in the simulator
+    for t in range(1000):
+        if t == 60:
+            # hide the GUI
+            print("History: {}".format(sim.history))
+            sim.hide()
+        if t == 200:
+            # render the gui
+            sim.render()
+
+        # perform a step in the simulation
+        sim.step(1./20)
