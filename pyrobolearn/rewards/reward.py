@@ -17,9 +17,8 @@ Dependencies:
 
 import operator
 import copy
-import collections
 
-# from objective import Objective
+# from pyrobolearn.rewards.objective import Objective
 from pyrobolearn.states import *
 from pyrobolearn.actions import *
 
@@ -88,12 +87,23 @@ class Reward(object):
         [2] https://turion.wordpress.com/2012/01/05/add-and-multiply-python-functions-operable-functions/
     """
 
-    def __init__(self, state=None, action=None, rewards=None):
+    def __init__(self, state=None, action=None, rewards=None, range=(-np.infty, np.infty)):
+        """
+        Initialize the reward function.
+
+        Args:
+            state (None, State): state on which depends the reward function.
+            action (None, Action): action on which depends the reward function.
+            rewards (None, list of Reward): list of intern rewards.
+            range (tuple of float): A tuple corresponding to the min and max possible rewards. By default, it is
+                [-infinity, infinity]. The computed reward is automatically clipped if it goes outside the range.
+        """
         # super(Reward, self).__init__(maximize=True)
 
         self.state = state
         self.action = action
         self.rewards = rewards
+        self.range = range
 
         # # create automatically binary operator methods
         # op_names = ['__add__', '__div__', '__floordiv__', '__iadd__', '__idiv__', '__ifloordiv__', '__imod__',
@@ -115,14 +125,14 @@ class Reward(object):
         #             # create reward to return
         #             reward = Reward(rewards=rewards)
         #
-        #             # replace the `reward.compute` by the corresponding function
+        #             # replace the `reward._compute` by the corresponding function
         #             if isinstance(other, Reward): # callable
         #                 def compute():
         #                     return op(self(), other())
         #             else:
         #                 def compute():
         #                     return op(self(), other)
-        #             reward.compute = compute
+        #             reward._compute = compute
         #             return reward
         #         return binary_operator
         #
@@ -156,7 +166,7 @@ class Reward(object):
         #             reward = copy.copy(self) # shallow copy
         #             def compute():
         #                 return op(self())
-        #             reward.compute = compute
+        #             reward._compute = compute
         #             return reward
         #         return unary_operator
         #
@@ -211,6 +221,26 @@ class Reward(object):
             rewards = [rewards]
         self._rewards = rewards
 
+    @property
+    def range(self):
+        """Return the range of the reward function; a tuple corresponding to the min and max possible rewards."""
+        return self._range
+
+    @range.setter
+    def range(self, range):
+        """Set the range of the reward function; a tuple corresponding to the min and max possible rewards."""
+        if range is None:
+            range = (-np.infty, np.infty)
+        if not isinstance(range, (tuple, list, np.ndarray)):
+            raise TypeError("Expecting the given 'range' to be a tuple/list/np.array of 2 float, instead got: "
+                            "{}".format(type(range)))
+        if len(range) != 2:
+            raise ValueError("Expecting the given 'range' to be a tuple/list/np.array of len(2), instead got a length "
+                             "of: {}".format(len(range)))
+        if range[0] > range[1]:
+            raise ValueError("Expecting range[0] <= range[1], instead got the opposite: {}".format(range))
+        self._range = np.array(range)
+
     ###########
     # Methods #
     ###########
@@ -229,23 +259,27 @@ class Reward(object):
         for reward in self.rewards:
             reward.reset()
 
-    def compute(self):  # **kwargs):
-        """Compute the reward and return the scalar value
+    def _compute(self):  # **kwargs):
+        """Compute the reward and return the scalar value. This has to be implemented in the child classes.
 
         Warnings: by default, *args and **kwargs are disabled as it could lead to several problems:
         1. As more and more rewards will become available, there might share the same argument name if the programmer
         is not careful, which could lead to bugs that are difficult to detect.
         2. It is better to provide the arguments during the initialization of the reward class. If the user has
-        a variable that might change, create a class for that variable and in the corresponding reward's compute
+        a variable that might change, create a class for that variable and in the corresponding reward's `compute`
         method, check what is its value.
         """
-        pass
+        raise NotImplementedError
+
+    def compute(self):
+        return np.clip(self._compute(), self.range[0], self.range[1])
 
     #############
     # Operators #
     #############
 
     def __repr__(self):
+        """Return a representation string about the reward function."""
         if not self.rewards or self.rewards is None:
             return self.__class__.__name__
         else:
@@ -253,11 +287,13 @@ class Reward(object):
             return ' + '.join(lst)
 
     def __call__(self):  # **kwargs):
+        """Compute the reward function."""
         return self.compute()  # **kwargs)
 
     # for unary and binary operators, see `__init__()` method.
 
     def __build_reward(self, other):
+        """Build the list of inner rewards."""
         # built the internal list of rewards
         rewards = self._rewards if self.has_rewards() else [self]
         if isinstance(other, Reward):
@@ -267,174 +303,281 @@ class Reward(object):
                 rewards.append(other)
         return Reward(rewards=rewards)
 
-    def __get_operation(self, other, op):
-        if isinstance(other, Reward):  # callable
-            def compute():
-                return op(self(), other())
+    @staticmethod
+    def __get_operation(a, b, op):
+        """Return the compute function that we called when calling the reward function.
+
+        Args:
+            a (float, int, Reward): first term in the operation: op(a, b)
+            b (float, int, Reward): second term in the operation: op(a, b)
+            op (types.BuiltinFunctionType): operator to be applied on the two given terms: op(a, b)
+        """
+        if isinstance(a, Reward):  # callable
+            if isinstance(b, Reward):
+                def compute():
+                    return op(a(), b())
+            else:
+                def compute():
+                    return op(a(), b)
         else:
-            def compute():
-                return op(self(), other)
+            if isinstance(b, Reward):
+                def compute():
+                    return op(a, b())
+            else:  # this condition should normally never be satisfied
+                def compute():
+                    return op(a, b)
         return compute
 
+    @staticmethod
+    def __build_range(a, b, op):
+        """Build the range of the reward function.
+
+        Args:
+            a (float, int, Reward): first term in the operation: op(a, b)
+            b (float, int, Reward): second term in the operation: op(a, b)
+            op (types.BuiltinFunctionType): operator to be applied on the two given terms: op(a, b)
+        """
+        a = a.range if isinstance(a, Reward) else (a, a)
+        b = b.range if isinstance(b, Reward) else (b, b)
+
+        # check that you do not have a possible division or modulo by zero
+        if op in {operator.__div__, operator.__floordiv__, operator.__truediv__, operator.__mod__}:
+            if b[0] <= 0 <= b[1]:
+                raise ValueError("Zero is between the lower and upper bound of the range of `other`. This is not "
+                                 "accepted as it can lead to a division or modulo by zero.")
+
+        # perform all possible combinations (Be careful with division or modulo by 0)
+        operations = [op(a[0], b[0]), op(a[0], b[1]), op(a[1], b[0]), op(a[1], b[1])]
+
+        # compute the lower and upper bounds
+        low = np.min(operations)
+        high = np.max(operations)
+
+        # return the lower bound
+        return low, high
+
     def __add__(self, other):
+        """Return a reward that will add `self` and `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__add__)
+        reward._compute = self.__get_operation(self, other, operator.__add__)
+        reward.range = self.__build_range(self, other, operator.__add__)
         return reward
 
     def __div__(self, other):
+        """Return a reward that will divide `self` by `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__div__)
+        reward._compute = self.__get_operation(self, other, operator.__div__)
+        reward.range = self.__build_range(self, other, operator.__div__)
         return reward
 
     def __floordiv__(self, other):
+        """Return a reward that will divide `self` by `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__floordiv__)
+        reward._compute = self.__get_operation(self, other, operator.__floordiv__)
+        reward.range = self.__build_range(self, other, operator.__floordiv__)
         return reward
 
     def __iadd__(self, other):
+        """Return a reward that will add `self` and `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__iadd__)
+        reward._compute = self.__get_operation(self, other, operator.__iadd__)
+        reward.range = self.__build_range(self, other, operator.__add__)
         return reward
 
     def __idiv__(self, other):
+        """Return a reward that will divide `self` by `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__idiv__)
+        reward._compute = self.__get_operation(self, other, operator.__idiv__)
+        reward.range = self.__build_range(self, other, operator.__div__)
         return reward
 
     def __ifloordiv__(self, other):
+        """Return a reward that will divide `self` by `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__ifloordiv__)
+        reward._compute = self.__get_operation(self, other, operator.__ifloordiv__)
+        reward.range = self.__build_range(self, other, operator.__floordiv__)
         return reward
 
     def __imod__(self, other):
+        """Return a reward that will compute `self` modulo `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__imod__)
+        reward._compute = self.__get_operation(self, other, operator.__imod__)
+        reward.range = self.__build_range(self, other, operator.__mod__)
         return reward
 
     def __imul__(self, other):
+        """Return a reward that will multiply `self` by `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__imul__)
+        reward._compute = self.__get_operation(self, other, operator.__imul__)
+        reward.range = self.__build_range(self, other, operator.__mul__)
         return reward
 
     def __ipow__(self, other):
+        """Return a reward that will raise `self` to the power `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__ipow__)
+        reward._compute = self.__get_operation(self, other, operator.__ipow__)
+        reward.range = self.__build_range(self, other, operator.__pow__)
         return reward
 
     def __isub__(self, other):
+        """Return a reward that will subtract `other` from `self`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__isub__)
+        reward._compute = self.__get_operation(self, other, operator.__isub__)
+        reward.range = self.__build_range(self, other, operator.__sub__)
         return reward
 
     def __itruediv__(self, other):
+        """Return a reward that will divide `self` by `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__itruediv__)
+        reward._compute = self.__get_operation(self, other, operator.__itruediv__)
+        reward.range = self.__build_range(self, other, operator.__truediv__)
         return reward
 
     def __mod__(self, other):
+        """Return a reward that will compute `self` modulo `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__mod__)
+        reward._compute = self.__get_operation(self, other, operator.__mod__)
+        reward.range = self.__build_range(self, other, operator.__mod__)
         return reward
 
     def __mul__(self, other):
+        """Return a reward that will multiply `self` by `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__mul__)
+        reward._compute = self.__get_operation(self, other, operator.__mul__)
+        reward.range = self.__build_range(self, other, operator.__mul__)
         return reward
 
     def __pow__(self, other):
+        """Return a reward that will raise `self` to the power `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__pow__)
+        reward._compute = self.__get_operation(self, other, operator.__pow__)
+        reward.range = self.__build_range(self, other, operator.__pow__)
         return reward
 
     def __radd__(self, other):
+        """Return a reward that will add `self` and `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__add__)
+        reward._compute = self.__get_operation(self, other, operator.__add__)
+        reward.range = self.__build_range(self, other, operator.__add__)
         return reward
 
     def __rdiv__(self, other):
+        """Return a reward that will divide `other` by `self`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__div__)
+        reward._compute = self.__get_operation(other, self, operator.__div__)
+        reward.range = self.__build_range(other, self, operator.__div__)
         return reward
 
     def __rfloordiv__(self, other):
+        """Return a reward that will divide `other` by `self`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__floordiv__)
+        reward._compute = self.__get_operation(other, self, operator.__floordiv__)
+        reward.range = self.__build_range(other, self, operator.__floordiv__)
         return reward
 
     def __rmod__(self, other):
+        """Return a reward that will compute `other` modulo `self`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__mod__)
+        reward._compute = self.__get_operation(other, self, operator.__mod__)
+        reward.range = self.__build_range(other, self, operator.__mod__)
         return reward
 
     def __rmul__(self, other):
+        """Return a reward that will multiply `self` by `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__mul__)
+        reward._compute = self.__get_operation(self, other, operator.__mul__)
+        reward.range = self.__build_range(self, other, operator.__mul__)
         return reward
 
     def __rpow__(self, other):
+        """Return a reward that will raise `other` to the power `self`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__pow__)
+        reward._compute = self.__get_operation(other, self, operator.__pow__)
+        reward.range = self.__build_range(other, self, operator.__pow__)
         return reward
 
     def __rsub__(self, other):
+        """Return a reward that will subtract `self` from `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__sub__)
+        reward._compute = self.__get_operation(other, self, operator.__sub__)
+        reward.range = self.__build_range(other, self, operator.__sub__)
         return reward
 
     def __rtruediv__(self, other):
+        """Return a reward that will divide `other` by `self`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__truediv__)
+        reward._compute = self.__get_operation(other, self, operator.__truediv__)
+        reward.range = self.__build_range(other, self, operator.__truediv__)
         return reward
 
     def __sub__(self, other):
+        """Return a reward that will subtract `other` from `self`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__sub__)
+        reward._compute = self.__get_operation(self, other, operator.__sub__)
+        reward.range = self.__build_range(self, other, operator.__sub__)
         return reward
 
     def __truediv__(self, other):
+        """Return a reward that will divide `self` by `other`."""
         reward = self.__build_reward(other)
-        reward.compute = self.__get_operation(other, operator.__truediv__)
+        reward._compute = self.__get_operation(self, other, operator.__truediv__)
+        reward.range = self.__build_range(self, other, operator.__truediv__)
         return reward
 
     # binary comparison operators
     def __eq__(self, other):
-        compute = self.__get_operation(other, operator.__eq__)
+        compute = self.__get_operation(self, other, operator.__eq__)
         return compute()
 
     def __ge__(self, other):
-        compute = self.__get_operation(other, operator.__ge__)
+        compute = self.__get_operation(self, other, operator.__ge__)
         return compute()
 
     def __gt__(self, other):
-        compute = self.__get_operation(other, operator.__gt__)
+        compute = self.__get_operation(self, other, operator.__gt__)
         return compute()
 
     def __le__(self, other):
-        compute = self.__get_operation(other, operator.__le__)
+        compute = self.__get_operation(self, other, operator.__le__)
         return compute()
 
     def __lt__(self, other):
-        compute = self.__get_operation(other, operator.__lt__)
+        compute = self.__get_operation(self, other, operator.__lt__)
         return compute()
 
     def __ne__(self, other):
-        compute = self.__get_operation(other, operator.__ne__)
+        compute = self.__get_operation(self, other, operator.__ne__)
         return compute()
 
     # unary operators
     def __abs__(self):
+        """Return the absolute value of the reward."""
         reward = copy.copy(self)  # shallow copy
-        reward.compute = lambda: operator.__abs__(self())
+        reward._compute = lambda: operator.__abs__(self())
+        if self.range[0] <= 0 <= self.range[1]:  # the lower bound is negative while the upper bound is positive
+            low, high = 0, self.range[1]
+        elif self.range[0] < 0 and self.range[1] < 0:  # the lower and upper bounds are negative
+            if self.range[0] < self.range[1]:
+                low, high = -self.range[1], -self.range[0]
+            else:
+                low, high = -self.range[0], -self.range[1]
+        else:  # the lower and upper bounds are positive
+            low, high = self.range[0], self.range[1]
+        reward.range = (low, high)
         return reward
 
     def __neg__(self):
+        """Return the resulting reward by applying the unary negative operation on it."""
         reward = copy.copy(self)  # shallow copy
-        reward.compute = lambda: operator.__neg__(self())
+        reward._compute = lambda: operator.__neg__(self())
+        reward.range = (-self.range[1], -self.range[0])
         return reward
 
     def __pos__(self):
+        """Return the resulting reward by applying the unary positive operation on it."""
         reward = copy.copy(self)  # shallow copy
-        reward.compute = lambda: operator.__pos__(self())
+        reward._compute = lambda: operator.__pos__(self())
+        reward.range = self.range
         return reward
 
 
@@ -466,7 +609,7 @@ class Reward(object):
 #                 y = copy.copy(x)  # shallow copy
 #                 def f():
 #                     return op(x())
-#                 y.compute = f
+#                 y._compute = f
 #                 return y
 #             else:
 #                 return op(x)
@@ -475,219 +618,210 @@ class Reward(object):
 #     globals()[name] = wrapper(getattr(np, name))
 
 def ceil(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.ceil(x())
+        y._compute = lambda: np.ceil(x())
+        y.range = (np.ceil(x.range[0]), np.ceil(x.range[1]))
         return y
     else:
         return np.ceil(x)
 
 
 def cos(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.cos(x())
+        y._compute = lambda: np.cos(x())
+        y.range = (np.cos(x.range[0]), np.cos(x.range[1]))
         return y
     else:
         return np.cos(x)
 
 
 def cosh(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.cosh(x())
+        y._compute = lambda: np.cosh(x())
+        y.range = (np.cosh(x.range[0]), np.cosh(x.range[1]))
         return y
     else:
         return np.cosh(x)
 
 
 def degrees(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.degrees(x())
+        y._compute = lambda: np.degrees(x())
+        y.range = (np.degrees(x.range[0]), np.degrees(x.range[1]))
         return y
     else:
         return np.degrees(x)
 
 
 def exp(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.exp(x())
+        y._compute = lambda: np.exp(x())
+        y.range = (np.exp(x.range[0]), np.exp(x.range[1]))
         return y
     else:
         return np.exp(x)
 
 
 def expm1(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.expm1(x())
+        y._compute = lambda: np.expm1(x())
+        y.range = (np.expm1(x.range[0]), np.expm1(x.range[1]))
         return y
     else:
         return np.expm1(x)
 
 
 def floor(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.floor(x())
+        y._compute = lambda: np.floor(x())
+        y.range = (np.floor(x.range[0]), np.floor(x.range[1]))
         return y
     else:
         return np.floor(x)
 
 
 def frexp(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.frexp(x())
+        y._compute = lambda: np.frexp(x())
+        y.range = (np.frexp(x.range[0]), np.frexp(x.range[1]))
         return y
     else:
         return np.frexp(x)
 
 
 def isinf(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.isinf(x())
+        y._compute = lambda: np.isinf(x())
+        y.range = x.range
         return y
     else:
         return np.isinf(x)
 
 
 def isnan(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.isnan(x())
+        y._compute = lambda: np.isnan(x())
+        y.range = x.range
         return y
     else:
         return np.isnan(x)
 
 
 def log(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.log(x())
+        y._compute = lambda: np.log(x())
+        y.range = (np.log(x.range[0]), np.log(x.range[1]))
         return y
     else:
         return np.log(x)
 
 
 def log10(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.log10(x())
+        y._compute = lambda: np.log10(x())
+        y.range = (np.log10(x.range[0]), np.log10(x.range[1]))
         return y
     else:
         return np.log10(x)
 
 
 def log1p(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.log1p(x())
+        y._compute = lambda: np.log1p(x())
+        y.range = (np.log1p(x.range[0]), np.log1p(x.range[1]))
         return y
     else:
         return np.log1p(x)
 
 
-def modf(x):
-    if callable(x):
-        y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.modf(x())
-        return y
-    else:
-        return np.modf(x)
+# def modf(x):
+#     if isinstance(x, Reward):
+#         y = copy.copy(x)  # shallow copy
+#         y._compute = lambda: np.modf(x())
+#         y.range = x.range
+#         return y
+#     else:
+#         return np.modf(x)
 
 
 def radians(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.radians(x())
+        y._compute = lambda: np.radians(x())
+        y.range = (np.radians(x.range[0]), np.radians(x.range[1]))
         return y
     else:
         return np.radians(x)
 
 
 def sin(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.sin(x())
+        y._compute = lambda: np.sin(x())
+        y.range = (np.sin(x.range[0]), np.sin(x.range[1]))
         return y
     else:
         return np.sin(x)
 
 
 def sinh(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.sinh(x())
+        y._compute = lambda: np.sinh(x())
+        y.range = (np.sinh(x.range[0]), np.sinh(x.range[1]))
         return y
     else:
         return np.sinh(x)
 
 
 def sqrt(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.sqrt(x())
+        y._compute = lambda: np.sqrt(x())
+        y.range = (np.sqrt(x.range[0]), np.sqrt(x.range[1]))
         return y
     else:
         return np.sqrt(x)
 
 
 def tan(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.tan(x())
+        y._compute = lambda: np.tan(x())
+        y.range = (np.tan(x.range[0]), np.tan(x.range[1]))
         return y
     else:
         return np.tan(x)
 
 
 def tanh(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.tanh(x())
+        y._compute = lambda: np.tanh(x())
+        y.range = (np.tanh(x.range[0]), np.tanh(x.range[1]))
         return y
     else:
         return np.tanh(x)
 
 
 def trunc(x):
-    if callable(x):
+    if isinstance(x, Reward):
         y = copy.copy(x)  # shallow copy
-        y.compute = lambda: np.trunc(x())
+        y._compute = lambda: np.trunc(x())
+        y.range = (np.trunc(x.range[0]), np.trunc(x.range[1]))
         return y
     else:
         return np.trunc(x)
-
-
-##############################################################
-#                         Rewards                            #
-##############################################################
-
-
-
-
-# Test
-if __name__ == '__main__':
-    reward = 2*FixedReward(10) + FixedReward(3)**2 - 10
-    reward += FixedReward(2)
-    print(reward())
-    print(isinstance(reward, Reward))
-    print(reward.rewards)
-
-    reward = FixedReward(-10)
-    print(reward())
-    reward = abs(reward)
-    print(reward())
-    print(FixedReward(10) == FixedReward(10))
-
-    print('')
-    reward = FixedReward(2) + FixedReward(1)
-    print(reward())
-    reward = cos(reward)
-    print(reward())
-    # print(type(reward))
-    # print(reward.rewards)

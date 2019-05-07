@@ -90,7 +90,7 @@ class GymEnvWrapper(gym.Env):
         # set state, action, and reward
         self._state = GymState(self.env)
         self._action = GymAction(self.env)
-        self._reward = GymReward(0.)
+        self._reward = GymReward(0., range=self.env.reward_range)
         # self.done = GymTerminatingCondition(done=False)
 
         # define the observation and action space
@@ -157,7 +157,7 @@ class GymEnvWrapper(gym.Env):
     @property
     def reward_range(self):
         """Return the range of the reward function; a tuple corresponding to the min and max possible rewards"""
-        return self.env.reward_range
+        return self._reward.range
 
     @property
     def state_processors(self):
