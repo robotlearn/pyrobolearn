@@ -17,6 +17,7 @@ References:
     [3] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
 
+
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
@@ -47,6 +48,7 @@ class Simulator(object):
     def __init__(self, render=True, **kwargs):
         self._render = render
         self.real_time = False
+        self.kwargs = kwargs
 
         # TODO: this is really bad to have attributes like that... It doesn't generalize well to other simulators...
 
@@ -197,10 +199,6 @@ class Simulator(object):
     # Operators #
     #############
 
-    def __repr__(self):
-        """Return a string about the class for debugging and development."""
-        return self.__class__.__name__
-
     def __str__(self):
         """Return a readable string about the class."""
         return self.__class__.__name__
@@ -208,6 +206,26 @@ class Simulator(object):
     def __del__(self):
         """Close/Delete the simulator."""
         self.close()
+
+    def __copy__(self):
+        """Return a shallow copy of the simulator. This can be overridden in the child class."""
+        return self.__class__(render=self._render, **self.kwargs)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the simulator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass.
+        """
+        # create a new copy of the simulator
+        sim = self.__class__(render=self._render, **self.kwargs)
+
+        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
+        # reference if already present)
+        memo[self] = sim
+
+        # return the copy
+        return sim
 
     ###########
     # Methods #
@@ -235,13 +253,26 @@ class Simulator(object):
         """
         pass
 
-    def render(self, flag=True):
+    def is_rendering(self):
+        """Return True if the simulator is in the render mode."""
+        return self._render
+
+    def reset_scene_camera(self, camera=None):
+        """
+        Reinitialize/Reset the scene view camera to the previous one.
+
+        Args:
+            camera (object): scene view camera. This is let to the user to decide what to do.
+        """
+        pass
+
+    def render(self, enable=True):
         """Render the simulation.
 
         Args:
-            flag (bool): If True, it will render the simulator by enabling the GUI.
+            enable (bool): If True, it will render the simulator by enabling the GUI.
         """
-        pass
+        self._render = enable
 
     def hide(self):
         """Hide the GUI."""

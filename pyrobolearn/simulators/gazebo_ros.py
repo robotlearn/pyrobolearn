@@ -150,9 +150,9 @@ class GazeboROS(ROS_RBDL):
         # TODO apply stuffs in simulator
         self.pause()
 
-    def render(self, flag=True):
+    def render(self, enable=True):
         """Render the simulation."""
-        if flag:
+        if enable:
             if self.gzclient_proc is None:
                 pass
         else:

@@ -89,7 +89,7 @@ class Bullet(Simulator):
             render (bool): if True, it will open the GUI, otherwise, it will just run the server.
             **kwargs (dict): optional arguments (this is not used here).
         """
-        super(Bullet, self).__init__()
+        super(Bullet, self).__init__(render=render, **kwargs)
 
         # parse the kwargs
 
@@ -164,6 +164,68 @@ class Bullet(Simulator):
     def gravity(self):
         """Return the gravity in the simulator."""
         return self.get_physics_properties()['gravity']
+
+    @property
+    def camera(self):
+        """Return the camera (yaw, pitch, distance, target_position) or None."""
+        return self._camera
+
+    #############
+    # Operators #
+    #############
+
+    def __copy__(self):
+        """Return a shallow copy of the Bullet simulator.
+
+        Warnings:
+            - this returns a simulator in the DIRECT mode. PyBullet does not allow to have several instances of the
+            simulator in the GUI mode in the same process.
+            - this method does not copy the dynamic properties or load the 3D models in the returned simulator.
+
+        Returns:
+            Bullet: new simulator instance.
+        """
+        return Bullet(render=False)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the Bullet simulator.
+
+        Warnings:
+            - this returns a simulator in the DIRECT mode. PyBullet does not allow to have several instances of the
+            simulator in the GUI mode in the same process.
+            - this method does not change the connection mode of the simulator, this has to be done outside the method
+            because it could otherwise cause different errors (e.g. when using multiprocessing).
+
+        Args:
+            memo (dict): dictionary containing references about already instantiated objects and allowing to share
+                information. Notably, it can contain the following keys `copy_models` (bool) which specifies if we
+                should load the models that have been loaded into the simulator (by default, it is False), and
+                `copy_properties` which specifies if we should copy the dynamic properties that has been set such as
+                gravity, friction coefficients, and others (by default, it is False).
+
+        Returns:
+            Bullet: bullet simulator in DIRECT mode.
+        """
+        # check if the memo has arguments that specify how to deep copy the simulator
+        copy_models = memo.get('copy_parameters', False)
+        copy_properties = memo.get('copy_properties', False)
+
+        # create new bullet simulator
+        sim = Bullet(render=False)
+
+        # load the models in the new simulator if specified
+        if copy_models:
+            pass
+
+        # copy the properties in the new simulator if specified
+        if copy_properties:
+            pass
+
+        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
+        # reference if already present)
+        memo[self] = sim
+
+        return sim
 
     ###########
     # Methods #
@@ -257,7 +319,21 @@ class Bullet(Simulator):
         self.sim.stepSimulation()
         time.sleep(sleep_time)
 
-    def render(self, flag=True, mode='human'):
+    def reset_scene_camera(self, camera=None):
+        """
+        Reinitialize/Reset the scene view camera to the previous one.
+
+        Args:
+            camera (tuple of 3 float and a 3d np.array): tuple containing the (yaw, pitch, distance, target_position).
+                The yaw and pitch angles are expressed in radians, the distance in meter, and the target position is
+                a 3D vector.
+        """
+        if camera is None:
+            camera = self._camera if self._camera is not None else self.get_debug_visualizer()[-4:]
+        yaw, pitch, distance, target = camera
+        self.reset_debug_visualizer(distance=distance, yaw=yaw, pitch=pitch, target_position=target)
+
+    def render(self, enable=True, mode='human'):
         """Render the GUI.
 
         Warnings: note that this operation can be time consuming with the pybullet simulator if we need to change the
@@ -267,7 +343,7 @@ class Bullet(Simulator):
         do not call at a high frequency rate (depending on the picture size).
 
         Args:
-            flag (bool): If True, it will render the simulator by enabling the GUI.
+            enable (bool): If True, it will render the simulator by enabling the GUI.
             mode (str): specify the rendering mode. If mode=='human', it will render it in the simulator, if
                 mode=='rgb', it will return a picture taken with the main camera of the simulator.
 
@@ -277,7 +353,7 @@ class Bullet(Simulator):
             if mode == 'rgb':
                 np.array[W,H,D]: RGB image
         """
-        if flag:
+        if enable:
             if mode == 'human':
                 # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING,  1)
                 if self.connection_mode == pybullet.DIRECT:
@@ -291,9 +367,7 @@ class Bullet(Simulator):
                     self.load(filename)
                     os.remove(filename)
                     # reset the camera
-                    if self._camera is not None:
-                        yaw, pitch, distance, target = self._camera
-                        self.reset_debug_visualizer(distance=distance, yaw=yaw, pitch=pitch, target_position=target)
+                    self.reset_scene_camera(camera=self._camera)
             elif mode == 'rgb' or mode == 'rgba':
                 width, height, view_matrix, projection_matrix = self.sim.get_debug_visualizer()[:4]
                 img = np.array(self.sim.get_camera_image(width, height, view_matrix, projection_matrix)[2])
@@ -316,6 +390,9 @@ class Bullet(Simulator):
                     # load the state of the world in the simulator
                     self.load(filename)
                     os.remove(filename)
+
+        # set the render variable (useful when calling the method `is_rendering`)
+        self._render = enable
 
     def set_time_step(self, time_step):
         """Set the specified time step in the simulator.
@@ -3741,15 +3818,25 @@ class Bullet(Simulator):
 
 # Tests
 if __name__ == "__main__":
+    # The following snippet code will test the `multiprocessing` library with the `Bullet` simulator in the GUI mode.
+    # We spawn 2 other processes, thus counting the main process, there are 3 processes in total.
+    # In the main one, you will just see the world with only the floor. In the two others, you will see that a ball
+    # has been added. The main process communicates with the 2 slave processes via pipes; it notably ask them to
+    # start to drop the ball or to exit. Once the simulation is over, it will return if the ball has been in contact
+    # with the floor at the last time step via a queue.
+    import multiprocessing
+
+    # define variables
+    num_processes = 2
 
     # create simulator
-    sim = Bullet()
+    sim = Bullet(render=True)
     sim.configure_debug_visualizer(sim.COV_ENABLE_GUI, 0)
     sim.set_gravity([0., 0., -9.81])
 
     # load floor and sphere
     sim.load_urdf('plane.urdf', use_fixed_base=True, scale=1.)
-    sim.load_urdf("sphere_small.urdf", position=[0, 0, 3])
+    # sim.load_urdf("sphere_small.urdf", position=[0, 0, 3])
 
     # print info
     print("Available URDFs: {}".format(sim.get_available_urdfs(fullpath=False)))
@@ -3757,15 +3844,78 @@ if __name__ == "__main__":
     # print("Available MJCFs: {}".format(sim.get_available_mjcfs(fullpath=False)))
     # print("Available OBJs: {}".format(sim.get_available_objs(fullpath=False)))
 
-    # perform few steps in the simulator
-    for t in range(1000):
-        if t == 60:
-            # hide the GUI
-            print("History: {}".format(sim.history))
-            sim.hide()
-        if t == 200:
-            # render the gui
-            sim.render()
+    # hide the simulator (i.e. switch to DIRECT mode)
+    sim.hide()
 
-        # perform a step in the simulation
-        sim.step(1./20)
+    # target function for each process
+    def function(pipe, queue, simulator):
+        process = multiprocessing.current_process()
+        print("{}: start".format(process.name))
+
+        # get info fro previous simulator
+        class_ = simulator.__class__
+        kwargs = simulator.kwargs
+
+        # create simulator and world (with visualization)
+        print("{}: create simulator and world".format(process.name))
+        sim = class_(render=True)
+        sim.reset_scene_camera(simulator.camera)
+        sim.configure_debug_visualizer(sim.COV_ENABLE_GUI, 0)
+        sim.set_gravity([0., 0., -9.81])
+        floor = sim.load_urdf('plane.urdf', use_fixed_base=True, scale=1.)
+        sphere = sim.load_urdf("sphere_small.urdf", position=[0, 0, 3])
+
+        while True:
+            print("{}: waiting for message...".format(process.name))
+            msg = pipe.recv()
+            print("{}: received msg: {}".format(process.name, msg))
+            if msg == 'stop':
+                break
+            else:
+                print('{}: running simulator'.format(process.name))
+                in_contact = None
+                for t in range(4000):
+                    in_contact = len(sim.get_contact_points(sphere, floor))
+                    sim.step(1. / 254)
+                queue.put([process.name, in_contact])
+        print("{}: end process".format(process.name))
+        pipe.close()
+
+    # create queue, pipe, and processes
+    print('creating queue, pipe, and processes')
+    queue = multiprocessing.Queue()
+    pipes = [multiprocessing.Pipe() for _ in range(num_processes)]
+    processes = [multiprocessing.Process(target=function, args=(pipe[1], queue, sim)) for pipe in pipes]
+
+    # start the processes
+    time.sleep(1.)
+    print('Start the processes')
+    for process in processes:
+        process.start()
+
+    # render back the simulator
+    sim.render()
+
+    # send msgs to each process to run the simulation
+    time.sleep(5)
+    print('Run each process')
+    for pipe in pipes:
+        pipe[0].send('run')
+
+    # get results from queue
+    print('Get the results from each process')
+    for _ in range(num_processes):
+        result = queue.get()
+        print("Result: {}".format(result))
+
+    # send msgs to each process to end the simulation
+    print('Stop each process')
+    for pipe in pipes:
+        pipe[0].send('stop')
+
+    # join the processes
+    for process in processes:
+        process.join()
+
+    print('END')
+
