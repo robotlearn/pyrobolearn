@@ -344,6 +344,21 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
             self.full = True
             self.position = self.position % self.capacity
 
+    def add_trajectory(self, trajectory, **kwargs):
+        r"""
+        Add a trajectory/rollout [(s_t, a_t, s_{t+1}, r_t, d_t)]_{t=1}^T in the storage. This calls in for-loop the
+        `insert` method.
+
+        Args:
+            trajectory (list of dict): trajectory represented as a list of dictionaries where each dictionary contains
+                a transition tuple (s_t, a_t, s_{t+1}, r_t, d_t), and thus has at least the following key: `states`,
+                `actions`, `next_states`, `reward`, `mask`.
+            **kwargs (dict): kwargs
+        """
+        # insert each step in the trajectory into the storage
+        for step in trajectory:
+            self.insert(**step)
+
     def get_batch(self, indices):
         """Return a batch of the experience replay storage in the form of a `DictStorage`.
 

@@ -1002,6 +1002,25 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
         if update_step:
             self.step()
 
+    def add_trajectory(self, trajectory, rollout_idx=0):
+        r"""
+        Add a trajectory/rollout [(s_t, a_t, s_{t+1}, r_t, d_t)]_{t=1}^T in the storage. This calls in for-loop the
+        `insert` method.
+
+        Args:
+            trajectory (list of dict): trajectory represented as a list of dictionaries where each dictionary contains
+                a transition tuple (s_t, a_t, s_{t+1}, r_t, d_t), and thus has at least the following key: `states`,
+                `actions`, `next_states`, `reward`, `mask`.
+            rollout_idx (int, torch.tensor, np.array, list): trajectory/rollout index(ices). This index must be below
+                `self.num_trajectories`.
+        """
+        # insert each step in the trajectory into the storage
+        for step in trajectory:
+            self.insert(rollout_idx=rollout_idx, **step)
+
+        # fill remaining mask values to be 0 (because the episode is done)
+        self.end(rollout_idx=rollout_idx)
+
     def get_batch(self, indices):
         """Return a batch of the Rollout storage in the form of a `DictStorage`.
 
