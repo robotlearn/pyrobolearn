@@ -68,7 +68,7 @@ class Quadcopter(RotaryWingUAV):
                  position=(0, 0, 0.2),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/quadcopter/quadcopter.urdf'):
         # check parameters
         if position is None:
@@ -80,7 +80,7 @@ class Quadcopter(RotaryWingUAV):
         if fixed_base is None:
             fixed_base = False
 
-        super(Quadcopter, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Quadcopter, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'quadcopter'
 
         self.gravity = 9.81

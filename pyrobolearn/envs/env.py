@@ -10,6 +10,8 @@ Dependencies:
 - (`pyrobolearn.envs.terminal_condition`)
 """
 
+import copy
+import pickle
 # import gym
 
 from pyrobolearn.worlds import World, BasicWorld
@@ -61,7 +63,7 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
         Args:
             world (World): world of the environment. The world contains all the objects (including robots), and has
                 access to the simulator.
-            states (State): states that are returned by the environment at each time step.
+            states ((list of) State): states that are returned by the environment at each time step.
             rewards (None, Reward): The rewards can be None when for instance we are in an imitation learning setting,
                 instead of a reinforcement learning one. If None, only the state is returned by the environment.
             terminal_conditions (None, callable, TerminalCondition, list of TerminalCondition): A callable function or
@@ -71,9 +73,10 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
             physics_randomizers (None, PhysicsRandomizer, list of PhysicsRandomizer): physics randomizers. This will be
                 called each time you reset the environment.
             extra_info (None, callable): Extra info returned by the environment at each time step.
-            actions (Action): actions that are given to the environment. Note that this is not used here in the current
-                environment as it should be the policy that performs the action. This is useful when creating policies
-                after the environment (that is, the policy can uses the environment's states and actions).
+            actions ((list of) Action): actions that are given to the environment. Note that this is not used here in
+                the current environment as it should be the policy that performs the action. This is useful when
+                creating policies after the environment (that is, the policy can uses the environment's states and
+                actions).
         """
         # Check and set parameters (see corresponding properties)
         self.world = world
@@ -103,7 +106,8 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
     def world(self, world):
         """Set the world."""
         if not isinstance(world, World):
-            raise TypeError("Expecting the 'world' argument to be an instance of World.")
+            raise TypeError("Expecting the given 'world' argument to be an instance of `World`, instead got: "
+                            "{}".format(type(world)))
         self._world = world
         self.sim = self._world.simulator
 
@@ -176,9 +180,8 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
         """Set the rewards."""
         if rewards is not None:
             if not isinstance(rewards, Reward):
-                raise TypeError("Expecting the 'rewards' argument to be an instance of Reward.")
-        else:
-            rewards = lambda: None
+                raise TypeError("Expecting the given 'rewards' argument to be an instance of `Reward` or None, "
+                                "instead got: {}".format(type(rewards)))
         self._rewards = rewards
 
     @property
@@ -301,7 +304,12 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
         reward, done, info).
 
         Args:
-            action (Action, None): an action provided by the policy(ies) to the environment
+            actions (None, (list of) Action, (list of) np.array): an action provided by the policy(ies) to the
+                environment. Note that this is not used in this method; calling the actions should be done inside the
+                policy(ies), and not in the environment. The policy decides when to execute an action. Several problems
+                can appear by providing the actions in the environment instead of letting the policy executes them.
+                For instance, think about when there are multiple policies, when using multiprocessing, or when the
+                environment runs in real-time.
 
         Returns:
             observation (object): agent's observation of the current environment
@@ -319,7 +327,7 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
         # for action in actions:
         #    action()
         # TODO: calling the actions should be done inside the policy(ies), and not in the environments. The policy
-        #  decided when to execute an action. Think about when there are multiple policies, when using multiprocessing,
+        #  decides when to execute an action. Think about when there are multiple policies, when using multiprocessing,
         #  or when the environment runs in real-time.
         # if actions is not None and isinstance(actions, Action):
         #     actions()
@@ -329,7 +337,8 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
 
         # compute reward
         # rewards = [reward.compute() for reward in self.rewards]
-        rewards = self.rewards()
+        if self.rewards is not None:
+            rewards = self.rewards()
 
         # compute terminating condition
         done = any([condition() for condition in self.terminal_conditions])
@@ -369,6 +378,46 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
         # set the seed for the physics randomizer
         for randomizer in self.physics_randomizers:
             randomizer.seed(seed)
+
+    #############
+    # Operators #
+    #############
+
+    def __call__(self, actions=None):
+        """Alias to `step` method."""
+        return self.step(actions)
+
+    def __str__(self):
+        """Return a string describing the environment."""
+        string = self.__class__.__name__ + '(\n\tworld=' + str(self.world) + ',\n\tstates=' + str(self.states) \
+                 + ',\n\trewards=' + str(self.rewards) + '\n)'
+        return string
+
+    def __copy__(self):
+        """Return a shallow copy of the approximator. This can be overridden in the child class."""
+        return self.__class__(world=self.world, states=self.states, rewards=self.rewards,
+                              terminal_conditions=self.terminal_conditions,
+                              initial_state_generators=self.state_generators,
+                              physics_randomizers=self.physics_randomizers,
+                              extra_info=self.extra_info, actions=self.actions)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the environment. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        world = copy.deepcopy(self.world, memo)
+        states = [copy.deepcopy(state, memo) for state in self.states]
+        rewards = None if self.rewards is None else copy.deepcopy(self.rewards, memo)
+        terminal_conditions = [copy.deepcopy(condition) for condition in self.terminal_conditions]
+        state_generators = [copy.deepcopy(generator, memo) for generator in self.state_generators]
+        physics_randomizers = [copy.deepcopy(randomizer, memo) for randomizer in self.physics_randomizers]
+        extra_info = copy.deepcopy(self.extra_info)
+        actions = None if self.actions is None else [copy.deepcopy(action, memo) for action in self.actions]
+        return self.__class__(world=world, states=states, rewards=rewards, terminal_conditions=terminal_conditions,
+                              initial_state_generators=state_generators, physics_randomizers=physics_randomizers,
+                              extra_info=extra_info, actions=actions)
 
 
 class BasicEnv(Env):

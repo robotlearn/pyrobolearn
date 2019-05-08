@@ -27,7 +27,7 @@ class CPGPolicy(Policy):
     r"""Central Pattern Generator (CPG) Network policy
     """
 
-    def __init__(self, states, actions, rate=1, cpg_network=None, amplitude=np.pi/4, offset=0., init_phase=0.,
+    def __init__(self, state, action, rate=1, cpg_network=None, amplitude=np.pi / 4, offset=0., init_phase=0.,
                  freq=1., couple_hips=False, parent_coupling=True, child_coupling=True,
                  hip_coupling_weight=None, hip_coupling_bias=0., parent_coupling_weight=None, parent_coupling_bias=0.,
                  child_coupling_weight=None, child_coupling_bias=0., update_amplitudes=True, update_offsets=True,
@@ -38,8 +38,8 @@ class CPGPolicy(Policy):
         Initialize the CPG Network Policy.
 
         Args:
-            states (PhaseState): phase state.
-            actions (JointAction): joint action. Normally, it will be JointPositionAction.
+            state (PhaseState): phase state.
+            action (JointAction): joint action. Normally, it will be JointPositionAction.
             rate (int, float): rate (float) at which the policy operates if we are operating in real-time. If we are
                 stepping deterministically in the simulator, it represents the number of ticks (int) to sleep before
                 executing the model.
@@ -97,23 +97,23 @@ class CPGPolicy(Policy):
             *args (list): other arguments given to the CPG network learning model.
             **kwargs (dict): other key + value arguments given to the CPG network learning model.
         """
-        super(CPGPolicy, self).__init__(states, actions, rate=rate, preprocessors=preprocessors,
+        super(CPGPolicy, self).__init__(state, action, rate=rate, preprocessors=preprocessors,
                                         postprocessors=postprocessors, *args, **kwargs)
 
         # check actions
-        if not isinstance(actions, JointAction):
+        if not isinstance(action, JointAction):
             raise TypeError("Expecting the actions to be an instance of JointAction, instead got: "
-                            "{}".format(type(actions)))
+                            "{}".format(type(action)))
 
         # check states
-        if not isinstance(states, PhaseState):
+        if not isinstance(state, PhaseState):
             raise TypeError("Expecting the states to be an instance of PhaseState, instead got: "
-                            "{}".format(type(states)))
+                            "{}".format(type(state)))
 
         # get useful information from the state/action
-        timesteps = states.num_steps
-        robot = actions.robot
-        joints = set(actions.joints)
+        timesteps = state.num_steps
+        robot = action.robot
+        joints = set(action.joints)
 
         # create CPG network based on the robot kinematic structures if not provided
         if cpg_network is None:

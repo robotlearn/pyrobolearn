@@ -34,7 +34,7 @@ class Walkman(BipedRobot, BiManipulatorRobot):
                  position=(0, 0, 1.14),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/walkman/walkman.urdf',
                  lower_body=False):  # 'walkman_lower_body.urdf'
         # check parameters
@@ -49,7 +49,7 @@ class Walkman(BipedRobot, BiManipulatorRobot):
         if lower_body:
             urdf = os.path.dirname(__file__) + '/urdfs/walkman/walkman_lower_body.urdf'
 
-        super(Walkman, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Walkman, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'walkman'
 
         # Camera sensors: Two 2D Camera sensor (stereo-camera)
@@ -57,16 +57,16 @@ class Walkman(BipedRobot, BiManipulatorRobot):
         # fovx = 1.3962634rad = 80 degrees, Gaussian noise = N(0, 0.007)
         # "left_camera_frame",
         self.left_camera = CameraSensor(self.sim, self.id, 11, width=800, height=800, fovy=80, near=0.02, far=300,
-                                        refresh_rate=30)  # 11
+                                        rate=30)  # 11
         self.right_camera = CameraSensor(self.sim, self.id, 13, width=800, height=800, fovy=80, near=0.02, far=300,
-                                         refresh_rate=30)  # 13
+                                         rate=30)  # 13
 
         # Laser (depth) sensor: Hokuyo sensor
         # link: "head_hokuyo_frame"
         # freq=40, samples = 720, angle = [-1.570796, 1.570796] rad, range = [0.10, 30.0] m
         # Gaussian noise: N(0.0, 0.01)
         self.depth_camera = CameraSensor(self.sim, self.id, 10, width=200, height=200, fovy=80, near=0.1, far=30.0,
-                                         refresh_rate=40)
+                                         rate=40)
 
         self.cameras = [self.left_camera, self.right_camera, self.depth_camera]
 

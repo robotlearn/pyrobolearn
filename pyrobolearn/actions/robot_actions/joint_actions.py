@@ -4,6 +4,7 @@
 This includes notably the joint positions, velocities, and force/torque actions.
 """
 
+import copy
 import numpy as np
 from abc import ABCMeta
 
@@ -49,6 +50,22 @@ class JointAction(RobotAction):
     def bounds(self):
         return self.robot.get_joint_limits(self.joints)
 
+    def __copy__(self):
+        """Return a shallow copy of the action. This can be overridden in the child class."""
+        return self.__class__(robot=self.robot, joint_ids=self.joints)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the action. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        robot = copy.deepcopy(self.robot, memo)
+        joints = copy.deepcopy(self.joints)
+        action = self.__class__(robot=robot, joint_ids=joints)
+        memo[self] = action
+        return action
+
 
 class JointPositionAction(JointAction):
     r"""Joint Position Action
@@ -66,6 +83,25 @@ class JointPositionAction(JointAction):
             self.robot.set_joint_positions(self._data, self.joints, kp=self.kp, kd=self.kd, forces=self.max_force)
         else:
             self.robot.set_joint_positions(data, self.joints, kp=self.kp, kd=self.kd, forces=self.max_force)
+
+    def __copy__(self):
+        """Return a shallow copy of the action. This can be overridden in the child class."""
+        return self.__class__(robot=self.robot, joint_ids=self.joints, kp=self.kp, kd=self.kd, max_force=self.max_force)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the action. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        robot = copy.deepcopy(self.robot, memo)
+        joints = copy.deepcopy(self.joints)
+        kp = copy.deepcopy(self.kp)
+        kd = copy.deepcopy(self.kd)
+        max_force = copy.deepcopy(self.max_force)
+        action = self.__class__(robot=robot, joint_ids=joints, kp=kp, kd=kd, max_force=max_force)
+        memo[self] = action
+        return action
 
 
 class JointVelocityAction(JointAction):
@@ -107,6 +143,25 @@ class JointPositionAndVelocityAction(JointAction):
             self.robot.set_joint_positions(data[:self.idx], self.joints, kp=self.kp, kd=self.kd,
                                            velocities=data[self.idx:], forces=self.max_force)
 
+    def __copy__(self):
+        """Return a shallow copy of the action. This can be overridden in the child class."""
+        return self.__class__(robot=self.robot, joint_ids=self.joints, kp=self.kp, kd=self.kd, max_force=self.max_force)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the action. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        robot = copy.deepcopy(self.robot, memo)
+        joints = copy.deepcopy(self.joints)
+        kp = copy.deepcopy(self.kp)
+        kd = copy.deepcopy(self.kd)
+        max_force = copy.deepcopy(self.max_force)
+        action = self.__class__(robot=robot, joint_ids=joints, kp=kp, kd=kd, max_force=max_force)
+        memo[self] = action
+        return action
+
 
 # class JointPositionVelocityAccelerationAction(JointAction):
 #     r"""Set the joint positions, velocities, and accelerations.
@@ -136,6 +191,24 @@ class JointForceAction(JointAction):
             data = np.clip(data, self.f_min, self.f_max)
             self.robot.set_joint_torques(data, self.joints)
 
+    def __copy__(self):
+        """Return a shallow copy of the action. This can be overridden in the child class."""
+        return self.__class__(robot=self.robot, joint_ids=self.joints, f_min=self.f_min, f_max=self.f_max)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the action. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        robot = copy.deepcopy(self.robot, memo)
+        joints = copy.deepcopy(self.joints)
+        f_min = copy.deepcopy(self.f_min)
+        f_max = copy.deepcopy(self.f_max)
+        action = self.__class__(robot=robot, joint_ids=joints, f_min=f_min, f_max=f_max)
+        memo[self] = action
+        return action
+
 
 class JointAccelerationAction(JointAction):
     r"""Joint Acceleration Action
@@ -157,3 +230,21 @@ class JointAccelerationAction(JointAction):
         else:
             data = np.clip(data, self.a_min, self.a_max)
             self.robot.set_joint_accelerations(data, self.joints)
+
+    def __copy__(self):
+        """Return a shallow copy of the action. This can be overridden in the child class."""
+        return self.__class__(robot=self.robot, joint_ids=self.joints, a_min=self.a_min, a_max=self.a_max)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the action. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        robot = copy.deepcopy(self.robot, memo)
+        joints = copy.deepcopy(self.joints)
+        a_min = copy.deepcopy(self.a_min)
+        a_max = copy.deepcopy(self.a_max)
+        action = self.__class__(robot=robot, joint_ids=joints, f_min=a_min, f_max=a_max)
+        memo[self] = action
+        return action

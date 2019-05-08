@@ -8,6 +8,7 @@ Dependencies:
 - `pyrobolearn.robots`
 """
 
+import copy
 from abc import ABCMeta
 
 from pyrobolearn.actions import Action
@@ -47,3 +48,18 @@ class RobotAction(Action):
 
     def is_continuous(self):
         return True
+
+    def __copy__(self):
+        """Return a shallow copy of the action. This can be overridden in the child class."""
+        return self.__class__(robot=self.robot)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the action. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        robot = copy.deepcopy(self.robot, memo)
+        action = self.__class__(robot=robot)
+        memo[self] = action
+        return action

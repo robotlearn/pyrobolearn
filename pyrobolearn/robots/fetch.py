@@ -29,7 +29,7 @@ class Fetch(WheeledRobot, ManipulatorRobot):
                  position=(0, 0, 0.1),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/fetch/fetch.urdf'):
         # check parameters
         if position is None:
@@ -41,7 +41,7 @@ class Fetch(WheeledRobot, ManipulatorRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Fetch, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Fetch, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'fetch'
 
 

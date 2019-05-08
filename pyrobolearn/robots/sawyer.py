@@ -31,7 +31,7 @@ class Sawyer(ManipulatorRobot, WheeledRobot):
                  position=(0, 0, 0.92),
                  orientation=(0, 0, 0, 1),
                  fixed_base=True,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/sawyer/sawyer.urdf'):
         # check parameters
         if position is None:
@@ -43,7 +43,7 @@ class Sawyer(ManipulatorRobot, WheeledRobot):
         if fixed_base is None:
             fixed_base = True
 
-        super(Sawyer, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Sawyer, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'sawyer'
 
         self.head = self.get_link_ids('head') if 'head' in self.link_names else None

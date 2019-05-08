@@ -36,7 +36,7 @@ class Cubli(Robot):
                  position=(0, 0, 0.5),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/cubli/cubli.urdf'):
         # check parameters
         if position is None:
@@ -48,7 +48,7 @@ class Cubli(Robot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Cubli, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Cubli, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'cubli'
 
         # disable each motor joint
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     scale = 1.  # Warning: this does not scale the mass...
     position = [0., 0., np.sqrt(2) / 2. * scale + 0.001]
     orientation = [0.383, 0, 0, 0.924]
-    robot = Cubli(sim, position, orientation, scaling=scale)
+    robot = Cubli(sim, position, orientation, scale=scale)
 
     # print information about the robot
     robot.print_info()

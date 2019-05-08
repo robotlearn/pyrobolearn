@@ -38,7 +38,7 @@ class Hubo(BipedRobot, BiManipulatorRobot, TwoHand):
                  position=(0, 0, 1),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/hubo/hubo.urdf'):
         # check parameters
         if position is None:
@@ -50,7 +50,7 @@ class Hubo(BipedRobot, BiManipulatorRobot, TwoHand):
         if fixed_base is None:
             fixed_base = False
 
-        super(Hubo, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Hubo, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'hubo'
 
         self.neck = [self.get_link_ids(link) for link in ['Body_Neck', 'Body_Head_Empty', 'Body_Head']

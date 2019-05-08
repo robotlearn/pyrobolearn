@@ -27,7 +27,7 @@ class PhantomX(HexapodRobot):
                  position=(0, 0, 0.2),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/phantomx/phantomx.urdf'):
         # check parameters
         if position is None:
@@ -39,7 +39,7 @@ class PhantomX(HexapodRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(PhantomX, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(PhantomX, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'phantomx'
 
 

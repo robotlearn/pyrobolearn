@@ -6,6 +6,7 @@ Dependencies:
 - `pyrobolearn.utils`
 """
 
+import copy
 import numpy as np
 # import quaternion
 
@@ -67,11 +68,11 @@ class Body(object):
         return self._id
 
     @id.setter
-    def id(self, id_):
+    def id(self, body_id):
         """Set the unique body id."""
-        # if not isinstance(id_, int):
-        #     raise TypeError("Expecting the given simulator to be an integer, instead got: {}".format(type(id_)))
-        self._id = id_
+        # if not isinstance(body_id, int):
+        #     raise TypeError("Expecting the given simulator to be an integer, instead got: {}".format(type(body_id)))
+        self._id = body_id
 
     @property
     def name(self):
@@ -197,6 +198,38 @@ class Body(object):
     def center_of_mass(self):
         """Return the center of mass."""
         return self.sim.get_center_of_mass_position(self.id)
+
+    #############
+    # Operators #
+    #############
+
+    # def __repr__(self):
+    #     """Return a representation string about the class for debugging and development."""
+    #     return self.__class__.__name__
+
+    def __str__(self):
+        """Return a readable string about the class."""
+        return self.__class__.__name__
+
+    def __copy__(self):
+        """Return a shallow copy of the body. This can be overridden in the child class."""
+        return self.__class__(simulator=self.simulator, body_id=self.id, name=self.name)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the body. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        simulator = copy.deepcopy(self.simulator, memo)
+        body = self.__class__(simulator=simulator, body_id=self.id, name=self.name)
+
+        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
+        # reference if already present)
+        memo[self] = body
+
+        # return the copy
+        return body
 
 
 class MovableBody(Body):

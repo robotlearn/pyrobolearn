@@ -34,7 +34,7 @@ class HyQ2Max(QuadrupedRobot):
                  position=(0, 0, 0.8),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/hyq2max/hyq2max.urdf'):
         # check parameters
         if position is None:
@@ -46,7 +46,7 @@ class HyQ2Max(QuadrupedRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(HyQ2Max, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(HyQ2Max, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'hyq2max'
         self.height = 0.9
 

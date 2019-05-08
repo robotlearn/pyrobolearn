@@ -29,7 +29,7 @@ class PR2(WheeledRobot, BiManipulatorRobot):
                  position=(0, 0, 0),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/pr2/pr2.urdf'):
         # check parameters
         if position is None:
@@ -41,7 +41,7 @@ class PR2(WheeledRobot, BiManipulatorRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(PR2, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(PR2, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'pr2'
 
 

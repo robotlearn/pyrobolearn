@@ -31,7 +31,7 @@ class Edo(ManipulatorRobot):
                  position=(0, 0, 0),
                  orientation=(0, 0, 0, 1),
                  fixed_base=True,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/edo/edo.urdf'):
         # check parameters
         if position is None:
@@ -43,7 +43,7 @@ class Edo(ManipulatorRobot):
         if fixed_base is None:
             fixed_base = True
 
-        super(Edo, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Edo, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'edo'
 
 

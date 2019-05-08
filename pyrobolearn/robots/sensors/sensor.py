@@ -8,6 +8,7 @@ simulation to reality. Also, note that some simulators are deterministic and thu
 add some noise to the returned sense value. The type of noise can also be selected at runtime.
 """
 
+import copy
 from abc import ABCMeta, abstractmethod
 import numpy as np
 
@@ -33,7 +34,7 @@ class Sensor(object):  # sensor attached to a link or joint
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, simulator, body_id, position=None, orientation=None, refresh_rate=1):
+    def __init__(self, simulator, body_id, position=None, orientation=None, rate=1):
         """Initialize the sensor.
 
         Args:
@@ -41,7 +42,7 @@ class Sensor(object):  # sensor attached to a link or joint
             body_id (int): unique id of the body
             position (vec3): local position of the sensor with respect to the given link
             orientation (vec4): local orientation of the sensor with respect to the given link
-            refresh_rate (int): number of steps to wait before acquisition of the next sensor value.
+            rate (int): number of steps to wait before acquisition of the next sensor value.
         """
         self.sim = simulator
         self.body_id = body_id
@@ -54,11 +55,20 @@ class Sensor(object):  # sensor attached to a link or joint
             orientation = [0., 0., 0., 1.]
         self.local_orientation = np.array(orientation)
 
-        self.rate = refresh_rate
+        self.rate = rate
         self.cnt = -1
 
         # data from last acquisition
         self.data = None
+
+    ##############
+    # Properties #
+    ##############
+
+    @property
+    def simulator(self):
+        """Return the simulator instance."""
+        return self.sim
 
     @property
     def position(self):
@@ -80,9 +90,11 @@ class Sensor(object):  # sensor attached to a link or joint
 
     @abstractmethod
     def _sense(self):
+        """Sense method to be implemented in the child class."""
         raise NotImplementedError
 
     def sense(self):
+        """Get the next sensor value."""
         self.cnt += 1
         if self.cnt % self.rate == 0:
             self.data = self._sense()
@@ -90,6 +102,39 @@ class Sensor(object):  # sensor attached to a link or joint
             return self.data
         return self.data
 
+    #############
+    # Operators #
+    #############
+
     # alias
     def __call__(self):
+        """Get the next sensor value."""
         return self.sense()
+
+    # def __repr__(self):
+    #     """Return a representation string about the class for debugging and development."""
+    #     return self.__class__.__name__
+
+    def __str__(self):
+        """Return a readable string about the class."""
+        return self.__class__.__name__
+
+    def __copy__(self):
+        """Return a shallow copy of the sensor. This can be overridden in the child class."""
+        return self.__class__(simulator=self.simulator, body_id=self.body_id, position=self.local_position,
+                              orientation=self.local_orientation, rate=self.rate)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the sensor. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        simulator = copy.deepcopy(self.simulator, memo)
+        body_id = copy.deepcopy(self.body_id)
+        position = copy.deepcopy(self.local_position)
+        orientation = copy.deepcopy(self.local_orientation)
+        sensor = self.__class__(simulator=simulator, body_id=body_id, position=position, orientation=orientation,
+                                rate=self.rate)
+        memo[self] = sensor
+        return sensor

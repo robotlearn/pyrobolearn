@@ -28,7 +28,7 @@ class Humanoid(BipedRobot, BiManipulatorRobot):
                  position=(-0.5, 0, 1.),
                  orientation=(0, 0.707, 0, 0.707),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/mjcfs/humanoid.xml'):  # humanoid_symmetric.xml
         # check parameters
         if position is None:
@@ -40,7 +40,7 @@ class Humanoid(BipedRobot, BiManipulatorRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Humanoid, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Humanoid, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'humanoid'
 
         # self.waist = self.get_link_ids('DWL') if 'DWL' in self.link_names else None

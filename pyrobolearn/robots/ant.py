@@ -27,7 +27,7 @@ class Ant(QuadrupedRobot):
                  position=(0, 0, 0.2),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/mjcfs/ant.xml'):
         # check parameters
         if position is None:
@@ -39,7 +39,7 @@ class Ant(QuadrupedRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Ant, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Ant, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'ant'
 
         self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]

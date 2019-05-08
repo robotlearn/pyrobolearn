@@ -2,8 +2,6 @@
 """Define the reinforcement learning task.
 """
 
-import gym
-
 from pyrobolearn.tasks.task import Task
 
 __author__ = "Brian Delhaisse"
@@ -26,5 +24,6 @@ class RLTask(Task):
         [1] "Reinforcement Learning: An Introduction", Sutton and Barto, 2018
         [2] "A Survey on Policy Search for Robotics", Deisenroth et al., 2013
     """
+
     def __init__(self, environment, policies):
         super(RLTask, self).__init__(environment, policies)

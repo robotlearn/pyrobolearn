@@ -49,18 +49,18 @@ class RandomPolicy(Policy):
             spaces = self.actions.space
             return [space.sample() for space in spaces]
 
-    def __init__(self, states, actions, rate=1, seed=None, preprocessors=None, postprocessors=None, *args, **kwargs):
+    def __init__(self, state, action, rate=1, seed=None, preprocessors=None, postprocessors=None, *args, **kwargs):
         """
         Initialize the Random policy.
 
         Args:
-            actions (Action): At each step, by calling `policy.act(state)`, the `actions` are computed by the policy,
-                and should be given to the environment. As with the `states`, the type and size/shape of each action
-                can be inferred and could be used to automatically build a policy. The `action` connects the policy
-                with a controllable object (such as a robot) in the environment.
-            states (State): By giving the `states` to the policy, it can automatically infer the type and size/shape
-                of each state, and thus can be used to automatically build a policy. At each step, the `states`
-                are filled by the environment, and read by the policy. The `state` connects the policy with one or
+            action (Action): At each step, by calling `policy.act(state)`, the `action` is computed by the policy,
+                and can be given to the environment. As with the `state`, the type and size/shape of each inner
+                action can be inferred and could be used to automatically build a policy. The `action` connects the
+                policy with a controllable object (such as a robot) in the environment.
+            state (State): By giving the `state` to the policy, it can automatically infer the type and size/shape
+                of each inner state, and thus can be used to automatically build a policy. At each step, the `state`
+                is filled by the environment, and read by the policy. The `state` connects the policy with one or
                 several objects (including robots) in the environment. Note that some policies don't use any state
                 information.
             model (Approximator, Model, None): inner model or approximator
@@ -72,8 +72,8 @@ class RandomPolicy(Policy):
             *args (list): list of arguments
             **kwargs (dict): dictionary of arguments
         """
-        model = self.RandomModel(actions, seed=seed)
-        super(RandomPolicy, self).__init__(states, actions, model=model, rate=rate, preprocessors=preprocessors,
+        model = self.RandomModel(action, seed=seed)
+        super(RandomPolicy, self).__init__(state, action, model=model, rate=rate, preprocessors=preprocessors,
                                            postprocessors=postprocessors, *args, **kwargs)
 
     def sample(self, state=None):
@@ -84,18 +84,18 @@ class LinearPolicy(Policy):
     """Linear Policy
     """
 
-    def __init__(self, states, actions, rate=1, preprocessors=None, postprocessors=None, *args, **kwargs):
+    def __init__(self, state, action, rate=1, preprocessors=None, postprocessors=None, *args, **kwargs):
         """
         Initialize the Linear Policy.
 
         Args:
-            actions (Action): At each step, by calling `policy.act(state)`, the `actions` are computed by the policy,
-                and should be given to the environment. As with the `states`, the type and size/shape of each action
-                can be inferred and could be used to automatically build a policy. The `action` connects the policy
-                with a controllable object (such as a robot) in the environment.
-            states (State): By giving the `states` to the policy, it can automatically infer the type and size/shape
-                of each state, and thus can be used to automatically build a policy. At each step, the `states`
-                are filled by the environment, and read by the policy. The `state` connects the policy with one or
+            action (Action): At each step, by calling `policy.act(state)`, the `action` is computed by the policy,
+                and can be given to the environment. As with the `state`, the type and size/shape of each inner
+                action can be inferred and could be used to automatically build a policy. The `action` connects the
+                policy with a controllable object (such as a robot) in the environment.
+            state (State): By giving the `state` to the policy, it can automatically infer the type and size/shape
+                of each inner state, and thus can be used to automatically build a policy. At each step, the `state`
+                is filled by the environment, and read by the policy. The `state` connects the policy with one or
                 several objects (including robots) in the environment. Note that some policies don't use any state
                 information.
             rate (int, float): rate (float) at which the policy operates if we are operating in real-time. If we are
@@ -106,8 +106,8 @@ class LinearPolicy(Policy):
             *args (list): list of arguments
             **kwargs (dict): dictionary of arguments
         """
-        model = LinearApproximator(states, actions, preprocessors=preprocessors, postprocessors=postprocessors)
-        super(LinearPolicy, self).__init__(states, actions, model, rate=rate, *args, **kwargs)
+        model = LinearApproximator(state, action, preprocessors=preprocessors, postprocessors=postprocessors)
+        super(LinearPolicy, self).__init__(state, action, model, rate=rate, *args, **kwargs)
 
 
 class PolicyFromQValue(Policy):
@@ -137,7 +137,7 @@ class PolicyFromQValue(Policy):
             **kwargs (dict): dictionary of arguments
         """
         self.value = value
-        super(PolicyFromQValue, self).__init__(states=value.state, actions=value.action, model=value, rate=rate,
+        super(PolicyFromQValue, self).__init__(state=value.state, action=value.action, model=value, rate=rate,
                                                preprocessors=preprocessors, postprocessors=postprocessors,
                                                *args, **kwargs)
 
@@ -214,7 +214,7 @@ if __name__ == '__main__':
     from pyrobolearn.actions import FixedAction
 
     # check linear policy
-    policy = LinearPolicy(states=FixedState(range(4)), actions=FixedAction(range(2)))
+    policy = LinearPolicy(state=FixedState(range(4)), action=FixedAction(range(2)))
     print(policy)
 
     target = copy.deepcopy(policy)

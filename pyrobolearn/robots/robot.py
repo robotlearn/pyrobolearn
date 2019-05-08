@@ -10,11 +10,12 @@ Dependencies:
 - `pyrobolearn.utils`
 """
 
+import os
+import copy
+import collections
 # import rbdl
 import numpy as np
 # import quaternion
-import collections
-import os
 
 from pyrobolearn.utils.transformation import *
 from pyrobolearn.robots.base import ControllableBody
@@ -37,7 +38,7 @@ class Robot(ControllableBody):
     and has been implemented such that it is very generic.
     """
 
-    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1., *args, **kwargs):
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1., *args, **kwargs):
         """
         Initialize the robot.
 
@@ -47,7 +48,7 @@ class Robot(ControllableBody):
             position (np.float[3]): initial position.
             orientation (np.float[4]): initial orientation represented as a quaternion (x,y,z,w).
             fixed_base (bool, None): if True, the base of the robot will be fixed.
-            scaling (float): scaling factor.
+            scale (float): scaling factor.
         """
         # check parameters
         if position is None:
@@ -66,18 +67,23 @@ class Robot(ControllableBody):
         if urdf[-3:] == 'xml' or urdf[-4:] == 'mjcf':
             self.id = self.sim.load_mjcf(urdf)[0]  # assume the first entity is the robot
         else:  # if urdf[-4:] == 'urdf':
-            self.id = self.sim.load_urdf(urdf, position, orientation, use_fixed_base=fixed_base, scale=scaling)
+            self.id = self.sim.load_urdf(urdf, position, orientation, use_fixed_base=fixed_base, scale=scale)
 
         # self.sim.configure_debug_visualizer(self.sim.COV_ENABLE_RENDERING, 1)
 
+        # save the input parameters
+        self.urdf = urdf
+        self.fixed_base = fixed_base
+        self.scale = scale
+
         # rescale if specified
-        if scaling != 1.0:
+        if scale != 1.0:
             # we rescale manually the mass and inertia matrices of each link
             for link in range(self.num_links):
                 info = self.sim.get_dynamics_info(self.id, link)
                 mass, local_inertia_diagonal = info[0], np.array(info[2])
-                mass *= scaling**3      # because the density is unchanged when scaling
-                local_inertia_diagonal *= scaling**5   # 5 = 3+2; 3 is for the mass, and 2 is for the distance: I~mr^2
+                mass *= scale ** 3      # because the density is unchanged when scaling
+                local_inertia_diagonal *= scale ** 5   # 5 = 3+2; 3 is for the mass, and 2 is for the distance: I~mr^2
                 self.sim.change_dynamics(self.id, link, mass=mass, local_inertia_diagonal=local_inertia_diagonal)
 
         # set robot properties
@@ -138,14 +144,34 @@ class Robot(ControllableBody):
         # Gains
         self.kp, self.kd = None, None
 
-    def __repr__(self):
-        """
-        Return the name of the class.
+    #############
+    # Operators #
+    #############
 
-        Returns:
-            str: name of the class
+    def __copy__(self):
+        """Return a shallow copy of the robot. This can be overridden in the child class."""
+        return self.__class__(simulator=self.simulator, urdf=self.urdf, position=self.position,
+                              orientation=self.orientation, fixed_base=self.fixed_base, scale=self.scale)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the robot. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
         """
-        return self.__class__.__name__
+        simulator = copy.deepcopy(self.simulator, memo)
+        urdf = copy.deepcopy(self.urdf)
+        position = copy.deepcopy(self.position)
+        orientation = copy.deepcopy(self.orientation)
+        robot = self.__class__(simulator=simulator, urdf=urdf, position=position, orientation=orientation,
+                               fixed_base=self.fixed_base, scale=self.scale)
+
+        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
+        # reference if already present)
+        memo[self] = robot
+
+        # return the copy
+        return robot
 
     ##############
     # Properties #
@@ -248,7 +274,8 @@ class Robot(ControllableBody):
         Returns:
             bool: True if the robot has a floating base.
         """
-        return self.floating_base
+        # return self.floating_base
+        return not self.fixed_base
 
     def has_fixed_base(self):
         """
@@ -257,7 +284,8 @@ class Robot(ControllableBody):
         Returns:
             bool: True if the robot has a fixed base.
         """
-        return not self.has_floating_base()
+        # return not self.has_floating_base()
+        return self.fixed_base
 
     #######
     # CoM #

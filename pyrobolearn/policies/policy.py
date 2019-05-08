@@ -12,8 +12,9 @@ Dependencies:
 - `pyrobolearn.exploration`
 """
 
-import collections
+import copy
 import pickle
+import collections
 import numpy as np
 import torch
 
@@ -116,19 +117,19 @@ class Policy(object):
         * `exploration.py`: describes how to explore using the policy
     """
 
-    def __init__(self, states, actions, model=None, rate=1, preprocessors=None, postprocessors=None,
-                 distribution=None, *args, **kwargs):
+    def __init__(self, state, action, model=None, rate=1, preprocessors=None, postprocessors=None, *args, **kwargs):
+        # distribution=None):
         r"""
         Initialize a policy (and the inner approximator / learning model).
 
         Args:
-            actions (Action): At each step, by calling `policy.act(state)`, the `actions` are computed by the policy,
-                and should be given to the environment. As with the `states`, the type and size/shape of each action
-                can be inferred and could be used to automatically build a policy. The `action` connects the policy
-                with a controllable object (such as a robot) in the environment.
-            states (State): By giving the `states` to the policy, it can automatically infer the type and size/shape
-                of each state, and thus can be used to automatically build a policy. At each step, the `states`
-                are filled by the environment, and read by the policy. The `state` connects the policy with one or
+            action (Action): At each step, by calling `policy.act(state)`, the `action` is computed by the policy,
+                and can be given to the environment. As with the `state`, the type and size/shape of each inner
+                action can be inferred and could be used to automatically build a policy. The `action` connects the
+                policy with a controllable object (such as a robot) in the environment.
+            state (State): By giving the `state` to the policy, it can automatically infer the type and size/shape
+                of each inner state, and thus can be used to automatically build a policy. At each step, the `state`
+                is filled by the environment, and read by the policy. The `state` connects the policy with one or
                 several objects (including robots) in the environment. Note that some policies don't use any state
                 information.
             model (Approximator, Model, None): inner model or approximator
@@ -137,12 +138,11 @@ class Policy(object):
                 executing the model.
             preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
             postprocessors (Processor, list of Processor, None): post-processors to be applied to the output
-            distribution:
-            *args (list): list of arguments
-            **kwargs (dict): dictionary of arguments
+            *args (list): list of arguments (this is not used in this class).
+            **kwargs (dict): dictionary of arguments (this is not used in this class).
         """
-        self.states = states
-        self.actions = actions
+        self.states = state
+        self.actions = action
         self.model = model
         self.rate = rate
         self.cnt = 0
@@ -258,7 +258,8 @@ class Policy(object):
     # Methods #
     ###########
 
-    def _size(self, items):
+    @staticmethod
+    def _size(items):
         """Compute the size of the given argument :attr:`items`."""
         size = 0
         if not isinstance(items, (list, tuple)):
@@ -692,12 +693,12 @@ class Policy(object):
         return self.act(state=state, deterministic=deterministic, to_numpy=to_numpy, return_logits=return_logits,
                         apply_action=apply_action)
 
-    def __repr__(self):
-        """Return representation of python object."""
-        if self.__class__.__name__ == 'Policy':
-            if self.model is not None:
-                return "{}({})".format(self.__class__.__name__, self.model.__str__())
-        return self.__class__.__name__
+    # def __repr__(self):
+    #     """Return representation of python object."""
+    #     if self.__class__.__name__ == 'Policy':
+    #         if self.model is not None:
+    #             return "{}({})".format(self.__class__.__name__, self.model.__str__())
+    #     return self.__class__.__name__
 
     def __str__(self):
         """Return string describing the policy."""
@@ -705,3 +706,29 @@ class Policy(object):
             if self.model is not None:
                 return "{}({})".format(self.__class__.__name__, self.model.__str__())
         return self.__class__.__name__
+
+    def __copy__(self):
+        """Return a shallow copy of the policy. This can be overridden in the child class."""
+        return self.__class__(states=self.states, actions=self.actions, model=self.model, rate=self.rate,
+                              preprocessors=self.preprocessors, postprocessors=self.postprocessors)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the policy. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        states = copy.deepcopy(self.states, memo)
+        actions = copy.deepcopy(self.actions, memo)
+        model = copy.deepcopy(self.model, memo)
+        rate = copy.deepcopy(self.rate, memo)
+        preprocessors = [copy.deepcopy(preprocessor, memo) for preprocessor in self.preprocessors]
+        postprocessors = [copy.deepcopy(postprocessor, memo) for postprocessor in self.postprocessors]
+        policy = self.__class__(states=states, actions=actions, model=model, rate=rate,
+                                preprocessors=preprocessors, postprocessors=postprocessors)
+
+        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
+        # reference if already present)
+        memo[self] = policy
+
+        return policy

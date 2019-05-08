@@ -4,10 +4,11 @@
 This file defines the `Action` class, which is returned by the policy and given to the environment.
 """
 
+import copy
+import collections
+# from abc import ABCMeta, abstractmethod
 import numpy as np
 import torch
-import collections
-from abc import ABCMeta, abstractmethod
 import gym
 
 from pyrobolearn.utils.data_structures.orderedset import OrderedSet
@@ -46,7 +47,7 @@ class Action(object):
         [2] "OpenAI gym": https://gym.openai.com/   and    https://github.com/openai/gym
     """
 
-    def __init__(self, actions=(), data=None, space=None, name=None):
+    def __init__(self, actions=(), data=None, space=None, name=None, ticks=1):
         """
         Initialize the action. The action contains some kind of data, or is a combination of other actions.
 
@@ -55,6 +56,7 @@ class Action(object):
                                             data)
             data (np.ndarray): data associated to this action
             space (gym.space): space associated with the given data
+            ticks (int): number of ticks to sleep before setting the next action data.
 
         Warning:
             Both arguments can not be provided to the action.
@@ -85,12 +87,16 @@ class Action(object):
         self._distribution = None  # for sampling
         self._normalizer = None
         self._noiser = None  # for noise
-        self._name = name
+        self.name = name
 
         # create ordered set which is useful if this action is a combination of multiple actions
         self._actions = OrderedSet()
         if self._data is None:
             self.add(actions)
+
+        # set ticks and counter
+        self.cnt = 0
+        self.ticks = int(ticks)
 
         # reset action
         # self.reset()
@@ -98,6 +104,7 @@ class Action(object):
     ##############################
     # Properties (Getter/Setter) #
     ##############################
+
     @property
     def actions(self):
         """
@@ -313,6 +320,8 @@ class Action(object):
         """
         Set the name of the action.
         """
+        if name is None:
+            name = self.__class__.__name__
         if not isinstance(name, str):
             raise TypeError("Expecting the name to be a string.")
         self._name = name
@@ -370,20 +379,20 @@ class Action(object):
         """
         return len(np.unique(self.dimension))
 
-    @property
-    def distribution(self):
-        """
-        Get the current distribution used when sampling the action
-        """
-        pass
-
-    @distribution.setter
-    def distribution(self, distribution):
-        """
-        Set the distribution to the action.
-        """
-        # check if distribution is discrete/continuous
-        pass
+    # @property
+    # def distribution(self):
+    #     """
+    #     Get the current distribution used when sampling the action
+    #     """
+    #     return None
+    #
+    # @distribution.setter
+    # def distribution(self, distribution):
+    #     """
+    #     Set the distribution to the action.
+    #     """
+    #     # check if distribution is discrete/continuous
+    #     pass
 
     ###########
     # Methods #
@@ -440,12 +449,17 @@ class Action(object):
         Write the action values to the simulator for each action.
         This has to be overwritten by the child class.
         """
-        if self.has_data():  # write the current action
-            self._write(data)
-        else:  # read each action
-            if self.actions:
-                for action, d in zip(self.actions, data):
-                    action._write(d)
+        # if time to write
+        if self.cnt % self.ticks == 0:
+
+            if self.has_data():  # write the current action
+                self._write(data)
+            else:  # read each action
+                if self.actions:
+                    for action, d in zip(self.actions, data):
+                        action._write(d)
+
+        self.cnt += 1
 
         # return the data
         # return self.data
@@ -687,23 +701,16 @@ class Action(object):
     # Operator Overloading #
     ########################
 
-    def __repr__(self):
+    def __str__(self):
+        """Return a string describing the action."""
         if self._data is None:
             lst = [self.__class__.__name__ + '(']
             for action in self.actions:
-                lst.append('\t' + action.__repr__() + ',')
+                lst.append('\t' + action.__str__() + ',')
             lst.append(')')
             return '\n'.join(lst)
         else:
             return '%s(%s)' % (self.name, self._data)
-
-    # def __str__(self):
-    #     """
-    #     String to represent the action. Need to be provided by each child class.
-    #     """
-    #     if self._data is None:
-    #         return [str(action) for action in self._actions]
-    #     return str(self)
 
     def __call__(self, data=None):
         """
@@ -871,15 +878,16 @@ class Action(object):
     def __sub__(self, other):
         """
         Remove the other action(s) from the current action.
-        :param other:
-        :return:
+
+        Args:
+            other (Action): action to be removed.
         """
         if not isinstance(other, Action):
             raise TypeError("Expecting another action, instead got {}".format(type(other)))
         s1 = self._actions if self._data is None else OrderedSet([self])
         s2 = other._actions if other._data is None else OrderedSet([other])
         s = s1 - s2
-        if len(s) == 1: # just one element
+        if len(s) == 1:  # just one element
             return s[0]
         return Action(s)
 
@@ -888,7 +896,7 @@ class Action(object):
         Remove one or several actions from the combined action.
 
         Args:
-            other:
+            other (Action): action to be removed.
         """
         if not isinstance(other, Action):
             raise TypeError("Expecting another action, instead got {}".format(type(other)))
@@ -896,3 +904,25 @@ class Action(object):
             raise RuntimeError("This operation is only available for a combined action")
         s = other._actions if other._data is None else OrderedSet([other])
         self._actions -= s
+
+    def __copy__(self):
+        """Return a shallow copy of the action. This can be overridden in the child class."""
+        return self.__class__(actions=self.actions, data=self._data, space=self._space, name=self.name,
+                              ticks=self.ticks)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the action. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        actions = [copy.deepcopy(action, memo) for action in self.actions]
+        data = copy.deepcopy(self._data)
+        space = copy.deepcopy(self._space)
+        action = self.__class__(actions=actions, data=data, space=space, name=self.name, ticks=self.ticks)
+
+        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
+        # reference if already present)
+        memo[self] = action
+
+        return action

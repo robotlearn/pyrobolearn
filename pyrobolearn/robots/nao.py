@@ -27,7 +27,7 @@ class Nao(BipedRobot, BiManipulatorRobot, TwoHand):
                  position=(0, 0, 0.35),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/nao/nao_v40.urdf'):
         # check parameters
         if position is None:
@@ -39,7 +39,7 @@ class Nao(BipedRobot, BiManipulatorRobot, TwoHand):
         if fixed_base is None:
             fixed_base = False
 
-        super(Nao, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Nao, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'nao'
 
         self.neck = self.get_link_ids('Neck') if 'Neck' in self.link_names else None

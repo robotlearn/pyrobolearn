@@ -30,7 +30,7 @@ class ICub(BipedRobot, BiManipulatorRobot):
                  position=(0, 0, 0.7),
                  orientation=(0, 0, 1, 0),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/icub/icub-v2.5+.urdf'):
         # check parameters
         if position is None:
@@ -42,7 +42,7 @@ class ICub(BipedRobot, BiManipulatorRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(ICub, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling=scaling)
+        super(ICub, self).__init__(simulator, urdf, position, orientation, fixed_base, scale=scale)
         self.name = 'icub'
 
         self.head = self.get_link_ids('head') if 'head' in self.link_names else None

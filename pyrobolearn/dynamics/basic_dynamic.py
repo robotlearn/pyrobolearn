@@ -27,24 +27,24 @@ class LinearDynamicModel(ParametrizedDynamicModel):
     Cons: very limited
     """
 
-    def __init__(self, states, actions, next_states=None, distributions=None, preprocessors=None, postprocessors=None):
+    def __init__(self, state, action, next_state=None, distributions=None, preprocessors=None, postprocessors=None):
         """
         Initialize the linear dynamic transition function / probability :math:`p(s_{t+1} | s_t, a_t)`.
 
         Args:
-            states (State): state inputs.
-            actions (Action): action inputs.
-            next_states (State, None): state outputs. If None, it will take the state inputs as the outputs.
+            state (State): state inputs.
+            action (Action): action inputs.
+            next_state (State, None): state outputs. If None, it will take the state inputs as the outputs.
             distributions (torch.distributions.Distribution): distribution to use to sample the next state. If None,
                 it will be deterministic.
             preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
             postprocessors (Processor, list of Processor, None): post-processors to be applied to the output
         """
-        if next_states is None:
-            next_states = states
-        model = LinearApproximator(inputs=[states, actions], outputs=next_states, preprocessors=preprocessors,
+        if next_state is None:
+            next_state = state
+        model = LinearApproximator(inputs=[state, action], outputs=next_state, preprocessors=preprocessors,
                                    postprocessors=postprocessors)
-        super(LinearDynamicModel, self).__init__(states, actions, model=model, next_states=next_states,
+        super(LinearDynamicModel, self).__init__(state, action, model=model, next_state=next_state,
                                                  distributions=distributions)
 
 
@@ -55,14 +55,14 @@ class PieceWiseLinearDynamicModel(ParametrizedDynamicModel):
     Cons: poor scalability
     """
 
-    def __init__(self, states, actions, next_states=None, distributions=None, preprocessors=None, postprocessors=None):
+    def __init__(self, state, action, next_state=None, distributions=None, preprocessors=None, postprocessors=None):
         """
         Initialize the piece wise linear dynamic transition function / probability :math:`p(s_{t+1} | s_t, a_t)`.
 
         Args:
-            states (State): state inputs.
-            actions (Action): action inputs.
-            next_states (State, None): state outputs. If None, it will take the state inputs as the outputs.
+            state (State): state inputs.
+            action (Action): action inputs.
+            next_state (State, None): state outputs. If None, it will take the state inputs as the outputs.
             distributions (torch.distributions.Distribution): distribution to use to sample the next state. If None,
                 it will be deterministic.
             preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
@@ -70,5 +70,5 @@ class PieceWiseLinearDynamicModel(ParametrizedDynamicModel):
         """
         # TODO
         model = None
-        super(PieceWiseLinearDynamicModel, self).__init__(states, actions, model=model, next_states=next_states,
+        super(PieceWiseLinearDynamicModel, self).__init__(state, action, model=model, next_state=next_state,
                                                           distributions=distributions)

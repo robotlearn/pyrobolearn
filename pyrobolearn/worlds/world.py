@@ -6,13 +6,14 @@ Dependencies:
 - `pyrobolearn.simulators`
 """
 
-import numpy as np
-import collections
-import inspect
-import multiprocessing
 import os
-import cv2
+import copy
+import inspect
+import collections
 import time
+import numpy as np
+import cv2
+
 
 from pyrobolearn.simulators import Simulator
 from pyrobolearn.worlds.world_camera import WorldCamera
@@ -71,6 +72,7 @@ class World(object):
         self.camera = WorldCamera(self.simulator)
 
         # keep track of the objects present in the world
+        # TODO: check what is already inside the simulator!
         self.robots = {}
         self.movable_bodies = {}  # set()
         self.immovable_bodies = {}  # set()
@@ -226,8 +228,8 @@ class World(object):
     # Operators #
     #############
 
-    def __repr__(self):
-        """Return a representation string of the object."""
+    def __str__(self):
+        """Return a string describing the world."""
         return self.__class__.__name__
 
     def __contains__(self, item):
@@ -245,6 +247,22 @@ class World(object):
 
         return (item in self.robots) or (item in self.movable_bodies) or (item in self.immovable_bodies) or \
                (item in self.visual_objects)
+
+    def __copy__(self):  # TODO: add the bodies in the copy
+        """Return a shallow copy of the world. This can be overridden in the child class."""
+        return self.__class__(simulator=self.simulator, gravity=self.gravity)
+
+    def __deepcopy__(self, memo={}):  # TODO: add the bodies in the copy
+        """Return a deep copy of the world. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        simulator = copy.deepcopy(self.simulator, memo)
+        gravity = copy.deepcopy(self.gravity)
+        world = self.__class__(simulator=simulator, gravity=gravity)
+        memo[self] = world
+        return world
 
     ###########
     # Methods #

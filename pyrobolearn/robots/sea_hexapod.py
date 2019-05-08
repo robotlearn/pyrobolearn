@@ -27,7 +27,7 @@ class SEAHexapod(HexapodRobot):
                  position=(0, 0, 0.15),
                  orientation=(0, 0, 0.707, 0.707),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/cmu_sea/hexapod.urdf'):
         # check parameters
         if position is None:
@@ -39,7 +39,7 @@ class SEAHexapod(HexapodRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(SEAHexapod, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(SEAHexapod, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'sea_hexapod'
 
 

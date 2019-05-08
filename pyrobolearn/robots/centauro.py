@@ -30,7 +30,7 @@ class Centauro(WheeledRobot, QuadrupedRobot, BiManipulatorRobot):
                  position=(0, 0, 1.),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/centauro/centauro_stick.urdf'
                  # centauro_stick.urdf, centauro_soft_hand.urdf, centauro_heri.urdf,
                  # centauro_schunk_handL.urdf, centauro_schunk_hand.urdf
@@ -45,7 +45,7 @@ class Centauro(WheeledRobot, QuadrupedRobot, BiManipulatorRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Centauro, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling=scaling)
+        super(Centauro, self).__init__(simulator, urdf, position, orientation, fixed_base, scale=scale)
         self.name = 'centauro'
 
         self.necks = [self.get_link_ids(link) for link in ['neck_' + str(i) for i in range(1, 4)]]

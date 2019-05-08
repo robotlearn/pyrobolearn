@@ -10,6 +10,7 @@ Dependencies:
 - `pyrobolearn.approximators` (and thus `pyrobolearn.models`)
 """
 
+import copy
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import torch
@@ -89,9 +90,36 @@ class ValueApproximator(object):
         """Predict the value."""
         pass
 
+    #############
+    # Operators #
+    #############
+
+    # def __repr__(self):
+    #     """Return a representation string about the reward function."""
+    #     return self.__class__.__name__
+
+    def __str__(self):
+        """Return a string describing the reward function."""
+        return self.__repr__()
+
     def __call__(self, *args, **kwargs):
         """Predict the value."""
         return self.evaluate(*args, **kwargs)
+
+    def __copy__(self):
+        """Return a shallow copy of the value approximator. This can be overridden in the child class."""
+        return self.__class__(state=self.state)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the value approximator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        state = copy.deepcopy(self.state, memo) if isinstance(self.state, State) else copy.deepcopy(self.state)
+        value = self.__class__(state=state)
+        memo[self] = value
+        return value
 
 
 class QValueApproximator(ValueApproximator):
@@ -102,9 +130,21 @@ class QValueApproximator(ValueApproximator):
     __metaclass__ = ABCMeta
 
     def __init__(self, state, action):
+        """
+        Initialize the value function approximator.
+
+        Args:
+            state (State, np.array, torch.Tensor): state input
+            action (Action, np.array, torch.Tensor): action input (if discrete or continuous) or output (only if
+                discrete).
+        """
         # super(QValueApproximator, self).__init__(state)
         ValueApproximator.__init__(self, state)
         self.action = action
+
+    ##############
+    # Properties #
+    ##############
 
     @property
     def action(self):
@@ -119,6 +159,26 @@ class QValueApproximator(ValueApproximator):
         elif not isinstance(action, (Action, torch.Tensor, np.ndarray)):
             raise TypeError("Expecting the action to be an Action, torch.Tensor, or np.ndarray.")
         self._action = action
+
+    #############
+    # Operators #
+    #############
+
+    def __copy__(self):
+        """Return a shallow copy of the value approximator. This can be overridden in the child class."""
+        return self.__class__(state=self.state, action=self.action)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the value approximator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        state = copy.deepcopy(self.state, memo) if isinstance(self.state, State) else copy.deepcopy(self.state)
+        action = copy.deepcopy(self.action, memo) if isinstance(self.action, Action) else copy.deepcopy(self.action)
+        value = self.__class__(state=state, action=action)
+        memo[self] = value
+        return value
 
 
 class ParametrizedValue(ValueApproximator):
@@ -273,9 +333,29 @@ class ParametrizedValue(ValueApproximator):
         self.value = self.model.predict(state, to_numpy=to_numpy, return_logits=True, set_output_data=False)
         return self.value
 
+    #############
+    # Operators #
+    #############
+
     def __call__(self, state=None, to_numpy=False):
         """Predict the value."""
         return self.evaluate(state=state, to_numpy=to_numpy)
+
+    def __copy__(self):
+        """Return a shallow copy of the value approximator. This can be overridden in the child class."""
+        return self.__class__(state=self.state, model=self.model)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the value approximator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        state = copy.deepcopy(self.state, memo) if isinstance(self.state, State) else copy.deepcopy(self.state)
+        model = copy.deepcopy(self.model, memo)
+        value = self.__class__(state=state, model=model)
+        memo[self] = value
+        return value
 
 
 # alias
@@ -453,9 +533,30 @@ class ParametrizedQValue(QValueApproximator):  # ParametrizedValue, QValueApprox
         self.value = self.model.predict([state, action], to_numpy=to_numpy, return_logits=True, set_output_data=False)
         return self.value
 
+    #############
+    # Operators #
+    #############
+
     def __call__(self, state=None, action=None, to_numpy=False):
         """Predict the value."""
         return self.evaluate(state=state, action=action, to_numpy=to_numpy)
+
+    def __copy__(self):
+        """Return a shallow copy of the value approximator. This can be overridden in the child class."""
+        return self.__class__(state=self.state, action=self.action, model=self.model)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the value approximator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        state = copy.deepcopy(self.state, memo) if isinstance(self.state, State) else copy.deepcopy(self.state)
+        action = copy.deepcopy(self.action, memo) if isinstance(self.action, Action) else copy.deepcopy(self.action)
+        model = copy.deepcopy(self.model, memo)
+        value = self.__class__(state=state, action=action, model=model)
+        memo[self] = value
+        return value
 
 
 # alias
@@ -501,6 +602,10 @@ class ParametrizedQValueOutput(ParametrizedQValue):
             raise TypeError("Expecting the action to be an int, float, Action, torch.Tensor, or np.ndarray.")
         self._action = action
 
+    ###########
+    # Methods #
+    ###########
+
     def evaluate(self, state=None, action=None, to_numpy=False):
         """Compute the output of the value function.
 
@@ -523,9 +628,30 @@ class ParametrizedQValueOutput(ParametrizedQValue):
         self.value = self.model.predict(state, to_numpy=to_numpy, return_logits=True, set_output_data=False)
         return self.value
 
+    #############
+    # Operators #
+    #############
+
     def __call__(self, state=None, action=None, to_numpy=False):
         """Predict the value."""
         return self.evaluate(state=state, to_numpy=to_numpy)
+
+    def __copy__(self):
+        """Return a shallow copy of the value approximator. This can be overridden in the child class."""
+        return self.__class__(state=self.state, action=self.action, model=self.model)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the value approximator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        state = copy.deepcopy(self.state, memo) if isinstance(self.state, State) else copy.deepcopy(self.state)
+        action = copy.deepcopy(self.action, memo) if isinstance(self.action, Action) else copy.deepcopy(self.action)
+        model = copy.deepcopy(self.model, memo)
+        value = self.__class__(state=state, action=action, model=model)
+        memo[self] = value
+        return value
 
 
 # alias

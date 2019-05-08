@@ -30,7 +30,7 @@ class LittleDog(QuadrupedRobot):
                  position=(0, 0, 0.2),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/littledog/littleDog.urdf'):
         # check parameters
         if position is None:
@@ -42,7 +42,7 @@ class LittleDog(QuadrupedRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(LittleDog, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(LittleDog, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'littledog'
 
         self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]

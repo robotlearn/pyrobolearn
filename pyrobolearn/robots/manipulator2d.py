@@ -28,7 +28,7 @@ class Manipulator2D(ManipulatorRobot):
                  position=(0, 0, 0),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/manipulator2d/manipulator2d.urdf'):
         # check parameters
         if position is None:
@@ -40,7 +40,7 @@ class Manipulator2D(ManipulatorRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Manipulator2D, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Manipulator2D, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'manipulator2d'
 
 

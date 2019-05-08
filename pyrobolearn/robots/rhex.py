@@ -34,7 +34,7 @@ class Rhex(HexapodRobot):
                  position=(0, 0, 0.12),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/rhex/rhex.urdf'):
         # check parameters
         if position is None:
@@ -46,7 +46,7 @@ class Rhex(HexapodRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Rhex, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Rhex, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'rhex'
 
         self.legs = [[self.get_link_ids(link + str(idx))] for link, idx in zip(['leg'] * 6, range(1, 7))

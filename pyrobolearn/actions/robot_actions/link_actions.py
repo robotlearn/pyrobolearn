@@ -4,6 +4,7 @@
 This includes notably the link positions, velocities, and force/torque actions.
 """
 
+import copy
 from abc import ABCMeta
 
 from pyrobolearn.actions.robot_actions.robot_actions import RobotAction
@@ -30,7 +31,7 @@ class LinkAction(RobotAction):
 
         Args:
             robot (Robot): robot instance
-            jointIds (int, int[N]): joint id or list of joint ids
+            link_ids (int, int[N]): link id or list of link ids
         """
         super(LinkAction, self).__init__(robot)
 
@@ -39,12 +40,29 @@ class LinkAction(RobotAction):
             link_ids = robot.get_link_ids()
         self.links = link_ids
 
+    def __copy__(self):
+        """Return a shallow copy of the action. This can be overridden in the child class."""
+        return self.__class__(self.robot, self.links)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the action. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        robot = copy.deepcopy(self.robot, memo)
+        links = copy.deepcopy(self.links)
+        action = self.__class__(robot, links)
+        memo[self] = action
+        return action
+
 
 class LinkPositionAction(LinkAction):
     r"""Link position action
 
     Set the link position(s) using IK.
     """
+
     def __init__(self, robot, link_ids=None):
         super(LinkPositionAction, self).__init__(robot, link_ids)
 

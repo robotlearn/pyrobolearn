@@ -29,7 +29,7 @@ class Laikago(QuadrupedRobot):
                  position=(0, 0, .5),
                  orientation=(0.5, 0.5, 0.5, 0.5),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/laikago/laikago.urdf'):
         # check parameters
         if position is None:
@@ -41,7 +41,7 @@ class Laikago(QuadrupedRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Laikago, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Laikago, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'laikago'
 
         self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]

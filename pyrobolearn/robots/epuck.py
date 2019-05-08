@@ -30,7 +30,7 @@ class Epuck(DifferentialWheeledRobot):
                  position=(0, 0, 0),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/epuck/epuck.urdf'):
         # check parameters
         if position is None:
@@ -42,7 +42,7 @@ class Epuck(DifferentialWheeledRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Epuck, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Epuck, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'epuck'
 
         self.wheels = [self.get_link_ids(link) for link in ['left_wheel', 'right_wheel']

@@ -28,7 +28,7 @@ class F10Racecar(AckermannWheeledRobot):
                  position=(0, 0, .1),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/f10_racecar/racecar.urdf'):  # racecar_differential.urdf
         # check parameters
         if position is None:
@@ -40,7 +40,7 @@ class F10Racecar(AckermannWheeledRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(F10Racecar, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(F10Racecar, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'racecar'
 
         self.wheels = [self.get_link_ids(link) for link in ['left_front_wheel', 'right_front_wheel',

@@ -4,7 +4,7 @@
 This includes notably the fixed and functional actions.
 """
 
-import numpy as np
+import copy
 
 from pyrobolearn.actions import Action
 
@@ -31,6 +31,21 @@ class FixedAction(Action):
     def _write(self, data=None):
         pass
 
+    def __copy__(self):
+        """Return a shallow copy of the action. This can be overridden in the child class."""
+        return self.__class__(value=self._data)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the action. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        data = copy.deepcopy(self._data)
+        action = self.__class__(value=data)
+        memo[self] = action
+        return action
+
 
 class FunctionalAction(Action):
     r"""Functional Action.
@@ -45,3 +60,18 @@ class FunctionalAction(Action):
     def _write(self, data=None):
         self.data = self.function(data)
 
+    def __copy__(self):
+        """Return a shallow copy of the action. This can be overridden in the child class."""
+        return self.__class__(function=self.function, data=self._data)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the action. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        function = copy.deepcopy(self.function)
+        data = copy.deepcopy(self._data)
+        action = self.__class__(function=function, initial_data=data)
+        memo[self] = action
+        return action

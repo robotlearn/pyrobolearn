@@ -31,7 +31,7 @@ class KR5(ManipulatorRobot):
                  position=(0, 0, 0),
                  orientation=(0, 0, 0, 1),
                  fixed_base=True,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/kuka/kr5/kr5.urdf'):
         # check parameters
         if position is None:
@@ -43,7 +43,7 @@ class KR5(ManipulatorRobot):
         if fixed_base is None:
             fixed_base = True
 
-        super(KR5, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(KR5, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'kr5'
 
 

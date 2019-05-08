@@ -22,8 +22,8 @@ class WheeledRobot(Robot):
     This type of robots has wheels.
     """
 
-    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
-        super(WheeledRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        super(WheeledRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.wheels = []
         self.wheel_directions = []
@@ -108,9 +108,9 @@ class DifferentialWheeledRobot(WheeledRobot):
             http://www.robotplatform.com/knowledge/Classification_of_Robots/wheel_control_theory.html
     """
 
-    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
         super(DifferentialWheeledRobot, self).__init__(simulator, urdf, position, orientation, fixed_base,
-                                                       scaling)
+                                                       scale)
 
 
 class AckermannWheeledRobot(WheeledRobot):
@@ -130,9 +130,9 @@ class AckermannWheeledRobot(WheeledRobot):
             http://www.robotplatform.com/knowledge/Classification_of_Robots/wheel_control_theory.html
     """
 
-    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
         super(AckermannWheeledRobot, self).__init__(simulator, urdf, position, orientation, fixed_base,
-                                                    scaling)
+                                                    scale)
 
         self.steering = 0   # id of steering joint
 

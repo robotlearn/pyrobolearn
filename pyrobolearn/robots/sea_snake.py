@@ -27,7 +27,7 @@ class SEASnake(Robot):
                  position=(-0.5, 0, 0.1),
                  orientation=(0, 0.707, 0, 0.707),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/cmu_sea/snake.urdf'):
         # check parameters
         if position is None:
@@ -39,7 +39,7 @@ class SEASnake(Robot):
         if fixed_base is None:
             fixed_base = False
 
-        super(SEASnake, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(SEASnake, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'sea_snake'
 
 

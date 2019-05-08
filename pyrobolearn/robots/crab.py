@@ -28,7 +28,7 @@ class Crab(HexapodRobot):
                  position=(0, 0, 0.12),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/crab/crab.urdf'):
         # check parameters
         if position is None:
@@ -40,7 +40,7 @@ class Crab(HexapodRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Crab, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Crab, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'crab'
 
         self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]

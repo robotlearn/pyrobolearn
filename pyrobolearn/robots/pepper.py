@@ -34,7 +34,7 @@ class Pepper(WheeledRobot, BiManipulatorRobot):
                  position=(0, 0, 0.9),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/pepper/pepper.urdf'):
         # check parameters
         if position is None:
@@ -46,7 +46,7 @@ class Pepper(WheeledRobot, BiManipulatorRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Pepper, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling=scaling)
+        super(Pepper, self).__init__(simulator, urdf, position, orientation, fixed_base, scale=scale)
         self.name = 'pepper'
 
         # 2D Camera sensor
@@ -55,16 +55,16 @@ class Pepper(WheeledRobot, BiManipulatorRobot):
 
         # Note that we divide width and height by 4 (otherwise the simulator is pretty slow)
         self.camera_top = CameraSensor(self.sim, self.id, 4, width=2560 / 4, height=1080 / 4, fovy=44.30,
-                                       near=0.3, far=100, refresh_rate=60)
+                                       near=0.3, far=100, rate=60)
         self.camera_bottom = CameraSensor(self.sim, self.id, 9, width=2560 / 4, height=1080 / 4, fovy=44.30,
-                                          near=0.3, far=100, refresh_rate=60)
+                                          near=0.3, far=100, rate=60)
 
         # 3D camera sensor
         # From [1]: "One 3D camera is located in the forehead. It provides image resolution up to 320x240 at
         # 20 frames per second. One ASUS Xtion 3D sensor is located behind the eyes. VFOV = 45 deg, HFOV = 58 deg,
         # focus = [80cm, 3.5m]."
         self.camera_depth = CameraSensor(self.sim, self.id, 6, width=320, height=240, fovy=45, near=0.3, far=3.5,
-                                         refresh_rate=120)
+                                         rate=120)
 
         self.cameras = [self.camera_top, self.camera_bottom, self.camera_depth]
 

@@ -24,7 +24,7 @@ class BB8(Robot):
     """
 
     def __init__(self, simulator, position=(0, 0, 0.4), orientation=(0, 0, 0, 1), fixed_base=False,
-                 scaling=1., urdf=os.path.dirname(__file__) + '/urdfs/bb8/bb8.urdf'):
+                 scale=1., urdf=os.path.dirname(__file__) + '/urdfs/bb8/bb8.urdf'):
         # check parameters
         if position is None:
             position = (0., 0., 0.4)
@@ -35,7 +35,7 @@ class BB8(Robot):
         if fixed_base is None:
             fixed_base = False
 
-        super(BB8, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(BB8, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'bb8'
 
 

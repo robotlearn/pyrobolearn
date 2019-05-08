@@ -31,7 +31,7 @@ class KukaIIWA(ManipulatorRobot):
                  simulator,
                  position=(0, 0, 0),
                  orientation=(0, 0, 0, 1),
-                 scaling=1.,
+                 scale=1.,
                  fixed_base=True,
                  urdf=os.path.dirname(__file__) + '/urdfs/kuka/kuka_iiwa/iiwa14.urdf'):
         # check parameters
@@ -44,7 +44,7 @@ class KukaIIWA(ManipulatorRobot):
         if fixed_base is None:
             fixed_base = True
 
-        super(KukaIIWA, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(KukaIIWA, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'kuka_iiwa'
 
         # self.disable_motor()

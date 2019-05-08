@@ -95,8 +95,9 @@ class Reward(object):
             state (None, State): state on which depends the reward function.
             action (None, Action): action on which depends the reward function.
             rewards (None, list of Reward): list of intern rewards.
-            range (tuple of float): A tuple corresponding to the min and max possible rewards. By default, it is
-                [-infinity, infinity]. The computed reward is automatically clipped if it goes outside the range.
+            range (tuple of float, np.array of 2 float): A tuple corresponding to the min and max possible rewards.
+                By default, it is [-infinity, infinity]. The computed reward is automatically clipped if it goes
+                outside the range.
         """
         # super(Reward, self).__init__(maximize=True)
 
@@ -278,17 +279,40 @@ class Reward(object):
     # Operators #
     #############
 
-    def __repr__(self):
+    def __str__(self):
         """Return a representation string about the reward function."""
         if not self.rewards or self.rewards is None:
             return self.__class__.__name__
         else:
-            lst = [reward.__repr__() for reward in self.rewards]
+            lst = [reward.__str__() for reward in self.rewards]
             return ' + '.join(lst)
 
     def __call__(self):  # **kwargs):
         """Compute the reward function."""
         return self.compute()  # **kwargs)
+
+    def __copy__(self):
+        """Return a shallow copy of the reward function. This can be overridden in the child class."""
+        return self.__class__(state=self.state, action=self.action, rewards=self.rewards, range=self.range)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the reward function. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        state = copy.deepcopy(self.state, memo)
+        action = copy.deepcopy(self.action, memo)
+        rewards = [copy.deepcopy(reward, memo) for reward in self.rewards]
+        range = copy.deepcopy(self.range)
+        reward = self.__class__(state=state, action=action, rewards=rewards, range=range)
+
+        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
+        # reference if already present)
+        memo[self] = reward
+
+        # return the copy
+        return reward
 
     # for unary and binary operators, see `__init__()` method.
 

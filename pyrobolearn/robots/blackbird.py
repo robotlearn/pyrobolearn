@@ -31,7 +31,7 @@ class Blackbird(BipedRobot):
                  position=(0, 0, 1.2),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/blackbird/blackbird_biped.urdf'):
 
         self.height = 1.2
@@ -47,7 +47,7 @@ class Blackbird(BipedRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Blackbird, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Blackbird, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'blackbird'
 
         # TODO: create constraints in pybullet

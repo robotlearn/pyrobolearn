@@ -28,7 +28,7 @@ class RRBot(ManipulatorRobot):
                  position=(0, 0, 0),
                  orientation=(0, 0, 0, 1),
                  fixed_base=True,
-                 scaling=1,
+                 scale=1,
                  urdf=os.path.dirname(__file__) + '/urdfs/rrbot/rrbot.urdf'):
         # check parameters
         if position is None:
@@ -40,7 +40,7 @@ class RRBot(ManipulatorRobot):
         if fixed_base is None:
             fixed_base = True
 
-        super(RRBot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(RRBot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'rrbot'
 
         # set initial joint positions

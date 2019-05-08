@@ -28,7 +28,7 @@ class AllegroHand(Hand):
                  simulator,
                  position=(0, 0, 0),
                  orientation=(0, 0, 0, 1),
-                 scaling=1.,
+                 scale=1.,
                  left=False,
                  fixed_base=True):
         # check parameters
@@ -46,7 +46,7 @@ class AllegroHand(Hand):
         # else:
         urdf_path = os.path.dirname(__file__) + '/urdfs/allegrohand/allegro_right_hand.urdf'
 
-        super(AllegroHand, self).__init__(simulator, urdf_path, position, orientation, fixed_base, scaling)
+        super(AllegroHand, self).__init__(simulator, urdf_path, position, orientation, fixed_base, scale)
         self.name = 'allegro_hand'
 
 

@@ -5,10 +5,11 @@ This file defines the `State` class, which is returned by the environment, and g
 models such as policies/controllers, dynamic transition functions, value approximators, reward/cost function, and so on.
 """
 
-import numpy as np
-import torch
+import copy
 import collections
 # from abc import ABCMeta, abstractmethod
+import numpy as np
+import torch
 import gym
 
 from pyrobolearn.utils.data_structures.orderedset import OrderedSet
@@ -828,11 +829,12 @@ class State(object):
     # Operators #
     #############
 
-    def __repr__(self):
+    def __str__(self):
+        """Return a representation string about the object."""
         if self._data is None:
             lst = [self.__class__.__name__ + '(']
             for state in self.states:
-                lst.append('\t' + state.__repr__() + ',')
+                lst.append('\t' + state.__str__() + ',')
             lst.append(')')
             return '\n'.join(lst)
         else:
@@ -1012,8 +1014,9 @@ class State(object):
     def __sub__(self, other):
         """
         Remove the other state(s) from the current state.
-        :param other:
-        :return:
+
+        Args:
+            other (State): state to be removed.
         """
         if not isinstance(other, State):
             raise TypeError("Expecting another state, instead got {}".format(type(other)))
@@ -1029,7 +1032,7 @@ class State(object):
         Remove one or several states from the combined state.
 
         Args:
-            other:
+            other (State): state to be removed.
         """
         if not isinstance(other, State):
             raise TypeError("Expecting another state, instead got {}".format(type(other)))
@@ -1061,6 +1064,29 @@ class State(object):
             print(s.shape)  # prints np.concatenate((s0,s1)).shape
         """
         return self.fuse(other, axis=0)
+
+    def __copy__(self):
+        """Return a shallow copy of the state. This can be overridden in the child class."""
+        return self.__class__(states=self.states, data=self._data, space=self._space, name=self.name,
+                              window_size=self.window_size, axis=self.axis, ticks=self.ticks)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the state. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        states = [copy.deepcopy(state, memo) for state in self.states]
+        data = copy.deepcopy(self.window[0]) if self.has_data() else None
+        space = copy.deepcopy(self._space)
+        state = self.__class__(states=states, data=data, space=space, name=self.name, window_size=self.window_size,
+                               axis=self.axis, ticks=self.ticks)
+
+        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
+        # reference if already present)
+        memo[self] = state
+
+        return state
 
     # def __invert__(self):
     #     """

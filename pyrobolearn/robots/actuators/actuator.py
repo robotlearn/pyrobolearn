@@ -23,6 +23,7 @@ class Actuator(object):
     All actuator classes inherit from this class. Actuators such as motors are often attached to the robot joints.
     Other actuators such as speakers, leds, and others are attached to links.
     """
+
     def __init__(self):
         pass
 
@@ -35,3 +36,44 @@ class Actuator(object):
     # @simulator.setter
     # def simulator(self, simulator):
     #     self.sim = simulator
+
+    ###########
+    # Methods #
+    ###########
+
+    def compute(self, *args, **kwargs):  # TODO: call it actuate?
+        pass
+
+    #############
+    # Operators #
+    #############
+
+    def __call__(self, *args, **kwargs):
+        return self.compute(*args, **kwargs)
+
+    # def __repr__(self):
+    #     """Return a representation string about the class for debugging and development."""
+    #     return self.__class__.__name__
+
+    def __str__(self):
+        """Return a readable string about the class."""
+        return self.__class__.__name__
+
+    def __copy__(self):
+        """Return a shallow copy of the actuator. This can be overridden in the child class."""
+        return self.__class__()
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the actuator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        actuator = self.__class__()
+
+        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
+        # reference if already present)
+        memo[self] = actuator
+
+        # return the copy
+        return actuator

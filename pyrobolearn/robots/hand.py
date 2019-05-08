@@ -16,7 +16,6 @@ __status__ = "Development"
 
 class Hand(Robot):
     r"""Hand end-effector
-
     """
 
     def __init__(self,
@@ -25,8 +24,8 @@ class Hand(Robot):
                  position=(0, 0, 1.),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.):
-        super(Hand, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+                 scale=1.):
+        super(Hand, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.fingers = []  # list of fingers where each finger is a list of links/joints
 
@@ -53,8 +52,8 @@ class TwoHand(Hand):
                  position=(0, 0, 1.),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.):
-        super(TwoHand, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+                 scale=1.):
+        super(TwoHand, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_fingers = []  # list of ids in self.fingers
         self.right_fingers = []     # list of ids in self.fingers

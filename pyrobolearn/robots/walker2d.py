@@ -27,7 +27,7 @@ class Walker2D(Robot):
                  position=(-0.5, 0, 0.1),
                  orientation=(0, 0.707, 0, 0.707),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/mjcfs/walker2d.xml'):
         # check parameters
         if position is None:
@@ -39,7 +39,7 @@ class Walker2D(Robot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Walker2D, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Walker2D, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'walker2D'
 
 

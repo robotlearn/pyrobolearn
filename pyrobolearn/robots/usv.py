@@ -20,5 +20,5 @@ class USVRobot(Robot):
     Vehicles/Robots that operate on the surface of water.
     """
 
-    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
-        super(USVRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        super(USVRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)

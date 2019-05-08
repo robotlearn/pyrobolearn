@@ -26,8 +26,8 @@ class ManipulatorRobot(Robot):
                  position=(0, 0, 0.),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.):
-        super(ManipulatorRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+                 scale=1.):
+        super(ManipulatorRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.arms = []  # list of arms where an arm is a list of links
         self.hands = []  # list of end-effectors/hands
@@ -124,8 +124,8 @@ class BiManipulatorRobot(ManipulatorRobot):
     """
 
     def __init__(self, simulator, urdf, position=(0, 0, 1.5), orientation=(0, 0, 0, 1), fixed_base=False,
-                 scaling=1.):
-        super(BiManipulatorRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+                 scale=1.):
+        super(BiManipulatorRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_arm_id = 0
         self.left_hand_id = 0

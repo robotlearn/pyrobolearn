@@ -25,7 +25,7 @@ class Pleurobot(QuadrupedRobot, UUVRobot, USVRobot):
         [2] https://biorob.epfl.ch/pleurobot
     """
 
-    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), fixed_base=False, scaling=1.,
+    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/pleurobot/pleurobot.urdf'):
         # check parameters
         if position is None:
@@ -37,7 +37,7 @@ class Pleurobot(QuadrupedRobot, UUVRobot, USVRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Pleurobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Pleurobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'pleurobot'
 
 

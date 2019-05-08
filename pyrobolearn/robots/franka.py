@@ -31,7 +31,7 @@ class Franka(ManipulatorRobot):
                  simulator,
                  position=(0, 0, 0),
                  orientation=(0, 0, 0, 1),
-                 scaling=1.,
+                 scale=1.,
                  fixed_base=True,
                  urdf=os.path.dirname(__file__) + '/urdfs/franka/franka.urdf'):
         # check parameters
@@ -44,7 +44,7 @@ class Franka(ManipulatorRobot):
         if fixed_base is None:
             fixed_base = True
 
-        super(Franka, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Franka, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'franka'
 
         # self.disable_motor()

@@ -7,6 +7,7 @@ from the gym environment, and keep it as an attribute of the class. This can the
 the various policies defined in the pyrobolearn framework.
 """
 
+import copy
 import gym
 
 from pyrobolearn.actions.action import Action
@@ -47,6 +48,21 @@ class GymAction(Action):
 
     def _write(self, data=None):
         pass
+
+    def __copy__(self):
+        """Return a shallow copy of the action. This can be overridden in the child class."""
+        return self.__class__(gym_env=self.env)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the action. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        env = copy.deepcopy(self.env)
+        action = self.__class__(gym_env=env)
+        memo[self] = action
+        return action
 
 
 # Tests

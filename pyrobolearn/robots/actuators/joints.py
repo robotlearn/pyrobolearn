@@ -2,6 +2,7 @@
 """Define the various joint actuators used in robotics.
 """
 
+import copy
 import numpy as np
 
 from pyrobolearn.robots.actuators.actuator import Actuator
@@ -24,9 +25,25 @@ class JointActuator(Actuator):
     For instance, given a target joint position value, the actuator computes the necessary torque to be applied on
     the joint using a simple PD control (with certain gains).
     """
+
     def __init__(self, joint_id):
         super(JointActuator, self).__init__()
         self.joint_id = joint_id
+
+    def __copy__(self):
+        """Return a shallow copy of the actuator. This can be overridden in the child class."""
+        return self.__class__(joint_id=self.joint_id)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the actuator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        joint_id = copy.deepcopy(self.joint_id)
+        actuator = self.__class__(joint_id=joint_id)
+        memo[self] = actuator
+        return actuator
 
 
 class PDJointActuator(JointActuator):
@@ -61,10 +78,33 @@ class PDJointActuator(JointActuator):
         torque = np.clip(torque, self.min_torque, self.max_torque)
         return torque
 
+    def __copy__(self):
+        """Return a shallow copy of the actuator. This can be overridden in the child class."""
+        return self.__class__(joint_id=self.joint_id, kp=self.kp, kd=self.kd, min_torque=self.min_torque,
+                              max_torque=self.max_torque, latency=self.latency)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the actuator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        joint_id = copy.deepcopy(self.joint_id)
+        kp = copy.deepcopy(self.kp)
+        kd = copy.deepcopy(self.kd)
+        min_torque = copy.deepcopy(self.min_torque)
+        max_torque = copy.deepcopy(self.max_torque)
+        latency = copy.deepcopy(self.latency)
+        actuator = self.__class__(joint_id=joint_id, kp=kp, kd=kd, min_torque=min_torque, max_torque=max_torque,
+                                  latency=latency)
+        memo[self] = actuator
+        return actuator
+
 
 class GearedActuator(JointActuator):
     r"""Geared Actuator
     """
+
     def __init__(self, joint_id):
         super(GearedActuator, self).__init__(joint_id)
 
@@ -72,6 +112,7 @@ class GearedActuator(JointActuator):
 class DirectDriveActuator(JointActuator):
     r"""Direct Drive Actuator
     """
+
     def __init__(self, joint_id):
         super(DirectDriveActuator, self).__init__(joint_id)
 
@@ -87,6 +128,7 @@ class SEA(JointActuator):
         [1] "Series elastic actuators", Pratt et al., 1995
         [2] "Learning agile and dynamic motor skills for legged robots", Hwangbo et al., 2019
     """
+
     def __init__(self, joint_id):
         super(SEA, self).__init__(joint_id)
 
@@ -94,6 +136,7 @@ class SEA(JointActuator):
 class HydraulicActuator(JointActuator):
     r"""Hydraulic Actuator
     """
+
     def __init__(self, joint_id):
         super(HydraulicActuator, self).__init__(joint_id)
 
@@ -105,9 +148,26 @@ class JointActuatorApproximator(JointActuator):
     actuator given for instance the joint positions. This function approximator has been trained on real data obtained
     from the real actuator and can thus be a better approximation of the way the actual actuator works.
     """
+
     def __init__(self, joint_id, approximator=None):
         super(JointActuatorApproximator, self).__init__(joint_id)
         self.approximator = approximator
+
+    def __copy__(self):
+        """Return a shallow copy of the actuator. This can be overridden in the child class."""
+        return self.__class__(joint_id=self.joint_id, approximator=self.approximator)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the actuator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        joint_id = copy.deepcopy(self.joint_id)
+        approximator = copy.deepcopy(self.approximator, memo)
+        actuator = self.__class__(joint_id=joint_id, approximator=approximator)
+        memo[self] = actuator
+        return actuator
 
 
 class ActuatorNet(JointActuatorApproximator):
@@ -116,6 +176,7 @@ class ActuatorNet(JointActuatorApproximator):
     References:
         [1] "Learning agile and dynamic motor skills for legged robots", Hwangbo et al., 2019
     """
+
     def __init__(self, joint_id, nn_model=None):
         super(ActuatorNet, self).__init__(joint_id, approximator=nn_model)
 

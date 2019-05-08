@@ -38,7 +38,7 @@ class CartPole(Robot):
                  simulator,
                  position=(0, 0, 0),
                  orientation=(0, 0, 0, 1),
-                 scaling=1.,
+                 scale=1.,
                  fixed_base=True,
                  urdf=os.path.join(pybullet_data.getDataPath(), "cartpole.urdf"),
                  num_links=1,
@@ -54,7 +54,7 @@ class CartPole(Robot):
         if fixed_base is None:
             fixed_base = True
 
-        super(CartPole, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(CartPole, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'cartpole'
 
         # create dynamically other links if necessary

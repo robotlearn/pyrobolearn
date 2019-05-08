@@ -4,6 +4,7 @@
 These include IMU, contact, Camera, and other sensors.
 """
 
+import copy
 from abc import ABCMeta, abstractmethod
 
 from pyrobolearn.utils.transformation import get_quaternion_product
@@ -28,7 +29,7 @@ class LinkSensor(Sensor):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, simulator, body_id, link_id=None, position=None, orientation=None, refresh_rate=1):
+    def __init__(self, simulator, body_id, link_id=None, position=None, orientation=None, rate=1):
         """Initialize the sensor.
 
         Args:
@@ -37,9 +38,9 @@ class LinkSensor(Sensor):
             link_id (int): unique id of the link
             position (vec3): local position of the sensor with respect to the given link
             orientation (vec4): local orientation of the sensor with respect to the given link
-            refresh_rate (int): number of steps to wait before acquisition of the next sensor value.
+            rate (int): number of steps to wait before acquisition of the next sensor value.
         """
-        super(LinkSensor, self).__init__(simulator, body_id, position, orientation, refresh_rate)
+        super(LinkSensor, self).__init__(simulator, body_id, position, orientation, rate)
         self.link_id = link_id
 
     @property
@@ -63,3 +64,24 @@ class LinkSensor(Sensor):
     @abstractmethod
     def _sense(self):
         raise NotImplementedError
+
+    def __copy__(self):
+        """Return a shallow copy of the sensor. This can be overridden in the child class."""
+        return self.__class__(simulator=self.simulator, body_id=self.body_id, link_id=self.link_id,
+                              position=self.local_position, orientation=self.local_orientation, rate=self.rate)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the sensor. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        simulator = copy.deepcopy(self.simulator, memo)
+        body_id = copy.deepcopy(self.body_id)
+        link_id = copy.deepcopy(self.link_id)
+        position = copy.deepcopy(self.local_position)
+        orientation = copy.deepcopy(self.local_orientation)
+        sensor = self.__class__(simulator=simulator, body_id=body_id, link_id=link_id, position=position,
+                                orientation=orientation, rate=self.rate)
+        memo[self] = sensor
+        return sensor

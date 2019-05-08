@@ -10,8 +10,9 @@ Dependencies:
 - `pyrobolearn.approximators` (and thus `pyrobolearn.models`)
 """
 
-from abc import ABCMeta, abstractmethod
+import copy
 import collections
+from abc import ABCMeta, abstractmethod
 import numpy as np
 import torch
 
@@ -74,24 +75,24 @@ class DynamicModel(object):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, states, actions, next_states=None, preprocessors=None, postprocessors=None):
+    def __init__(self, state, action, next_state=None, preprocessors=None, postprocessors=None):
         """
         Initialize the dynamic transition probability :math:`p(s_{t+1} | s_t, a_t)`, or dynamic transition function
         :math:`s_{t+1} = f(s_t, a_t)`.
 
         Args:
-            states (State): state inputs.
-            actions (Action): action inputs.
-            next_states (State, None): state outputs. If None, it will take the state inputs as the outputs.
+            state (State): state inputs.
+            action (Action): action inputs.
+            next_state (State, None): state outputs. If None, it will take the state inputs as the outputs.
             preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
             postprocessors (Processor, list of Processor, None): post-processors to be applied to the output
         """
         # set inputs
-        self.states = states
-        self.actions = actions
+        self.state = state
+        self.action = action
 
         # set outputs
-        self.next_states = next_states
+        self.next_state = next_state
         self.state_data = None
 
         # preprocessors and postprocessors
@@ -112,43 +113,43 @@ class DynamicModel(object):
     ##############
 
     @property
-    def states(self):
+    def state(self):
         """Return the state instance."""
-        return self._states
+        return self._state
 
-    @states.setter
-    def states(self, states):
+    @state.setter
+    def state(self, state):
         """Set the states."""
-        if not isinstance(states, State):
-            raise TypeError("Expecting the given states to be an instance of `State`, instead got: "
-                            "{}".format(type(states)))
-        self._states = states
+        if not isinstance(state, State):
+            raise TypeError("Expecting the given state to be an instance of `State`, instead got: "
+                            "{}".format(type(state)))
+        self._state = state
 
     @property
-    def actions(self):
+    def action(self):
         """Return thge action instance."""
-        return self._actions
+        return self._action
 
-    @actions.setter
-    def actions(self, actions):
+    @action.setter
+    def action(self, action):
         """Set the actions."""
-        if not isinstance(actions, Action):
-            raise TypeError("Expecting the given actions to be an instance of `Action`, instead got: "
-                            "{}".format(type(actions)))
-        self._actions = actions
+        if not isinstance(action, Action):
+            raise TypeError("Expecting the given action to be an instance of `Action`, instead got: "
+                            "{}".format(type(action)))
+        self._action = action
 
     @property
-    def next_states(self):
+    def next_state(self):
         """Return the next state instance."""
         return self._next_states
 
-    @next_states.setter
-    def next_states(self, states):
+    @next_state.setter
+    def next_state(self, states):
         """Set the next states."""
         if states is None:
-            states = self.states
+            states = self.state
         elif not isinstance(states, State):
-            raise TypeError("Expecting the given next_states to be an instance of `State`, instead got: "
+            raise TypeError("Expecting the given next_state to be an instance of `State`, instead got: "
                             "{}".format(type(states)))
         self._next_states = states
 
@@ -214,7 +215,7 @@ class DynamicModel(object):
             state_data = [state_data]
 
         # go through each state and data
-        for idx, (state, data) in enumerate(zip(self.states, state_data)):
+        for idx, (state, data) in enumerate(zip(self.state, state_data)):
             if state.is_discrete():  # discrete state
                 if isinstance(data, np.ndarray):  # data state is a numpy array
                     # check if given logits or not
@@ -289,6 +290,14 @@ class DynamicModel(object):
         """
         pass
 
+    #############
+    # Operators #
+    #############
+
+    def __str__(self):
+        """Return a representation string about the object."""
+        return self.__class__.__name__
+
     def __call__(self, states=None, actions=None, deterministic=False, to_numpy=True, set_state_data=True):
         """
         Return predicted next state given the current state and action.
@@ -307,6 +316,27 @@ class DynamicModel(object):
         return self.predict(states=states, actions=actions, deterministic=deterministic, to_numpy=to_numpy,
                             set_state_data=set_state_data)
 
+    def __copy__(self):
+        """Return a shallow copy of the dynamic model. This can be overridden in the child class."""
+        return self.__class__(state=self.state, action=self.action, next_state=self.next_state,
+                              preprocessors=self.preprocessors, postprocessors=self.postprocessors)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the dynamic model. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        state = copy.deepcopy(self.state, memo)
+        action = copy.deepcopy(self.action, memo)
+        next_state = copy.deepcopy(self.next_state, memo)
+        preprocessors = [copy.deepcopy(preprocessor, memo) for preprocessor in self.preprocessors]
+        postprocessors = [copy.deepcopy(postprocessor, memo) for postprocessor in self.postprocessors]
+        dynamic = self.__class__(state=state, action=action, next_state=next_state, preprocessors=preprocessors,
+                                 postprocessors=postprocessors)
+        memo[self] = dynamic
+        return dynamic
+
 
 class ParametrizedDynamicModel(DynamicModel):
     r"""Learnable Parametrized Dynamic Model
@@ -314,23 +344,23 @@ class ParametrizedDynamicModel(DynamicModel):
     Dynamic model that can be trained.
     """
 
-    def __init__(self, states, actions, model, next_states=None, distributions=None, preprocessors=None,
+    def __init__(self, state, action, model, next_state=None, distributions=None, preprocessors=None,
                  postprocessors=None):
         """
         Initialize the dynamic transition probability :math:`p(s_{t+1} | s_t, a_t)`.
 
         Args:
-            states (State): state inputs.
-            actions (Action): action inputs.
+            state (State): state inputs.
+            action (Action): action inputs.
             model (Approximator): approximator (inner learning model).
-            next_states (State, None): state outputs. If None, it will take the state inputs as the outputs.
+            next_state (State, None): state outputs. If None, it will take the state inputs as the outputs.
             distributions ((list of) torch.distributions.Distribution, None): distribution to use to sample the next
                 state. If None, it will be deterministic if the model is deterministic.
             preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
             postprocessors (Processor, list of Processor, None): post-processors to be applied to the output
         """
         # set inner model
-        super(ParametrizedDynamicModel, self).__init__(states, actions, next_states, preprocessors=preprocessors,
+        super(ParametrizedDynamicModel, self).__init__(state, action, next_state, preprocessors=preprocessors,
                                                        postprocessors=postprocessors)
         self.model = model
         self.distributions = distributions
@@ -364,9 +394,9 @@ class ParametrizedDynamicModel(DynamicModel):
         elif isinstance(distributions, torch.distributions.Distribution):
             distributions = [distributions]
 
-        if len(distributions) != 0 and len(distributions) != len(self.next_states):
+        if len(distributions) != 0 and len(distributions) != len(self.next_state):
             raise ValueError("Expecting the number of distributions (={}) to match the number of states (={})"
-                             ".".format(len(distributions), len(self.next_states)))
+                             ".".format(len(distributions), len(self.next_state)))
         self._distributions = distributions
 
     @property
@@ -489,10 +519,39 @@ class ParametrizedDynamicModel(DynamicModel):
 
         # set the state data if specified
         if set_state_data:
-            self.next_states.data = data
+            self.next_state.data = data
 
         # return next state data
         return data
+
+    #############
+    # Operators #
+    #############
+
+    def __copy__(self):
+        """Return a shallow copy of the dynamic model. This can be overridden in the child class."""
+        return self.__class__(state=self.state, action=self.action, model=self.model, next_state=self.next_state,
+                              distributions=self.distributions, preprocessors=self.preprocessors,
+                              postprocessors=self.postprocessors)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the dynamic model. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        state = copy.deepcopy(self.state, memo)
+        action = copy.deepcopy(self.action, memo)
+        model = copy.deepcopy(self.model, memo)
+        distributions = [copy.deepcopy(distribution) for distribution in self.distributions]
+        next_state = copy.deepcopy(self.next_state, memo)
+        preprocessors = [copy.deepcopy(preprocessor, memo) for preprocessor in self.preprocessors]
+        postprocessors = [copy.deepcopy(postprocessor, memo) for postprocessor in self.postprocessors]
+        dynamic = self.__class__(state=state, action=action, model=model, next_state=next_state,
+                                 distributions=distributions, preprocessors=preprocessors,
+                                 postprocessors=postprocessors)
+        memo[self] = dynamic
+        return dynamic
 
 
 # class GPDynamicModel(ParametrizedDynamicModel):

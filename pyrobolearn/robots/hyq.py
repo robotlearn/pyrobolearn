@@ -30,7 +30,7 @@ class HyQ(QuadrupedRobot):
                  position=(0, 0, .9),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/hyq/hyq.urdf'):
         # check parameters
         if position is None:
@@ -42,7 +42,7 @@ class HyQ(QuadrupedRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(HyQ, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(HyQ, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'hyq'
 
         self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]

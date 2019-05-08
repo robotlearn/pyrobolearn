@@ -28,9 +28,9 @@ class LeggedRobot(Robot):
     in the standard regime are rhythmic movements.
     """
 
-    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.,
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.,
                  foot_frictions=None):
-        super(LeggedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling=scaling)
+        super(LeggedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale=scale)
 
         # leg and feet ids
         self.legs = []  # list of legs where a leg is a list of links
@@ -729,8 +729,8 @@ class BipedRobot(LeggedRobot):
     A biped robot is a robot which has 2 legs.
     """
 
-    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
-        super(BipedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        super(BipedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_leg_id = 0
         self.right_leg_id = 1
@@ -766,8 +766,8 @@ class QuadrupedRobot(LeggedRobot):
     A quadruped robot is a robot which has 4 legs.
     """
 
-    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scaling=1.):
-        super(QuadrupedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        super(QuadrupedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_front_leg_id = 0
         self.right_front_leg_id = 1
@@ -825,8 +825,8 @@ class HexapodRobot(LeggedRobot):
     An hexapod robot is a robot which has 6 legs.
     """
 
-    def __init__(self, simulator, urdf, position, orientation=None, fixed_base=False, scaling=1.):
-        super(HexapodRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+    def __init__(self, simulator, urdf, position, orientation=None, fixed_base=False, scale=1.):
+        super(HexapodRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_front_leg_id = 0
         self.right_front_leg_id = 1

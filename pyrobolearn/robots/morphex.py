@@ -28,7 +28,7 @@ class Morphex(HexapodRobot):
                  position=(0, 0, 0.2),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/morphex/morphex.urdf'):
         # check parameters
         if position is None:
@@ -40,7 +40,7 @@ class Morphex(HexapodRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Morphex, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Morphex, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'morphex'
 
 

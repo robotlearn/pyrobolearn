@@ -22,8 +22,8 @@ class ForceTorqueSensor(JointSensor):
     The F/T sensor allows to measure the forces and torques applied to it.
     """
 
-    def __init__(self, simulator, body_id, joint_id, position, orientation, refresh_rate=1):
-        super(ForceTorqueSensor, self).__init__(simulator, body_id, joint_id, position, orientation, refresh_rate)
+    def __init__(self, simulator, body_id, joint_id, position, orientation, rate=1):
+        super(ForceTorqueSensor, self).__init__(simulator, body_id, joint_id, position, orientation, rate)
         self.sim.enable_joint_force_torque_sensor(body_id, joint_id, enableSensor=True)
 
     def _sense(self):

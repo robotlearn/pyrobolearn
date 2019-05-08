@@ -28,7 +28,7 @@ class SoftHand(Hand):
                  simulator,
                  position=(0, 0, 0),
                  orientation=(0, 0, 0, 1),
-                 scaling=1.,
+                 scale=1.,
                  left=True,
                  fixed_base=True):
         # check parameters
@@ -48,7 +48,7 @@ class SoftHand(Hand):
                 orientation = (0, 0, 1, 0)
             urdf_path = os.path.dirname(__file__) + '/urdfs/softhand/right_hand.urdf'
 
-        super(SoftHand, self).__init__(simulator, urdf_path, position, orientation, fixed_base, scaling)
+        super(SoftHand, self).__init__(simulator, urdf_path, position, orientation, fixed_base, scale)
         self.name = 'soft_hand'
 
 

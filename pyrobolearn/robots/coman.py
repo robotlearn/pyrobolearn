@@ -29,7 +29,7 @@ class Coman(BipedRobot, BiManipulatorRobot):
                  position=(0, 0, 0.5),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/coman/coman.urdf'):
         # check parameters
         if position is None:
@@ -41,7 +41,7 @@ class Coman(BipedRobot, BiManipulatorRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Coman, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Coman, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'coman'
 
         self.torso = [self.get_link_ids(link) for link in ['DWL', 'DWS', 'DWYTorso'] if link in self.link_names]

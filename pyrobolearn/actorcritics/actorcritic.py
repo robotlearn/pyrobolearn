@@ -8,6 +8,7 @@ Dependencies:
 - `pyrobolearn.values`
 """
 
+import copy
 import itertools
 import torch
 
@@ -142,6 +143,35 @@ class ActorCritic(object):
                           apply_action=apply_action)
         value = self.evaluate(state, to_numpy=to_numpy)
         return action, value
+
+    #############
+    # Operators #
+    #############
+
+    def __str__(self):
+        """Return a string describing the object."""
+        return self.__class__.__name__
+
+    def __copy__(self):
+        """Return a shallow copy of the approximator. This can be overridden in the child class."""
+        return self.__class__(policy=self.actor, value=self.critic)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the approximator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        policy = copy.deepcopy(self.actor, memo) if isinstance(self.actor, Policy) else copy.deepcopy(self.actor)
+        value = copy.deepcopy(self.critic, memo) if isinstance(self.critic, ValueApproximator) \
+            else copy.deepcopy(self.critic)
+        actor_critic = self.__class__(policy=policy, value=value)
+
+        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
+        # reference if already present)
+        memo[self] = actor_critic
+
+        return actor_critic
 
 
 class SharedActorCritic(object):

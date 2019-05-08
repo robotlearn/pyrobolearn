@@ -22,8 +22,8 @@ class PhysicalDynamicModel(DynamicModel):
     Dynamic model described by mathematical/physical equations.
     """
 
-    def __init__(self, states, actions):
-        super(PhysicalDynamicModel, self).__init__(states, actions)
+    def __init__(self, state, action):
+        super(PhysicalDynamicModel, self).__init__(state, action)
 
 
 class RobotDynamicModel(PhysicalDynamicModel):
@@ -37,8 +37,8 @@ class RobotDynamicModel(PhysicalDynamicModel):
     * the states/actions have to be robot states/actions
     """
 
-    def __init__(self, states, actions, robot):
-        super(RobotDynamicModel, self).__init__(states, actions)
+    def __init__(self, state, action, robot):
+        super(RobotDynamicModel, self).__init__(state, action)
         self.robot = robot
 
     ##############

@@ -31,7 +31,7 @@ class Atlas(BipedRobot, BiManipulatorRobot):
                  position=(0, 0, 1.),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/atlas/atlas_v4_with_multisense.urdf'):
         # check parameters
         if position is None:
@@ -43,7 +43,7 @@ class Atlas(BipedRobot, BiManipulatorRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Atlas, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Atlas, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'atlas'
 
         self.head = self.get_link_ids('head') if 'head' in self.link_names else None

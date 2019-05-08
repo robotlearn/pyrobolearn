@@ -20,6 +20,7 @@ Dependencies:
 
 import collections
 import copy
+import pickle
 import time
 from abc import ABCMeta
 from itertools import count
@@ -231,6 +232,7 @@ class Task(object):
         """
         Perform one step.
         """
+        # if we need to render the environment
         if render:
             self.env.render()
         else:
@@ -261,7 +263,49 @@ class Task(object):
         return self.policies[idx].model
 
     def save(self, filename):
+        """Save the storage on the disk."""
+        pickle.dump(self, open(filename, 'wb'))
+
+    @staticmethod
+    def load(filename):
+        """Load the storage from the disk."""
+        return pickle.load(open(filename, 'r'))
+
+    def rollout(self):  # TODO
         pass
+
+    #############
+    # Operators #
+    #############
+
+    def __repr__(self):
+        """Return a representation string about the reward function."""
+        return self.__class__.__name__
+
+    def __str__(self):
+        """Return a string describing the reward function."""
+        return self.__class__.__name__ + '(\n\tenvironment=' + str(self.environment) + ',\n\tpolicies=[' \
+               + ',\n\t\t'.join([str(policy) for policy in self.policies]) + ']\n)'
+
+    def __copy__(self):
+        """Return a shallow copy of the task. This can be overridden in the child class."""
+        return self.__class__(environment=self.environment, policies=self.policies)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the task. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        environment = copy.deepcopy(self.environment, memo)
+        policies = [copy.deepcopy(policy, memo) for policy in self.policies]
+        task = self.__class__(environment=environment, policies=policies)
+
+        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
+        # reference if already present)
+        memo[self] = task
+
+        return task
 
 
 # alias

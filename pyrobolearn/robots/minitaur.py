@@ -33,7 +33,7 @@ class Minitaur(QuadrupedRobot):
                  position=(0, 0, .3),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  couple_legs=True,
                  foot_friction=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/minitaur/minitaur.urdf'):
@@ -47,7 +47,7 @@ class Minitaur(QuadrupedRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Minitaur, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Minitaur, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'minitaur'
 
         self.base_height = 0.1638

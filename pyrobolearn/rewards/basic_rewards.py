@@ -202,8 +202,9 @@ class DirectiveReward(Reward):
 if __name__ == '__main__':
     from pyrobolearn.rewards import cos
 
-    reward = 2*FixedReward(1, range=(-1., 1.)) + FixedReward(3)**2 - 10
+    reward = 2*FixedReward(1, range=(-1., 1.)) - FixedReward(3)**2 - 10
     reward += FixedReward(2)
+    print(reward)
     print("\n2*FixedReward(1, range=(-1., 1.)) + FixedReward(3)**2 - 10 + FixedReward(2) = {}".format(reward()))
     print("Is an instance of Reward? {}".format(isinstance(reward, Reward)))
     print("Inner rewards: {}".format(reward.rewards))

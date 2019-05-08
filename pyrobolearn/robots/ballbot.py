@@ -25,7 +25,7 @@ class Ballbot(Robot):
     """
 
     def __init__(self, simulator, position=(0, 0, 0.), orientation=(0, 0, 0, 1), fixed_base=False,
-                 scaling=1., urdf=os.path.dirname(__file__) + '/urdfs/ballbot/ballbot.urdf'):
+                 scale=1., urdf=os.path.dirname(__file__) + '/urdfs/ballbot/ballbot.urdf'):
         # check parameters
         if position is None:
             position = (0., 0., 0.)
@@ -36,7 +36,7 @@ class Ballbot(Robot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Ballbot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Ballbot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.ball = self.sim.load_urdf(os.path.dirname(__file__) + '/urdfs/ballbot/ball.urdf', position, orientation)
         self.name = 'ballbot'
 

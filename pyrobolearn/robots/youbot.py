@@ -31,7 +31,7 @@ class YoubotBase(DifferentialWheeledRobot):
                  position=(0, 0, 0.085),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/youbot/youbot_base_only.urdf'):
         # check parameters
         if position is None:
@@ -43,7 +43,7 @@ class YoubotBase(DifferentialWheeledRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(YoubotBase, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(YoubotBase, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'youbot_base'
 
         # self.wheels = [self.get_link_ids(link) for link in ['left_wheel', 'right_wheel']
@@ -63,7 +63,7 @@ class KukaYoubotArm(ManipulatorRobot):
                  position=(0, 0, 0.03),
                  orientation=(0, 0, 0, 1),
                  fixed_base=True,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/youbot/youbot_arm_only.urdf'):
         # check parameters
         if position is None:
@@ -75,7 +75,7 @@ class KukaYoubotArm(ManipulatorRobot):
         if fixed_base is None:
             fixed_base = True
 
-        super(KukaYoubotArm, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(KukaYoubotArm, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'kuka_youbot_arm'
 
 
@@ -91,7 +91,7 @@ class Youbot(ManipulatorRobot, DifferentialWheeledRobot):
                  position=(0, 0, 0.085),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/youbot/youbot.urdf'):
         # check parameters
         if position is None:
@@ -103,7 +103,7 @@ class Youbot(ManipulatorRobot, DifferentialWheeledRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Youbot, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Youbot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'youbot'
 
         # self.wheels = [self.get_link_ids(link) for link in ['left_wheel', 'right_wheel']
@@ -123,7 +123,7 @@ class YoubotDualArm(BiManipulatorRobot, DifferentialWheeledRobot):
                  position=(0, 0, 0.085),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/youbot/youbot_dual_arm.urdf'):
         # check parameters
         if position is None:
@@ -135,7 +135,7 @@ class YoubotDualArm(BiManipulatorRobot, DifferentialWheeledRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(YoubotDualArm, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(YoubotDualArm, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'youbot_dual_arm'
 
         # self.wheels = [self.get_link_ids(link) for link in ['left_wheel', 'right_wheel']

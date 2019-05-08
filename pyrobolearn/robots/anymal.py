@@ -35,7 +35,7 @@ class ANYmal(QuadrupedRobot):
                  position=(0, 0, .6),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/anymal/anymal.urdf'):
         # check parameters
         if position is None:
@@ -47,7 +47,7 @@ class ANYmal(QuadrupedRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(ANYmal, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(ANYmal, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'anymal'
 
         self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]

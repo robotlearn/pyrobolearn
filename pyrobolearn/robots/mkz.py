@@ -32,7 +32,7 @@ class MKZ(AckermannWheeledRobot):
                  position=(0, 0, .4),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/mkz/mkz.urdf'):
         # check parameters
         if position is None:
@@ -44,7 +44,7 @@ class MKZ(AckermannWheeledRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(MKZ, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(MKZ, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'mkz'
 
         self.wheels = [self.get_link_ids(link) for link in ['wheel_fl', 'wheel_fr', 'wheel_rl', 'wheel_rr']

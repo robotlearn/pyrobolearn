@@ -56,7 +56,7 @@ class CameraSensor(LinkSensor):
         [4] http://learnwebgl.brown37.net/08_projections/projections_perspective.html
     """
 
-    def __init__(self, simulator, body_id, link_id, width, height, position=None, orientation=None, refresh_rate=50,
+    def __init__(self, simulator, body_id, link_id, width, height, position=None, orientation=None, rate=50,
                  target_position=None, distance=10.,
                  fovy=60, aspect=None, near=0.01, far=100.,
                  left=None, right=None, bottom=None, top=None):
@@ -97,7 +97,7 @@ class CameraSensor(LinkSensor):
                 bottom (float): bottom screen (canvas) coordinate
                 top (float): top screen (canvas) coordinate
         """
-        super(CameraSensor, self).__init__(simulator, body_id, link_id, position, orientation, refresh_rate)
+        super(CameraSensor, self).__init__(simulator, body_id, link_id, position, orientation, rate)
 
         self.width = width
         self.height = height

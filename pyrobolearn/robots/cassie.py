@@ -36,7 +36,7 @@ class Cassie(BipedRobot):
                  position=(0, 0, .8),
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
-                 scaling=1.,
+                 scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/cassie/cassie.urdf'):
         # check parameters
         if position is None:
@@ -48,7 +48,7 @@ class Cassie(BipedRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(Cassie, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Cassie, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'cassie'
 
         # TODO: create constraints in pybullet

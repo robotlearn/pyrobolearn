@@ -20,8 +20,8 @@ class ContactSensor(LinkSensor):
     This sensor return 1 if in contact with an object, and 0 otherwise.
     """
 
-    def __init__(self, simulator, body_id, link_id, position, orientation, refresh_rate=1):
-        super(ContactSensor, self).__init__(simulator, body_id, link_id, position, orientation, refresh_rate)
+    def __init__(self, simulator, body_id, link_id, position, orientation, rate=1):
+        super(ContactSensor, self).__init__(simulator, body_id, link_id, position, orientation, rate)
 
     def get_contact_points(self):
         """Get the contact points.

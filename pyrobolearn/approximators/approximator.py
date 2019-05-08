@@ -10,6 +10,7 @@ Dependencies:
 - `pyrobolearn.actions`
 """
 
+import copy
 import collections
 import numpy as np
 import torch
@@ -313,7 +314,8 @@ class Approximator(object):
         """
         return self.model.is_generative()
 
-    def _size(self, x):
+    @staticmethod
+    def _size(x):
         """Return the total size of a `State`, `Action`, numpy.array, or torch.Tensor."""
         size = 0
         if isinstance(x, (State, Action)):
@@ -381,7 +383,8 @@ class Approximator(object):
                     processor.reset()
         self.model.reset()
 
-    def __convert_to_numpy(self, x, to_numpy=True):
+    @staticmethod
+    def __convert_to_numpy(x, to_numpy=True):
         """Convert the given argument to a numpy array if specified."""
         if to_numpy and isinstance(x, torch.Tensor):
             if x.requires_grad:
@@ -389,7 +392,8 @@ class Approximator(object):
             return x.numpy()
         return x
 
-    def merge_inputs(self, x=None, to_numpy=True):
+    @staticmethod
+    def merge_inputs(x=None, to_numpy=True):
         """
         Merge the inputs of the approximator.
 
@@ -503,13 +507,52 @@ class Approximator(object):
         """Predict the output using the inner learning model given the input."""
         return self.predict(x)
 
-    def __repr__(self):
-        """Return a representation of the model."""
-        return self.model.__str__()
+    # def __repr__(self):
+    #     """Return a representation of the model."""
+    #     return self.model.__str__()
 
     def __str__(self):
         """Return a string describing the model."""
         return self.model.__str__()
+
+    def __copy__(self):
+        """Return a shallow copy of the approximator. This can be overridden in the child class."""
+        return self.__class__(inputs=self.inputs, outputs=self.outputs, model=self.model,
+                              preprocessors=self.preprocessors, postprocessors=self.postprocessors)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the approximator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        def get_inputs_outputs(items):
+            if isinstance(items, list):
+                elements = []
+                for item in items:
+                    if isinstance(item, (Action, State)):
+                        elements.append(copy.deepcopy(item, memo))
+                    else:
+                        elements.append(copy.deepcopy(item))
+            elif isinstance(items, (Action, State)):
+                elements = copy.deepcopy(items, memo)
+            else:
+                elements = copy.deepcopy(items)
+            return elements
+
+        inputs = get_inputs_outputs(self.inputs)
+        outputs = get_inputs_outputs(self.outputs)
+        model = copy.deepcopy(self.model, memo) if self.model is not None else None
+        preprocessors = [copy.deepcopy(preprocessor, memo) for preprocessor in self.preprocessors]
+        postprocessors = [copy.deepcopy(postprocessor, memo) for postprocessor in self.postprocessors]
+        approximator = self.__class__(inputs=inputs, outputs=outputs, model=model,
+                                      preprocessors=preprocessors, postprocessors=postprocessors)
+
+        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
+        # reference if already present)
+        memo[self] = approximator
+
+        return approximator
 
 
 # Tests

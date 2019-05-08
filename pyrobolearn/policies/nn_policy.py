@@ -24,18 +24,18 @@ class NNPolicy(Policy):
     Defines the neural network policy.
     """
 
-    def __init__(self, states, actions, model=None, rate=1, preprocessors=None, postprocessors=None, *args, **kwargs):
+    def __init__(self, state, action, model=None, rate=1, preprocessors=None, postprocessors=None, *args, **kwargs):
         """
         Initialize the Neural network policy.
 
         Args:
-            actions (Action): At each step, by calling `policy.act(state)`, the `actions` are computed by the policy,
-                and should be given to the environment. As with the `states`, the type and size/shape of each action
-                can be inferred and could be used to automatically build a policy. The `action` connects the policy
-                with a controllable object (such as a robot) in the environment.
-            states (State): By giving the `states` to the policy, it can automatically infer the type and size/shape
-                of each state, and thus can be used to automatically build a policy. At each step, the `states`
-                are filled by the environment, and read by the policy. The `state` connects the policy with one or
+            action (Action): At each step, by calling `policy.act(state)`, the `action` is computed by the policy,
+                and can be given to the environment. As with the `state`, the type and size/shape of each inner
+                action can be inferred and could be used to automatically build a policy. The `action` connects the
+                policy with a controllable object (such as a robot) in the environment.
+            state (State): By giving the `state` to the policy, it can automatically infer the type and size/shape
+                of each inner state, and thus can be used to automatically build a policy. At each step, the `state`
+                is filled by the environment, and read by the policy. The `state` connects the policy with one or
                 several objects (including robots) in the environment. Note that some policies don't use any state
                 information.
             model (NN, NNApproximator): NN model
@@ -44,8 +44,8 @@ class NNPolicy(Policy):
                 executing the model.
             preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
             postprocessors (Processor, list of Processor, None): post-processors to be applied to the output
-            *args (list): list of arguments
-            **kwargs (dict): dictionary of arguments
+            *args (list): list of arguments (this is not used in this class).
+            **kwargs (dict): dictionary of arguments (this is not used in this class).
         """
         if model is None:
             raise ValueError("Expecting a NN model for the NN policy")
@@ -54,7 +54,7 @@ class NNPolicy(Policy):
             # checking the output dimension of the model and the dimension of actions
             pass
 
-        super(NNPolicy, self).__init__(states, actions, model, rate=rate, preprocessors=preprocessors,
+        super(NNPolicy, self).__init__(state, action, model, rate=rate, preprocessors=preprocessors,
                                        postprocessors=postprocessors, *args, **kwargs)
 
     # def act(self, state, deterministic=True):
@@ -71,14 +71,14 @@ class MLPPolicy(NNPolicy):
     activation functions.
     """
 
-    def __init__(self, states, actions, hidden_units=(), activation='linear', last_activation=None,
+    def __init__(self, state, action, hidden_units=(), activation='linear', last_activation=None,
                  dropout=None, rate=1, preprocessors=None, postprocessors=None):
         """Initialize MLP policy.
 
         Args:
-            states (State): 1D-states that is feed to the policy (the input dimensions will be inferred from the
+            state (State): 1D-states that is feed to the policy (the input dimensions will be inferred from the
                             states)
-            actions (Action): 1D-actions outputted by the policy and will be applied in the simulator (the output
+            action (Action): 1D-actions outputted by the policy and will be applied in the simulator (the output
                               dimensions will be inferred from the actions)
             hidden_units (list/tuple of int): number of hidden units in the corresponding layer
             activation (None, str, or list/tuple of str/None): activation function to be applied after each layer.
@@ -93,10 +93,10 @@ class MLPPolicy(NNPolicy):
             preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
             postprocessors (Processor, list of Processor, None): post-processors to be applied to the output
         """
-        model = MLPApproximator(states, actions, hidden_units=hidden_units,
+        model = MLPApproximator(state, action, hidden_units=hidden_units,
                                 activation=activation, last_activation=last_activation,
                                 dropout=dropout, preprocessors=preprocessors, postprocessors=postprocessors)
-        super(MLPPolicy, self).__init__(states, actions, model, rate=rate)
+        super(MLPPolicy, self).__init__(state, action, model, rate=rate)
 
     # def act(self, state, deterministic=True):
     #     return self.model.predict(state)
