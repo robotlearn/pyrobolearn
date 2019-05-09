@@ -301,17 +301,16 @@ class Reward(object):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
+
         state = copy.deepcopy(self.state, memo)
         action = copy.deepcopy(self.action, memo)
         rewards = [copy.deepcopy(reward, memo) for reward in self.rewards]
         range = copy.deepcopy(self.range)
         reward = self.__class__(state=state, action=action, rewards=rewards, range=range)
 
-        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
-        # reference if already present)
         memo[self] = reward
-
-        # return the copy
         return reward
 
     # for unary and binary operators, see `__init__()` method.

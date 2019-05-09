@@ -1076,16 +1076,16 @@ class State(object):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
+
         states = [copy.deepcopy(state, memo) for state in self.states]
         data = copy.deepcopy(self.window[0]) if self.has_data() else None
         space = copy.deepcopy(self._space)
         state = self.__class__(states=states, data=data, space=space, name=self.name, window_size=self.window_size,
                                axis=self.axis, ticks=self.ticks)
 
-        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
-        # reference if already present)
         memo[self] = state
-
         return state
 
     # def __invert__(self):

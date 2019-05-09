@@ -526,6 +526,9 @@ class Approximator(object):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
+
         def get_inputs_outputs(items):
             if isinstance(items, list):
                 elements = []
@@ -548,10 +551,7 @@ class Approximator(object):
         approximator = self.__class__(inputs=inputs, outputs=outputs, model=model,
                                       preprocessors=preprocessors, postprocessors=postprocessors)
 
-        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
-        # reference if already present)
         memo[self] = approximator
-
         return approximator
 
 

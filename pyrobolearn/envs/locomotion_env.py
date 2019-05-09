@@ -4,6 +4,7 @@
 Define the environment to perform a locomotion task; it mainly defines the reward function.
 """
 
+from pyrobolearn.simulators.simulator import Simulator
 from pyrobolearn.envs.env import Env
 from pyrobolearn.worlds import BasicWorld
 from pyrobolearn.states import State
@@ -20,7 +21,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class LocomotionEnv(Env):
+class LocomotionEnv(Env):  # TODO
     r"""Locomotion environment
 
     Define a simple environment for a locomotion task.
@@ -63,5 +64,5 @@ class LocomotionEnv(Env):
         terminal_condition = None
 
         super(LocomotionEnv, self).__init__(world, states, rewards=rewards,
-                                            terminal_condition=terminal_condition, extra_info=None)
+                                            terminal_conditions=terminal_condition, extra_info=None)
 

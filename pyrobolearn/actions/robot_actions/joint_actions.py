@@ -60,6 +60,8 @@ class JointAction(RobotAction):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         robot = copy.deepcopy(self.robot, memo)
         joints = copy.deepcopy(self.joints)
         action = self.__class__(robot=robot, joint_ids=joints)
@@ -94,6 +96,8 @@ class JointPositionAction(JointAction):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         robot = copy.deepcopy(self.robot, memo)
         joints = copy.deepcopy(self.joints)
         kp = copy.deepcopy(self.kp)
@@ -153,6 +157,8 @@ class JointPositionAndVelocityAction(JointAction):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         robot = copy.deepcopy(self.robot, memo)
         joints = copy.deepcopy(self.joints)
         kp = copy.deepcopy(self.kp)
@@ -201,6 +207,8 @@ class JointForceAction(JointAction):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         robot = copy.deepcopy(self.robot, memo)
         joints = copy.deepcopy(self.joints)
         f_min = copy.deepcopy(self.f_min)
@@ -241,6 +249,8 @@ class JointAccelerationAction(JointAction):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         robot = copy.deepcopy(self.robot, memo)
         joints = copy.deepcopy(self.joints)
         a_min = copy.deepcopy(self.a_min)

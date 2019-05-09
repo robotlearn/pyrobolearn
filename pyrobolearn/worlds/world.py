@@ -17,7 +17,7 @@ import cv2
 
 from pyrobolearn.simulators import Simulator
 from pyrobolearn.worlds.world_camera import WorldCamera
-from pyrobolearn.utils import has_method, has_variable
+# from pyrobolearn.utils import has_method, has_variable
 from pyrobolearn.robots import Body, Robot, robot_names_to_classes
 # TODO: to install the `gdal` library, run the script `pyrobolearn/scripts/install_gdal.sh`, by default do not
 #  import it
@@ -40,13 +40,13 @@ __status__ = "Development"
 class World(object):
     r"""World class.
 
-    The world contains all the objects that constitutes the world. This includes immovable objects such as the
-    terrain/floor, walls, and so on, as well as movable objects such as the various robots, etc.
+    The world contains all the objects that constitutes the world. This includes immovable bodies such as the
+    terrain/floor, walls, and so on, as well as movable bodies such as the various robots, etc.
     Properties of the world are also defined here, such as gravity, friction, and other dynamical properties.
 
-    The world is responsible to load the different objects part of the world and keeping a map of objects;
-    based on where the agent(s) is(are), the objects will be removed or added from/to the simulator allowing it
-    to run faster.
+    The world is responsible to load the different objects part of the world and keeping a map of bodies;
+    based on where the agent(s) is(are), the bodies will be removed or added from/to the simulator allowing it
+    to run faster. (TODO)
 
     It is independent of the simulator and environment used in RL, and is often provided as inputs to some
     `rewards/costs` and to the `environment`.
@@ -62,23 +62,26 @@ class World(object):
     """
 
     def __init__(self, simulator, gravity=(0., 0., -9.81)):
+        """
+        Initialize the world.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            gravity (tuple/list of 3 float, np.array[3]): gravity vector.
+        """
         # set simulator
         self.simulator = simulator
-
-        # By default, set the gravity
         self.gravity = gravity
 
         # set world camera
         self.camera = WorldCamera(self.simulator)
 
-        # keep track of the objects present in the world
-        # TODO: check what is already inside the simulator!
-        self.robots = {}
-        self.movable_bodies = {}  # set()
-        self.immovable_bodies = {}  # set()
-        self.visual_objects = {}  # set()
+        # keep track of the all the unique ids present in the world
+        # the following dictionary contains {id1: [(method_name, args), [parent_ids], [child_ids]], id2: Body}
+        # ids like id1 include visual shapes, collision shapes, textures, bodies that were created here
+        self.ids = collections.OrderedDict()
+        self.bodies = {}  # this contains {id: Body}
 
-        self.visual_shapes = {}
         self.map = None
         self.floor_id = -1
 
@@ -89,8 +92,8 @@ class World(object):
         self.sim.configure_debug_visualizer(self.sim.COV_ENABLE_GUI, 0)
 
         # interfaces and bridges
-        self.interfaces = set([])
-        self.bridges = []
+        # self.interfaces = set([])
+        # self.bridges = []
 
     ##############
     # Properties #
@@ -112,7 +115,7 @@ class World(object):
     @property
     def gravity(self):
         """Return the gravity vector."""
-        return self._gravity
+        return self.simulator.gravity
 
     @gravity.setter
     def gravity(self, gravity):
@@ -121,9 +124,7 @@ class World(object):
         Args:
             gravity (np.float[3]): 3d gravity vector.
         """
-        gravity = np.array(gravity)
-        self.sim.set_gravity(gravity)
-        self._gravity = gravity
+        self.simulator.gravity = gravity
 
     @property
     def lateral_friction(self):
@@ -237,16 +238,14 @@ class World(object):
         Check if the given item is in the world.
 
         Args:
-            item (int, Object, Robot): if it is an integer, it will check if the given object id is in the world.
+            item (int, Body): if it is an integer, it will check if the given body id is in the world.
 
         Returns:
             bool: True if the world contains the given item
         """
-        if not isinstance(item, int):
+        if isinstance(item, Body):
             item = item.id
-
-        return (item in self.robots) or (item in self.movable_bodies) or (item in self.immovable_bodies) or \
-               (item in self.visual_objects)
+        return item in self.bodies
 
     def __copy__(self):  # TODO: add the bodies in the copy
         """Return a shallow copy of the world. This can be overridden in the child class."""
@@ -258,9 +257,25 @@ class World(object):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
+
+        # copy world
         simulator = copy.deepcopy(self.simulator, memo)
         gravity = copy.deepcopy(self.gravity)
         world = self.__class__(simulator=simulator, gravity=gravity)
+
+        # load bodies in world
+        for id_, items in self.ids.iteritems():
+            if not isinstance(items, list):
+                items = [items]
+            for item in items:
+                if isinstance(item, tuple):  # (method_name, arguments)
+                    method = getattr(world, item[0])
+                    method(**item[1])
+                else:
+                    copy.deepcopy(item, memo)
+
         memo[self] = world
         return world
 
@@ -268,31 +283,49 @@ class World(object):
     # Methods #
     ###########
 
-    def set_bridges(self, bridges):  # TODO: remove this
+    @staticmethod
+    def __get_method_and_parameters(frame):
         """
-        This append the given bridges to various interfaces to the list of bridges.
-
-        See `pyrobolearn.tools.interface` and `pyrobolearn.tools.bridge` for more information.
+        Return the method name and the parameters with their values.
 
         Args:
-            bridges (list, Bridge): list of bridges
+            frame (types.FrameType): frame of the method
+
+        Returns:
+            str: method name.
+            dict: parameters with their values.
         """
-        if isinstance(bridges, collections.Iterable):
-            for bridge in bridges:
-                # if not isinstance(bridge, Bridge):
-                #    raise TypeError("Expecting a list of bridges (must be an instance of Bridge)")
-                if not has_method(bridge, 'step') and not has_variable(bridge, 'interface'):
-                    raise TypeError("Expecting bridge to have a `step` method and an `interface` variable")
-                if not has_method(bridge.interface, 'step'):
-                    raise TypeError("Expecting the bridge.interface to have a `step` method")
-                self.bridges.append(bridge)
-                self.interfaces.add(bridge.interface)
-        # elif isinstance(bridges, Bridge):
-        elif has_method(bridges, 'step') and has_variable(bridges, 'interface') and has_method(bridges.interface, 'step'):
-            self.bridges.append(bridges)
-            self.interfaces.add(bridges.interface)
-        else:
-            raise TypeError("Expecting a bridge (instance of Bridge) or a list of instances of Bridge")
+        args, _, _, values = inspect.getargvalues(frame)
+        method_name = frame.f_code.co_name
+        parameters = {arg: values[arg] for arg in args[1:]}
+        return method_name, parameters
+
+    # def set_bridges(self, bridges):  # TODO: remove this
+    #     """
+    #     This append the given bridges to various interfaces to the list of bridges.
+    #
+    #     See `pyrobolearn.tools.interface` and `pyrobolearn.tools.bridge` for more information.
+    #
+    #     Args:
+    #         bridges (list, Bridge): list of bridges
+    #     """
+    #     if isinstance(bridges, collections.Iterable):
+    #         for bridge in bridges:
+    #             # if not isinstance(bridge, Bridge):
+    #             #    raise TypeError("Expecting a list of bridges (must be an instance of Bridge)")
+    #             if not has_method(bridge, 'step') and not has_variable(bridge, 'interface'):
+    #                 raise TypeError("Expecting bridge to have a `step` method and an `interface` variable")
+    #             if not has_method(bridge.interface, 'step'):
+    #                 raise TypeError("Expecting the bridge.interface to have a `step` method")
+    #             self.bridges.append(bridge)
+    #             self.interfaces.add(bridge.interface)
+    #     # elif isinstance(bridges, Bridge):
+    #     elif has_method(bridges, 'step') and has_variable(bridges, 'interface') and \
+    #             has_method(bridges.interface, 'step'):
+    #         self.bridges.append(bridges)
+    #         self.interfaces.add(bridges.interface)
+    #     else:
+    #         raise TypeError("Expecting a bridge (instance of Bridge) or a list of instances of Bridge")
 
     def save(self, filename=None):
         """
@@ -305,8 +338,6 @@ class World(object):
         Returns:
             str or int: filename, or unique state id.
         """
-        # save approximate world state on the disk
-        # self.sim.saveWorld(filename)
         self.world_state = self.sim.save(filename)
         return self.world_state
 
@@ -350,10 +381,10 @@ class World(object):
         """
         Perform one step for the interfaces and bridges, and one step in the world/simulator.
         """
-        for interface in self.interfaces:
-            interface.step()
-        for bridge in self.bridges:
-            bridge.step()
+        # for interface in self.interfaces:
+        #     interface.step()
+        # for bridge in self.bridges:
+        #     bridge.step()
         self.sim.step()
         if sleep_dt is not None:
             time.sleep(sleep_dt)
@@ -377,7 +408,7 @@ class World(object):
         """
         Load the robot into the world. If the robot parameter is a known robot name or the path to the urdf file,
         it will create a `Robot` instance and return it. If the robot is already an instance of `Robot` it will
-        just add it to the list of objects present in the world.
+        just add it to the list of bodies present in the world.
 
         Args:
             robot (Robot, str, class): the robot instance or name. For the list of possible robot names, import
@@ -420,54 +451,95 @@ class World(object):
             raise TypeError('Unknown type for robot: {}. It must be a string or '
                             'an instance of Robot'.format(type(robot)))
 
-        self.robots[robot.id] = robot
+        self.bodies[robot.id] = robot
+        self.ids[robot.id] = [robot]
         return robot
 
-    def is_robot_id(self, robot_id):
+    def is_body_id(self, body_id):
+        """
+        Check if the given id is a body id.
+
+        Args:
+            body_id (int): the possible body id
+
+        Returns:
+            bool: True if the id is a body id, False otherwise
+        """
+        if body_id in self.bodies:
+            return True  # isinstance(self.bodies[body_id], Body)
+        return False
+
+    def is_robot_id(self, body_id):
         """
         Check if the given id is a robot id.
 
         Args:
-            robot_id (int): the possible robot id
+            body_id (int): the possible robot id
 
         Returns:
             bool: True if the id is a robot id, False otherwise
         """
-        return robot_id in self.robots
+        if body_id in self.bodies:
+            body = self.bodies[body_id]
+            return isinstance(body, Robot)
+        return False
 
-    def get_robot(self, robot_id):
+    def get_body(self, body_id):
         """
-        Return the robot object (instance of Robot) associated to the given robot id.
+        Return the instance (Body, Robot) associated to the given body id.
 
         Args:
-            robot_id (int): unique id of the robot
+            body_id (int): unique body id.
 
         Raises:
-            KeyError: if the given robot id is not in the world.
+            KeyError: if the given body id is not in the world.
 
         Returns:
-            Robot: robot instance
+            Body, Robot, int: Body/Robot instance, or unique id.
         """
-        return self.robots[robot_id]
+        return self.bodies[body_id]
+
+    def wrap(self, body_id, wrapper=Body, *args, **kwargs):
+        """
+        Wrap the given body_id with the provided wrapper. This will replace the
+
+        Args:
+            body_id (int): unique body id.
+            wrapper (class, Body): wrapper class. By default, it will wrap the provided body_id with the `Body` class.
+                The wrapper (its constructor) must at least accepts two parameters: the simulator and the body_id.
+            args (tuple, list): list of arguments that are given to the wrapper class.
+            kwargs (dict): dictionary of arguments that are given to the wrapper class.
+
+        Returns:
+            type(wrapper), Body: instance of the wrapper (by default, it is `Body`)
+        """
+        if body_id not in self.bodies:
+            raise TypeError("Expecting the 'body_id' to be in `self.bodies` (i.e. to have been loaded with one of the "
+                            "methods provided in `World`)")
+        body = wrapper(self.sim, body_id, *args, **kwargs)
+        self.bodies[body_id] = body
+        self.ids[body_id].append(body)
+        return body
 
     def reset_robots(self):
         """
         Reset the base and joint states of each robot
         """
-        for robot_id, robot in self.robots.items():
-            # reset base
-            self.sim.reset_base_pose(robot_id, robot.init_position, robot.init_orientation)
-            self.sim.reset_base_velocity(robot_id, linear_velocity=[0, 0, 0], angular_velocity=[0, 0, 0])
+        for body_id, body in self.bodies.items():
+            if isinstance(body, Robot):
+                # reset base
+                self.sim.reset_base_pose(body_id, body.init_position, body.init_orientation)
+                self.sim.reset_base_velocity(body_id, linear_velocity=[0, 0, 0], angular_velocity=[0, 0, 0])
 
-            # reset joint positions
-            positions = robot.init_joint_positions
-            velocities = np.zeros(len(positions))
-            for joint_id, position, velocity in zip(robot.joints, positions, velocities):
-                self.sim.reset_joint_state(robot_id, joint_id, position, velocity)
+                # reset joint positions
+                positions = body.init_joint_positions
+                velocities = np.zeros(len(positions))
+                for joint_id, position, velocity in zip(body.joints, positions, velocities):
+                    self.sim.reset_joint_state(body_id, joint_id, position, velocity)
 
-    def load_urdf(self, filename, position, orientation=(0, 0, 0, 1), fixed_base=False, scale=1., name=None):
+    def load_urdf(self, filename, position, orientation=(0, 0, 0, 1), fixed_base=False, scale=1.):
         """
-        Load URDF specified by the given path. This is basically a wrapper around the simulator's `load_urdf` method.
+        Load the URDF specified by the given path. This will return the body described in the URDF.
 
         Args:
             filename (str): path to the URDF file
@@ -478,26 +550,28 @@ class World(object):
             name (str, None): name of the object. If None, it will extract it from the URDF.
 
         Returns:
-            int: unique id of the loaded body.
+            int: unique id.
         """
         body = self.sim.load_urdf(filename, position, orientation, use_fixed_base=fixed_base, scale=scale)
-        self.movable_bodies[body] = self.sim.get_body_info(body) if name is None else name
+        self.bodies[body] = body
+        self.ids[body] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return body
 
     def load_sdf(self, filename, scaling=1.):
         """
-        Load the given SDF file; this will thus load all the object described in a SDF file.
+        Load the given SDF file; this will thus load all the bodies described in a SDF file.
 
         Args:
             filename (str): path to the SDF file
             scaling (float): scale factor for the object
 
         Returns:
-            list(int): list of ids
+            list of int: list of unique ids.
         """
         bodies = self.sim.load_sdf(filename, scaling=scaling)
+        self.ids[tuple(bodies)] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         for body in bodies:
-            self.movable_bodies[body] = self.sim.get_body_info(body)
+            self.bodies[body] = body
         return bodies
 
     def load_mjcf(self, filename, scaling=1.):
@@ -509,25 +583,34 @@ class World(object):
             scaling (float): scale factor for the object
 
         Returns:
-            list(int): list of ids
+            list of int: list of bodies
         """
         bodies = self.sim.load_mjcf(filename, scaling=scaling)
+        self.ids[tuple(bodies)] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         for body in bodies:
-            self.movable_bodies[body] = self.sim.get_body_info(body)
+            self.bodies[body] = body
         return bodies
 
-    def _load_sdf_or_urdf(self, path, position, orientation, scaling, objectType=None):
-        extension_name = path.split('.')[-1]
-        if extension_name == 'urdf':
-            object_id = self.sim.load_urdf(path, position, orientation, scale=scaling)
-            self.movable_bodies[object_id] = 'urdf' if objectType is None else objectType
-        elif extension_name == 'sdf':
-            object_id = self.sim.load_sdf(path, scale=scaling)  # list of ids
-            for i in object_id:  # assume for now that the objects are movable...
-                self.movable_bodies[i] = 'sdf' if objectType is None else objectType
-        else:
-            raise ValueError('Extension name of the file is not known; this method only accepts URDF/SDF files.')
-        return object_id
+    def create_body(self, position, visual_shape_id, collision_shape_id=-1, mass=0., orientation=(0., 0., 0., 1.),
+                    *args, **kwargs):
+        """Create a body in the simulator.
+
+        Args:
+            position (np.float[3]): Cartesian world position of the base
+            visual_shape_id (int): unique id from createVisualShape or -1. You can reuse the visual shape (instancing)
+            collision_shape_id (int): unique id from createCollisionShape or -1. You can re-use the collision shape
+                for multiple multibodies (instancing)
+            mass (float): mass of the base, in kg (if using SI units)
+            orientation (np.float[4]): Orientation of base as quaternion [x,y,z,w]
+
+        Returns:
+            int: non-negative unique id or -1 for failure.
+        """
+        body = self.sim.create_body(visual_shape_id=visual_shape_id, collision_shape_id=collision_shape_id, mass=mass,
+                                    position=position, orientation=orientation, *args, **kwargs)
+        self.bodies[body] = body
+        self.ids[body] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        return body
 
     def get_available_sdfs(self, fullpath=False):
         """Return the list of available SDFs from the `pybullet_data.getDataPath()` method.
@@ -565,55 +648,22 @@ class World(object):
         """
         return self.sim.get_available_objs(fullpath=fullpath)
 
-    def load_object(self, object_type, path=None, position=(0, 0, 0), orientation=(0, 0, 0, 1), scaling=1.):
-        """
-        Load the specified object. This is a method that allows you to quickly load stuffs however it is less
-        accurate than other methods in this class.
-
-        Args:
-            object_type (str): type of the object (name, 'sphere',
-            path (str): path to the object
-            position (np.float[3]): position of the object in the world frame.
-            orientation (np.float[4]): orientation of the object in the world frame.
-            scaling (float): scaling factor
-
-        Returns:
-            int or int[]: object ids
-        """
-        # check if an object has already been loaded at that place.
-
-        if path is not None:
-            object_id = self._load_sdf_or_urdf(path, position, orientation, scaling=1., objectType=object_type)
-        else:
-            if object_type == 'sphere':
-                object_id = self.load_sphere(position)
-            elif object_type == 'box':
-                object_id = self.load_box(position, orientation)
-            elif object_type == 'cylinder':
-                object_id = self.load_cylinder(position, orientation)
-            elif object_type == 'capsule':
-                object_id = self.load_capsule(position, orientation)
-            else:
-                raise TypeError("Object type not known...")
-
-        return object_id
-
-    def move_object(self, object_id, position=None, orientation=None):
+    def move_object(self, body_id, position=None, orientation=None):
         """
         Move the given object at the specified position and orientation.
 
         Args:
-            object_id (int): object id
+            body_id (int): body id
             position (float[3]): new position of the object. If None, it will keep the old position.
             orientation (float[4]): new orientation of the object. If None, it will keep the old orientation.
         """
         if position is None:
-            position = self.sim.get_base_pose(object_id)[0]
+            position = self.sim.get_base_pose(body_id)[0]
         if orientation is None:
-            orientation = self.sim.get_base_pose(object_id)[1]
-        self.sim.reset_base_pose(object_id, position, orientation)
+            orientation = self.sim.get_base_pose(body_id)[1]
+        self.sim.reset_base_pose(body_id, position, orientation)
 
-    def apply_force(self, object_id, link_id=-1, force=(0., 0., 0.), position=None, frame=2):
+    def apply_force(self, body_id, link_id=-1, force=(0., 0., 0.), position=None, frame=2):
         """
         Apply the given force on the specified object or link of the object.
 
@@ -622,206 +672,197 @@ class World(object):
             - this does not work when using `sim.setRealTimeSimulation(1)`.
 
         Args:
-            object_id (int): object id to apply the force on
+            body_id (int): body id to apply the force on
             link_id (int): link id to apply the force, if -1 it will apply the force on the base
-            force (float[3]): Cartesian forces to be applied on the body
-            position (float[3]): position on the link where the force is applied. If None, it is the center of mass
+            force (np.array[3]): Cartesian forces to be applied on the body
+            position (np.array[3]): position on the link where the force is applied. If None, it is the center of mass
                 of the object (or the link if specified)
             frame (int): allows to specify the coordinate system of force/position. sim.LINK_FRAME (=1) for local
                 link frame, and sim.WORLD_FRAME (=2) for world frame. By default, it is the world frame.
         """
-        if position is None:
-            if link_id != -1:
-                position = self.sim.get_base_pose(object_id)[0]
-            else:
-                position = self.sim.get_link_state(object_id, link_id)[0]
-        self.sim.apply_external_force(object_id, link_id, force, position, frame)
+        self.sim.apply_external_force(body_id, link_id, force, position, frame)
 
-    def get_object_color(self, object_id):
+    def get_body_color(self, body_id):
         """
-        Return the RGBA color of the given object.
+        Return the RGBA color of the given body.
 
         Args:
-            object_id (int): object id
+            body_id (int): body id
 
         Returns:
             float[4]: RGBA color
         """
-        return self.sim.get_visual_shape_data(object_id)[-1]
+        return self.sim.get_visual_shape_data(body_id)[-1]
 
-    def change_object_color(self, object_id, color, link_id=-1):
+    def change_body_color(self, body_id, color, link_id=-1):
         """
-        Change the color of the given object.
+        Change the color of the given body.
 
         Args:
-            object_id (int): object id
-            color (float[4]): RGBA color
+            body_id (int, Body): body (id)
+            color (float[4]): RGBA color where each channel is between 0 and 1.
             link_id (int): link id
         """
-        self.sim.change_visual_shape(object_id, link_id, rgba_color=color)
+        self.sim.change_visual_shape(body_id, link_id, rgba_color=color)
 
-    def get_object_position(self, object_id):
+    def get_body_position(self, body_id):
         """
-        Return the position of the given object.
+        Return the position of the given body.
 
         Args:
-            object_id (int): object id
+            body_id (int): body id
 
         Returns:
-            float[3]: position of the object
+            np.array[3]: position of the body (expressed in the world Cartesian frame)
         """
-        return np.array(self.sim.get_base_pose(object_id)[0])
+        return self.sim.get_base_pose(body_id)[0]
 
-    def get_object_orientation(self, object_id):
+    def get_body_orientation(self, body_id):
         """
-        Return the orientation of the given object.
+        Return the orientation of the given body.
 
         Args:
-            object_id (int): object id
+            body_id (int): body id
 
         Returns:
-            float[4]: orientation of the object
+            np.array[4]: orientation of the body (expressed as a quaternion [x,y,z,w]).
         """
-        return np.array(self.sim.get_base_pose(object_id)[1])
+        return self.sim.get_base_pose(body_id)[1]
 
-    def get_object_velocity(self, object_id):
+    def get_body_velocity(self, body_id):
         """
-        Return the linear and angular velocities of the given object.
+        Return the linear and angular velocities of the given body.
 
         Args:
-            object_id (int): object id
+            body_id (int): body id
 
         Returns:
-            float[6]: linear and angular velocities of the object
+            np.array[6]: linear and angular velocities of the body (in the world frame)
         """
-        lin_vel, ang_vel = self.sim.get_base_velocity(object_id)
-        return np.array(lin_vel + ang_vel)
+        lin_vel, ang_vel = self.sim.get_base_velocity(body_id)
+        return np.concatenate((lin_vel, ang_vel))
 
-    def get_object_linear_velocity(self, object_id):
+    def get_body_linear_velocity(self, body_id):
         """
-        Return the linear velocity of the given object.
+        Return the linear velocity of the given body.
 
         Args:
-            object_id (int): object id
+            body_id (int): body id
 
         Returns:
-            float[3]: linear velocity of the object
+            np.array[3]: linear velocity of the body
         """
-        return np.array(self.sim.get_base_velocity(object_id)[0])
+        return self.sim.get_base_velocity(body_id)[0]
 
-    def get_object_angular_velocity(self, object_id):
+    def get_body_angular_velocity(self, body_id):
         """
-        Return the angular velocity of the given object.
+        Return the angular velocity of the given body.
 
         Args:
-            object_id (int): object id
+            body_id (int): body id
 
         Returns:
-            float[3]: angular velocity of the object
+            np.array[3]: angular velocity of the body
         """
-        return np.array(self.sim.get_base_velocity(object_id)[1])
+        return self.sim.get_base_velocity(body_id)[1]
 
-    def hide_object(self, object_id):
+    def hide_body(self, body_id):
         """
-        Hide (visually) the given object; by making it transparent.
+        Hide (visually) the given body; by making it transparent.
 
         Args:
-            object_id (int): object id
+            body_id (int): body id
         """
-        color = self.get_object_color(object_id)
+        color = self.get_body_color(body_id)
         color[-1] = 0.
-        self.change_object_color(object_id, color=color)
+        self.change_body_color(body_id, color=color)
 
-    def show_object(self, object_id):
+    def show_body(self, body_id):
         """
-        Show (visually) a hidden object; by making it opaque.
+        Show (visually) a hidden body; by making it opaque.
 
         Args:
-            object_id (int): object id
+            body_id (int): body id
         """
-        color = self.get_object_color(object_id)
+        color = self.get_body_color(body_id)
         color[-1] = 1.
-        self.change_object_color(object_id, color=color)
+        self.change_body_color(body_id, color=color)
 
     def remove(self, body):
         """
-        Remove the object specified by its unique id from the world/simulator.
+        Remove the body specified by its unique id from the world/simulator.
 
         Args:
-            body (int, Robot): unique id of the object in the simulator.
+            body (int, Body): unique id of the body in the simulator.
 
         Returns:
             bool: True if succeeded, False if not. This method does not raise any errors.
         """
-        if isinstance(body, Robot):
+        if isinstance(body, Body):
             body = body.id
-        if body in self.robots:
-            self.robots.pop(body)
-        elif body in self.movable_bodies:
-            self.movable_bodies.pop(body)
-        elif body in self.immovable_bodies:
-            self.immovable_bodies.pop(body)
-        elif body in self.visual_objects:
-            self.visual_objects.pop(body)
+        if body in self.bodies:
+            self.bodies.pop(body)
+            if body in self.ids:
+                self.ids.pop(body)
         else:
             return False
 
         self.sim.remove_body(body)
         return True
 
-    def get_object_dimensions(self, object_id):
+    def get_body_dimensions(self, body_id):
         """
-        Return the object dimensions of the given object.
+        Return the body dimensions of the given body.
 
         Args:
-            object_id (int): object id
+            body_id (int): body id
 
         Returns:
-            float[3]: dimensions of the object
+            float[3]: dimensions of the body
         """
-        return np.array(self.sim.get_visual_shape_data(object_id)[3])
+        return self.sim.get_visual_shape_data(body_id)[0][3]
 
-    def change_object_scale(self, object_id, scale=(1., 1., 1.)):
+    def change_body_scale(self, body_id, scale=(1., 1., 1.)):
         """
-        Change the scale of the given object; it changes the scale for the visual and collision shapes.
+        Change the scale of the given body; it changes the scale for the visual and collision shapes.
 
         Args:
-            object_id (int): object id
+            body_id (int): body id
             scale (float[3]): scaling factors in each direction
         """
         # TODO: currently not possible in PyBullet
         pass
 
-    def get_object_aabb(self, object_id, link_id=-1):
+    def get_body_aabb(self, body_id, link_id=-1):
         """
-        Return the axis-aligned bounding box (AABB) in world space of the given object.
+        Return the axis-aligned bounding box (AABB) in world space of the given body.
 
         Args:
-            object_id (int): object id
+            body_id (int): body id
             link_id (int): optional link id
 
         Returns:
-            float[3]: coordinates in world space of the min corner of the AABB
-            float[3]: coordinates in world space of the max corner of the AABB
+            np.array[3]: coordinates in world space of the min corner of the AABB
+            np.array[3]: coordinates in world space of the max corner of the AABB
         """
-        aabb_min, aabb_max = self.sim.get_aabb(object_id, link_id)
-        return np.array(aabb_min), np.array(aabb_max)
+        aabb_min, aabb_max = self.sim.get_aabb(body_id, link_id)
+        return aabb_min, aabb_max
 
-    def get_object_ids_in_aabb(self, aabb_min, aabb_max):
+    def get_body_ids_in_aabb(self, aabb_min, aabb_max):
         """
-        Get the list of object ids that have AABB overlap with a given AABB.
+        Get the list of body ids that have AABB overlap with a given AABB.
 
         Args:
             aabb_min (float[3]): coordinates of the min corner of the bounding box
             aabb_max (float[3]): coordinates of the max corner of the bounding box
 
         Returns:
-            int[N]: list of object ids
+            int[N]: list of body ids
         """
-        overlapping_objects = self.sim.get_overlapping_objects(aabb_min, aabb_max)
-        if overlapping_objects is None:
+        overlapping_bodies = self.sim.get_overlapping_objects(aabb_min, aabb_max)
+        if overlapping_bodies is None:
             return []
-        return overlapping_objects
+        return overlapping_bodies
 
     def is_there_an_object(self, aabb_min, aabb_max, except_floor=True):
         """
@@ -835,23 +876,23 @@ class World(object):
         Returns:
             bool: True if there is an object in the specified bounding box
         """
-        objects = self.sim.get_overlapping_objects(aabb_min, aabb_max)
-        if len(objects) > 2:
+        bodies = self.sim.get_overlapping_objects(aabb_min, aabb_max)
+        if len(bodies) > 2:
             return True
-        if len(objects) == 0:
+        if len(bodies) == 0:
             return False
-        idx = objects[0]
+        idx = bodies[0]
         if idx == self.floor_id and except_floor:
             return False
         return True
 
-    def get_closest_objects(self, body, radius=1, link_id=-1, body2=None, link2_id=-1):  # Not possible for now
+    def get_closest_bodies(self, body, radius=1, link_id=-1, body2=None, link2_id=-1):  # Not possible for now
         """
-        Get the closest objects from the specified body (or link) within the specified radius.
+        Get the closest bodies from the specified body (or link) within the specified radius.
 
         Args:
             body (Body): body.
-            radius (float): radius around the body in which we check the closest objects.
+            radius (float): radius around the body in which we check the closest bodies.
             link_id (int): link id. Only report contact points that involve link index of body A.
             body2 (int): only report contact points that involve body B. Important: you need to have a valid body A
                 if you provide body B
@@ -876,7 +917,7 @@ class World(object):
         """
         if body2 is not None:
             return self.sim.get_closest_points(body1=body.id, body2=body2, distance=radius,
-                                               link1_id=link_id, link2_id=link_id)
+                                               link1_id=link_id, link2_id=link2_id)
 
     def load_floor(self, scaling=1.):
         """
@@ -935,8 +976,7 @@ class World(object):
             if filename[-3:] == 'obj':  # obj (mesh)
                 if not isinstance(scaling, (list, tuple)):
                     scaling = [scaling] * 3
-                self.floor_id = self.load_mesh(filename, position, orientation, mass=0., scale=scaling, flags=1,
-                                               object_type='terrain')
+                self.floor_id = self.load_mesh(filename, position, orientation, mass=0., scale=scaling, flags=1)
 
             elif filename[-3:] == 'sdf':  # SDF
                 self.floor_id = self.load_sdf(filename=filename, scaling=scaling)
@@ -959,8 +999,7 @@ class World(object):
                 # load the obj
                 if not isinstance(scaling, (list, tuple)):
                     scaling = [scaling] * 3
-                self.floor_id = self.load_mesh(filename, position, orientation, mass=0., scale=scaling, flags=1,
-                                               object_type='terrain')
+                self.floor_id = self.load_mesh(filename, position, orientation, mass=0., scale=scaling, flags=1)
         else:
             raise TypeError("Expecting the given 'heightmap' to be a string or a numpy array, instead got: "
                             "{}".format(type(heightmap)))
@@ -1168,8 +1207,7 @@ class World(object):
         Returns:
             int: unique id of the table
         """
-        table = self.sim.load_urdf('table/table.urdf', position=position, orientation=orientation, scale=scaling)
-        self.movable_bodies[table] = 'table'
+        table = self.load_urdf('table/table.urdf', position=position, orientation=orientation, scale=scaling)
         return table
 
     def load_kiva_shelf(self, scaling=1.):
@@ -1183,7 +1221,8 @@ class World(object):
             int: unique id of the shelf
         """
         shelf = self.sim.load_sdf('kiva_shelf/model.sdf', scale=scaling)[0]
-        self.movable_bodies[shelf] = 'shelf'
+        self.bodies[shelf] = shelf
+        self.ids[shelf] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return shelf
 
     def load_visual_sphere(self, position, radius=0.5, color=None):
@@ -1200,7 +1239,8 @@ class World(object):
         """
         visual_shape = self.sim.create_visual_shape(self.sim.GEOM_SPHERE, radius=radius, rgba_color=color)
         sphere = self.sim.create_body(visual_shape_id=visual_shape, mass=0., position=position)
-        self.visual_objects[sphere] = 'sphere'
+        self.bodies[sphere] = sphere
+        self.ids[sphere] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return sphere
 
     def load_sphere(self, position, mass=1., radius=0.5, color=None):
@@ -1218,13 +1258,12 @@ class World(object):
         """
         collision_shape = self.sim.create_collision_shape(self.sim.GEOM_SPHERE, radius=radius)
         visual_shape = self.sim.create_visual_shape(self.sim.GEOM_SPHERE, radius=radius, rgba_color=color)
+
         sphere = self.sim.create_body(mass=mass, collision_shape_id=collision_shape, visual_shape_id=visual_shape,
                                       position=position)
-        if mass == 0.0:
-            self.immovable_bodies[sphere] = 'sphere'
-        else:
-            self.movable_bodies[sphere] = 'sphere'
 
+        self.bodies[sphere] = sphere
+        self.ids[sphere] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return sphere
 
     def load_visual_box(self, position, orientation=(0, 0, 0, 1), dimensions=(1., 1., 1.), color=None):
@@ -1242,8 +1281,11 @@ class World(object):
         """
         dimensions = np.array(dimensions) / 2.
         visual_shape = self.sim.create_visual_shape(self.sim.GEOM_BOX, half_extents=dimensions, rgba_color=color)
+
         box = self.sim.create_body(mass=0., visual_shape_id=visual_shape, position=position, orientation=orientation)
-        self.visual_objects[box] = 'box'
+
+        self.bodies[box] = box
+        self.ids[box] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return box
 
     def load_box(self, position, orientation=(0, 0, 0, 1), mass=1., dimensions=(1., 1., 1.), color=None):
@@ -1263,14 +1305,12 @@ class World(object):
         dimensions = np.array(dimensions) / 2.
         collision_shape = self.sim.create_collision_shape(self.sim.GEOM_BOX, half_extents=dimensions)
         visual_shape = self.sim.create_visual_shape(self.sim.GEOM_BOX, half_extents=dimensions, rgba_color=color)
-        
+
         box = self.sim.create_body(mass=mass, collision_shape_id=collision_shape, visual_shape_id=visual_shape,
                                    position=position, orientation=orientation)
 
-        if mass == 0.0:
-            self.immovable_bodies[box] = 'box'
-        else:
-            self.movable_bodies[box] = 'box'
+        self.bodies[box] = box
+        self.ids[box] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return box
 
     def load_visual_cylinder(self, position, orientation=(0, 0, 0, 1), radius=0.5, height=1., color=None):
@@ -1292,7 +1332,8 @@ class World(object):
         
         cylinder = self.sim.create_body(mass=0., visual_shape_id=visual_shape, position=position,
                                         orientation=orientation)
-        self.visual_objects[cylinder] = 'cylinder'
+        self.bodies[cylinder] = cylinder
+        self.ids[cylinder] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return cylinder
 
     def load_cylinder(self, position, orientation=(0, 0, 0, 1), mass=1., radius=0.5, height=1., color=None):
@@ -1317,10 +1358,8 @@ class World(object):
         cylinder = self.sim.create_body(mass=mass, collision_shape_id=collision_shape, visual_shape_id=visual_shape,
                                         position=position, orientation=orientation)
 
-        if mass == 0.0:
-            self.immovable_bodies[cylinder] = 'cylinder'
-        else:
-            self.movable_bodies[cylinder] = 'cylinder'
+        self.bodies[cylinder] = cylinder
+        self.ids[cylinder] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return cylinder
 
     def load_visual_capsule(self, position, orientation=(0, 0, 0, 1), radius=0.5, height=1., color=None):
@@ -1340,11 +1379,11 @@ class World(object):
         height = height/2.
         visual_shape = self.sim.create_visual_shape(self.sim.GEOM_CAPSULE, radius=radius, length=height,
                                                     rgba_color=color)
-        
         capsule = self.sim.create_body(mass=0., visual_shape_id=visual_shape, position=position,
                                        orientation=orientation)
 
-        self.visual_objects[capsule] = 'capsule'
+        self.bodies[capsule] = capsule
+        self.ids[capsule] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return capsule
 
     def load_capsule(self, position, orientation=(0, 0, 0, 1), mass=1., radius=0.5, height=1., color=None):
@@ -1369,14 +1408,12 @@ class World(object):
         
         capsule = self.sim.create_body(mass=mass, collision_shape_id=collision_shape, visual_shape_id=visual_shape,
                                        position=position, orientation=orientation)
-        if mass == 0.0:
-            self.immovable_bodies[capsule] = 'capsule'
-        else:
-            self.movable_bodies[capsule] = 'capsule'
+
+        self.bodies[capsule] = capsule
+        self.ids[capsule] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return capsule
 
-    def load_visual_mesh(self, filename, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None,
-                         object_type='mesh'):
+    def load_visual_mesh(self, filename, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None):
         """
         Load a visual mesh in the world (only available in the simulator).
 
@@ -1393,11 +1430,12 @@ class World(object):
         """
         mesh = self.sim.load_mesh(filename, position, orientation, mass=0., scale=scale, color=color,
                                   with_collision=False)
-        self.visual_objects[mesh] = object_type
+        self.bodies[mesh] = mesh
+        self.ids[mesh] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return mesh
 
     def load_mesh(self, filename, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None,
-                  flags=None, object_type='mesh'):
+                  flags=None):
         """
         Load a mesh in the world (only available in the simulator).
 
@@ -1410,17 +1448,15 @@ class World(object):
             scale (float[3]): scale the mesh in the (x,y,z) directions
             color (int[4], None): color of the mesh for red, green, blue, and alpha, each in range [0,1]
             flags (int, None): if flag = `sim.GEOM_FORCE_CONCAVE_TRIMESH` (=1), this will create a concave static
-                triangle mesh. This should not be used with dynamic/moving objects, only for static (mass=0) terrain.
+                triangle mesh. This should not be used with dynamic/moving bodies, only for static (mass=0) terrain.
 
         Returns:
             int: unique id of the mesh in the world
         """
         mesh = self.sim.load_mesh(filename, position, orientation, mass, scale, color, with_collision=True,
                                   flags=flags)
-        if mass == 0.0:
-            self.immovable_bodies[mesh] = object_type
-        else:
-            self.movable_bodies[mesh] = object_type
+        self.bodies[mesh] = mesh
+        self.ids[mesh] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return mesh
 
     # The following commented code does not work currently because URDF_GEOM_PLANE is not set in Bullet
@@ -1444,7 +1480,8 @@ class World(object):
     #                                     visual_shape_id=visual_shape,
     #                                     position=position,
     #                                     orientation=orientation)
-    #     self.visual_objects[plane] = 'plane'
+    #     self.bodies[plane] = plane
+    #     self.ids[plane] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
     #     return plane
     #
     # def load_plane(self, position, orientation, mass=1., normal=(0.,0.,1.), color=(1,1,1,1)):
@@ -1469,10 +1506,8 @@ class World(object):
     #                                      visual_shape_id=visual_shape,
     #                                      position=position,
     #                                      orientation=orientation)
-    #     if mass == 0.0:
-    #         self.immovable_bodies[plane] = 'plane'
-    #     else:
-    #         self.movable_bodies[plane] = 'plane'
+    #     self.bodies[plane] = plane
+    #     self.ids[plane] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
     #     return plane
 
     # Temporary because the code above doesn't work
@@ -1489,7 +1524,8 @@ class World(object):
             int: unique id of the plane
         """
         plane = self.sim.load_urdf('plane.urdf', position, orientation, use_fixed_base=True, scale=scale)
-        self.immovable_bodies[plane] = plane
+        self.bodies[plane] = plane
+        self.ids[plane] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return plane
 
     def load_visual_ellipsoid(self, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None):
@@ -1599,12 +1635,12 @@ class World(object):
     def load_arrow(self, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None):
         pass
 
-    def distribute_objects(self, distributor, objects):
+    def distribute_bodies(self, distributor, bodies):
         pass
 
     def get_dynamics_info(self, body_id, link_id=-1):
         """
-        Return the dynamics information about objects that are in the world.
+        Return the dynamics information about bodies that are in the world.
 
         Args:
             body_id (int): object unique id.
@@ -1675,9 +1711,6 @@ class World(object):
             texture (str): path to the texture.
             body_id (int): unique body id.
             link_id (int): link id. If -1, it will be the base.
-
-        Returns:
-
         """
         texture = self.sim.load_texture(texture)
         self.sim.change_visual_shape(object_id=body_id, link_id=link_id, texture_id=texture)
@@ -1759,6 +1792,7 @@ if __name__ == '__main__':
 
     # load basic shapes
     sphere = world.load_visual_sphere([1., 0, 1.], color=(1, 0, 0, 0.5))
+    sphere = world.wrap(sphere, name='sphere')
     # world.load_visual_box([-1,0,1], dimensions=[1.,1.,1.], color=[0,0,1,0.5])
     # world.load_cylinder([0, -1, 1], color=[1, 0, 0, 1])
     #  world.load_capsule([0, 1, 1],  color=[1, 0, 0, 1])
@@ -1794,9 +1828,11 @@ if __name__ == '__main__':
 
         if t % T == 0:
             if red:
-                world.change_object_color(sphere, (1,0,0,0.5))
+                world.change_body_color(sphere.id, (1, 0, 0, 0.5))
             else:
-                world.change_object_color(sphere, (0,0,1,0.5))
+                world.change_body_color(sphere.id, (0, 0, 1, 0.5))
             red = not red
-        world.move_object(sphere, p)
+        # world.move_object(sphere, p)
+        sphere.position = p
+        world.apply_force(body_id=sphere.id, force=(0, 0, 100))
         world.step(sleep_dt=1./240)

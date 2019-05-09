@@ -327,6 +327,9 @@ class DynamicModel(object):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
+
         state = copy.deepcopy(self.state, memo)
         action = copy.deepcopy(self.action, memo)
         next_state = copy.deepcopy(self.next_state, memo)
@@ -334,6 +337,7 @@ class DynamicModel(object):
         postprocessors = [copy.deepcopy(postprocessor, memo) for postprocessor in self.postprocessors]
         dynamic = self.__class__(state=state, action=action, next_state=next_state, preprocessors=preprocessors,
                                  postprocessors=postprocessors)
+
         memo[self] = dynamic
         return dynamic
 
@@ -540,6 +544,9 @@ class ParametrizedDynamicModel(DynamicModel):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
+
         state = copy.deepcopy(self.state, memo)
         action = copy.deepcopy(self.action, memo)
         model = copy.deepcopy(self.model, memo)
@@ -550,6 +557,7 @@ class ParametrizedDynamicModel(DynamicModel):
         dynamic = self.__class__(state=state, action=action, model=model, next_state=next_state,
                                  distributions=distributions, preprocessors=preprocessors,
                                  postprocessors=postprocessors)
+
         memo[self] = dynamic
         return dynamic
 

@@ -50,6 +50,8 @@ class LinkAction(RobotAction):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         robot = copy.deepcopy(self.robot, memo)
         links = copy.deepcopy(self.links)
         action = self.__class__(robot, links)

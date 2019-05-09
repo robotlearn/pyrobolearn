@@ -82,11 +82,11 @@ class MLPApproximator(NNApproximator):
         """
 
         # check that the inputs and ouputs are 1D
-        # if not self._check1D(inputs):
+        # if not self._check_1d(inputs):
         #     raise ValueError("Length of input shape should be 1! Instead, got {}".format(inputs.shape))
         # print(outputs)
         # print(outputs.shape)
-        # if not self._check1D(outputs):
+        # if not self._check_1d(outputs):
         #     raise ValueError("Length of output shape should be 1! Instead, got {}".format(outputs.shape))
 
         input_size = self._size(inputs)
@@ -100,7 +100,8 @@ class MLPApproximator(NNApproximator):
         super(MLPApproximator, self).__init__(inputs, outputs, model, preprocessors=preprocessors,
                                               postprocessors=postprocessors)
 
-    def _check1D(self, arg):
+    @staticmethod
+    def _check_1d(arg):
         """Check that the given argument is a 1D vector, or simple array"""
         # if isinstance(arg, np.ndarray):
         shapes = arg.shape

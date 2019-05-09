@@ -24,6 +24,42 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
+def get_homogeneous_transform(position, orientation):
+    r"""
+    Return the Homogeneous transform matrix given the position vector and the orientation.
+
+    .. math::
+
+        H = [[R, p],
+             [zeros(3),1]]
+
+    where :math:`R` is the 3x3 rotation matrix, :math:`p` is the 3x1 position vector.
+
+    Args:
+        position (np.array[3]): position vector
+        orientation (np.array[4], np.array[3,3], np.array[3]): orientation (expressed as a quaternion [x,y,z,w],
+            3x3 rotation matrix, or roll-pitch-yaw angles).
+
+    Returns:
+        np.array[4,4]: homogeneous matrix
+    """
+    if isinstance(orientation, quaternion.quaternion):
+        R = quaternion.as_rotation_matrix(orientation)
+    else:
+        orientation = np.array(orientation)
+        if orientation.shape == (3,):  # RPY Euler angles
+            R = get_matrix_from_rpy(orientation)
+        elif orientation.shape == (4,):  # quaternion in the form [x,y,z,w]
+            R = get_matrix_from_quaternion(orientation)
+        elif orientation.shape == (3, 3):  # Rotation matrix
+            R = orientation
+        else:
+            raise ValueError("Expecting a quaternion, RPY Euler angles, or rotation matrix")
+
+    H = np.vstack((np.hstack((R, position.reshape(-1, 1))), np.array([[0, 0, 0, 1]])))
+    return H
+
+
 def get_matrix_from_axis_angle(axis, angle):
     """Return the rotation matrix from the specified axis and angle.
 

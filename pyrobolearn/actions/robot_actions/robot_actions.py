@@ -59,6 +59,8 @@ class RobotAction(Action):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         robot = copy.deepcopy(self.robot, memo)
         action = self.__class__(robot=robot)
         memo[self] = action

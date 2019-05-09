@@ -117,7 +117,8 @@ class Bullet(Simulator):
         # The items in the history container are in the same order there were called. Each item is a tuple where the
         # first item is the name of the method called, and the second item is the parameters that were passed to that
         # method.
-        self.history = []
+        self.history = []  # keep track of every commands
+        self.ids = []  # keep track of created unique ids
 
         # main camera in the simulator
         self._camera = None
@@ -160,16 +161,6 @@ class Bullet(Simulator):
         """Return the version of the simulator in a year-month-day format."""
         return self.sim.getAPIVersion()
 
-    @property
-    def gravity(self):
-        """Return the gravity in the simulator."""
-        return self.get_physics_properties()['gravity']
-
-    @property
-    def camera(self):
-        """Return the camera (yaw, pitch, distance, target_position) or None."""
-        return self._camera
-
     #############
     # Operators #
     #############
@@ -206,6 +197,10 @@ class Bullet(Simulator):
         Returns:
             Bullet: bullet simulator in DIRECT mode.
         """
+        # if the object has already been copied return the reference to the copied object
+        if self in memo:
+            return memo[self]
+
         # check if the memo has arguments that specify how to deep copy the simulator
         copy_models = memo.get('copy_parameters', False)
         copy_properties = memo.get('copy_properties', False)
@@ -221,10 +216,8 @@ class Bullet(Simulator):
         if copy_properties:
             pass
 
-        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
-        # reference if already present)
+        # update the memodict
         memo[self] = sim
-
         return sim
 
     ###########
@@ -408,7 +401,7 @@ class Bullet(Simulator):
         Args:
             time_step (float): Each time you call 'step' the time step will proceed with 'time_step'.
         """
-        self.history.append(('set_time_step', {'time_step': time_step}))
+        # self.history.append(('set_time_step', {'time_step': time_step}))
         self.sim.setTimeStep(timeStep=time_step)
 
     def set_real_time(self, enable=True):
@@ -606,6 +599,10 @@ class Bullet(Simulator):
         """
         self.sim.stopStateLogging(logger_id)
 
+    def get_gravity(self):
+        """Return the gravity set in the simulator."""
+        return self.get_physics_properties()['gravity']
+
     def set_gravity(self, gravity=(0, 0, -9.81)):
         """Set the gravity in the simulator with the given acceleration.
 
@@ -754,10 +751,10 @@ class Bullet(Simulator):
             kwargs['globalScaling'] = scale
 
         model_id = self.sim.loadURDF(filename, **kwargs)
-        if model_id > -1:
-            frame = inspect.currentframe()
-            args, _, _, values = inspect.getargvalues(frame)
-            self.history.append(('load_urdf', {arg: values[arg] for arg in args[1:]}))
+        # if model_id > -1:
+        #     frame = inspect.currentframe()
+        #     args, _, _, values = inspect.getargvalues(frame)
+        #     self.history.append(('load_urdf', {arg: values[arg] for arg in args[1:]}))
         return model_id
 
     def load_sdf(self, filename, scaling=1., *args, **kwargs):
@@ -1366,8 +1363,7 @@ class Bullet(Simulator):
         """
         self.sim.resetBaseVelocity(body_id, angularVelocity=angular_velocity)
 
-    def apply_external_force(self, body_id, link_id=-1, force=(0., 0., 0.), position=(0., 0., 0.),
-                             frame=pybullet.LINK_FRAME):
+    def apply_external_force(self, body_id, link_id=-1, force=(0., 0., 0.), position=None, frame=Simulator.LINK_FRAME):
         """
         Apply the specified external force on the specified position on the body / link.
 
@@ -1380,14 +1376,22 @@ class Bullet(Simulator):
             body_id (int): unique body id.
             link_id (int): unique link id. If -1, it will be the base.
             force (np.float[3]): external force to be applied.
-            position (np.float[3]): position on the link where the force is applied. See `flags` for coordinate
-                systems.
+            position (np.float[3], None): position on the link where the force is applied. See `flags` for coordinate
+                systems. If None, it is the center of mass of the body (or the link if specified).
             frame (int): Specify the coordinate system of force/position: either `pybullet.WORLD_FRAME` (=2) for
                 Cartesian world coordinates or `pybullet.LINK_FRAME` (=1) for local link coordinates.
         """
+        if position is None:
+            if frame == Simulator.WORLD_FRAME:  # world frame
+                if link_id == -1:
+                    position = self.get_base_pose(body_id)[0]
+                else:
+                    position = self.get_link_state(body_id, link_id)[0]
+            else:  # local frame
+                position = (0., 0., 0.)
         self.sim.applyExternalForce(body_id, link_id, force, position, frame)
 
-    def apply_external_torque(self, body_id, link_id=-1, torque=(0., 0., 0.)):
+    def apply_external_torque(self, body_id, link_id=-1, torque=(0., 0., 0.), frame=Simulator.LINK_FRAME):
         """
         Apply an external torque on a body, or a link of the body. Note that after each simulation step, the external
         torques are cleared to 0.
@@ -1398,6 +1402,8 @@ class Bullet(Simulator):
             body_id (int): unique body id.
             link_id (int): link id to apply the torque, if -1 it will apply the torque on the base
             torque (float[3]): Cartesian torques to be applied on the body
+            frame (int): Specify the coordinate system of force/position: either `pybullet.WORLD_FRAME` (=2) for
+                Cartesian world coordinates or `pybullet.LINK_FRAME` (=1) for local link coordinates.
         """
         self.sim.applyExternalTorque(body_id, link_id, torque)
 
@@ -2912,27 +2918,33 @@ class Bullet(Simulator):
 
     def get_collision_shape_data(self, object_id, link_id=-1):
         """
-        Get the collision shape data associated with the specified object id and link id.
+        Get the collision shape data associated with the specified object id and link id. If the given object_id has
+        no collision shape, it returns an empty tuple.
 
         Args:
             object_id (int): object unique id.
             link_id (int): link index or -1 for the base.
 
         Returns:
-            int: object unique id.
-            int: link id.
-            int: geometry type; GEOM_BOX (=3), GEOM_SPHERE (=2), GEOM_CAPSULE (=7), GEOM_MESH (=5), GEOM_PLANE (=6)
-            np.float[3]: depends on geometry type:
-                for GEOM_BOX: extents,
-                for GEOM_SPHERE: dimensions[0] = radius,
-                for GEOM_CAPSULE and GEOM_CYLINDER: dimensions[0] = height (length), dimensions[1] = radius.
-                For GEOM_MESH: dimensions is the scaling factor.
-            str: Only for GEOM_MESH: file name (and path) of the collision mesh asset.
-            np.float[3]: Local position of the collision frame with respect to the center of mass/inertial frame
-            np.float[4]: Local orientation of the collision frame with respect to the inertial frame
+            if not has_collision_shape_data:
+                tuple: empty tuple
+            else:
+                int: object unique id.
+                int: link id.
+                int: geometry type; GEOM_BOX (=3), GEOM_SPHERE (=2), GEOM_CAPSULE (=7), GEOM_MESH (=5), GEOM_PLANE (=6)
+                np.float[3]: depends on geometry type:
+                    for GEOM_BOX: extents,
+                    for GEOM_SPHERE: dimensions[0] = radius,
+                    for GEOM_CAPSULE and GEOM_CYLINDER: dimensions[0] = height (length), dimensions[1] = radius.
+                    For GEOM_MESH: dimensions is the scaling factor.
+                str: Only for GEOM_MESH: file name (and path) of the collision mesh asset.
+                np.float[3]: Local position of the collision frame with respect to the center of mass/inertial frame
+                np.float[4]: Local orientation of the collision frame with respect to the inertial frame
         """
-        object_id, link_id, geom_type, dimensions, filename, \
-            position, orientation = self.sim.getCollisionShapeData(object_id, link_id)
+        collision = self.sim.getCollisionShapeData(object_id, link_id)
+        if len(collision) == 0:
+            return collision
+        object_id, link_id, geom_type, dimensions, filename, position, orientation = collision
         return object_id, link_id, geom_type, np.array(dimensions), filename, np.array(position), np.array(orientation)
 
     def get_overlapping_objects(self, aabb_min, aabb_max):
@@ -3047,7 +3059,7 @@ class Bullet(Simulator):
         if link2_id is not None:
             kwargs['linkIndexB'] = link2_id
 
-        results = self.sim.getContactPoints(body1, body2, distance, **kwargs)
+        results = self.sim.getClosestPoints(body1, body2, distance, **kwargs)
         if len(results) == 0:
             return results
         return [[r[0], r[1], r[2], r[3], r[4], np.array(r[5]), np.array(r[6]), np.array(r[7]), r[8], r[9], r[10],
@@ -3156,7 +3168,7 @@ class Bullet(Simulator):
 
         Returns:
             float: mass in kg
-            float: friction coefficient
+            float: lateral friction coefficient
             np.float[3]: local inertia diagonal. Note that links and base are centered around the center of mass and
                 aligned with the principal axes of inertia.
             np.float[3]: position of inertial frame in local coordinates of the joint frame
@@ -3177,7 +3189,7 @@ class Bullet(Simulator):
                         contact_stiffness=None, contact_damping=None, friction_anchor=None,
                         local_inertia_diagonal=None, joint_damping=None):
         """
-        Change dynamic properties such as mass, friction and restitution coefficients .
+        Change dynamic properties of the given body (or link) such as mass, friction and restitution coefficients, etc.
 
         Args:
             body_id (int): object unique id, as returned by `load_urdf`, etc.

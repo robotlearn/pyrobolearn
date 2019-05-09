@@ -407,6 +407,8 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         world = copy.deepcopy(self.world, memo)
         states = [copy.deepcopy(state, memo) for state in self.states]
         rewards = None if self.rewards is None else copy.deepcopy(self.rewards, memo)
@@ -415,9 +417,11 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
         physics_randomizers = [copy.deepcopy(randomizer, memo) for randomizer in self.physics_randomizers]
         extra_info = copy.deepcopy(self.extra_info)
         actions = None if self.actions is None else [copy.deepcopy(action, memo) for action in self.actions]
-        return self.__class__(world=world, states=states, rewards=rewards, terminal_conditions=terminal_conditions,
-                              initial_state_generators=state_generators, physics_randomizers=physics_randomizers,
-                              extra_info=extra_info, actions=actions)
+        env = self.__class__(world=world, states=states, rewards=rewards, terminal_conditions=terminal_conditions,
+                             initial_state_generators=state_generators, physics_randomizers=physics_randomizers,
+                             extra_info=extra_info, actions=actions)
+        memo[self] = env
+        return env
 
 
 class BasicEnv(Env):

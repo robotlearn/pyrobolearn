@@ -41,6 +41,8 @@ class FixedAction(Action):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         data = copy.deepcopy(self._data)
         action = self.__class__(value=data)
         memo[self] = action
@@ -70,6 +72,8 @@ class FunctionalAction(Action):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         function = copy.deepcopy(self.function)
         data = copy.deepcopy(self._data)
         action = self.__class__(function=function, initial_data=data)

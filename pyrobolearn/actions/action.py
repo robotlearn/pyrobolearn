@@ -916,13 +916,13 @@ class Action(object):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
+
         actions = [copy.deepcopy(action, memo) for action in self.actions]
         data = copy.deepcopy(self._data)
         space = copy.deepcopy(self._space)
         action = self.__class__(actions=actions, data=data, space=space, name=self.name, ticks=self.ticks)
 
-        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
-        # reference if already present)
         memo[self] = action
-
         return action

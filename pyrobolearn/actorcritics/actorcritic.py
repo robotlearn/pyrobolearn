@@ -162,15 +162,15 @@ class ActorCritic(object):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
+
         policy = copy.deepcopy(self.actor, memo) if isinstance(self.actor, Policy) else copy.deepcopy(self.actor)
         value = copy.deepcopy(self.critic, memo) if isinstance(self.critic, ValueApproximator) \
             else copy.deepcopy(self.critic)
         actor_critic = self.__class__(policy=policy, value=value)
 
-        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
-        # reference if already present)
         memo[self] = actor_critic
-
         return actor_critic
 
 

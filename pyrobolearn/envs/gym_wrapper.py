@@ -295,9 +295,9 @@ class GymEnvWrapper(gym.Env):
             attribute = functools.partial(attribute)
         return attribute
 
-    def __repr__(self):
-        """Return a representing object."""
-        return self.env.__repr__()
+    # def __repr__(self):
+    #     """Return a representing object."""
+    #     return self.env.__repr__()
 
     def __str__(self):
         """Return a string describing the class."""

@@ -59,6 +59,8 @@ class GymAction(Action):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         env = copy.deepcopy(self.env)
         action = self.__class__(gym_env=env)
         memo[self] = action
