@@ -1,0 +1,9 @@
+{
+	"f_sim"		: 1e4,
+	"f_driver"	: 1e3,
+	"f_sensor"	: 500,
+	"f_control"	: 500,
+	"f_imu"		: 1000,
+	"f_vicon"	: 200,
+	"f_visual"	: 24
+}

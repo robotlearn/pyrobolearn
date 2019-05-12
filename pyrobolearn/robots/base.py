@@ -305,7 +305,7 @@ class Body(object):
     # just create setter
     def _set_force(self, force):
         """Set the given force (expressed in the world cartesian frame) on the center of mass of the body."""
-        self.apply_force(link_id=-1, force=force, position=None, frame=Simulator.WORLD_FRAME)
+        self.apply_external_force(link_id=-1, force=force, position=None, frame=Simulator.WORLD_FRAME)
 
     force = property(fset=_set_force)
 
@@ -322,7 +322,7 @@ class Body(object):
         """
         self.sim.change_visual_shape(object_id=self.id, link_id=link_id, rgba_color=color)
 
-    def apply_force(self, link_id=-1, force=(0., 0., 0.), position=None, frame=Simulator.LINK_FRAME):
+    def apply_external_force(self, force=(0., 0., 0.), link_id=-1, position=None, frame=Simulator.LINK_FRAME):
         """
         Apply the given force on the specified link of the current body.
 
@@ -331,17 +331,17 @@ class Body(object):
             - this does not work when using `sim.setRealTimeSimulation(1)`.
 
         Args:
-            link_id (int): link id to apply the force, if -1 it will apply the force on the base
             force (np.array[3]): Cartesian forces to be applied on the body
+            link_id (int): link id to apply the force, if -1 it will apply the force on the base
             position (np.array[3], None): position on the link where the force is applied (expressed in the given
                 cartesian frame, see next attribute :attr:`frame`). If None, it is the center of mass of the body
                 (or the link if specified).
             frame (int): allows to specify the coordinate system of force/position. sim.LINK_FRAME (=1) for local
                 link frame, and sim.WORLD_FRAME (=2) for world frame. By default, it is the world frame.
         """
-        self.sim.apply_external_force(self.id, link_id, force, position, frame)
+        self.sim.apply_external_force(body_id=self.id, link_id=link_id, force=force, position=position, frame=frame)
 
-    def apply_external_torque(self, link_id=-1, torque=(0., 0., 0.), frame=Simulator.LINK_FRAME):
+    def apply_external_torque(self, torque=(0., 0., 0.), link_id=-1, frame=Simulator.LINK_FRAME):
         """
         Apply an external torque on the body, or a link of the body. Note that after each simulation step, the external
         torques are cleared to 0.
@@ -349,8 +349,8 @@ class Body(object):
         Warnings: This does not work when using `sim.setRealTimeSimulation(1)`.
 
         Args:
-            link_id (int): link id to apply the torque, if -1 it will apply the torque on the base
             torque (float[3]): Cartesian torques to be applied on the body
+            link_id (int): link id to apply the torque, if -1 it will apply the torque on the base
             frame (int): Specify the coordinate system of force/position: either `pybullet.WORLD_FRAME` (=2) for
                 Cartesian world coordinates or `pybullet.LINK_FRAME` (=1) for local link coordinates.
         """

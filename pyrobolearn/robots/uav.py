@@ -24,11 +24,17 @@ class UAVRobot(Robot):
         super(UAVRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.propellers = []  # list of propellers id
+        self.wings = []  # list of wing id
 
     @property
     def num_propellers(self):
         """Return the number of propellers"""
         return len(self.propellers)
+
+    @property
+    def num_wings(self):
+        """Return the number of wings."""
+        return len(self.wings)
 
 
 class FixedWingUAV(UAVRobot):
@@ -47,3 +53,12 @@ class RotaryWingUAV(UAVRobot):
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
         super(RotaryWingUAV, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
+
+
+class FlappingWingUAV(UAVRobot):
+    r"""Flapping Wing Robot
+
+    """
+
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        super(FlappingWingUAV, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)

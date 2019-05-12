@@ -18,12 +18,13 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
+# TODO: several methods such as the calculation of the thrust force should be done in `uav.py` file, not here
 class Quadcopter(RotaryWingUAV):
     r"""Quadcopter
 
     WARNING: Currently, in pybullet there is no air, so we simulate the thrust force.
 
-    Based on momentum theory, we can calculate the thrust [4,5,6] to be:
+    Based on momentum theory, we can calculate the thrust [5,6,7] to be:
 
     .. math::
 
@@ -56,9 +57,9 @@ class Quadcopter(RotaryWingUAV):
         [3] https://github.com/prfraanje/quadcopter_sim
         [4] https://github.com/ethz-asl/rotors_simulator
 
-        [4] "Propeller Thrust" (NASA): https://www.grc.nasa.gov/WWW/K-12/airplane/propth.html
-        [5] "Static thrust calculation": https://quadcopterproject.wordpress.com/static-thrust-calculation/
-        [6] "Propeller Static & Dynamic Thrust Calculation":
+        [5] "Propeller Thrust" (NASA): https://www.grc.nasa.gov/WWW/K-12/airplane/propth.html
+        [6] "Static thrust calculation": https://quadcopterproject.wordpress.com/static-thrust-calculation/
+        [7] "Propeller Static & Dynamic Thrust Calculation":
             https://www.electricrcaircraftguy.com/2013/09/propeller-static-dynamic-thrust-equation.html
             https://www.electricrcaircraftguy.com/2014/04/propeller-static-dynamic-thrust-equation-background.html
     """
@@ -133,14 +134,13 @@ class Quadcopter(RotaryWingUAV):
         diameter = (4. * area / np.pi)**0.5
         return air_density * area * (tmp**2 - tmp*v0) * (self.k1 * diameter / propeller_pitch)**self.k2
 
-    def set_joint_velocities(self, velocities, joint_ids=None, max_velocity=True, forces=True):
+    def set_propeller_velocities(self, velocities, max_velocity=True, forces=True):
         """
         Set the joint velocities and apply the thrust force on the propeller link corresponding to the given
         joint id(s).
 
         Args:
-            velocities (float[4]): velocity of each propeller
-            joint_ids (int[4], None): Not used here
+            velocities (np.array[4]): velocity of each propeller
             forces (float, np.float[N], None, bool): maximum motor torques / forces. If True, it will apply the
                 default maximum force values.
             max_velocity (float, bool, None): if True, it will make sure that the given velocity(ies) are below their
@@ -156,7 +156,7 @@ class Quadcopter(RotaryWingUAV):
         joint_ids = self.joints
 
         # call parent method
-        super(Quadcopter, self).set_joint_velocities(velocities, joint_ids, max_velocity, forces)
+        super(Quadcopter, self).set_joint_velocities(velocities, joint_ids, forces, max_velocity)
 
         # calculate thrust force of the given joints, and apply it on the link
         for jnt, d, v in zip(joint_ids, self.turning_directions, velocities):
@@ -165,7 +165,7 @@ class Quadcopter(RotaryWingUAV):
 
             # compute propeller speed v0
             state = self.sim.get_link_state(self.id, jnt, compute_velocity=True)  # , compute_forward_kinematics=True)
-            R = np.array(get_matrix_from_quaternion(state[1]))
+            R = get_matrix_from_quaternion(state[1])
             linear_velocity = np.array(state[-2])
             propeller_up_vec = R.dot(np.array([0., 0., 1.]))
             v0 = linear_velocity.dot(propeller_up_vec)
@@ -176,7 +176,7 @@ class Quadcopter(RotaryWingUAV):
             # f = self.mass * self.gravity / 4.
 
             # apply force in the simulation
-            self.apply_external_force([0, 0, f], jnt, position=(0., 0., 0.))
+            self.apply_external_force(force=[0, 0, f], link_id=jnt, position=(0., 0., 0.))
 
     def get_stationary_joint_velocity(self):
         fg = self.mass * self.gravity / 4.
@@ -217,6 +217,6 @@ if __name__ == "__main__":
 
     # run simulation
     for i in count():
-        robot.set_joint_velocities(v)
+        robot.set_propeller_velocities(v)
         # step in simulation
         world.step(sleep_dt=1./240)

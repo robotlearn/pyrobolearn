@@ -1389,7 +1389,8 @@ class Bullet(Simulator):
                     position = self.get_link_state(body_id, link_id)[0]
             else:  # local frame
                 position = (0., 0., 0.)
-        self.sim.applyExternalForce(body_id, link_id, force, position, frame)
+        self.sim.applyExternalForce(objectUniqueId=body_id, linkIndex=link_id, forceObj=force, posObj=position,
+                                    flags=frame)
 
     def apply_external_torque(self, body_id, link_id=-1, torque=(0., 0., 0.), frame=Simulator.LINK_FRAME):
         """
@@ -1405,7 +1406,7 @@ class Bullet(Simulator):
             frame (int): Specify the coordinate system of force/position: either `pybullet.WORLD_FRAME` (=2) for
                 Cartesian world coordinates or `pybullet.LINK_FRAME` (=1) for local link coordinates.
         """
-        self.sim.applyExternalTorque(body_id, link_id, torque)
+        self.sim.applyExternalTorque(objectUniqueId=body_id, linkIndex=link_id, torqueObj=torque, flags=frame)
 
     ###################
     # transformations #

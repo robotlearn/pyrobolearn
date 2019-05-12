@@ -45,14 +45,14 @@ class Crab(HexapodRobot):
 
         self.legs = [[self.get_link_ids(link) for link in links if link in self.link_names]
                      for links in [['coxa_l1', 'femur_l1', 'tibia_l1'],
-                                   [ 'coxa_r1', 'femur_r1', 'tibia_r1'],
+                                   ['coxa_r1', 'femur_r1', 'tibia_r1'],
                                    ['coxa_l2', 'femur_l2', 'tibia_l2'],
                                    ['coxa_r2', 'femur_r2', 'tibia_r2'],
                                    ['coxa_l3', 'femur_l3', 'tibia_l3'],
                                    ['coxa_r3', 'femur_r3', 'tibia_r3']]]
 
         self.feet = [self.get_link_ids(link) for link in ['tibia_foot_l1', 'tibia_foot_r1', 'tibia_foot_l2',
-                                                        'tibia_foot_r2', 'tibia_foot_l3', 'tibia_foot_r3']
+                                                          'tibia_foot_r2', 'tibia_foot_l3', 'tibia_foot_r3']
                      if link in self.link_names]
 
 

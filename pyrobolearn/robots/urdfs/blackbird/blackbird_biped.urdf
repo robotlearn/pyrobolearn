@@ -1,0 +1,340 @@
+<?xml version="1.0"?>
+<!-- created with Phobos 0.7 -->
+  <robot name="biped">
+      <material name = "black">
+          <color rgba="0.25 0.25 0.25 1.0"/>
+      </material>
+    <link name="l_ab_ad">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.8"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+      <visual name="l_yaw_motor">
+        <origin xyz="0 0 -0.04328" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="meshes/V2Mockup.009.stl" scale="0.1 0.1 0.1"/>
+        </geometry>
+        <material name="black"/>
+
+      </visual>
+      <collision name="l_yaw_motor">
+          <origin xyz="0 0 -0.04328" rpy="0 0 0"/>
+          <geometry>
+              <mesh filename="meshes/V2Mockup.009.stl" scale="0.1 0.1 0.1"/>
+          </geometry>
+          
+      </collision>
+    </link>
+
+    <link name="l_foot">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.1"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+      <visual name="l_foot_mesh">
+        <origin xyz="0.00032 -0.02422 -0.0314" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="meshes/V2Mockup.003.stl" scale="0.1 0.1 0.1"/>
+        </geometry>
+        <material name="black"/>
+
+      </visual>
+      <collision name="l_foot_mesh">
+          <origin xyz="0.00032 -0.02422 -0.0314" rpy="0 0 0"/>
+          <geometry>
+              <mesh filename="meshes/V2Mockup.003.stl" scale="0.1 0.1 0.1"/>
+          </geometry>
+          
+      </collision>
+    </link>
+
+    <link name="l_lower">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="1.0"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+      <visual name="l_leg_lower">
+        <origin xyz="0 -0.01638 -0.14422" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="meshes/V2Mockup.001.stl" scale="0.1 0.1 0.1"/>
+        </geometry>
+        <material name="black"/>
+
+      </visual>
+      <collision name="l_leg_lower">
+          <origin xyz="0 -0.01638 -0.14422" rpy="0 0 0"/>
+          <geometry>
+              <mesh filename="meshes/V2Mockup.001.stl" scale="0.1 0.1 0.1"/>
+          </geometry>
+          
+      </collision>
+    </link>
+
+    <link name="l_upper">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.2"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+      <visual name="l_leg_upper">
+        <origin xyz="0 0.04702 -0.13046" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="meshes/V2Mockup.005.stl" scale="0.1 0.1 0.1"/>
+        </geometry>
+        <material name="black"/>
+
+      </visual>
+      <collision name="l_leg_upper">
+          <origin xyz="0 0.04702 -0.13046" rpy="0 0 0"/>
+          <geometry>
+              <mesh filename="meshes/V2Mockup.005.stl" scale="0.1 0.1 0.1"/>
+          </geometry>
+          
+      </collision>
+    </link>
+
+    <link name="l_yaw">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="2.0"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+      <visual name="l_hip">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="meshes/V2Mockup.007.stl" scale="0.1 0.1 0.1"/>
+        </geometry>
+        <material name="black"/>
+
+      </visual>
+      <collision name="l_hip">
+          <origin xyz="0 0 0" rpy="0 0 0"/>
+          <geometry>
+              <mesh filename="meshes/V2Mockup.007.stl" scale="0.1 0.1 0.1"/>
+          </geometry>
+
+      </collision>
+    </link>
+
+    <link name="r_ab_ad">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.8"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+      <visual name="r_yaw_motor">
+        <origin xyz="0 0 -0.03098" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="meshes/V2Mockup.010.stl" scale="0.1 0.1 0.1"/>
+        </geometry>
+        <material name="black"/>
+
+      </visual>
+      <collision name="r_yaw_motor">
+          <origin xyz="0 0 -0.03098" rpy="0 0 0"/>
+          <geometry>
+              <mesh filename="meshes/V2Mockup.010.stl" scale="0.1 0.1 0.1"/>
+          </geometry>
+
+      </collision>
+    </link>
+
+    <link name="r_foot">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.1"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+      <visual name="r_foot_mesh">
+        <origin xyz="0.00039 -0.02422 -0.0314" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="meshes/V2Mockup.004.stl" scale="0.1 0.1 0.1"/>
+        </geometry>
+        <material name="black"/>
+
+      </visual>
+      <collision name="r_foot_mesh">
+          <origin xyz="0.00039 -0.02422 -0.0314" rpy="0 0 0"/>
+          <geometry>
+              <mesh filename="meshes/V2Mockup.004.stl" scale="0.1 0.1 0.1"/>
+          </geometry>
+          
+      </collision>
+    </link>
+
+    <link name="r_lower">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="1.0"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+      <visual name="r_leg_lower">
+        <origin xyz="0 -0.01638 -0.14422" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="meshes/V2Mockup.002.stl" scale="0.1 0.1 0.1"/>
+        </geometry>
+        <material name="black"/>
+
+      </visual>
+      <collision name="r_leg_lower">
+          <origin xyz="0 -0.01638 -0.14422" rpy="0 0 0"/>
+          <geometry>
+              <mesh filename="meshes/V2Mockup.002.stl" scale="0.1 0.1 0.1"/>
+          </geometry>
+          
+      </collision>
+    </link>
+
+    <link name="r_upper">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.2"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+      <visual name="r_leg_upper">
+        <origin xyz="0 0.04702 -0.13046" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="meshes/V2Mockup.006.stl" scale="0.1 0.1 0.1"/>
+        </geometry>
+        <material name="black"/>
+
+      </visual>
+      <collision name="r_leg_upper">
+          <origin xyz="0 0.04702 -0.13046" rpy="0 0 0"/>
+          <geometry>
+              <mesh filename="meshes/V2Mockup.006.stl" scale="0.1 0.1 0.1"/>
+          </geometry>
+          
+      </collision>
+    </link>
+
+    <link name="r_yaw">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="2.0"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+      <visual name="r_hip">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="meshes/V2Mockup.013.stl" scale="0.1 0.1 0.1"/>
+        </geometry>
+        <material name="black"/>
+
+      </visual>
+      <collision name="r_hip">
+          <origin xyz="0 0 0" rpy="0 0 0"/>
+          <geometry>
+              <mesh filename="meshes/V2Mockup.013.stl" scale="0.1 0.1 0.1"/>
+          </geometry>
+          
+      </collision>
+    </link>
+
+    <link name="torso">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="5.0"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+      <visual name="torso_mesh">
+        <origin xyz="0 0.07151 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="meshes/V2Mockup.stl" scale="0.1 0.1 0.1"/>
+        </geometry>
+        <material name="black"/>
+
+      </visual>
+      <collision name="torso_mesh">
+          <origin xyz="0 0.07151 0" rpy="0 0 0"/>
+          <geometry>
+              <mesh filename="meshes/V2Mockup.stl" scale="0.1 0.1 0.1"/>
+          </geometry>
+          
+      </collision>
+    </link>
+
+    <joint name="l_ab_ad" type="revolute">
+      <origin xyz="0.15 0 0" rpy="0 0 0"/>
+      <parent link="torso"/>
+      <child link="l_ab_ad"/>
+      <axis xyz="0 -1.0 0"/>
+      <limit lower="-0.17453" upper="1.309" effort="0" velocity="0"/>
+    </joint>
+
+    <joint name="l_foot" type="revolute">
+      <origin xyz="0 -0.17 -0.47" rpy="0 0 0"/>
+      <parent link="l_lower"/>
+      <child link="l_foot"/>
+      <axis xyz="1.0 0 0"/>
+      <limit lower="-1.5708" upper="0.69813" effort="0" velocity="0"/>
+    </joint>
+
+    <joint name="l_lower" type="revolute">
+      <origin xyz="0 0.17 -0.47" rpy="0 0 0"/>
+      <parent link="l_upper"/>
+      <child link="l_lower"/>
+      <axis xyz="1.0 0 0"/>
+      <limit lower="-2.0944" upper="0.34907" effort="0" velocity="0"/>
+    </joint>
+
+    <joint name="l_upper" type="revolute">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="l_yaw"/>
+      <child link="l_upper"/>
+      <axis xyz="1.0 0 0"/>
+      <limit lower="-1.91986" upper="1.22173" effort="0" velocity="0"/>
+    </joint>
+
+    <joint name="l_yaw" type="revolute">
+      <origin xyz="0 0 -0.135" rpy="0 0 0"/>
+      <parent link="l_ab_ad"/>
+      <child link="l_yaw"/>
+      <axis xyz="0 0 1.0"/>
+      <limit lower="-0.7854" upper="0.7854" effort="0" velocity="0"/>
+    </joint>
+
+    <joint name="r_ab_ad" type="revolute">
+      <origin xyz="-0.15 0 0" rpy="0 0 0"/>
+      <parent link="torso"/>
+      <child link="r_ab_ad"/>
+      <axis xyz="0 -1.0 0"/>
+      <limit lower="-1.309" upper="0.17453" effort="0" velocity="0"/>
+    </joint>
+
+    <joint name="r_foot" type="revolute">
+      <origin xyz="0 -0.17 -0.47" rpy="0 0 0"/>
+      <parent link="r_lower"/>
+      <child link="r_foot"/>
+      <axis xyz="1.0 0 0"/>
+      <limit lower="-1.5708" upper="0.69813" effort="0" velocity="0"/>
+    </joint>
+
+    <joint name="r_lower" type="revolute">
+      <origin xyz="0 0.17 -0.47" rpy="0 0 0"/>
+      <parent link="r_upper"/>
+      <child link="r_lower"/>
+      <axis xyz="1.0 0 0"/>
+      <limit lower="-2.0944" upper="0.34907" effort="0" velocity="0"/>
+    </joint>
+
+    <joint name="r_upper" type="revolute">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="r_yaw"/>
+      <child link="r_upper"/>
+      <axis xyz="1.0 0 0"/>
+      <limit lower="-1.91986" upper="1.22173" effort="0" velocity="0"/>
+    </joint>
+
+    <joint name="r_yaw" type="revolute">
+      <origin xyz="0 0 -0.135" rpy="0 0 0"/>
+      <parent link="r_ab_ad"/>
+      <child link="r_yaw"/>
+      <axis xyz="0 0 1.0"/>
+      <limit lower="-0.7854" upper="0.7854" effort="0" velocity="0"/>
+    </joint>
+
+  </robot>

@@ -2129,9 +2129,15 @@ class Robot(ControllableBody):
 
         # compute and return joint accelerations
         torques = np.array(torques)
+        if not self.fixed_base:  # if floating base
+            torques = np.concatenate((np.zeros(6), torques))
         Hinv = np.linalg.inv(self.get_mass_matrix(q))
         C = self.calculate_inverse_dynamics(np.zeros(len(q)), dq=dq, q=q)
+        if np.any(np.equal(C, None)):
+            C = np.zeros(len(torques))
         acc = Hinv.dot(torques - C)
+        if not self.fixed_base:  # if floating base
+            return acc[6:]
         return acc
 
     def get_mass_matrix(self, q=None, q_idx=None):
