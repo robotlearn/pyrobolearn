@@ -8,7 +8,6 @@ Dependencies:
 """
 
 import numpy as np
-# from pathos.multiprocessing import Pool
 
 from pyrobolearn.storages import RolloutStorage
 
@@ -149,7 +148,7 @@ class RLAlgo(object):  # Algo):
         [5] OpenAI - Spinning Up: https://spinningup.openai.com/
     """
 
-    def __init__(self, explorer, evaluator, updater, dynamic_model=None):  # , hyperparameters={}, num_workers=1):
+    def __init__(self, explorer, evaluator, updater, dynamic_model=None):
         """
         Initialize the reinforcement learning algorithm.
 
@@ -327,19 +326,22 @@ class RLAlgo(object):  # Algo):
         # for each episode
         for episode in range(num_episodes):
 
-            # for each rollout
-            for rollout in range(num_rollouts):
-                # TODO: consider to learn the dynamic model if provided
+            # # for each rollout
+            # for rollout in range(num_rollouts):
+            #     # TODO: consider to learn the dynamic model if provided
+            #
+            #     if verbose:
+            #         print("Episode: {}/{} - Rollout: {}/{}".format(episode+1, num_episodes, rollout+1, num_rollouts))
+            #
+            #     # Explore
+            #     self.explorer.explore(num_steps, rollout, verbose=verbose)
 
-                if verbose:
-                    print("Episode: {}/{} - Rollout: {}/{}".format(episode+1, num_episodes, rollout+1, num_rollouts))
-
-                # Explore
-                self.explorer.explore(num_steps, rollout, verbose=verbose)
-
-            # evaluate and update
+            # 1. explore
+            self.explorer.explore(num_steps, num_rollouts, verbose=verbose)
+            # 2. evaluate
             if self.evaluator is not None:
                 self.evaluator.evaluate(verbose=verbose)
+            # 3. update
             losses = self.updater.update(verbose=verbose)
 
             # add the loss in the history

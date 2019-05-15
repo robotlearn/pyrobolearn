@@ -219,22 +219,27 @@ class Model(object):
                 pass
         self._models.append(model)
 
-    # def copy_parameters(self, parameters):
-    #     """Copy the given parameters.
-    #
-    #     Args:
-    #         parameters (NN, torch.nn.Module, generator, iterable): the other model's parameters to copy.
-    #     """
-    #     if isinstance(parameters, self.__class__):
-    #         self.model.load_state_dict(parameters.model.state_dict())
-    #     elif isinstance(parameters, torch.nn.Module):
-    #         self.model.load_state_dict(parameters.state_dict())
-    #     elif isinstance(parameters, (types.GeneratorType, collections.Iterable)):
-    #         for model_params, other_params in zip(self.parameters(), parameters):
-    #             model_params.data.copy_(other_params.data)
-    #     else:
-    #         raise TypeError("Expecting the given parameters to be an instance of `NN`, `torch.nn.Module`, `generator`"
-    #                         ", or an iterable object, instead got: {}".format(type(parameters)))
+    def copy_parameters(self, parameters):
+        """Copy the given parameters.
+
+        Args:
+            parameters (torch.nn.Module, generator, iterable): the other model's parameters to copy.
+        """
+        if len(self.models) == 1:
+            self.models[0].copy_parameters(parameters)
+        else:
+            for model, parameter in zip(self.models, parameters):
+                model.copy_parameters(parameter)
+        # if isinstance(parameters, self.__class__):
+        #     self.model.load_state_dict(parameters.model.state_dict())
+        # elif isinstance(parameters, torch.nn.Module):
+        #     self.model.load_state_dict(parameters.state_dict())
+        # elif isinstance(parameters, (types.GeneratorType, collections.Iterable)):
+        #     for model_params, other_params in zip(self.parameters(), parameters):
+        #         model_params.data.copy_(other_params.data)
+        # else:
+        #     raise TypeError("Expecting the given parameters to be an instance of `torch.nn.Module`, `generator`"
+        #                     ", or an iterable object, instead got: {}".format(type(parameters)))
 
     @abstractmethod
     def parameters(self):

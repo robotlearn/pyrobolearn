@@ -326,6 +326,18 @@ class Policy(object):
         """
         raise self.model.is_recurrent()
 
+    def copy_parameters(self, parameters):
+        """Copy the given parameters.
+
+        Args:
+            parameters (Policy, Approximator, torch.nn.Module, generator, iterable): the other policy's parameters to
+                copy.
+        """
+        if isinstance(parameters, (self.__class__, self.model.__class__)):
+            self.model.copy_parameters(parameters.parameters())
+        else:
+            self.model.copy_parameters(parameters)
+
     def parameters(self):
         """
         Return an iterator over the learning model parameters.

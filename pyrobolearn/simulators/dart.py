@@ -293,7 +293,7 @@ class Dart(Simulator):
         Returns:
             int (non-negative): unique id associated to the load model.
         """
-        return self.world.add_skeleton(filename)
+        return self.world.add_skeleton(filename).id
 
     def load_sdf(self, filename, scaling=1., *args, **kwargs):
         """Load a SDF file in the simulator.
@@ -305,7 +305,7 @@ class Dart(Simulator):
         Returns:
             list(int): list of object unique id for each object loaded
         """
-        return self.world.add_skeleton(filename)
+        return self.world.add_skeleton(filename).id
 
     def load_mjcf(self, filename, scaling=1., *args, **kwargs):
         """Load a Mujoco file in the simulator.

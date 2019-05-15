@@ -339,6 +339,18 @@ class Approximator(object):
         """Set the inner model into testing mode."""
         self.model.eval()
 
+    def copy_parameters(self, parameters):
+        """Copy the given parameters.
+
+        Args:
+            parameters (Approximator, Model, torch.nn.Module, generator, iterable): the other policy's parameters to
+                copy.
+        """
+        if isinstance(parameters, (self.__class__, self.model.__class__)):
+            self.model.copy_parameters(parameters.parameters())
+        else:
+            self.model.copy_parameters(parameters)
+
     def parameters(self):
         """Return an iterator over the approximator parameters."""
         return self.model.parameters()

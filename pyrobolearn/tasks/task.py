@@ -64,8 +64,19 @@ class Task(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, environment, policies):
+        """
+        Initialize the task.
+
+        Args:
+            environment (Env, gym.Env): environment.
+            policies (list of Policy, Policy): the policy(ies).
+        """
+        # check the environment
         if not isinstance(environment, (Env, gym.Env)):
             raise TypeError("Expecting 'environment' to be an instance of Env or gym.Env")
+        self.env = environment
+
+        # check the policies
         if isinstance(policies, collections.Iterable):
             for policy in policies:
                 if not isinstance(policy, Policy):
@@ -74,9 +85,8 @@ class Task(object):
             policies = [policies]
         else:
             raise TypeError("Expecting 'policies' to be an instance of Policy, or list/tuple of policies")
-
-        self.env = environment
         self.policies = policies
+
         self._done = False
         self._succeeded = False
 
@@ -204,6 +214,13 @@ class Task(object):
     def run(self, num_steps=None, dt=0, use_terminating_condition=False, render=False):
         """
         Reset and run the task until it is done, or the current time step matches num_steps.
+
+        Args:
+            num_steps (None, int): number of steps to run.
+            dt (float): time to sleep for the next step in the environment.
+            use_terminating_condition (bool): if we should continue or not once the terminal condition has been
+                fulfilled.
+            render (bool): if we should render the environment or not.
         """
         if num_steps is None:
             num_steps = np.infty
@@ -231,6 +248,10 @@ class Task(object):
     def step(self, deterministic=True, render=False):
         """
         Perform one step.
+
+        Args:
+            deterministic (bool): if policy should be deterministic or not.
+            render (bool): if we should render or not.
         """
         # if we need to render the environment
         if render:
@@ -253,11 +274,29 @@ class Task(object):
         return np.array(rewards)
 
     def get_policy(self, idx=None):
+        """
+        Get the `idx`th policy.
+
+        Args:
+            idx (int, None): the `idx`th policy to return. If None, it will return the list of policies.
+
+        Returns:
+            (list of) Policy: policy(ies)
+        """
         if idx is None:
             return self.policies
         return self.policies[idx]
 
     def get_learning_model(self, idx=None):
+        """
+        Get the learning model associated to the `idx`th policy.
+
+        Args:
+            idx (int): the `idx`th policy. If None, it will return the list of learning models.
+
+        Returns:
+            (list of) Model: learning model(s).
+        """
         if idx is None:
             return [policy.model for policy in self.policies]
         return self.policies[idx].model
@@ -270,9 +309,6 @@ class Task(object):
     def load(filename):
         """Load the storage from the disk."""
         return pickle.load(open(filename, 'r'))
-
-    def rollout(self):  # TODO
-        pass
 
     #############
     # Operators #

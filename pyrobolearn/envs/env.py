@@ -88,7 +88,9 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
         self.extra_info = extra_info if extra_info is not None else lambda: False
         self.actions = actions
 
-        self.rendering = False  # check with simulator
+        # check if we are rendering with the simulator
+        self.is_rendering = self.simulator.is_rendering()
+        self.rendering_mode = 'human'
 
         # save the world state in memory
         self.initial_world_state = self.world.save()
@@ -337,8 +339,7 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
 
         # compute reward
         # rewards = [reward.compute() for reward in self.rewards]
-        if self.rewards is not None:
-            rewards = self.rewards()
+        rewards = self.rewards() if self.rewards is not None else None
 
         # compute terminating condition
         done = any([condition() for condition in self.terminal_conditions])
@@ -355,10 +356,13 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
 
     def render(self, mode='human'):
         """Renders the environment (show the GUI)."""
+        self.is_rendering = True
+        self.rendering_mode = mode
         self.sim.render()
 
     def hide(self):
         """hide the GUI."""
+        self.is_rendering = False
         self.sim.hide()
 
     def close(self):

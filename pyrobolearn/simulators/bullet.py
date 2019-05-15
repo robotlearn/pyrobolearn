@@ -20,10 +20,9 @@ References:
 
 # general imports
 import os
-import inspect
+# import inspect
 import time
 import numpy as np
-import quaternion
 
 # import pybullet
 import pybullet
@@ -69,7 +68,7 @@ class Bullet(Simulator):
 
     In the following documentation:
     * `vec3` specifies a list/tuple/np.array of 3 floats
-    * `quat` specifies a list/tuple/np.quaternion of 4 floats
+    * `quat` specifies a list/tuple/np.array of 4 floats
 
     Examples:
         sim = Bullet()
@@ -800,11 +799,10 @@ class Bullet(Simulator):
         Args:
             filename (str): path to file for the mesh. Currently, only Wavefront .obj. It will create convex hulls
                 for each object (marked as 'o') in the .obj file.
-            position (float[3]): position of the mesh in the Cartesian world space (in meters)
-            orientation (float[4], np.quaternion): orientation of the mesh using quaternion.
-                If np.quaternion then it uses the convention (w,x,y,z). If float[4], it uses the convention (x,y,z,w)
+            position (list of 3 float, np.array[3]): position of the mesh in the Cartesian world space (in meters)
+            orientation (list of 4 float, np.array[4]): orientation of the mesh using quaternion [x,y,z,w].
             mass (float): mass of the mesh (in kg). If mass = 0, it won't move even if there is a collision.
-            scale (float[3]): scale the mesh in the (x,y,z) directions
+            scale (list of 3 float, np.array[3]): scale the mesh in the (x,y,z) directions
             color (int[4], None): color of the mesh for red, green, blue, and alpha, each in range [0,1].
             with_collision (bool): If True, it will also create the collision mesh, and not only a visual mesh.
             flags (int, None): if flag = `sim.GEOM_FORCE_CONCAVE_TRIMESH` (=1), this will create a concave static

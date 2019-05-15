@@ -101,6 +101,9 @@ class GymEnvWrapper(gym.Env):
         self.state_processors = state_processors
         self.reward_processors = reward_processors
 
+        # rendering
+        self.is_rendering = False
+
     ##############
     # Properties #
     ##############
@@ -270,11 +273,12 @@ class GymEnvWrapper(gym.Env):
 
     def render(self, mode='human'):
         """Render the gym environment."""
+        self.is_rendering = True
         self.env.render(mode)
 
     def hide(self):
         """Hide the gym environment (not used)."""
-        pass
+        self.is_rendering = False
 
     def close(self):
         """Close the gym environment."""
