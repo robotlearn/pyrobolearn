@@ -2,6 +2,7 @@
 """Define some common terminal conditions for the environment.
 """
 
+import copy
 import numpy as np
 
 from pyrobolearn.robots import Robot
@@ -40,7 +41,7 @@ class TerminalCondition(object):
         """
         return False
 
-    def __repr__(self):
+    def __str__(self):
         return self.__class__.__name__
 
     def __call__(self, *args, **kwargs):
@@ -123,11 +124,30 @@ class HasFallen(FailedCondition):
         angle_condition = angle > self.angle_threshold
         return height_condition or angle_condition
 
-    def __repr__(self):
+    def __str__(self):
         description = '{} (\n\tbase_height={} ?<? height_threshold={}, \n\tangle_up_vector={} ?>? angle_threshold={}' \
                       '\n)'.format(self.__class__.__name__, self._compute_height(), self.height_threshold,
                                    self._compute_angle(), self.angle_threshold)
         return description
+
+    def __copy__(self):
+        """Return a shallow copy of the terminal condition. This can be overridden in the child class."""
+        return self.__class__(robot=self.robot, height_threshold=self.height_threshold,
+                              angle_threshold=self.angle_threshold)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the terminal condition. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        if self in memo:
+            return memo[self]
+        robot = memo.get(self.robot, self.robot)
+        terminal = self.__class__(robot=robot, height_threshold=self.height_threshold,
+                                  angle_threshold=self.angle_threshold)
+        memo[self] = terminal
+        return terminal
 
 
 class HasReached(SucceededCondition):
@@ -175,7 +195,7 @@ class LinkInSpecifiedDirection(HasReached):
         Returns:
             bool: True if the condition is satisfied.
         """
-        pos = self.state._data
+        pos = self.state.data[0]
         pos = self.normalize(pos)
         value = np.dot(pos, self.direction)
         # check if the direction belongs to the cone domain
@@ -188,5 +208,25 @@ class LinkInSpecifiedDirection(HasReached):
             self.cnt = 0
         return False
 
-    def __repr__(self):
+    def __str__(self):
         return self.__class__.__name__ + '(direction=' + str(self.direction) + ')'
+
+    def __copy__(self):
+        """Return a shallow copy of the terminal condition. This can be overridden in the child class."""
+        return self.__class__(state=self.state, direction=self.direction, domain=self.domain,
+                              total_steps=self.total_steps)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the terminal condition. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        if self in memo:
+            return memo[self]
+        state = copy.deepcopy(self.state, memo)
+        direction = copy.deepcopy(self.direction)
+        domain = copy.deepcopy(self.domain)
+        terminal = self.__class__(state=state, direction=direction, domain=domain, total_steps=self.total_steps)
+        memo[self] = terminal
+        return terminal

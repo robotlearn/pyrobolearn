@@ -2,7 +2,7 @@
 """Provides the various basic value function approximators (e.g. table and linear value approximators)
 """
 
-from abc import ABCMeta
+import copy
 import torch
 
 # from pyrobolearn.models import Linear
@@ -52,6 +52,24 @@ class LinearValue(ParametrizedValue):
         model = LinearApproximator(inputs=state, outputs=torch.Tensor([1]), preprocessors=preprocessors)
         super(LinearValue, self).__init__(state, model=model)
 
+    def __copy__(self):
+        """Return a shallow copy of the value approximator. This can be overridden in the child class."""
+        return self.__class__(state=self.state, preprocessors=self.model.preprocessors)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the value approximator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        if self in memo:
+            return memo[self]
+        state = copy.deepcopy(self.state, memo)
+        preprocessors = [copy.deepcopy(preprocessor, memo) for preprocessor in self.model.preprocessors]
+        value = self.__class__(state=state, preprocessors=preprocessors)
+        memo[self] = value
+        return value
+
 
 class LinearQValue(ParametrizedQValue):
     r"""Linear Q-value function approximator (which accepts as inputs the states and actions)
@@ -73,6 +91,26 @@ class LinearQValue(ParametrizedQValue):
         """
         model = LinearApproximator(inputs=[state, action], outputs=torch.Tensor([1]), preprocessors=preprocessors)
         super(LinearQValue, self).__init__(state, action, model=model)
+
+    def __copy__(self):
+        """Return a shallow copy of the value approximator. This can be overridden in the child class."""
+        return self.__class__(state=self.state, action=self.action, preprocessors=self.model.preprocessors)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the value approximator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        if self in memo:
+            return memo[self]
+
+        state = copy.deepcopy(self.state, memo)
+        action = copy.deepcopy(self.action, memo)
+        preprocessors = [copy.deepcopy(preprocessor, memo) for preprocessor in self.model.preprocessors]
+        value = self.__class__(state=state, action=action, preprocessors=preprocessors)
+        memo[self] = value
+        return value
 
 
 class LinearQValueOutput(ParametrizedQValueOutput):
@@ -96,3 +134,23 @@ class LinearQValueOutput(ParametrizedQValueOutput):
         """
         model = LinearApproximator(inputs=state, outputs=action, preprocessors=preprocessors)
         super(LinearQValueOutput, self).__init__(state, action, model=model)
+
+    def __copy__(self):
+        """Return a shallow copy of the value approximator. This can be overridden in the child class."""
+        return self.__class__(state=self.state, action=self.action, preprocessors=self.model.preprocessors)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the value approximator. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        if self in memo:
+            return memo[self]
+
+        state = copy.deepcopy(self.state, memo)
+        action = copy.deepcopy(self.action, memo)
+        preprocessors = [copy.deepcopy(preprocessor, memo) for preprocessor in self.model.preprocessors]
+        value = self.__class__(state=state, action=action, preprocessors=preprocessors)
+        memo[self] = value
+        return value

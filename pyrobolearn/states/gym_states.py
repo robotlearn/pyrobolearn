@@ -8,6 +8,7 @@ the various policies defined in the pyrobolearn framework.
 """
 
 import gym
+import copy
 
 from pyrobolearn.states.state import State
 
@@ -70,6 +71,25 @@ class GymState(State):
 
     def _read(self):
         pass
+
+    def __copy__(self):
+        """Return a shallow copy of the state. This can be overridden in the child class."""
+        return self.__class__(gym_env=self.env, window_size=self.window_size, axis=self.axis, ticks=self.ticks)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the state. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        if self in memo:
+            return memo[self]
+
+        env = memo.get(self.env, self.env)  # copy.deepcopy(self.env, memo)
+        state = self.__class__(gym_env=env, window_size=self.window_size, axis=self.axis, ticks=self.ticks)
+
+        memo[self] = state
+        return state
 
 
 # Tests

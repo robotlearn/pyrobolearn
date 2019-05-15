@@ -231,7 +231,7 @@ class DDPG(GradientRLAlgo):
         Args:
             task (RLTask, Env): RL task/env to run
             approximators ([Policy, QValue]): policy and Q-value function approximator to optimize.
-            gamma (float): discount factor (which is a bias-variance tradeoff). This parameter describes how much
+            gamma (float): discount factor (which is a bias-variance trade-off). This parameter describes how much
                 importance has the future rewards we get.
             lr (float): learning rate
             polyak (float): coefficient (between 0 and 1) used in the polyak averaging when updating the target
@@ -261,20 +261,24 @@ class DDPG(GradientRLAlgo):
         else:
             raise TypeError("Expecting a list/tuple of a policy and a Q-value function.")
 
+        # get states and actions from policy
+        states, actions = policy.states, policy.actions
+
         # check that the actions are continuous
-        actions = policy.actions
         if not actions.is_continuous():
             raise ValueError("The DDPG assumes that the actions are continuous, however got an action which is not.")
 
         # Set target parameters equal to main parameters
-        q_target = copy.deepcopy(q_value)
-        policy_target = copy.deepcopy(policy)
+        memo = {}
+        q_target = copy.deepcopy(q_value, memo=memo)
+        policy_target = copy.deepcopy(policy, memo=memo)
 
         # create action exploration strategy
-        exploration = ActionExploration(policy=policy, action=policy.actions)
+        exploration = ActionExploration(policy=policy, action=actions)
 
         # create experience replay
-        storage = ExperienceReplay(state_shapes=policy.states, action_shapes=policy.actions, capacity=capacity)
+        storage = ExperienceReplay(state_shapes=states.merged_shape, action_shapes=actions.merged_shape,
+                                   capacity=capacity)
         sampler = BatchRandomSampler(storage)
 
         # create target return estimator

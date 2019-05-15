@@ -69,11 +69,8 @@ class Actuator(object):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         actuator = self.__class__()
-
-        # update the memodict (note that `copy.deepcopy` will automatically check this dictionary and return the
-        # reference if already present)
         memo[self] = actuator
-
-        # return the copy
         return actuator

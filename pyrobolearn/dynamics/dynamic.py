@@ -442,6 +442,18 @@ class ParametrizedDynamicModel(DynamicModel):
     # Methods #
     ###########
 
+    def train(self):
+        """
+        Set the dynamic transition model in training mode.
+        """
+        self.model.train()
+
+    def eval(self):
+        """
+        Set the dynamic transition model in evaluation mode.
+        """
+        self.model.eval()
+
     def parameters(self):
         """
         Return an iterator over the learning model parameters.
@@ -493,7 +505,7 @@ class ParametrizedDynamicModel(DynamicModel):
         Set the vectorized parameters.
 
         Args:
-            np.array, torch.Tensor: 1D parameter vector.
+            vector (np.array, torch.Tensor): 1D parameter vector.
         """
         self.model.set_vectorized_parameters(vector=vector)
 

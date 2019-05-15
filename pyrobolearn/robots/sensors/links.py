@@ -76,7 +76,7 @@ class LinkSensor(Sensor):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
-        simulator = copy.deepcopy(self.simulator, memo)
+        simulator = memo.get(self.simulator, self.simulator)  # copy.deepcopy(self.simulator, memo)
         body_id = copy.deepcopy(self.body_id)
         link_id = copy.deepcopy(self.link_id)
         position = copy.deepcopy(self.local_position)

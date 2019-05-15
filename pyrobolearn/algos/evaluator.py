@@ -52,7 +52,7 @@ class Evaluator(object):
     @estimator.setter
     def estimator(self, estimator):
         """Set the estimator."""
-        if not None and not isinstance(estimator, Estimator):
+        if estimator is not None and not isinstance(estimator, Estimator):
             raise TypeError("Expecting estimator to be an instance of `Estimator` or None, instead got: "
                             "{}".format(type(estimator)))
         self._estimator = estimator

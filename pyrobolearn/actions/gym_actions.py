@@ -61,7 +61,7 @@ class GymAction(Action):
         """
         if self in memo:
             return memo[self]
-        env = copy.deepcopy(self.env)
+        env = memo.get(self.env, self.env)  # copy.deepcopy(self.env, memo)
         action = self.__class__(gym_env=env)
         memo[self] = action
         return action

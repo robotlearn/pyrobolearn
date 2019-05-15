@@ -305,10 +305,12 @@ class SAC(GradientRLAlgo):
             raise TypeError("No Q-value function approximators were given to the algorithm.")
 
         # set target parameters equal to main parameters for the value function
-        value_target = copy.deepcopy(value)
+        value_target = copy.deepcopy(value, memo={})
 
         # create experience replay
-        storage = ExperienceReplay(state_shapes=policy.states, action_shapes=policy.actions, capacity=capacity)
+        states, actions = policy.states, policy.actions
+        storage = ExperienceReplay(state_shapes=states.merged_shape, action_shapes=actions.merged_shape,
+                                   capacity=capacity)
         sampler = BatchRandomSampler(storage)
 
         # create action exploration

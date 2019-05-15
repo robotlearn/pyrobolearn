@@ -202,20 +202,24 @@ class TD3(GradientRLAlgo):
         if len(q_values) < 2:
             raise ValueError("Expecting at least 2 Q-value function approximators for the TD3 algorithm.")
 
+        # get states and actions from policy
+        states, actions = policy.states, policy.actions
+
         # check that the actions are continuous
-        actions = policy.actions
         if not actions.is_continuous():
             raise ValueError("The TD3 assumes that the actions are continuous, however got an action which is not.")
 
         # evaluate target Q-value fct by copying Q-value function approximator
-        q_targets = [copy.deepcopy(q_value) for q_value in q_values]
-        policy_target = copy.deepcopy(policy)
+        memo = {}
+        q_targets = [copy.deepcopy(q_value, memo=memo) for q_value in q_values]
+        policy_target = copy.deepcopy(policy, memo=memo)
 
         # create action exploration strategy
-        exploration = ActionExploration(policy=policy, action=policy.actions)
+        exploration = ActionExploration(policy=policy, action=actions)
 
         # create experience replay
-        storage = ExperienceReplay(state_shapes=policy.states, action_shapes=policy.actions, capacity=capacity)
+        storage = ExperienceReplay(state_shapes=states.merged_shape, action_shapes=actions.merged_shape,
+                                   capacity=capacity)
         sampler = BatchRandomSampler(storage)
 
         # create target return estimator

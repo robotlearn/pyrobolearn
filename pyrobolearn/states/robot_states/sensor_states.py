@@ -4,6 +4,7 @@
 This includes notably the camera, contact, IMU, force/torque sensors and others.
 """
 
+import copy
 from abc import ABCMeta
 import collections
 import numpy as np
@@ -58,6 +59,25 @@ class SensorState(State):  # RobotState # TODO: define refresh_rate & frequency
                                 "{}".format(type(sensor)))
         self.sensors = sensors
         super(SensorState, self).__init__(window_size=window_size, axis=axis, ticks=ticks)
+
+    def __copy__(self):
+        """Return a shallow copy of the state. This can be overridden in the child class."""
+        return self.__class__(sensors=self.sensors, window_size=self.window_size, axis=self.axis, ticks=self.ticks)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the state. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        if self in memo:
+            return memo[self]
+
+        sensors = copy.deepcopy(self.sensors, memo)
+        state = self.__class__(sensors=sensors, window_size=self.window_size, axis=self.axis, ticks=self.ticks)
+
+        memo[self] = state
+        return state
 
 
 class CameraState(SensorState):

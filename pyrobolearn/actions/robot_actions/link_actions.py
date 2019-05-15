@@ -52,7 +52,7 @@ class LinkAction(RobotAction):
         """
         if self in memo:
             return memo[self]
-        robot = copy.deepcopy(self.robot, memo)
+        robot = memo.get(self.robot, self.robot)  # copy.deepcopy(self.robot, memo)
         links = copy.deepcopy(self.links)
         action = self.__class__(robot, links)
         memo[self] = action

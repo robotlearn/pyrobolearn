@@ -90,6 +90,18 @@ class ValueApproximator(object):
         """Predict the value."""
         pass
 
+    def train(self):
+        """
+        Set the value approximator in training mode.
+        """
+        pass
+
+    def eval(self):
+        """
+        Set the value approximator in evaluation mode.
+        """
+        pass
+
     #############
     # Operators #
     #############
@@ -116,6 +128,8 @@ class ValueApproximator(object):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         state = copy.deepcopy(self.state, memo) if isinstance(self.state, State) else copy.deepcopy(self.state)
         value = self.__class__(state=state)
         memo[self] = value
@@ -174,6 +188,8 @@ class QValueApproximator(ValueApproximator):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         state = copy.deepcopy(self.state, memo) if isinstance(self.state, State) else copy.deepcopy(self.state)
         action = copy.deepcopy(self.action, memo) if isinstance(self.action, Action) else copy.deepcopy(self.action)
         value = self.__class__(state=state, action=action)
@@ -255,6 +271,18 @@ class ParametrizedValue(ValueApproximator):
     # Methods #
     ###########
 
+    def train(self):
+        """
+        Set the value approximator in training mode.
+        """
+        self.model.train()
+
+    def eval(self):
+        """
+        Set the value approximator in evaluation mode.
+        """
+        self.model.eval()
+
     def parameters(self):
         """
         Return an iterator over the learning model parameters.
@@ -306,7 +334,7 @@ class ParametrizedValue(ValueApproximator):
         Set the vectorized parameters.
 
         Args:
-            np.array, torch.Tensor: 1D parameter vector.
+            vector (np.array, torch.Tensor): 1D parameter vector.
         """
         self.model.set_vectorized_parameters(vector=vector)
 
@@ -351,6 +379,8 @@ class ParametrizedValue(ValueApproximator):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         state = copy.deepcopy(self.state, memo) if isinstance(self.state, State) else copy.deepcopy(self.state)
         model = copy.deepcopy(self.model, memo)
         value = self.__class__(state=state, model=model)
@@ -551,6 +581,8 @@ class ParametrizedQValue(QValueApproximator):  # ParametrizedValue, QValueApprox
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         state = copy.deepcopy(self.state, memo) if isinstance(self.state, State) else copy.deepcopy(self.state)
         action = copy.deepcopy(self.action, memo) if isinstance(self.action, Action) else copy.deepcopy(self.action)
         model = copy.deepcopy(self.model, memo)
@@ -646,6 +678,8 @@ class ParametrizedQValueOutput(ParametrizedQValue):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
+        if self in memo:
+            return memo[self]
         state = copy.deepcopy(self.state, memo) if isinstance(self.state, State) else copy.deepcopy(self.state)
         action = copy.deepcopy(self.action, memo) if isinstance(self.action, Action) else copy.deepcopy(self.action)
         model = copy.deepcopy(self.model, memo)

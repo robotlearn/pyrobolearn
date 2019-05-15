@@ -8,6 +8,7 @@ Dependencies:
 - `pyrobolearn.robots`
 """
 
+# import copy
 from abc import ABCMeta
 import numpy as np
 
@@ -61,6 +62,25 @@ class RobotState(State):
     def robot(self):
         """Return the robot instance"""
         return self._robot
+
+    def __copy__(self):
+        """Return a shallow copy of the state. This can be overridden in the child class."""
+        return self.__class__(robot=self.robot, window_size=self.window_size, axis=self.axis, ticks=self.ticks)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the state. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        if self in memo:
+            return memo[self]
+
+        robot = memo.get(self.robot, self.robot)  # copy.deepcopy(self.robot, memo)
+        state = self.__class__(robot=robot, window_size=self.window_size, axis=self.axis, ticks=self.ticks)
+
+        memo[self] = state
+        return state
 
 
 class BasePositionState(RobotState):

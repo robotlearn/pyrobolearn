@@ -61,7 +61,7 @@ class RobotAction(Action):
         """
         if self in memo:
             return memo[self]
-        robot = copy.deepcopy(self.robot, memo)
+        robot = memo.get(self.robot, self.robot)  # copy.deepcopy(self.robot, memo)
         action = self.__class__(robot=robot)
         memo[self] = action
         return action

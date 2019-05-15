@@ -130,7 +130,9 @@ class Sensor(object):  # sensor attached to a link or joint
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
-        simulator = copy.deepcopy(self.simulator, memo)
+        if self in memo:
+            return memo[self]
+        simulator = memo.get(self.simulator, self.simulator)  # copy.deepcopy(self.simulator, memo)
         body_id = copy.deepcopy(self.body_id)
         position = copy.deepcopy(self.local_position)
         orientation = copy.deepcopy(self.local_orientation)

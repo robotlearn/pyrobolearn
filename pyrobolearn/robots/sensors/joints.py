@@ -62,7 +62,7 @@ class JointSensor(Sensor):
         Args:
             memo (dict): memo dictionary of objects already copied during the current copying pass
         """
-        simulator = copy.deepcopy(self.simulator, memo)
+        simulator = memo.get(self.simulator, self.simulator)  # copy.deepcopy(self.simulator, memo)
         body_id = copy.deepcopy(self.body_id)
         joint_id = copy.deepcopy(self.joint_id)
         position = copy.deepcopy(self.local_position)
@@ -71,7 +71,6 @@ class JointSensor(Sensor):
                                 orientation=orientation, rate=self.rate)
         memo[self] = sensor
         return sensor
-
 
 
 class Encoder(JointSensor):

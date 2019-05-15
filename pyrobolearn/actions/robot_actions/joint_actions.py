@@ -62,7 +62,7 @@ class JointAction(RobotAction):
         """
         if self in memo:
             return memo[self]
-        robot = copy.deepcopy(self.robot, memo)
+        robot = memo.get(self.robot, self.robot)  # copy.deepcopy(self.robot, memo)
         joints = copy.deepcopy(self.joints)
         action = self.__class__(robot=robot, joint_ids=joints)
         memo[self] = action
@@ -98,7 +98,7 @@ class JointPositionAction(JointAction):
         """
         if self in memo:
             return memo[self]
-        robot = copy.deepcopy(self.robot, memo)
+        robot = memo.get(self.robot, self.robot)  # copy.deepcopy(self.robot, memo)
         joints = copy.deepcopy(self.joints)
         kp = copy.deepcopy(self.kp)
         kd = copy.deepcopy(self.kd)
@@ -159,7 +159,7 @@ class JointPositionAndVelocityAction(JointAction):
         """
         if self in memo:
             return memo[self]
-        robot = copy.deepcopy(self.robot, memo)
+        robot = memo.get(self.robot, self.robot)  # copy.deepcopy(self.robot, memo)
         joints = copy.deepcopy(self.joints)
         kp = copy.deepcopy(self.kp)
         kd = copy.deepcopy(self.kd)
@@ -209,7 +209,7 @@ class JointForceAction(JointAction):
         """
         if self in memo:
             return memo[self]
-        robot = copy.deepcopy(self.robot, memo)
+        robot = memo.get(self.robot, self.robot)  # copy.deepcopy(self.robot, memo)
         joints = copy.deepcopy(self.joints)
         f_min = copy.deepcopy(self.f_min)
         f_max = copy.deepcopy(self.f_max)
@@ -251,7 +251,7 @@ class JointAccelerationAction(JointAction):
         """
         if self in memo:
             return memo[self]
-        robot = copy.deepcopy(self.robot, memo)
+        robot = memo.get(self.robot, self.robot)  # copy.deepcopy(self.robot, memo)
         joints = copy.deepcopy(self.joints)
         a_min = copy.deepcopy(self.a_min)
         a_max = copy.deepcopy(self.a_max)

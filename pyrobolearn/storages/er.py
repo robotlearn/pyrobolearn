@@ -203,9 +203,10 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
     @property
     def size(self):
         """Return the size of the experience replay storage."""
-        if self.full:
-            return self.capacity
-        return self.position
+        # if self.full:
+        #     return self.capacity
+        # return self.position
+        return self.capacity
 
     ###########
     # Methods #
@@ -373,7 +374,7 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
 
         # go through each attribute in the  and sample from the tensors
         for key, value in self.iteritems():
-            if isinstance(list, value):  # value = list of tensors
+            if isinstance(value, list):  # value = list of tensors
                 batch[key] = [val[indices] for val in value]
             else:  # value = tensor
                 batch[key] = value[indices]

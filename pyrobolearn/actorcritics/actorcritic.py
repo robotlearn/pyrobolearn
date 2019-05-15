@@ -13,7 +13,7 @@ import itertools
 import torch
 
 from pyrobolearn.policies import Policy
-from pyrobolearn.values import ValueApproximator
+from pyrobolearn.values import Value
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -68,8 +68,8 @@ class ActorCritic(object):
     @critic.setter
     def critic(self, critic):
         """Set the critic."""
-        if not isinstance(critic, (ValueApproximator, torch.nn.Module)):
-            raise TypeError("Expecting the critic to be an instance of 'ValueApproximator' or 'torch.nn.Module', "
+        if not isinstance(critic, (Value, torch.nn.Module)):
+            raise TypeError("Expecting the critic to be an instance of 'Value' or 'torch.nn.Module', "
                             "instead got {}".format(type(critic)))
         self._critic = critic
 
@@ -87,10 +87,58 @@ class ActorCritic(object):
     # Methods #
     ###########
 
+    def train(self):
+        """
+        Set the actor and critic in training mode.
+        """
+        self.actor.train()
+        self.critic.train()
+
+    def eval(self):
+        """
+        Set the actor and critic in evaluation mode.
+        """
+        self.actor.eval()
+        self.critic.eval()
+
     def parameters(self):
         """Return the parameters of first the actor then the critic."""
         generator = itertools.chain(self.actor.parameters(), self.critic.parameters())
         return generator
+
+    def named_parameters(self):
+        """
+        Return an iterator over the learning model parameters; yielding both the name and the parameter itself.
+        """
+        generator = itertools.chain(self.actor.named_parameters(), self.critic.named_parameters())
+        return generator
+
+    def list_parameters(self):
+        """
+        Return the learning model parameters.
+        """
+        return self.actor.list_parameters() + self.critic.list_parameters()
+
+    def get_vectorized_parameters(self, to_numpy=True):
+        """
+        Get the parameters in a vectorized form.
+
+        Args:
+            to_numpy (bool): if True, it will convert the 1D parameter vector into a numpy array.
+        """
+        return self.actor.get_vectorized_parameters(to_numpy=to_numpy), \
+               self.critic.get_vectorized_parameters(to_numpy=to_numpy)
+
+    def set_vectorized_parameters(self, actor_parameters, critic_parameters):
+        """
+        Set the vectorized parameters.
+
+        Args:
+            actor_parameters (np.array, torch.Tensor): 1D parameter vector for the actor.
+            critic_parameters (np.array, torch.Tensor): 1D parameter vector for the critic.
+        """
+        self.actor.set_vectorized_parameters(vector=actor_parameters)
+        self.critic.set_vectorized_parameters(vector=critic_parameters)
 
     def value(self, x):
         """Compute the value function."""

@@ -4,6 +4,7 @@
 This includes notably the link positions and velocities.
 """
 
+import copy
 from abc import ABCMeta
 
 from pyrobolearn.states.robot_states.robot_states import RobotState, Robot
@@ -56,6 +57,28 @@ class LinkState(RobotState):
 
         # call parent constructor
         super(LinkState, self).__init__(robot, window_size=window_size, axis=axis, ticks=ticks)
+
+    def __copy__(self):
+        """Return a shallow copy of the state. This can be overridden in the child class."""
+        return self.__class__(robot=self.robot, link_ids=self.links, window_size=self.window_size, axis=self.axis,
+                              ticks=self.ticks)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the state. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass
+        """
+        if self in memo:
+            return memo[self]
+
+        robot = memo.get(self.robot, self.robot)  # copy.deepcopy(self.robot, memo)
+        link_ids = copy.deepcopy(self.links)
+        state = self.__class__(robot=robot, link_ids=link_ids, window_size=self.window_size, axis=self.axis,
+                               ticks=self.ticks)
+
+        memo[self] = state
+        return state
 
 
 class LinkPositionState(LinkState):

@@ -188,7 +188,7 @@ class REINFORCE(GradientRLAlgo):
 
         # create storage
         states, actions = policy.states, policy.actions
-        storage = RolloutStorage(num_steps=1000, state_shapes=states.shape, action_shapes=actions.shape,
+        storage = RolloutStorage(num_steps=1000, state_shapes=states.merged_shape, action_shapes=actions.merged_shape,
                                  num_trajectories=1)
         sampler = StorageSampler(storage)
 

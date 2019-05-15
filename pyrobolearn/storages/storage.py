@@ -729,6 +729,11 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
         return self._num_steps * self._num_trajectories
 
     @property
+    def capacity(self):
+        """Return the capacity of the rollout storage (=number of steps * number of processes)."""
+        return self._num_steps * self._num_trajectories
+
+    @property
     def curr_step(self):
         """Return the current time step."""
         return self._step

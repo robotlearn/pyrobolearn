@@ -138,13 +138,17 @@ class DQN(GradientRLAlgo):
                             "`ParametrizedQValueOutput`, instead got: {}".format(type(approximator)))
 
         # evaluate target Q-value fct by copying Q-value function approximator
-        q_target = copy.deepcopy(q_value)
+        q_target = copy.deepcopy(q_value, memo={})
+
+        # get states and actions from policy
+        states, actions = policy.states, policy.actions
 
         # create action exploration strategy
-        exploration = EpsilonGreedyActionExploration(policy=policy, action=policy.actions)
+        exploration = EpsilonGreedyActionExploration(policy=policy, action=actions)
 
         # create experience replay and sampler
-        storage = ExperienceReplay(capacity=capacity)
+        storage = ExperienceReplay(state_shapes=states.merged_shape, action_shapes=actions.merged_shape,
+                                   capacity=capacity)
         sampler = BatchRandomSampler(storage)
 
         # create target return estimator

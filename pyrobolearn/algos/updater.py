@@ -308,7 +308,7 @@ class Updater(object):
                     if self._cnt % self.ticks[loss] == 0:
 
                         if verbose:
-                            print("\t Compute loss {}".format(loss))
+                            print("\t Compute loss: {}".format(loss))
 
                         # compute loss on the data (the loss knows what to do with the batch)
                         loss_value = loss.compute(batch)
