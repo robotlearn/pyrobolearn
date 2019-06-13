@@ -9,7 +9,7 @@ from .bullet import Bullet
 from .bullet import Bullet as BulletSim  # alias  # TODO: remove that alias
 
 # dart simulator
-from .dart import Dart
+# from .dart import Dart
 
 # # PyBullet simulator
 # import pybullet

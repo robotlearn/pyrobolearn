@@ -6,10 +6,15 @@ Dependencies:
 - `pyrobolearn.utils`
 """
 
+import sys
 import copy
 
 from pyrobolearn.simulators import Simulator
 from pyrobolearn.utils.transformation import get_rpy_from_quaternion, get_matrix_from_quaternion
+
+# define long for Python 3.x
+if int(sys.version[0]) == 3:
+    long = int
 
 
 __author__ = "Brian Delhaisse"

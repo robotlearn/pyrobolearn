@@ -5,7 +5,7 @@
 import os
 import numpy as np
 
-from legged_robot import QuadrupedRobot
+from pyrobolearn.robots.legged_robot import QuadrupedRobot
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"

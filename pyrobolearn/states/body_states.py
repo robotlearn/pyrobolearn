@@ -4,11 +4,16 @@
 This includes notably the joint positions, velocities, and force/torque states.
 """
 
+import sys
 from abc import ABCMeta, abstractmethod
 
 from pyrobolearn.states.state import State
 from pyrobolearn.worlds import World
 from pyrobolearn.robots import Body
+
+# define long for Python 3.x
+if int(sys.version[0]) == 3:
+    long = int
 
 
 __author__ = "Brian Delhaisse"
@@ -49,9 +54,10 @@ class BodyState(State):
         """
 
         super(BodyState, self).__init__(window_size=window_size, axis=axis, ticks=ticks)
-        if not isinstance(body, (Body, int)):
-            raise TypeError("Expecting an instance of Body, or an identifier from the simulator/world.")
-        if isinstance(body, int):
+        if not isinstance(body, (Body, int, long)):
+            raise TypeError("Expecting an instance of Body, or an identifier from the simulator/world, instead got: "
+                            "{}".format(type(body)))
+        if isinstance(body, (int, long)):
             if not isinstance(world, World):
                 # try to look for the world in global variables
                 if 'world' in globals() and isinstance(globals()['world'], World):  # O(1)
