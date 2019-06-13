@@ -22,10 +22,11 @@ Dependencies in PRL:
 Dependencies in PRL: None
 
 References:
-    [1] Dynamic Animation and Robotics Toolkit (DART):
+    [1] DART: Dynamic Animation and Robotics Toolkit
+        - paper: http://joss.theoj.org/papers/10.21105/joss.00500
         - webpage: https://dartsim.github.io/
         - github: https://github.com/dartsim/dart/
-    [2] PyDART:
+    [2] PyDART
         - source code: https://pydart2.readthedocs.io/en/latest/
         - documentation: https://pydart2.readthedocs.io/en/latest/
     [3] PEP8: https://www.python.org/dev/peps/pep-0008/

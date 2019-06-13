@@ -97,6 +97,7 @@ from .centauro import Centauro
 # UAV
 from .quadcopter import Quadcopter
 # from .techpod import Techpod
+from .flappy import Flappy
 
 # UUV
 # from .ecaa9 import ECAA9

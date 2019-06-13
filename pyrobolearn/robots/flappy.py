@@ -306,7 +306,7 @@ class Flappy(FlappingWingUAV):
     described in the paper and code [2,3]. The gravity is carried out by pybullet.
 
     References:
-        [1] "Design Optimization and System Integration of Robotic Hummingbird", 2017, Zhang et al.
+        [1] "Design Optimization and System Integration of Robotic Hummingbird", Zhang et al., 2017
         [2] "Flappy Hummingbird: An Open Source Dynamic Simulation of Flapping Wing Robots and Animals", Fei et al.,
             2019
         [3] https://github.com/purdue-biorobotics/flappy

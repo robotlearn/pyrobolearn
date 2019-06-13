@@ -59,9 +59,8 @@ class MLPDynamicModel(NNDynamicModel):
 
     """
 
-    def __init__(self, state, action, next_state=None, hidden_units=(), activation_fct='Linear',
-                 last_activation_fct=None, dropout_prob=None, distributions=None, preprocessors=None,
-                 postprocessors=None):
+    def __init__(self, state, action, next_state=None, hidden_units=(), activation='linear', last_activation=None,
+                 dropout=None, distributions=None, preprocessors=None, postprocessors=None):
         """
         Initialize the multi-layer perceptron model.
 
@@ -70,9 +69,9 @@ class MLPDynamicModel(NNDynamicModel):
             action (Action): action inputs.
             next_state (State, None): state outputs. If None, it will take the state inputs as the outputs.
             hidden_units (tuple, list of int): number of hidden units in each layer
-            activation_fct (str): activation function to apply on each layer
-            last_activation_fct (str, None): activation function to apply on the last layer
-            dropout_prob (None, float): dropout probability
+            activation (str): activation function to apply on each layer
+            last_activation (str, None): activation function to apply on the last layer
+            dropout (None, float): dropout probability
             distributions (torch.distributions.Distribution): distribution to use to sample the next state. If None,
                 it will be deterministic.
             preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
@@ -81,8 +80,8 @@ class MLPDynamicModel(NNDynamicModel):
         if next_state is None:
             next_state = state
         model = MLPApproximator(inputs=[state, action], outputs=next_state, hidden_units=hidden_units,
-                                activation=activation_fct, last_activation=last_activation_fct,
-                                dropout=dropout_prob)
+                                activation=activation, last_activation=last_activation,
+                                dropout=dropout)
         super(MLPDynamicModel, self).__init__(state, action, model=model, next_state=next_state,
                                               distributions=distributions, preprocessors=preprocessors,
                                               postprocessors=postprocessors)

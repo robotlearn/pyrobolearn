@@ -1,22 +1,30 @@
 #!/usr/bin/env python
-"""Define the Simulator API.
+"""Define the RaiSim Simulator API.
 
-All the simulators inherit from the interface defined here. This acts as a bridge between the simulator and
-the PyRoboLearn framework. The signature of each method presents in this interface were inspired by the ones defined
-in PyBullet [1,2], but in accordance with the PEP8 style guide [3].
+Warnings: Currently, the RaiSim simulator is closed-source and is only available for researchers at RSL and ETH Zurich.
 
-Because the simulator is based on the PyBullet API and we want all the simulator APIs to be similar, all the other
-simulators would have to be able to carry out operations such as querying the state of the robots, kinematics and
-dynamics, etc.
+This is the main interface that communicates with the RaiSim simulator [1, 2]. By defining this interface, it allows to
+decouple the PyRoboLearn framework from the simulator. It also converts some data types to the ones required by
+RaiSim.
 
-Dependencies in PRL: None
+The signature of each method defined here are inspired by [1,2] but in accordance with the PEP8 style guide [3].
+Parts of the documentation for the methods have been copied-pasted from [2] for completeness purposes.
+
+Dependencies in PRL:
+* `pyrobolearn.simulators.simulator.Simulator`
 
 References:
-    [1] PyBullet: https://pybullet.org
-    [2] PyBullet Quickstart Guide: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA
+    [1] "Per-Contact Iteration Method for Solving Contact Dynamics", Hwangbo et al., 2018
+    [2] RaiSim: https://leggedrobotics.github.io/SimBenchmark/about/sims.html
     [3] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
 
+# TODO:
+#  1. wait for ETH to release the simulator (not sure if they will ever do it...)
+#  2. check if a Python wrapper is provided, if not, will have to implement it
+
+# import PRL simulator
+from pyrobolearn.simulators.simulator import Simulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -28,167 +36,24 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Simulator(object):
-    r"""Simulator (abstract class)
+class Raisim(Simulator):
+    r"""RaiSim
 
-    All the simulators inherits from the Simulator defined here. This acts as a bridge between the simulator and
-    the PyRoboLearn framework. This avoids the PyRoboLearn framework to depends on a particular simulator.
-    The signature of each method presents in this interface were inspired by the ones defined in PyBullet [1].
+    This is a wrapper around the RaiSim simulator [1,2]. Currently, the simulator is closed-source and is only
+    available for researchers at RSL and ETH Zurich.
 
-    Examples::
-        sim = Bullet()
-        sim = ROS_RBDL()
-        sim = GazeboROS()
+    Examples:
+        sim = Raisim()
 
     References:
-    [1] PyBullet: https://pybullet.org
-    [2] PEP8: https://www.python.org/dev/peps/pep-0008/
+        [1] "Per-Contact Iteration Method for Solving Contact Dynamics", Hwangbo et al., 2018
+        [2] RaiSim: https://leggedrobotics.github.io/SimBenchmark/about/sims.html
     """
 
-    # TODO: this is really bad to have attributes like that... It doesn't generalize well to other simulators...
-
-    B3G_ALT = 65308
-    B3G_BACKSPACE = 65305
-    B3G_CONTROL = 65307
-    B3G_DELETE = 65304
-    B3G_DOWN_ARROW = 65298
-    B3G_END = 65301
-    B3G_F1 = 65280
-    B3G_F10 = 65289
-    B3G_F11 = 65290
-    B3G_F12 = 65291
-    B3G_F13 = 65292
-    B3G_F14 = 65293
-    B3G_F15 = 65294
-    B3G_F2 = 65281
-    B3G_F3 = 65282
-    B3G_F4 = 65283
-    B3G_F5 = 65284
-    B3G_F6 = 65285
-    B3G_F7 = 65286
-    B3G_F8 = 65287
-    B3G_F9 = 65288
-    B3G_HOME = 65302
-    B3G_INSERT = 65303
-    B3G_LEFT_ARROW = 65295
-    B3G_PAGE_DOWN = 65300
-    B3G_PAGE_UP = 65299
-    B3G_RETURN = 65309
-    B3G_RIGHT_ARROW = 65296
-    B3G_SHIFT = 65306
-    B3G_UP_ARROW = 65297
-
-    COV_ENABLE_DEPTH_BUFFER_PREVIEW = 14
-    COV_ENABLE_GUI = 1
-    COV_ENABLE_KEYBOARD_SHORTCUTS = 9
-    COV_ENABLE_MOUSE_PICKING = 10
-    COV_ENABLE_PLANAR_REFLECTION = 16
-    COV_ENABLE_RENDERING = 7
-    COV_ENABLE_RGB_BUFFER_PREVIEW = 13
-    COV_ENABLE_SEGMENTATION_MARK_PREVIEW = 15
-    COV_ENABLE_SHADOWS = 2
-    COV_ENABLE_SINGLE_STEP_RENDERING = 17
-    COV_ENABLE_TINY_RENDERER = 12
-    COV_ENABLE_WIREFRAME = 3
-    COV_ENABLE_Y_AXIS_UP = 11
-
-    DIRECT = 2
-    ER_BULLET_HARDWARE_OPENGL = 131072
-    ER_NO_SEGMENTATION_MASK = 4
-    ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX = 1
-    ER_TINY_RENDERER = 65536
-    ER_USE_PROJECTIVE_TEXTURE = 2
-
-    GEOM_FORCE_CONCAVE_TRIMESH = 1
-    GEOM_SPHERE = 2
-    GEOM_CONCAVE_INTERNAL_EDGE = 2
-    GEOM_BOX = 3
-    GEOM_CYLINDER = 4
-    GEOM_MESH = 5
-    GEOM_PLANE = 6
-    GEOM_CAPSULE = 7
-
-    GUI = 1
-    GUI_MAIN_THREAD = 8
-    GUI_SERVER = 7
-    IK_DLS = 0
-    IK_HAS_JOINT_DAMPING = 128
-    IK_HAS_NULL_SPACE_VELOCITY = 64
-    IK_HAS_TARGET_ORIENTATION = 32
-    IK_HAS_TARGET_POSITION = 16
-    IK_SDLS = 1
-
-    JOINT_FEEDBACK_IN_JOINT_FRAME = 2
-    JOINT_FEEDBACK_IN_WORLD_SPACE = 1
-    JOINT_FIXED = 4
-    JOINT_GEAR = 6
-    JOINT_PLANAR = 3
-    JOINT_POINT2POINT = 5
-    JOINT_PRISMATIC = 1
-    JOINT_REVOLUTE = 0
-    JOINT_SPHERICAL = 2
-
-    KEY_IS_DOWN = 1
-    KEY_WAS_RELEASED = 4
-    KEY_WAS_TRIGGERED = 2
-
-    LINK_FRAME = 1
-    WORLD_FRAME = 2
-
-    MAX_RAY_INTERSECTION_BATCH_SIZE = 16384
-
-    VELOCITY_CONTROL = 0
-    TORQUE_CONTROL = 1
-    POSITION_CONTROL = 2
-    PD_CONTROL = 3
-
-    SENSOR_FORCE_TORQUE = 1
-    SHARED_MEMORY = 3
-    SHARED_MEMORY_KEY = 12347
-    SHARED_MEMORY_KEY2 = 12348
-    SHARED_MEMORY_SERVER = 9
-    STATE_LOGGING_ALL_COMMANDS = 7
-    STATE_LOGGING_CONTACT_POINTS = 5
-    STATE_LOGGING_CUSTOM_TIMER = 9
-    STATE_LOGGING_GENERIC_ROBOT = 1
-    STATE_LOGGING_MINITAUR = 0
-    STATE_LOGGING_PROFILE_TIMINGS = 6
-    STATE_LOGGING_VIDEO_MP4 = 3
-    STATE_LOGGING_VR_CONTROLLERS = 2
-    STATE_LOG_JOINT_MOTOR_TORQUES = 1
-    STATE_LOG_JOINT_TORQUES = 3
-    STATE_LOG_JOINT_USER_TORQUES = 2
-    STATE_REPLAY_ALL_COMMANDS = 8
-
-    TCP = 5
-    UDP = 4
-
-    URDF_ENABLE_CACHED_GRAPHICS_SHAPES = 1024
-    URDF_ENABLE_SLEEPING = 2048
-    URDF_GLOBAL_VELOCITIES_MB = 256
-    URDF_INITIALIZE_SAT_FEATURES = 4096
-    URDF_USE_IMPLICIT_CYLINDER = 128
-    URDF_USE_INERTIA_FROM_FILE = 2
-    URDF_USE_MATERIAL_COLORS_FROM_MTL = 32768
-    URDF_USE_MATERIAL_TRANSPARANCY_FROM_MTL = 65536
-    URDF_USE_SELF_COLLISION = 8
-    URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS = 32
-    URDF_USE_SELF_COLLISION_EXCLUDE_PARENT = 16
-    URDF_USE_SELF_COLLISION_INCLUDE_PARENT = 8192
-
     def __init__(self, render=True, **kwargs):
-        self._render = render
-        self.real_time = False
-        self.kwargs = kwargs
-
-        # main camera in the simulator
-        self._camera = None
-
-        # TODO: this is really bad to have attributes like that... It doesn't generalize well to other simulators...
-        # import pybullet
-        # for attribute in dir(pybullet):
-        #     if attribute[0].isupper():
-        #         print('self.{} = {}'.format(attribute, getattr(pybullet, attribute)))
+        super(Raisim, self).__init__(render, **kwargs)
+        raise NotImplementedError("The RaiSim simulator is not currently available as it has not been released for "
+                                  "the moment")
 
     ##############
     # Properties #

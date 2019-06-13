@@ -110,7 +110,7 @@ class MLPValue(ValueNetwork):
     This is defined by :math:`V_{\psi}(s_t)` where the function :math:`V` is approximated by a multilayer perceptron.
     """
 
-    def __init__(self, state, hidden_units=(), activation_fct='linear', last_activation_fct=None, dropout_prob=None,
+    def __init__(self, state, hidden_units=(), activation='linear', last_activation=None, dropout=None,
                  preprocessors=None):
         """Initialize the Value MLP approximator.
 
@@ -118,19 +118,18 @@ class MLPValue(ValueNetwork):
             state (State): 1D-states that is feed to the policy (the input dimensions will be inferred from the
                             states)
             hidden_units (list/tuple of int): number of hidden units in the corresponding layer
-            activation_fct (None, str, or list/tuple of str/None): activation function to be applied after each layer.
+            activation (None, str, or list/tuple of str/None): activation function to be applied after each layer.
                                                                    If list/tuple, then it has to match the
-            last_activation_fct (None or str): last activation function to be applied. If not specified, it will check
+            last_activation (None or str): last activation function to be applied. If not specified, it will check
                                                if it is in the list/tuple of activation functions provided for the
                                                previous argument.
-            dropout_prob (None, float, or list/tuple of float/None): dropout probability.
+            dropout (None, float, or list/tuple of float/None): dropout probability.
             preprocessors ((list of) Processor): pre-processors to be applied on the input state before being fed to
                 the inner model / function approximator.
         """
         output = torch.Tensor([1.])  # torch.Tensor([[1.]])
-        model = MLPApproximator(state, output, hidden_units=hidden_units, activation=activation_fct,
-                                last_activation=last_activation_fct, dropout=dropout_prob,
-                                preprocessors=preprocessors)
+        model = MLPApproximator(state, output, hidden_units=hidden_units, activation=activation,
+                                last_activation=last_activation, dropout=dropout, preprocessors=preprocessors)
         super(MLPValue, self).__init__(state, model)
 
 
@@ -142,8 +141,8 @@ class MLPQValue(QValueNetwork):
     and outputs the value :math:`Q(s,a)`. This can be used for continuous actions as well as discrete actions.
     """
 
-    def __init__(self, state, action, hidden_units=(), activation_fct='linear', last_activation_fct=None,
-                 dropout_prob=None, preprocessors=None):
+    def __init__(self, state, action, hidden_units=(), activation='linear', last_activation=None, dropout=None,
+                 preprocessors=None):
         """
         Initialize the MLP state-action value function approximator.
 
@@ -151,18 +150,18 @@ class MLPQValue(QValueNetwork):
             state (State): input state.
             action (Action): input action.
             hidden_units (list/tuple of int): number of hidden units in the corresponding layer
-            activation_fct (None, str, or list/tuple of str/None): activation function to be applied after each layer.
+            activation (None, str, or list/tuple of str/None): activation function to be applied after each layer.
                                                                    If list/tuple, then it has to match the
-            last_activation_fct (None or str): last activation function to be applied. If not specified, it will check
+            last_activation (None or str): last activation function to be applied. If not specified, it will check
                                                if it is in the list/tuple of activation functions provided for the
                                                previous argument.
-            dropout_prob (None, float, or list/tuple of float/None): dropout probability.
+            dropout (None, float, or list/tuple of float/None): dropout probability.
             preprocessors ((list of) Processor): pre-processors to be applied on the input state before being fed to
                 the inner model / function approximator.
         """
         model = MLPApproximator(inputs=[state, action], outputs=torch.Tensor([1]), hidden_units=hidden_units,
-                                activation=activation_fct, last_activation=last_activation_fct,
-                                dropout=dropout_prob, preprocessors=preprocessors)
+                                activation=activation, last_activation=last_activation, dropout=dropout,
+                                preprocessors=preprocessors)
         super(MLPQValue, self).__init__(state, action, model=model)
 
 
@@ -175,8 +174,8 @@ class MLPQValueOutput(ParametrizedQValueOutput):
     :math:`Q(s,a)` for each discrete action. This can NOT be used with continuous actions.
     """
 
-    def __init__(self, state, action, hidden_units=(), activation_fct='linear', last_activation_fct=None,
-                 dropout_prob=None, preprocessors=None):
+    def __init__(self, state, action, hidden_units=(), activation='linear', last_activation=None, dropout=None,
+                 preprocessors=None):
         """
         Initialize the MLP state-action value function approximator.
 
@@ -184,16 +183,15 @@ class MLPQValueOutput(ParametrizedQValueOutput):
             state (State): input state.
             action (Action): output action.
             hidden_units (list/tuple of int): number of hidden units in the corresponding layer
-            activation_fct (None, str, or list/tuple of str/None): activation function to be applied after each layer.
+            activation (None, str, or list/tuple of str/None): activation function to be applied after each layer.
                                                                    If list/tuple, then it has to match the
-            last_activation_fct (None or str): last activation function to be applied. If not specified, it will check
+            last_activation (None or str): last activation function to be applied. If not specified, it will check
                                                if it is in the list/tuple of activation functions provided for the
                                                previous argument.
-            dropout_prob (None, float, or list/tuple of float/None): dropout probability.
+            dropout (None, float, or list/tuple of float/None): dropout probability.
             preprocessors ((list of) Processor): pre-processors to be applied on the input state before being fed to
                 the inner model / function approximator.
         """
-        model = MLPApproximator(inputs=state, outputs=action, hidden_units=hidden_units,
-                                activation=activation_fct, last_activation=last_activation_fct,
-                                dropout=dropout_prob, preprocessors=preprocessors)
+        model = MLPApproximator(inputs=state, outputs=action, hidden_units=hidden_units, activation=activation,
+                                last_activation=last_activation, dropout=dropout, preprocessors=preprocessors)
         super(MLPQValueOutput, self).__init__(state, action, model=model)

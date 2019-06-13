@@ -70,7 +70,7 @@ class Adam(Optimizer):
 
         # optimize
         self.optimizer.zero_grad()
-        loss.backward()
+        loss.backward(retain_graph=True)
         if self.max_grad_norm is not None:
             nn.utils.clip_grad_norm_(params, self.max_grad_norm)
         self.optimizer.step()
@@ -99,7 +99,7 @@ class Adadelta(Optimizer):
 
         # optimize
         self.optimizer.zero_grad()
-        loss.backward()
+        loss.backward(retain_graph=True)
         if self.max_grad_norm is not None:
             nn.utils.clip_grad_norm_(params, self.max_grad_norm)
         self.optimizer.step()
