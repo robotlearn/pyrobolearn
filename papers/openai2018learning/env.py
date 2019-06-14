@@ -9,7 +9,7 @@ Reference:
 
 # TODO: end the implementation
 
-# import PyRoboLearn
+import os
 import pyrobolearn as prl
 
 __author__ = "Brian Delhaisse"
@@ -54,7 +54,8 @@ class Openai2018LearningEnv(prl.envs.Env):
         robot.print_info()
 
         # load cube in hand
-        cube = world.load_mesh('../meshes/cube.obj', position=[0.1, 0, 0.57], scale=(.05, .05, .05), flags=0)
+        cube = world.load_mesh(os.path.dirname(__file__) + '/meshes/cube.obj', position=[0.1, 0, 0.57],
+                               scale=(.05, .05, .05), flags=0)
         cube = prl.robots.Body(simulator, body_id=cube)
 
         # create state: fingertip positions (5*3D), object position (3D), object orientation (4D=quaternion),
