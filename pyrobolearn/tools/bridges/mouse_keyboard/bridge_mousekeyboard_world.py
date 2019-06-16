@@ -337,7 +337,7 @@ class BridgeMouseKeyboardWorld(Bridge):
                 if object_id != -1 and self.world.is_robot_id(object_id):  # valid object
 
                     # Set robot and link_id
-                    self.robot, self.link_id = self.world.get_robot(object_id), link_id
+                    self.robot, self.link_id = self.world.get_body(object_id), link_id
 
                     width, height = camera[:2]
                     x_screen = np.array([width/2, height/10, 0.95, 1])

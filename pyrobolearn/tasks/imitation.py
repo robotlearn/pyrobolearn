@@ -276,8 +276,9 @@ class ILTask(Task):
         Perform one step in the training of the policy(ies) using the recorded data.
         """
         if self.training_enabled:
-            # print(self.recorders[0].data)
-            # print(np.array(self.recorders[0].data).shape)
+            # print("data: ", self.recorders[0].data)
+            # print("shape: ", np.array(self.recorders[0].data).shape)
+
             # take data from recorder
             data = np.array([data[0] for data in self.recorders[0].data]).T
 

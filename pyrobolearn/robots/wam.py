@@ -19,7 +19,8 @@ class WAM(ManipulatorRobot):
     r"""Wam robot
 
     References:
-        [1] https://github.com/jhu-lcsr/barrett_model
+        [1] https://advanced.barrett.com/wam-arm-1
+        [2] https://github.com/jhu-lcsr/barrett_model
     """
 
     def __init__(self,

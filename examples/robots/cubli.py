@@ -4,7 +4,7 @@
 
 import numpy as np
 from itertools import count
-from pyrobolearn.utils.orientation import get_rpy_from_quaternion
+from pyrobolearn.utils.transformation import get_rpy_from_quaternion
 from pyrobolearn.simulators import BulletSim
 from pyrobolearn.worlds import BasicWorld
 from pyrobolearn.robots import Cubli
@@ -19,7 +19,7 @@ world = BasicWorld(sim)
 scale = 1.  # Warning: this does not scale the mass...
 position = [0., 0., np.sqrt(2) / 2. * scale + 0.001]
 orientation = [0.383, 0, 0, 0.924]
-robot = Cubli(sim, position, orientation, scaling=scale)
+robot = Cubli(sim, position, orientation, scale=scale)
 
 # print information about the robot
 robot.print_info()

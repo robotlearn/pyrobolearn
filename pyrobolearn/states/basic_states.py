@@ -131,7 +131,7 @@ class CounterState(State):
 
     def _read(self):
         """Read the next counter state."""
-        self.data = self._data + 1
+        self.data = self.last_data + 1
 
 
 class PreviousActionState(State):

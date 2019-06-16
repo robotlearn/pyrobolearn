@@ -311,6 +311,9 @@ if __name__ == '__main__':
     for i, item in enumerate(q):
         print("Item {}: {}".format(i, item))
 
+    # print last item put in the queue
+    print("Last item in queue: {}".format(q[-1]))
+
     # create stack
     stack = LIFOQueue(maxsize=2)
     print("\nInitial stack (maxsize={}): {}".format(stack.maxsize, stack))

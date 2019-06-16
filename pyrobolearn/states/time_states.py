@@ -136,7 +136,7 @@ class CumulativeTimeState(TimeState):
     def _read(self):
         """Read the next cumulative time state."""
         next_time = time.time()
-        self.data = self._data + (next_time - self.current_time)
+        self.data = self.last_data + (next_time - self.current_time)
         self.current_time = next_time
 
 
@@ -187,10 +187,10 @@ class PhaseState(TimeState):
 
     def _read(self):
         """Read the next linear phase state."""
-        if self.sign > 0 and self._data[0] < self.end_value:
-            self.data = np.minimum(self._data + self.dphase, self.end_value)
-        elif self.sign < 0 and self._data[0] > self.end_value:
-            self.data = np.maximum(self._data + self.dphase, self.end_value)
+        if self.sign > 0 and self.last_data[0] < self.end_value:
+            self.data = np.minimum(self.last_data + self.dphase, self.end_value)
+        elif self.sign < 0 and self.last_data[0] > self.end_value:
+            self.data = np.maximum(self.last_data + self.dphase, self.end_value)
 
 
 class ExponentialPhaseState(TimeState):
@@ -251,9 +251,9 @@ class ExponentialPhaseState(TimeState):
             self.data = np.array([self.s0]) * np.exp(self.a * self.t)
             if self.sf is not None:
                 if self.a < 0:
-                    self.data = np.maximum(self._data, self.sf)
+                    self.data = np.maximum(self.last_data, self.sf)
                 elif self.a > 0:
-                    self.data = np.minimum(self._data, self.sf)
+                    self.data = np.minimum(self.last_data, self.sf)
 
 
 # alias
@@ -296,10 +296,10 @@ class RhythmicPhase(PhaseState):
 
     def _read(self):
         """Read the next rhythmic phase state."""
-        self.data = self._data + self.dphase
-        if self.sign > 0 and self._data[0] >= self.end_value:
+        self.data = self.last_data + self.dphase
+        if self.sign > 0 and self.last_data[0] >= self.end_value:
             self.data = np.array([self.start_value])
-        if self.sign < 0 and self._data[0] <= self.end_value:
+        if self.sign < 0 and self.last_data[0] <= self.end_value:
             self.data = np.array([self.start_value])
 
 
