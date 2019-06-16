@@ -1546,7 +1546,7 @@ class Robot(ControllableBody):
                 # remove parent index from the end-effectors dict if present
                 end_effectors.pop(parent_idx, None)
 
-            self.end_effectors = end_effectors.keys()
+            self.end_effectors = list(end_effectors.keys())
             self.end_effector_names = {name: idx for idx, name in end_effectors.items()}
 
     def get_end_effector_ids(self, end_effector=None):
