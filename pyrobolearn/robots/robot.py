@@ -18,12 +18,14 @@ import numpy as np
 # import quaternion
 
 from pyrobolearn.utils.transformation import *
+from pyrobolearn.utils.manifold_utils import tensor_matrix_product, symmetric_matrix_to_vector, logarithm_map, \
+    distance_spd
 from pyrobolearn.robots.base import ControllableBody
 
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__credits__ = ["Brian Delhaisse"]
+__credits__ = ["Brian Delhaisse", "Leonel Rozo"]
 __license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
@@ -1498,6 +1500,26 @@ class Robot(ControllableBody):
             return self.sim.get_contact_points(body1=self.id, link1_id=link_ids)
         return [self.sim.get_contact_points(body1=self.id, link1_id=link) for link in link_ids]
 
+    def get_link_local_inertia(self, link_ids=None):
+        """
+        Return the local inertia (diagonal) of the given link(s).
+
+        Args:
+            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the inertia of all the
+                links (even of fixed links).
+
+        Returns:
+            if 1 link:
+                np.array[3]: local inertia (diagonal vector) of the given link
+            else:
+                np.array[N]: mass of each link
+        """
+        if isinstance(link_ids, int):
+            return self.sim.get_dynamics_info(body_id=self.id, link_id=link_ids)[2]
+        if link_ids is None:
+            link_ids = list(range(self.num_links))
+        return np.array([self.sim.get_dynamics_info(self.id, link)[2] for link in link_ids])
+
     def set_link_positions(self, link_ids, position, orientation=None):
         """
         Set the position(s) of the given link(s) using inverse kinematics (IK).
@@ -1773,6 +1795,96 @@ class Robot(ControllableBody):
                         np.hstack((np.zeros((3, 3)), Tinv)))).dot(jacobian)
         return Ja
 
+    @staticmethod
+    def compute_jacobian_joint_derivative(jacobian):
+        r"""
+        Compute the derivative of the Jacobian wrt joint values (hybrid Jacobian representation). The computation is
+        based on [1].
+
+        Args:
+            jacobian (np.array[6,N], np.array[6,6+N]): jacobian matrix J.
+
+        Returns:
+            np.array[6,6,N]: derivative of the Jacobian wrt joint values (dJ/dq)
+
+        References:
+            [1] "Symbolic differentiation of the velocity mapping for a serial kinematic chain", Bruyninck et al.,
+            Mechanism and Machine Theory. 1996
+        """
+        nb_rows = jacobian.shape[0]  # task space dim.
+        nb_cols = jacobian.shape[1]  # joint space dim.
+
+        # compute Jgrad
+        J_grad = np.zeros((nb_rows, nb_cols, nb_cols))
+        for i in range(nb_cols):
+            for j in range(nb_cols):
+                J_i, J_j = jacobian[:, i], jacobian[:, j]
+                if j < i:
+                    # J_grad[0:3, i, j] = np.cross(J_j[3:6], J_i[0:3])  # Slow implementation
+                    J_grad[0, i, j] = J_j[4] * J_i[2] - J_j[5] * J_i[1]
+                    J_grad[1, i, j] = J_j[5] * J_i[0] - J_j[3] * J_i[2]
+                    J_grad[2, i, j] = J_j[3] * J_i[1] - J_j[4] * J_i[0]
+                    # J_grad[3:6, i, j] = np.cross(J_j[3:6], J_i[3:6]) # Slow implementation
+                    J_grad[3, i, j] = J_j[4] * J_i[5] - J_j[5] * J_i[4]
+                    J_grad[4, i, j] = J_j[5] * J_i[3] - J_j[3] * J_i[5]
+                    J_grad[5, i, j] = J_j[3] * J_i[4] - J_j[4] * J_i[3]
+                elif j > i:
+                    # J_grad[0:3, i, j] = -np.cross(J_j[0:3], J_i[3:6]) # Slow implementation
+                    J_grad[0, i, j] = - J_j[1] * J_i[5] + J_j[2] * J_i[4]
+                    J_grad[1, i, j] = - J_j[2] * J_i[3] + J_j[0] * J_i[5]
+                    J_grad[2, i, j] = - J_j[0] * J_i[4] + J_j[1] * J_i[3]
+                else:
+                    # J_grad[0:3, i, j] = np.cross(J_i[3:6], J_i[0:3]) # Slow implementation
+                    J_grad[0, i, j] = J_i[4] * J_i[2] - J_i[5] * J_i[1]
+                    J_grad[1, i, j] = J_i[5] * J_i[0] - J_i[3] * J_i[2]
+                    J_grad[2, i, j] = J_i[3] * J_i[1] - J_i[4] * J_i[0]
+
+        return J_grad
+
+    def get_center_of_mass_jacobian(self, q=None):
+        r"""
+        Compute the Jacobian for the center of mass of the robot. This method was coded based on the C++ code
+        provided in the `ModelInterface` class from ADVR Humanoids repository. A useful reference to check for this
+        method is [1].
+
+        Args:
+            q (np.array[N]): joint positions of size N, where N is the number of DoFs. If None, it will compute q
+                based on the current joint positions.
+
+        Returns:
+            np.array[6,6,N]: CoM Jacobian
+
+        References:
+            [1] "Whole-body cooperative balancing of humanoid robot using COG Jacobian", Sugihara et al., IROS, 2002
+        """
+        # Get current joint position
+        if q is None:
+            q = self.get_joint_positions()
+        else:
+            if len(q) != len(self.joints):
+                raise ValueError("The length of q ({}) is different from the number of DoFs"
+                                 " ({}).".format(len(q), len(self.joints)))
+
+        # Robot total mass
+        robot_mass = 0
+
+        # initialize center of mass jacobian: J_com
+        if self.has_fixed_base():
+            Jcom = np.zeros((6, self.num_dofs))
+        else:
+            Jcom = np.zeros((6, self.num_dofs + 6))
+
+        # calculate the CoM jacobian
+        for link_id in range(self.num_links):
+            Jlink = self.get_jacobian(link_id, q)
+            link_mass = self.get_link_masses(link_id)
+            Jcom += link_mass * Jlink
+            robot_mass += link_mass
+
+        Jcom /= robot_mass
+
+        return Jcom
+
     def get_angular_velocities_from_derivative_rpy(self, rpy_angle, dRPY):
         r"""
         Return the angular velocities :math:`\omega` from the derivative of RPY Euler angles \math:`\dot{\phi}`.
@@ -1858,9 +1970,6 @@ class Robot(ControllableBody):
         J, k = jacobian, damping_factor
         return J.T.dot(np.linalg.inv(J.dot(J.T) + k**2 * np.identity(J.shape[0])))
 
-    # alias
-    getDLSInverse = get_damped_least_squares_inverse
-
     @staticmethod
     def get_pinv_jacobian(jacobian):
         r"""
@@ -1888,9 +1997,8 @@ class Robot(ControllableBody):
             np.array[N,N]: null space projector matrix
         """
         J = jacobian
-        JJT = self.get_JJT(jacobian)
         I = np.identity(J.shape[1])
-        return I - self.get_pinv_jacobian(J=J).dot(J)
+        return I - self.get_pinv_jacobian(J).dot(J)
 
     def compute_manipulability_measure(self, jacobian):
         r"""
@@ -1908,6 +2016,45 @@ class Robot(ControllableBody):
             [1] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010, chap 3.5 and 3.9
         """
         return np.sqrt(np.linalg.det(self.get_JJT(jacobian)))
+
+    def compute_velocity_manipulability_ellipsoid(self, jacobian):
+        r"""
+        Compute the velocity manipulability ellipsoid (matrix) as `M = J(q)J(q)^T`.
+
+        Args:
+            jacobian (np.array[D,N]): Jacobian matrix
+
+        Returns:
+            np.array[D,D]: velocity manipulability
+        """
+        return self.get_JJT(jacobian)
+
+    def compute_force_manipulability_ellipsoid(self, jacobian):
+        r"""
+        Compute the force manipulability ellipsoid (matrix) as `M = (J(q)J(q)^T)^-1`.
+
+        Args:
+            jacobian (np.array[D,N]): Jacobian matrix
+
+        Returns:
+            np.array[D,D]: force manipulability
+        """
+        return np.linalg.inv(self.get_JJT(jacobian))
+
+    @staticmethod
+    def compute_dynamic_manipulability_ellipsoid(jacobian, inertia):
+        r"""
+        Compute the dynamic manipulability ellipsoid (matrix) as `M = J(q)H(q)^{-1} (J(q)H(q)^{-1})^T`.
+
+        Args:
+            jacobian (np.array[D,N]): Jacobian matrix
+            inertia (np.array[N,N], np.array[6+N,6+N], np.array[M,M]): inertia matrix in joint space
+
+        Returns:
+            np.array[D,D]: dynamic manipulability
+        """
+        epsilon = jacobian.dot(np.linalg.inv(inertia))
+        return epsilon.dot(epsilon.T)
 
     @staticmethod
     def in_singular_configuration(jacobian):
@@ -1960,6 +2107,10 @@ class Robot(ControllableBody):
 
         .. math:: v = J(q) \dot{q}
 
+        Args:
+            jacobian (np.array[D,N], np.array[D,N]): Jacobian matrix
+            dq (np.array[N]): joint velocities
+
         Returns:
             np.array[6]: Cartesian linear and angular velocities
         """
@@ -2004,6 +2155,169 @@ class Robot(ControllableBody):
                                                      joint_dampings=joint_dampings, max_iters=max_iters,
                                                      threshold=threshold)
 
+    def calculate_inverse_differential_kinematics_velocity_manipulability(self, jacobian,
+                                                                          target_velocity_manipulability, Km):
+        r"""
+        Compute the inverse differential kinematics for velocity Manipulability; it will return a joint velocity for
+        all the actuated joints [1].
+
+        Args:
+            jacobian (np.array[D,N]): jacobian matrix
+            target_velocity_manipulability (np.array[D,D]): target velocity manipulability
+            Km (float[,]): Proportional gain for manipulability error
+
+        Returns:
+            np.array[N]: joint velocities
+            float: minimum of eigenvalues of the velocity manip. Jacobian
+            float: Distance between desired and current manip. ellipsoids
+
+        References:
+            [1] "Geometry-aware Tracking of Manipulability Ellipsoids", Jaquier et al., R:SS, 2018
+        """
+        num_task_vars = np.size(target_velocity_manipulability, 0)
+
+        # Compute manipulability error
+        velocity_manip = self.compute_velocity_manipulability_ellipsoid(jacobian)
+        Me = logarithm_map([target_velocity_manipulability], velocity_manip[0:num_task_vars, 0:num_task_vars])[0]
+        # print("Me: {}".format(Me))
+        distance = distance_spd(target_velocity_manipulability, velocity_manip[0:num_task_vars, 0:num_task_vars])
+        # print("SPD dist: {}".format(distance))
+
+        Jm_red = self.compute_velocity_manipulability_jacobian(jacobian, num_task_vars)
+        # print("Jm: {}".format(Jm_red))
+
+        # Matrix singularity robustness
+        U, S, Vh = np.linalg.svd(Jm_red)
+        damping = 1E-2 if np.min(S) < 1E-2 else 1E-8
+
+        dq = np.dot(self.get_damped_least_squares_inverse(Jm_red, damping), np.dot(Km, symmetric_matrix_to_vector(Me)))
+
+        return dq, np.min(S), distance
+
+    def calculate_inverse_differential_kinematics_dynamic_manipulability(self, jacobian, inertia,
+                                                                         target_dynamic_manipulability, Km):
+        """
+        Compute the inverse differential kinematics for dynamic Manipulability; it will return a joint velocity for all
+        the actuated joints.
+
+        Args:
+            jacobian (np.array[D,N]): Jacobian matrix
+            target_dynamic_manipulability (np.array[D,D]): target dynamic manipulability
+            Km (float[,]): Proportional gain for manipulability error
+
+        Returns:
+            np.array[N]: joint velocities
+            float: minimum of eigenvalues of the dynamic manip. Jacobian
+            float: Distance between desired and current manip. ellipsoids
+        """
+        num_task_vars = np.size(target_dynamic_manipulability, 0)
+
+        # Compute manipulability error
+        dynamic_manip = self.compute_dynamic_manipulability_ellipsoid(jacobian, inertia)
+        Me = logarithm_map([target_dynamic_manipulability[0:num_task_vars, 0:num_task_vars]],
+                           dynamic_manip[0:num_task_vars, 0:num_task_vars])[0]
+        # print("Me: {}".format(Me))
+        distance = distance_spd(target_dynamic_manipulability[0:num_task_vars, 0:num_task_vars],
+                                dynamic_manip[0:num_task_vars, 0:num_task_vars])
+        print("SPD dist: {}".format(distance))
+
+        Jm_red = self.compute_dynamic_manipulability_jacobian(jacobian, inertia, num_task_vars)
+        # print("Jm: {}".format(Jm_red))
+
+        # Matrix singularity robustness
+        U, S, Vh = np.linalg.svd(Jm_red)
+        damping = 1E-2 if np.min(S) < 1E-2 else 1E-8
+
+        dq = np.dot(self.get_damped_least_squares_inverse(Jm_red, damping), np.dot(Km, symmetric_matrix_to_vector(Me)))
+
+        return dq, np.min(S), distance
+
+    def compute_velocity_manipulability_jacobian(self, jacobian, num_task_vars):
+        r"""
+        Compute the velocity manipulability Jacobian [1].
+
+        Args:
+            jacobian (np.array[D,N]): jacobian matrix
+            num_task_vars (float): number of task variables (usually 3 or 6)
+
+        Returns:
+            np.array[(num_task_vars * num_task_vars + num_task_vars) / 2, N]: manipulability jacobian matrix
+
+        References:
+            [1] "Geometry-aware Tracking of Manipulability Ellipsoids", Jaquier et al., R:SS, 2018
+        """
+        num_dofs = jacobian.shape[1]
+
+        # Jtot = sc.linalg.block_diag(*jacobian)
+        # print("Jtot: {}".format(Jtot))
+
+        # Compute derivative of Jacobian wrt joint angles
+        J_grad = self.compute_jacobian_joint_derivative(jacobian)
+
+        # for i in range(J_grad.shape[2]):
+        #    print("dJ/dq_{}: {}".format(i, J_grad[:, :, i]))
+
+        # Manipulability Jacobian
+        Jm = tensor_matrix_product(J_grad, jacobian, 1) + \
+             tensor_matrix_product(np.transpose(J_grad, [1, 0, 2]), jacobian, 0)
+        # for i in range(Jm.shape[2]):
+        #    print("Jm_{}: {}".format(i, Jm[:, :, i]))
+        # Jm = Jm[num_task_vars, num_task_vars, :]
+
+        # Manipulability Jacobian in matrix form (Mandel notation)
+        # num_vars = len(num_task_vars)
+        Jm_red = np.zeros(((num_task_vars * num_task_vars + num_task_vars) / 2, np.sum(num_dofs)))
+        # print("Jm_red.shape: {}".format(Jm_red.shape))
+
+        for i in range(Jm.shape[2]):
+            Jm_red[:, i] = symmetric_matrix_to_vector(Jm[0:num_task_vars, 0:num_task_vars, i])
+
+        return Jm_red
+
+    def compute_dynamic_manipulability_jacobian(self, jacobian, inertia, num_task_vars):
+        r"""
+        Compute the dynamic manipulability Jacobian.
+
+        Args:
+            jacobian (np.array[D,N]): Jacobian matrix
+            inertia (np.array[N,N]): inertia matrix
+            num_task_vars (float): number of task variables (usually 3 or 6)
+
+        Returns:
+            np.array[(num_task_vars * num_task_vars + num_task_vars) / 2, N]: manipulability jacobian matrix
+        """
+        num_dofs = jacobian.shape[1]
+
+        # Compute derivative of Jacobian wrt joint angles
+        J_grad = self.compute_jacobian_joint_derivative(jacobian)
+        # Compute derivative of Inertia matrix wrt joint angles
+        H_grad = self.compute_inertia_joint_derivative(jacobian)
+        #
+        L = np.dot(jacobian, np.linalg.inv(inertia))
+
+        # for i in range(J_grad.shape[2]):
+        #    print("dJ/dq_{}: {}".format(i, J_grad[:, :, i]))
+        # for i in range(H_grad.shape[2]):
+        #    print("dH/dq_{}: {}".format(i, H_grad[:, :, i]))
+
+        # Dynamic manipulability Jacobian
+        Lgrad = tensor_matrix_product(J_grad, np.linalg.inv(inertia), 1) - \
+                tensor_matrix_product(tensor_matrix_product(H_grad, L, 0), np.linalg.inv(inertia), 1)
+        Jm = tensor_matrix_product(np.transpose(Lgrad[:, :], [1, 0, 2]), L, 0) + tensor_matrix_product(Lgrad, L, 1)
+        # for i in range(Jm.shape[2]):
+        #    print("Jm_{}: {}".format(i, Jm[:, :, i]))
+        # Jm = Jm[num_task_vars, num_task_vars, :]
+
+        # # Manipulability Jacobian in matrix form (Mandel notation)
+        # num_vars = len(num_task_vars)
+        Jm_red = np.zeros(((num_task_vars * num_task_vars + num_task_vars) / 2, np.sum(num_dofs)))
+        # print("Jm_red.shape: {}".format(Jm_red.shape))
+
+        for i in range(Jm.shape[2]):
+            Jm_red[:, i] = symmetric_matrix_to_vector(Jm[0:num_task_vars, 0:num_task_vars, i])
+
+        return Jm_red
+
     def hard_priorities(self, jacobians, task_velocities, method='backtrack'):
         r"""
         Return dq.
@@ -2011,7 +2325,7 @@ class Robot(ControllableBody):
         Args:
             jacobians:
             task_velocities:
-            methods: 'successive', 'augmented', 'backtrack'.
+            method: 'successive', 'augmented', 'backtrack'.
 
         Returns:
 
@@ -2141,7 +2455,7 @@ class Robot(ControllableBody):
         return acc
 
     def get_mass_matrix(self, q=None, q_idx=None):
-        """
+        r"""
         Return the mass/inertia matrix :math:`H(q)`.
 
         Warnings: If the base is floating, it will return a [6+N,6+N] inertia matrix, where N is the number of actuated
@@ -2170,6 +2484,44 @@ class Robot(ControllableBody):
         if q_idx is None:
             return np.array(self.sim.calculate_mass_matrix(self.id, q_aug))
         return np.array(self.sim.calculate_mass_matrix(self.id, q_aug))[q_idx, q_idx]
+
+    def compute_inertia_joint_derivative(self, jacobian):
+        r"""
+        Compute the derivative of the Inertia matrix H(q) wrt joint values q.
+        The computation is based on [1].
+
+        Args:
+            jacobian (np.array[D,N]): Jacobian matrix
+
+        Returns:
+            float[N,N,N]: derivative of the inertia matrix wrt joint values (dH/dq)
+        """
+        nb_rows = jacobian.shape[0]  # task space dim.
+        nb_cols = jacobian.shape[1]  # joint space dim.
+        nb_links = self.num_links
+
+        # initialize variables
+        dHdq = np.zeros((nb_cols, nb_cols, nb_cols))
+        Jlinks = np.zeros((nb_rows, nb_cols, nb_links))
+        dJlink_dq = np.zeros((nb_rows, nb_cols, nb_cols, nb_links))  # 4D array to store derivatives of link Jacobians
+
+        # Compute derivatives for link Jacobians
+        qt = self.get_joint_positions()
+        for linkId in range(nb_links):
+            Jlinks[:, :, linkId] = self.get_jacobian(linkId, qt)[:, 0:nb_cols]  # Jacobian for robot link
+            dJlink_dq[:, :, :, linkId] = self.compute_jacobian_joint_derivative(Jlinks[:, :, linkId])  # Derivative of J
+
+        for n in range(nb_cols):
+            for linkId in range(nb_links):
+                mass_i = self.get_link_masses(linkId)
+                # Create generalized inertia matrix for link
+                Hi = np.diag(self.get_link_local_inertia(linkId))  # Local inertia
+                Mi = np.vstack((np.hstack((mass_i*np.eye(3), mass_i*np.zeros((3, 3)))),
+                                np.hstack((mass_i*np.zeros((3, 3)), Hi))))
+                dHdq[:, :, n] += np.dot(np.dot(dJlink_dq[:, :, n, linkId].T, Mi), Jlinks[:, :, linkId]) + \
+                                 np.dot(np.dot(Jlinks[:, :, linkId].T, Mi), dJlink_dq[:, :, n, linkId])
+
+        return dHdq
 
     @staticmethod
     def get_cartesian_inertia_matrix(H=None, Ja=None):
@@ -2416,7 +2768,7 @@ class Robot(ControllableBody):
         """
         joint_ids = self.joints if q_idx is None else self.joints[q_idx]
         torques = self.get_coriolis_and_gravity_compensation_torques(q, dq, q_idx)
-        self.set_joint_torques(torques=torques + external_torques, joint_ids=joint_ids)
+        self.set_joint_torques(torque=torques + external_torques, joint_ids=joint_ids)
 
     # TODO: finish to implement the method + think about multiple links + think about dimensions
     def get_active_compliant_torques(self, q=None, dq=None, q_idx=None, jacobian=None, link_velocity=None,
@@ -3120,7 +3472,8 @@ class Robot(ControllableBody):
                                          orientation=orientation)
         return ellipsoid
 
-    def get_ellipsoid_orientation_and_scale(self, X):
+    @staticmethod
+    def get_ellipsoid_orientation_and_scale(X):
         # compute evecs and singular values
         _, S, V = np.linalg.svd(X)
 
@@ -3136,7 +3489,7 @@ class Robot(ControllableBody):
 
         # evals, evecs = np.linalg.eigh(X)
         # evals, evecs = evals[::-1], evecs[:,::-1]
-        # S, orientation = np.sqrt(evals), self.angular_converter.convert_from(quaternion.from_rotation_matrix(evecs.T))
+        # S, orientation = np.sqrt(evals), get_quaternion_from_matrix(evecs.T))
         #
         # print(V[0])
         # print(V[1])
@@ -3199,6 +3552,8 @@ class Robot(ControllableBody):
         Warnings: currently, the bullet simulator do not allow to update the scale, only the position and orientation.
         """
         pass
+        # orientation, scale = self.get_ellipsoid_orientation_and_scale(ellipsoid)
+        # position = self.get_link_world_positions(link_id)
         # self.sim.reset_base_pose(ellipsoid_id, position, orientation)
 
     def remove_manipulability_ellipsoid(self, ellipsoid_id):
