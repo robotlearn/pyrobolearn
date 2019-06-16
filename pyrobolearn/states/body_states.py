@@ -52,8 +52,7 @@ class BodyState(State):
                 state is not a combination of states, but is given some :attr:`data`.
             ticks (int): number of ticks to sleep before getting the next state data.
         """
-
-        super(BodyState, self).__init__(window_size=window_size, axis=axis, ticks=ticks)
+        # check given body
         if not isinstance(body, (Body, int, long)):
             raise TypeError("Expecting an instance of Body, or an identifier from the simulator/world, instead got: "
                             "{}".format(type(body)))
@@ -66,6 +65,9 @@ class BodyState(State):
                     raise ValueError("When giving the body identifier, the world need to be given as well.")
             body = Body(world.simulator, body)
         self.body = body
+
+        # initialize parent class
+        super(BodyState, self).__init__(window_size=window_size, axis=axis, ticks=ticks)
 
     @abstractmethod
     def _read(self):

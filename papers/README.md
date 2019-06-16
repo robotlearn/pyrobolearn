@@ -17,6 +17,8 @@ example on how to use the environment defined in `env.py`.
 - a possible `figures` directory containing figures; this can include a picture of the environment, training plots, 
 etc.
 - a possible `meshes` directory containing meshes for the different objects that are present in the environment.
+- a possible `data` folder containing the parameters/hyperparameters of a pre-trained learning model, or collected 
+data that can be used for imitation learning for instance.
 
 
 ### Structure
@@ -39,7 +41,8 @@ ignore.
 
 ### Further notes
 
-- It might be that in the future, this folder will be moved to its own repository.
+- It might be that in the future, this folder will be moved to its own repository, and each paper will have its own 
+repository and will be loaded as submodules recursively (using `git clone --recursive`)
 - I will often focus more on implementing the environments than training the various policies using the different 
 algorithms
 - Any comments, help, pull requests are appreciated. 

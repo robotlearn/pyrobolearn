@@ -170,7 +170,7 @@ elif solver_flag == 1:
 
         # set joint positions
         q = q[qIdx] + dq * dt
-        robot.set_joint_positions(q, joint_idss=joint_ids)
+        robot.set_joint_positions(q, joint_ids=joint_ids)
 
         # step in simulation
         world.step(sleep_dt=dt)
