@@ -9,7 +9,7 @@ import scipy.linalg
 __author__ = "Leonel Rozo"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Leonel Rozo"]
-__license__ = "MIT"
+__license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"

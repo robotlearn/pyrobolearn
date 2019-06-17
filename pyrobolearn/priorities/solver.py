@@ -17,7 +17,7 @@ from pyrobolearn.optimizers.qpsolvers_optimizer import QP
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["OpenSoT (Enrico Mingo Hoffman and Alessio Rocchi)", "Songyan Xin"]
-__license__ = "MIT"
+__license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"

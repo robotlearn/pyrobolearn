@@ -13,7 +13,7 @@ import numpy as np
 __author__ = ["Brian Delhaisse", "Jamie Scollay"]
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse", "Jamie Scollay"]
-__license__ = "MIT"
+__license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"

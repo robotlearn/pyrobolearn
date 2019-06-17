@@ -9,7 +9,7 @@ from pyrobolearn.robots.manipulator import BiManipulatorRobot
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__license__ = "MIT"
+__license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"

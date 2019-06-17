@@ -12,7 +12,7 @@ from pyrobolearn.utils.units import inches_to_meters
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__license__ = "MIT"
+__license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"

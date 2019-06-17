@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 __author__ = ["Songyan Xin", "Brian Delhaisse"]
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Songyan Xin"]
-__license__ = "MIT"
+__license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
