@@ -27,7 +27,7 @@ class LinkAction(RobotAction):
 
     def __init__(self, robot, link_ids=None):
         """
-        Initialize the joint action.
+        Initialize the link action.
 
         Args:
             robot (Robot): robot instance
@@ -62,17 +62,65 @@ class LinkAction(RobotAction):
 class LinkPositionAction(LinkAction):
     r"""Link position action
 
-    Set the link position(s) using IK.
+    Set the position using IK for the specified robot link(s).
     """
 
     def __init__(self, robot, link_ids=None):
+        """
+        Initialize the link position action.
+
+        Args:
+            robot (Robot): robot instance
+            link_ids (int, int[N]): link id or list of link ids
+        """
         super(LinkPositionAction, self).__init__(robot, link_ids)
 
-    def _write(self, data=None):
-        if data is None:
-            self.robot.set_link_positions(self.links, self._data)
-        else:
-            self.robot.set_link_positions(self.links, data)
+    def _write(self, data):
+        """apply the action data on the robot."""
+        self.robot.set_link_positions(self.links, data)
+
+
+class LinkVelocityAction(LinkAction):
+    r"""Link velocity action
+
+    Set the cartesian velocity(ies) for the specified robot link(s).
+    """
+
+    def __init__(self, robot, link_ids=None):
+        """
+        Initialize the link position action.
+
+        Args:
+            robot (Robot): robot instance
+            link_ids (int, int[N]): link id or list of link ids
+        """
+        super(LinkVelocityAction, self).__init__(robot, link_ids)
+
+    def _write(self, data):
+        """apply the action data on the robot."""
+        # self.robot
+        pass
+
+
+class LinkForceAction(LinkAction):
+    r"""Link force action
+
+    Set the cartesian force(s) for the specified robot link(s).
+    """
+    def __init__(self, robot, link_ids=None):
+        """
+        Initialize the link position action.
+
+        Args:
+            robot (Robot): robot instance
+            link_ids (int, int[N]): link id or list of link ids
+        """
+        super(LinkForceAction, self).__init__(robot, link_ids)
+
+    def _write(self, data):
+        """apply the action data on the robot."""
+        # self.robot
+        pass
 
 
 ########################

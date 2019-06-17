@@ -28,9 +28,6 @@ class FixedAction(Action):
     def __init__(self, value):
         super(FixedAction, self).__init__(data=value)
 
-    def _write(self, data=None):
-        pass
-
     def __copy__(self):
         """Return a shallow copy of the action. This can be overridden in the child class."""
         return self.__class__(value=self._data)
@@ -59,7 +56,7 @@ class FunctionalAction(Action):
         self.function = function
         super(FunctionalAction, self).__init__(data=initial_data)
 
-    def _write(self, data=None):
+    def _write(self, data):
         self.data = self.function(data)
 
     def __copy__(self):

@@ -46,9 +46,6 @@ class GymAction(Action):
         # call super constructor
         super(GymAction, self).__init__(data=data, space=space)
 
-    def _write(self, data=None):
-        pass
-
     def __copy__(self):
         """Return a shallow copy of the action. This can be overridden in the child class."""
         return self.__class__(gym_env=self.env)

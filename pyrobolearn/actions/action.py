@@ -441,7 +441,7 @@ class Action(object):
     append = add
     extend = add
 
-    def _write(self, data=None):
+    def _write(self, data):
         pass
 
     def write(self, data=None):
@@ -453,10 +453,16 @@ class Action(object):
         if self.cnt % self.ticks == 0:
 
             if self.has_data():  # write the current action
+                if data is None:
+                    data = self._data
                 self._write(data)
             else:  # read each action
                 if self.actions:
+                    if data is None:
+                        data = [None] * len(self.actions)
                     for action, d in zip(self.actions, data):
+                        if d is None:
+                            d = action._data
                         action._write(d)
 
         self.cnt += 1

@@ -48,6 +48,7 @@ class JointAction(RobotAction):
     #     return len(self.joints)
 
     def bounds(self):
+        """Return the joint limits."""
         return self.robot.get_joint_limits(self.joints)
 
     def __copy__(self):
@@ -80,11 +81,9 @@ class JointPositionAction(JointAction):
         super(JointPositionAction, self).__init__(robot, joint_ids)
         self.data = robot.get_joint_positions(self.joints)
 
-    def _write(self, data=None):
-        if data is None:
-            self.robot.set_joint_positions(self._data, self.joints, kp=self.kp, kd=self.kd, forces=self.max_force)
-        else:
-            self.robot.set_joint_positions(data, self.joints, kp=self.kp, kd=self.kd, forces=self.max_force)
+    def _write(self, data):
+        """apply the action data on the robot."""
+        self.robot.set_joint_positions(data, self.joints, kp=self.kp, kd=self.kd, forces=self.max_force)
 
     def __copy__(self):
         """Return a shallow copy of the action. This can be overridden in the child class."""
@@ -118,11 +117,9 @@ class JointVelocityAction(JointAction):
         super(JointVelocityAction, self).__init__(robot, joint_ids)
         self.data = robot.get_joint_velocities(self.joints)
 
-    def _write(self, data=None):
-        if data is None:
-            self.robot.set_joint_velocities(self._data, self.joints)
-        else:
-            self.robot.set_joint_velocities(data, self.joints)
+    def _write(self, data):
+        """apply the action data on the robot."""
+        self.robot.set_joint_velocities(data, self.joints)
 
 
 class JointPositionAndVelocityAction(JointAction):
@@ -139,13 +136,10 @@ class JointPositionAndVelocityAction(JointAction):
         self.data = np.concatenate((pos, vel))
         self.idx = len(pos)
 
-    def _write(self, data=None):
-        if data is None:
-            self.robot.set_joint_positions(self._data[:self.idx], self.joints, kp=self.kp, kd=self.kd,
-                                           velocities=self._data[self.idx:], forces=self.max_force)
-        else:
-            self.robot.set_joint_positions(data[:self.idx], self.joints, kp=self.kp, kd=self.kd,
-                                           velocities=data[self.idx:], forces=self.max_force)
+    def _write(self, data):
+        """apply the action data on the robot."""
+        self.robot.set_joint_positions(data[:self.idx], self.joints, kp=self.kp, kd=self.kd,
+                                       velocities=data[self.idx:], forces=self.max_force)
 
     def __copy__(self):
         """Return a shallow copy of the action. This can be overridden in the child class."""
@@ -190,12 +184,10 @@ class JointForceAction(JointAction):
         self.f_min = f_min
         self.f_max = f_max
 
-    def _write(self, data=None):
-        if data is None:
-            self.robot.set_joint_torques(self._data, self.joints)
-        else:
-            data = np.clip(data, self.f_min, self.f_max)
-            self.robot.set_joint_torques(data, self.joints)
+    def _write(self, data):
+        """apply the action data on the robot."""
+        data = np.clip(data, self.f_min, self.f_max)
+        self.robot.set_joint_torques(data, self.joints)
 
     def __copy__(self):
         """Return a shallow copy of the action. This can be overridden in the child class."""
@@ -232,12 +224,10 @@ class JointAccelerationAction(JointAction):
         self.a_min = a_min
         self.a_max = a_max
 
-    def _write(self, data=None):
-        if data is None:
-            self.robot.set_joint_accelerations(self._data, self.joints)
-        else:
-            data = np.clip(data, self.a_min, self.a_max)
-            self.robot.set_joint_accelerations(data, self.joints)
+    def _write(self, data):
+        """apply the action data on the robot."""
+        data = np.clip(data, self.a_min, self.a_max)
+        self.robot.set_joint_accelerations(data, self.joints)
 
     def __copy__(self):
         """Return a shallow copy of the action. This can be overridden in the child class."""
