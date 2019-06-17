@@ -1948,7 +1948,7 @@ class Raisim(Simulator):
         pass
 
     def calculate_jacobian(self, body_id, link_id, local_position, q, dq, des_ddq):
-        """
+        r"""
         Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q), J_{ang}(q)]^T`, such that:
 
         .. math:: v = [\dot{p}, \omega]^T = J(q) \dot{q}
@@ -1974,7 +1974,7 @@ class Raisim(Simulator):
         pass
 
     def calculate_mass_matrix(self, body_id, q):
-        """
+        r"""
         Return the mass/inertia matrix :math:`H(q)`, which is used in the rigid-body equation of motion (EoM) in joint
         space given by (see [1]):
 

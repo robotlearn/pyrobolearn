@@ -25,7 +25,7 @@ from pyrobolearn.robots.base import ControllableBody
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__credits__ = ["Brian Delhaisse", "Leonel Rozo"]
+__credits__ = ["Brian Delhaisse", "Leonel Rozo", "Songyan Xin"]
 __license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
@@ -182,7 +182,16 @@ class Robot(ControllableBody):
 
     @property
     def num_dofs(self):
-        """Return the number of degrees of freedom (i.e. the number of joints that are not fixed)"""
+        """Return the number of degrees of freedom (DoFs); that is, if the base is not fixed, 6 (= 3 degrees for
+        translation + 3 degrees for orientation) + the joints that are not fixed.
+        """
+        if self.fixed_base:
+            return len(self.joints)
+        return len(self.joints) + 6
+
+    @property
+    def num_free_joints(self):
+        """Return the number of joints that are not fixed."""
         return len(self.joints)
 
     ########
@@ -304,6 +313,9 @@ class Robot(ControllableBody):
         self.com = self.sim.get_center_of_mass_position(self.id)
         return self.com
 
+    # alias
+    get_com_position = get_center_of_mass_position
+
     def get_center_of_mass_velocity(self):
         """
         Return the center of mass velocity.
@@ -312,6 +324,9 @@ class Robot(ControllableBody):
             np.array[3]: center of mass velocity
         """
         return self.sim.get_center_of_mass_velocity(self.id)
+
+    # alias
+    get_com_velocity = get_center_of_mass_velocity
 
     # def get_linear_momentum(self):
     #     """
@@ -337,28 +352,6 @@ class Robot(ControllableBody):
     #
     #     Returns:
     #         np.array[3]: angular momentum
-    #     """
-    #     pass
-    #
-    # def get_centroidal_dynamics(self, q=None, dq=None):
-    #     """
-    #     Compute the centroidal momentum dynamics based on [1]. "The centroidal momentum of a rigid-body system
-    #     consists of its net linear momentum as well as its net angular momentum about its center of mass (CoM)" [1]
-    #
-    #     Args:
-    #         q (np.array[N], None): joint positions of size N, where N is the total number of DoFs. If None, it will
-    #             get the current joint positions (but note that this could lead to a decrease of performance).
-    #         dq (np.array[M], None): joint velocities of size M (with 0 < M <= N). If None, it will
-    #             get the current joint velocities (but note that this could lead to a decrease of performance).
-    #
-    #     Returns:
-    #         np.array[6, N+6]: centroidal momentum matrix :math:`A_G`
-    #         np.array[6]: the dot product between the derivative of the centroidal momentum matrix with the
-    #             generalized velocities vector. That is, :math:`\dot{A}_G \dot{q}`
-    #
-    #     References:
-    #         [1] "Improved computation of the humanoid centroidal dynamics and application for whole-body control",
-    #             Wensing and Orin, 2016
     #     """
     #     pass
 
@@ -1520,7 +1513,7 @@ class Robot(ControllableBody):
             link_ids = list(range(self.num_links))
         return np.array([self.sim.get_dynamics_info(self.id, link)[2] for link in link_ids])
 
-    def set_link_positions(self, link_ids, position, orientation=None):
+    def set_link_positions(self, link_ids, positions, orientations=None):
         """
         Set the position(s) of the given link(s) using inverse kinematics (IK).
 
@@ -1529,9 +1522,22 @@ class Robot(ControllableBody):
 
         Args:
             link_ids (int, int[N]): link id, or list of desired link ids.
-            position (np.array[3], [np.array[3]], np.array[N,3]):
-            orientation (np.array[4], [np.array[4]], np.array[N,4]):
+            positions (np.array[3], [np.array[3]], np.array[N,3]): desired link position(s).
+            orientations (np.array[4], list of np.array[4], np.array[N,4]): desired link orientation(s) (expressed as
+                quaternions [x,y,z,w])
         """
+        # TODO: think when setting the position of multiple links where some joints are shared (need to use the
+        #  null-space)
+        pass
+
+    def set_link_velocities(self, link_ids, velocities):
+        # TODO: think when setting the position of multiple links where some joints are shared (need to use the
+        #  null-space)
+        pass
+
+    def set_link_forces(self, link_ids, forces):
+        # TODO: think when setting the position of multiple links where some joints are shared (need to use the
+        #  null-space)
         pass
 
     #################
@@ -1869,10 +1875,10 @@ class Robot(ControllableBody):
         robot_mass = 0
 
         # initialize center of mass jacobian: J_com
-        if self.has_fixed_base():
-            Jcom = np.zeros((6, self.num_dofs))
-        else:
-            Jcom = np.zeros((6, self.num_dofs + 6))
+        # if self.has_fixed_base():
+        Jcom = np.zeros((6, self.num_dofs))
+        # else:
+        #     Jcom = np.zeros((6, self.num_dofs + 6))
 
         # calculate the CoM jacobian
         for link_id in range(self.num_links):
@@ -1884,6 +1890,9 @@ class Robot(ControllableBody):
         Jcom /= robot_mass
 
         return Jcom
+
+    # alias
+    get_com_jacobian = get_center_of_mass_jacobian
 
     def get_angular_velocities_from_derivative_rpy(self, rpy_angle, dRPY):
         r"""
@@ -2042,21 +2051,6 @@ class Robot(ControllableBody):
         return np.linalg.inv(self.get_JJT(jacobian))
 
     @staticmethod
-    def compute_dynamic_manipulability_ellipsoid(jacobian, inertia):
-        r"""
-        Compute the dynamic manipulability ellipsoid (matrix) as `M = J(q)H(q)^{-1} (J(q)H(q)^{-1})^T`.
-
-        Args:
-            jacobian (np.array[D,N]): Jacobian matrix
-            inertia (np.array[N,N], np.array[6+N,6+N], np.array[M,M]): inertia matrix in joint space
-
-        Returns:
-            np.array[D,D]: dynamic manipulability
-        """
-        epsilon = jacobian.dot(np.linalg.inv(inertia))
-        return epsilon.dot(epsilon.T)
-
-    @staticmethod
     def in_singular_configuration(jacobian):
         r"""
         Return True if we are in a singular configuration.
@@ -2194,44 +2188,6 @@ class Robot(ControllableBody):
 
         return dq, np.min(S), distance
 
-    def calculate_inverse_differential_kinematics_dynamic_manipulability(self, jacobian, inertia,
-                                                                         target_dynamic_manipulability, Km):
-        """
-        Compute the inverse differential kinematics for dynamic Manipulability; it will return a joint velocity for all
-        the actuated joints.
-
-        Args:
-            jacobian (np.array[D,N]): Jacobian matrix
-            target_dynamic_manipulability (np.array[D,D]): target dynamic manipulability
-            Km (float[,]): Proportional gain for manipulability error
-
-        Returns:
-            np.array[N]: joint velocities
-            float: minimum of eigenvalues of the dynamic manip. Jacobian
-            float: Distance between desired and current manip. ellipsoids
-        """
-        num_task_vars = np.size(target_dynamic_manipulability, 0)
-
-        # Compute manipulability error
-        dynamic_manip = self.compute_dynamic_manipulability_ellipsoid(jacobian, inertia)
-        Me = logarithm_map([target_dynamic_manipulability[0:num_task_vars, 0:num_task_vars]],
-                           dynamic_manip[0:num_task_vars, 0:num_task_vars])[0]
-        # print("Me: {}".format(Me))
-        distance = distance_spd(target_dynamic_manipulability[0:num_task_vars, 0:num_task_vars],
-                                dynamic_manip[0:num_task_vars, 0:num_task_vars])
-        print("SPD dist: {}".format(distance))
-
-        Jm_red = self.compute_dynamic_manipulability_jacobian(jacobian, inertia, num_task_vars)
-        # print("Jm: {}".format(Jm_red))
-
-        # Matrix singularity robustness
-        U, S, Vh = np.linalg.svd(Jm_red)
-        damping = 1E-2 if np.min(S) < 1E-2 else 1E-8
-
-        dq = np.dot(self.get_damped_least_squares_inverse(Jm_red, damping), np.dot(Km, symmetric_matrix_to_vector(Me)))
-
-        return dq, np.min(S), distance
-
     def compute_velocity_manipulability_jacobian(self, jacobian, num_task_vars):
         r"""
         Compute the velocity manipulability Jacobian [1].
@@ -2265,50 +2221,6 @@ class Robot(ControllableBody):
         # Jm = Jm[num_task_vars, num_task_vars, :]
 
         # Manipulability Jacobian in matrix form (Mandel notation)
-        # num_vars = len(num_task_vars)
-        Jm_red = np.zeros(((num_task_vars * num_task_vars + num_task_vars) / 2, np.sum(num_dofs)))
-        # print("Jm_red.shape: {}".format(Jm_red.shape))
-
-        for i in range(Jm.shape[2]):
-            Jm_red[:, i] = symmetric_matrix_to_vector(Jm[0:num_task_vars, 0:num_task_vars, i])
-
-        return Jm_red
-
-    def compute_dynamic_manipulability_jacobian(self, jacobian, inertia, num_task_vars):
-        r"""
-        Compute the dynamic manipulability Jacobian.
-
-        Args:
-            jacobian (np.array[D,N]): Jacobian matrix
-            inertia (np.array[N,N]): inertia matrix
-            num_task_vars (float): number of task variables (usually 3 or 6)
-
-        Returns:
-            np.array[(num_task_vars * num_task_vars + num_task_vars) / 2, N]: manipulability jacobian matrix
-        """
-        num_dofs = jacobian.shape[1]
-
-        # Compute derivative of Jacobian wrt joint angles
-        J_grad = self.compute_jacobian_joint_derivative(jacobian)
-        # Compute derivative of Inertia matrix wrt joint angles
-        H_grad = self.compute_inertia_joint_derivative(jacobian)
-        #
-        L = np.dot(jacobian, np.linalg.inv(inertia))
-
-        # for i in range(J_grad.shape[2]):
-        #    print("dJ/dq_{}: {}".format(i, J_grad[:, :, i]))
-        # for i in range(H_grad.shape[2]):
-        #    print("dH/dq_{}: {}".format(i, H_grad[:, :, i]))
-
-        # Dynamic manipulability Jacobian
-        Lgrad = tensor_matrix_product(J_grad, np.linalg.inv(inertia), 1) - \
-                tensor_matrix_product(tensor_matrix_product(H_grad, L, 0), np.linalg.inv(inertia), 1)
-        Jm = tensor_matrix_product(np.transpose(Lgrad[:, :], [1, 0, 2]), L, 0) + tensor_matrix_product(Lgrad, L, 1)
-        # for i in range(Jm.shape[2]):
-        #    print("Jm_{}: {}".format(i, Jm[:, :, i]))
-        # Jm = Jm[num_task_vars, num_task_vars, :]
-
-        # # Manipulability Jacobian in matrix form (Mandel notation)
         # num_vars = len(num_task_vars)
         Jm_red = np.zeros(((num_task_vars * num_task_vars + num_task_vars) / 2, np.sum(num_dofs)))
         # print("Jm_red.shape: {}".format(Jm_red.shape))
@@ -2472,7 +2384,7 @@ class Robot(ControllableBody):
         if q is None:
             q = self.get_joint_positions()
         else:
-            if len(q) != self.num_dofs:
+            if len(q) != self.num_free_joints:  # self.num_dofs:
                 raise ValueError("All the joint positions need to be given to this method. You can then slice the"
                                  "inertia matrix afterward.")
 
@@ -2484,6 +2396,9 @@ class Robot(ControllableBody):
         if q_idx is None:
             return np.array(self.sim.calculate_mass_matrix(self.id, q_aug))
         return np.array(self.sim.calculate_mass_matrix(self.id, q_aug))[q_idx, q_idx]
+
+    # alias
+    get_inertia_matrix = get_mass_matrix
 
     def compute_inertia_joint_derivative(self, jacobian):
         r"""
@@ -2749,6 +2664,46 @@ class Robot(ControllableBody):
         dq = np.zeros(len(q))
         return self.get_coriolis_and_gravity_compensation_torques(q, dq, q_idx)
 
+    def get_coriolis_torques(self, q=None, dq=None, q_idx=None):
+        r"""
+        Return the torques that need to be applied to the robot joints such that it compensates for Coriolis effects
+        in the absence of gravity, i.e. :math:`\tau = C(q,\dot{q}) \dot{q}`
+
+        From the equations of motion:
+
+        .. math:: H(q) \ddot{q} + C(q,\dot{q}) \dot{q} + g(q) = \tau + J^T(q) F,
+
+        we can see that if we set :math:`F` and :math:`\ddot{q}` to 0, then we have:
+
+        .. math:: \tau_1 = C(q,\dot{q}) \dot{q} + g(q),
+
+        and if additionally, we set :math:`\dot{q}` to 0, then we have:
+
+        .. math:: \tau_2 = g(q).
+
+        We can then get :math:`C(q,\dot{q}) \dot{q} = \tau_1 - \tau_2`.
+
+        Args:
+            q (np.array[N], None): all the joint positions. If None, it will get the current joint positions of all the
+                joints. However, note that if you already got the joint positions in your code,
+                it is better to pass them to this method for performance.
+            dq (np.array[N], None): all the joint velocities. If None, it will get the current joint velocities of
+                all the joints.
+            q_idx (int[M], None): slice the torques at the given q indices (0 < M <= N).
+
+        Returns:
+            np.array[M]: joint torques to be applied [Nm]
+        """
+        if q is None:
+            q = self.get_joint_positions()
+        if dq is None:
+            dq = self.get_joint_velocities()
+
+        tau1 = self.get_coriolis_and_gravity_compensation_torques(q=q, dq=dq, q_idx=q_idx)
+        tau2 = self.get_gravity_compensation_torques(q=q, q_idx=q_idx)
+
+        return tau1 - tau2
+
     def apply_coriolis_and_gravity_compensation(self, q=None, dq=None, q_idx=None, external_torques=0.):
         r"""
         Apply Coriolis and Gravity Compensation; set the torques using torque control.
@@ -2772,7 +2727,7 @@ class Robot(ControllableBody):
 
     # TODO: finish to implement the method + think about multiple links + think about dimensions
     def get_active_compliant_torques(self, q=None, dq=None, q_idx=None, jacobian=None, link_velocity=None,
-                                     link_ids=None, kd=60):
+                                     link_id=None, kd=60):
         r"""
         Return the torques that need to be applied to enable active compliance. This is done by enabling Coriolis
         and gravity compensation along with a damping force projected from the Cartesian space to the joint space.
@@ -2790,6 +2745,8 @@ class Robot(ControllableBody):
             dq (np.array[N], None): all the joint velocities. If None, it will get the current joint velocities of
                 all the joints.
             q_idx (int[M], None): slice the torques at the given q indices (0 < M <= N).
+            jacobian (np.array[6,N], np.array[6,6+N]): Jacobian matrix.
+            link_velocity (np.array[6]): linear and angular velocity of the link in the Cartesian world space
 
         Returns:
             np.array[M]: joint torques to be applied [Nm]
@@ -2822,33 +2779,341 @@ class Robot(ControllableBody):
             dq (np.array[N], None): all the joint velocities. If None, it will get the current joint velocities of
                 all the joints.
             q_idx (int[M], None): slice the torques at the given q indices (0 < M <= N).
+            external_torques (float, np.array[M]): external torques.
         """
         joint_id = self.joints if q_idx is None else self.joints[q_idx]
         torques = self.get_active_compliant_torques(q, dq, q_idx)
-        self.set_joint_torques(joint_id, torques + external_torques)
+        self.set_joint_torques(torques + external_torques, joint_id)
 
-    def get_impedance_torques(self, x=0, dx=0, ddx=0):
+    def get_impedance_torques(self, jacobian, xdes=0, x=0, dx=0, dxdes=0, ddx=0, ddxdes=0, Km=1, Dm=0.01):
         r"""
+        Return the impedance torques.
+
         .. math:: F_{a} = H_m (\ddot{x} - \ddot{x}_d) + D_m (\dot{x} - \dot{x}_d) + K_m (x - x_d)
+
+        Args:
+
+
+        Returns:
+            np.array[N]: impedance torques
+
+        References:
+            [1] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+                http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
         pass
 
-    def apply_task_impedance_control(self):
+    def get_attractor_torques(self, x_des, jacobian, link_id=None, q=None, dq=None, x=None, dx=None, K=5, D=0.1):
         r"""
-        .. math:: F_{a} = H_m (\ddot{x} - \ddot{x}_d) + D_m (\dot{x} - \dot{x}_d) + K_m (x - x_d)
-        """
-        pass
-
-    def get_attractor_torques(self):
-        r"""
-        The torques to be applied are given by:
+        The torques to be applied (using impedance control with an attractor point) are given by:
 
         .. math::  \tau = C(q,\dot{q}) \dot{q} + g(q) + J^T F
 
         where :math:`F = K(x_d - x) - D v` with :math:`x` and :math:`v` are the Cartesian position and velocities,
         and :math:`K` and :math:`D` are the stiffness and damping factor, respectively.
+
+        Args:
+            q (np.array[N]): joint positions
+            dq (np.array[N]): joint velocities
+            x_des (np.array[3]): desired position of the link
+            x (np.array[3]): cartesian world position of the link
+            dx (np.array[3]): cartesian world linear velocity of the link
+            jacobian (np.array[3,N]): linear jacobian associated to the link
+            K (float, np.array[3,3]): proportional gain scalar or matrix
+            D (float, np.array[3,3]): derivative gain scalar or matrix
+
+        Returns:
+            np.array[N]: torques to apply
+
+        References:
+            [1] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+                http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
-        pass
+        # check arguments
+        if q is None:
+            q = self.get_joint_positions()
+        if dq is None:
+            dq = self.get_joint_velocities()
+        if link_id is not None:
+            if x is None:
+                x = self.get_link_world_positions(link_id)
+            if dx is None:
+                dx = self.get_link_world_linear_velocities(link_id)
+            if jacobian is None:
+                jacobian = self.get_jacobian(link_id, q=q)
+
+        # coriolis and gravity torques
+        torques = self.get_coriolis_and_gravity_compensation_torques(q=q, dq=dq)
+
+        # impedance control: attractor point
+        forces = K.dot(x_des - x) - D.dot(dx)
+        torques += jacobian.T.dot(forces)
+
+        return torques
+
+    @staticmethod
+    def compute_dynamic_manipulability_ellipsoid(jacobian, inertia):
+        r"""
+        Compute the dynamic manipulability ellipsoid (matrix) as `M = J(q)H(q)^{-1} (J(q)H(q)^{-1})^T`.
+
+        Args:
+            jacobian (np.array[D,N]): Jacobian matrix
+            inertia (np.array[N,N]): inertia matrix in joint space
+
+        Returns:
+            np.array[D,D]: dynamic manipulability
+        """
+        epsilon = jacobian.dot(np.linalg.inv(inertia))
+        return epsilon.dot(epsilon.T)
+
+    def calculate_inverse_differential_kinematics_dynamic_manipulability(self, jacobian, inertia,
+                                                                         target_dynamic_manipulability, Km):
+        """
+        Compute the inverse differential kinematics for dynamic Manipulability; it will return a joint velocity for all
+        the actuated joints.
+
+        Args:
+            jacobian (np.array[D,N]): Jacobian matrix
+            inertia (np.array[N,N]): inertia matrix
+            target_dynamic_manipulability (np.array[D,D]): target dynamic manipulability
+            Km (float[,]): Proportional gain for manipulability error
+
+        Returns:
+            np.array[N]: joint velocities
+            float: minimum of eigenvalues of the dynamic manip. Jacobian
+            float: Distance between desired and current manip. ellipsoids
+        """
+        num_task_vars = np.size(target_dynamic_manipulability, 0)
+
+        # Compute manipulability error
+        dynamic_manip = self.compute_dynamic_manipulability_ellipsoid(jacobian, inertia)
+        Me = logarithm_map([target_dynamic_manipulability[0:num_task_vars, 0:num_task_vars]],
+                           dynamic_manip[0:num_task_vars, 0:num_task_vars])[0]
+        # print("Me: {}".format(Me))
+        distance = distance_spd(target_dynamic_manipulability[0:num_task_vars, 0:num_task_vars],
+                                dynamic_manip[0:num_task_vars, 0:num_task_vars])
+        print("SPD dist: {}".format(distance))
+
+        Jm_red = self.compute_dynamic_manipulability_jacobian(jacobian, inertia, num_task_vars)
+        # print("Jm: {}".format(Jm_red))
+
+        # Matrix singularity robustness
+        U, S, Vh = np.linalg.svd(Jm_red)
+        damping = 1E-2 if np.min(S) < 1E-2 else 1E-8
+
+        dq = np.dot(self.get_damped_least_squares_inverse(Jm_red, damping), np.dot(Km, symmetric_matrix_to_vector(Me)))
+
+        return dq, np.min(S), distance
+
+    def compute_dynamic_manipulability_jacobian(self, jacobian, inertia, num_task_vars):
+        r"""
+        Compute the dynamic manipulability Jacobian.
+
+        Args:
+            jacobian (np.array[D,N]): Jacobian matrix
+            inertia (np.array[N,N]): inertia matrix
+            num_task_vars (float): number of task variables (usually 3 or 6)
+
+        Returns:
+            np.array[(num_task_vars * num_task_vars + num_task_vars) / 2, N]: manipulability jacobian matrix
+        """
+        num_dofs = jacobian.shape[1]
+
+        # Compute derivative of Jacobian wrt joint angles
+        J_grad = self.compute_jacobian_joint_derivative(jacobian)
+        # Compute derivative of Inertia matrix wrt joint angles
+        H_grad = self.compute_inertia_joint_derivative(jacobian)
+        #
+        L = np.dot(jacobian, np.linalg.inv(inertia))
+
+        # for i in range(J_grad.shape[2]):
+        #    print("dJ/dq_{}: {}".format(i, J_grad[:, :, i]))
+        # for i in range(H_grad.shape[2]):
+        #    print("dH/dq_{}: {}".format(i, H_grad[:, :, i]))
+
+        # Dynamic manipulability Jacobian
+        Lgrad = tensor_matrix_product(J_grad, np.linalg.inv(inertia), 1) - \
+                tensor_matrix_product(tensor_matrix_product(H_grad, L, 0), np.linalg.inv(inertia), 1)
+        Jm = tensor_matrix_product(np.transpose(Lgrad[:, :], [1, 0, 2]), L, 0) + tensor_matrix_product(Lgrad, L, 1)
+        # for i in range(Jm.shape[2]):
+        #    print("Jm_{}: {}".format(i, Jm[:, :, i]))
+        # Jm = Jm[num_task_vars, num_task_vars, :]
+
+        # # Manipulability Jacobian in matrix form (Mandel notation)
+        # num_vars = len(num_task_vars)
+        Jm_red = np.zeros(((num_task_vars * num_task_vars + num_task_vars) / 2, np.sum(num_dofs)))
+        # print("Jm_red.shape: {}".format(Jm_red.shape))
+
+        for i in range(Jm.shape[2]):
+            Jm_red[:, i] = symmetric_matrix_to_vector(Jm[0:num_task_vars, 0:num_task_vars, i])
+
+        return Jm_red
+
+    def get_centroidal_dynamics(self, q=None, dq=None, inertia=None):
+        r"""
+        Compute the centroidal momentum dynamics based on [1]. "The centroidal momentum of a rigid-body system
+        consists of its net linear momentum as well as its net angular momentum about its center of mass (CoM)" [1]
+
+        The centroidal momentum, which is the sum of all body spatial momenta computed with respect to the CoM, is
+        given by:
+
+        .. math:: h_G = A_G \dot{q},
+
+        where :math:`h_G \in \mathbb{R}^6` is the centroidal momentum, :math:`A_G \in \mathbb{R}^{6 \times (n+6)}` is
+        the centroidal momentum matrix (CMM), and :math:`\dot{q}` are the system's generalized velocities. The CMM is
+        related to the joint space inertia matrix (see code). This centroidal momentum collects the system linear and
+        angular momentum together.
+
+        The centroidal dynamics are then given by the equation:
+
+        .. math:: \dot{h}_G = A_G \ddot{q} + \dot{A}_G \dot{q}.
+
+        The centroidal dynamics :math:`\dot{h}_G` are then linked to external forces on the system by:
+
+        .. math:: \dot{h}_G = f_G^{net},
+
+        where :math:`f_G^{net}` is the net external wrench applied on the robot expressed at the CoM. This last term
+        includes for instance the gravity force and ground reaction forces.
+
+        Warnings: this currently does not work with a fixed base.
+
+        Args:
+            q (np.array[N], None): joint positions of size N, where N is the total number of free joints. If None, it
+                will get the current joint positions (but note that this could lead to a decrease of performance).
+            dq (np.array[N], None): joint velocities of size N, where N is the total number of free joints. If None, it
+                will get the current joint velocities (but note that this could lead to a decrease of performance).
+            inertia (np.array[6+N,6+N]): inertia matrix. If None, it will get the current inertia matrix
+                (but note that this could lead to a decrease of performance if you have already computed it).
+
+        Returns:
+            np.array[6, N+6]: the centroidal momentum matrix :math:`A_G`
+            np.array[6]: the centroidal dynamics velocity-dependent bias vector :math:`\dot{A}_G \dot{q}`
+
+        Raises:
+            RuntimeError: if the robot has not a floating base (i.e. it has a fixed base).
+
+        References:
+            [1] "Improved computation of the humanoid centroidal dynamics and application for whole-body control",
+                Wensing and Orin, 2016
+            [2] "Motion Planning and Control of Dynamic Humanoid Locomotion" (PhD thesis: sec 2.1.5 and 3.1.3), Xin,
+                2018
+        """
+        # check if floating base
+        if self.fixed_base:
+            raise RuntimeError("You can not get the centroidal dynamics for a body with a fixed base; need to be a "
+                               "floating base.")
+
+        # get number of DoFs
+        N, n = self.num_dofs, self.num_dofs - 6  # N=n+6
+
+        # check arguments
+        if q is None:
+            q = self.get_joint_positions()  # shape = (N,)
+        if dq is None:
+            dq = self.get_joint_velocities()  # shape = (N,)
+        if inertia is None:
+            inertia = self.get_mass_matrix(q)  # shape = (N,N)
+        H = inertia
+
+        # Coriolis term: C(q, dq) * dq
+        C_dq = self.get_coriolis_torques(q=q, dq=dq)  # shape = (N,)
+
+        # U_1
+        U_1 = np.hstack((np.identity(6), np.zeros((6, n))))  # shape = (6,n+6)
+
+        # R_01(q_1)
+        R_01 = get_matrix_from_quaternion(self.get_base_orientation()).T  # shape = (3,3)
+
+        # Phi_1: this is a matrix transfer generalized velocity of floating base to spatial velocity defined in local
+        # frame
+        Phi_1 = np.vstack((np.hstack((np.zeros((3, 3)), np.identity(3))),
+                           np.hstack((R_01.T, np.zeros((3, 3))))))  # shape = (6,6)
+
+        # Psi_1
+        Psi_1 = np.linalg.inv(Phi_1)  # shape = (6,6)
+
+        # some other computations
+        H11 = U_1.dot(H).dot(U_1.T)  # shape = (6,6)
+        I1C = Psi_1.T.dot(H11).dot(Psi_1)  # shape = (6,6)
+        M = I1C[6 - 1, 6 - 1]
+        p1G = (1.0 / M) * np.array([I1C[3 - 1, 5 - 1], I1C[1 - 1, 6 - 1], I1C[2 - 1, 4 - 1]])  # shape = (3,)
+        X_iG_T = np.vstack((np.hstack((R_01, R_01.dot(skew_matrix(p1G).T))),
+                            np.hstack((np.zeros((3, 3)), R_01))))  # shape = (6,6)
+
+        # compute centroidal momentum matrix and the dot product between the derivative of this centroidal momentum
+        # matrix with the generalized velocities vector
+        A_G = X_iG_T.dot(Psi_1.T).dot(U_1).dot(H)  # shape = (6,n+6)
+        A_Gd_dq = X_iG_T.dot(Psi_1.T).dot(U_1).dot(C_dq)  # shape = (6,)
+
+        return A_G, A_Gd_dq
+
+    def get_centroidal_momentum(self, q=None, dq=None, inertia=None):
+        r"""
+        Return the centroidal momentum which consists of the net linear and angular momentum about the rigid-body's
+        center of mass (CoM). This is thus the sum of all body spatial momenta computed with respect to the CoM,
+        given by:
+
+        .. math:: h_G = A_G \dot{q},
+
+        where :math:`h_G \in \mathbb{R}^6` is the centroidal momentum, :math:`A_G \in \mathbb{R}^{6 \times (n+6)}` is
+        the centroidal momentum matrix (CMM), and :math:`\dot{q}` are the system's generalized velocities. The CMM is
+        related to the joint space inertia matrix (see code). This centroidal momentum collects the system linear and
+        angular momentum together.
+
+        Args:
+            q (np.array[N], None): joint positions of size N, where N is the total number of free joints. If None, it
+                will get the current joint positions (but note that this could lead to a decrease of performance).
+            dq (np.array[N], None): joint velocities of size N, where N is the total number of free joints. If None, it
+                will get the current joint velocities (but note that this could lead to a decrease of performance).
+            inertia (np.array[6+N,6+N]): inertia matrix. If None, it will get the current inertia matrix
+                (but note that this could lead to a decrease of performance if you have already computed it).
+
+        Returns:
+            np.array[6]: the centroidal momentum
+
+        Raises:
+            RuntimeError: if the robot has not a floating base (i.e. it has a fixed base).
+
+        References:
+            [1] "Improved computation of the humanoid centroidal dynamics and application for whole-body control",
+                Wensing and Orin, 2016
+            [2] "Motion Planning and Control of Dynamic Humanoid Locomotion" (PhD thesis: sec 2.1.5 and 3.1.3), Xin,
+                2018
+        """
+        if dq is None:
+            dq = self.get_joint_velocities()  # shape = (N,)
+        A_G, A_Gd_dq = self.get_centroidal_dynamics(q, dq, inertia)
+        return A_G.dot(dq)
+
+    @staticmethod
+    def get_centroidal_momentum_singular_values(A_G):
+        r"""
+        Return the singular values of the centroidal momentum matrix.
+
+        Args:
+            A_G (np.array[6, N+6]): centroidal momentum matrix
+
+        Returns:
+            np.array[6]: singular values
+        """
+        u, s, vh = np.linalg.svd(A_G, full_matrices=True)
+        return s
+
+    @staticmethod
+    def get_centroidal_momentum_orientation_and_scale(A_G):
+        r"""
+        Return the orientation and scale of the centroidal momentum matrix ellipsoid.
+
+        Args:
+            A_G (np.array[6, N+6]): centroidal momentum matrix
+
+        Returns:
+            np.array[4]: orientation (expressed as a quaternion [x,y,z,w])
+            float: scale
+        """
+        u, scale, vh = np.linalg.svd(A_G, full_matrices=True)
+        quaternion = get_quaternion_from_matrix(u)
+        return quaternion, scale
 
     ######################
     # Symbolic Equations #
@@ -3474,6 +3739,16 @@ class Robot(ControllableBody):
 
     @staticmethod
     def get_ellipsoid_orientation_and_scale(X):
+        r"""
+        Get ellipsoid's orientation and scale.
+
+        Args:
+            X (np.array): 2D matrix
+
+        Returns:
+            np.array[4]: orientation (expressed as a quaternion [x,y,z,w])
+            float: scale
+        """
         # compute evecs and singular values
         _, S, V = np.linalg.svd(X)
 
