@@ -5,7 +5,10 @@ Track the velocity manipulability ellipsoid of the center of mass of a particula
 base is fixed.
 
 See Also:
-    - `file.py`: short description
+    - `com_manipulability_tracking_with_balance.py`: in this example, we track the velocity manipulability ellipsoid
+        while keeping the robot balanced.
+    - `com_dynamic_manipulability_tracking_with_balance.py`: in this example, the dynamic manipulability ellipsoid is
+        tracked instead of the velocity one.
 
 References:
     [1] "Robotics: Modelling, Planning and Control" (section 3.9), Siciliano et al., 2010
@@ -14,15 +17,23 @@ References:
 
 from itertools import count
 import numpy as np
+import argparse
 
 from pyrobolearn.simulators import Bullet
 from pyrobolearn.worlds import BasicWorld
 from pyrobolearn.robots import Centauro, Cogimon, Nao, KukaIIWA
 
 
-# select robot to use
-robot_name = 'nao'  # 'kuka_iiwa', 'cogimon', 'centauro'
+# create parser to select the robot to use
+parser = argparse.ArgumentParser()
+parser.add_argument('-r', '--robot', help='the robot to track the velocity manipulability ellipsoid', type=str,
+                    choices=['nao', 'kuka_iiwa', 'cogimon', 'centauro'], default='nao')
+args = parser.parse_args()
+
+# get the robot to use for the example
+robot_name = args.robot
 dt = 0.01
+
 
 # Create simulator and world
 sim = Bullet()
@@ -118,8 +129,9 @@ for i in count():
 
     # Plot current manipulability ellipsoid
     if i % 10 == 0:
-        robot.update_manipulability_ellipsoid(link_id=-1, ellipsoid_id=ellipsoid_id,
-                                              ellipsoid=10 * velocity_manip[:3, :3], color=(0.75, 0.1, 0.1, 0.6))
+        ellipsoid_id = robot.update_manipulability_ellipsoid(link_id=-1, ellipsoid_id=ellipsoid_id,
+                                                             ellipsoid=10 * velocity_manip[:3, :3],
+                                                             color=(0.75, 0.1, 0.1, 0.6))
 
     # Obtaining joint velocity command
     dq = robot.calculate_inverse_differential_kinematics_velocity_manipulability(Jcom, desired_velocity_manip, Km)[0]
