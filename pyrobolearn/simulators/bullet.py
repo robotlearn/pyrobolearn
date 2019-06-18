@@ -361,8 +361,8 @@ class Bullet(Simulator):
                     # reset the camera
                     self.reset_scene_camera(camera=self._camera)
             elif mode == 'rgb' or mode == 'rgba':
-                width, height, view_matrix, projection_matrix = self.sim.get_debug_visualizer()[:4]
-                img = np.array(self.sim.get_camera_image(width, height, view_matrix, projection_matrix)[2])
+                width, height, view_matrix, projection_matrix = self.get_debug_visualizer()[:4]
+                img = np.asarray(self.get_camera_image(width, height, view_matrix, projection_matrix)[2])
                 img = img.reshape(width, height, 4)  # RGBA
                 if mode == 'rgb':
                     return img[:, :, :3]
@@ -439,8 +439,8 @@ class Bullet(Simulator):
         """
         d = self.sim.getPhysicsEngineParameters()
         properties = dict()
-        properties['gravity'] = np.array([d['gravityAccelerationX'], d['gravityAccelerationY'],
-                                          d['gravityAccelerationZ']])
+        properties['gravity'] = np.asarray([d['gravityAccelerationX'], d['gravityAccelerationY'],
+                                            d['gravityAccelerationZ']])
         properties['num_solver_iterations'] = d['numSolverIterations']
         properties['use_real_time_simulation'] = d['useRealTimeSimulation']
         properties['num_sub_steps'] = d['numSubSteps']
@@ -1224,7 +1224,7 @@ class Bullet(Simulator):
             np.float[4]: base orientation (quaternion [x,y,z,w])
         """
         pos, orientation = self.sim.getBasePositionAndOrientation(body_id)
-        return np.array(pos), np.array(orientation)
+        return np.asarray(pos), np.asarray(orientation)
 
     def get_base_position(self, body_id):
         """
@@ -1299,7 +1299,7 @@ class Bullet(Simulator):
             np.float[3]: angular velocity of the base in Cartesian world space coordinates
         """
         lin_vel, ang_vel = self.sim.getBaseVelocity(body_id)
-        return np.array(lin_vel), np.array(ang_vel)
+        return np.asarray(lin_vel), np.asarray(ang_vel)
 
     def get_base_linear_velocity(self, body_id):
         """
@@ -1488,9 +1488,9 @@ class Bullet(Simulator):
             [16] int:       parent link index, -1 for base
         """
         info = list(self.sim.getJointInfo(body_id, joint_id))
-        info[13] = np.array(info[13])
-        info[14] = np.array(info[14])
-        info[15] = np.array(info[15])
+        info[13] = np.asarray(info[13])
+        info[14] = np.asarray(info[14])
+        info[15] = np.asarray(info[15])
         return info
 
     def get_joint_state(self, body_id, joint_id):
@@ -1511,7 +1511,7 @@ class Bullet(Simulator):
                 is exactly what you provide, so there is no need to report it separately.
         """
         pos, vel, forces, torque = self.sim.getJointState(body_id, joint_id)
-        return pos, vel, np.array(forces), torque
+        return pos, vel, np.asarray(forces), torque
 
     def get_joint_states(self, body_id, joint_ids):
         """
@@ -1533,7 +1533,7 @@ class Bullet(Simulator):
         """
         states = self.sim.getJointStates(body_id, joint_ids)
         for idx, state in enumerate(states):
-            states[idx][2] = np.array(state[2])
+            states[idx][2] = np.asarray(state[2])
         return states
 
     def reset_joint_state(self, body_id, joint_id, position, velocity=0.):
@@ -1667,7 +1667,7 @@ class Bullet(Simulator):
         """
         results = self.sim.getLinkState(body_id, link_id, computeLinkVelocity=int(compute_velocity),
                                         computeForwardKinematics=int(compute_forward_kinematics))
-        return [np.array(result) for result in results]
+        return [np.asarray(result) for result in results]
 
     def get_link_states(self, body_id, link_ids, compute_velocity=False, compute_forward_kinematics=False):
         """
@@ -1729,7 +1729,7 @@ class Bullet(Simulator):
         """
         if isinstance(link_ids, int):
             return self.sim.getDynamicsInfo(body_id, link_ids)[0]
-        return np.array([self.sim.getDynamicsInfo(body_id, link_id)[0] for link_id in link_ids])
+        return np.asarray([self.sim.getDynamicsInfo(body_id, link_id)[0] for link_id in link_ids])
 
     def get_link_frames(self, body_id, link_ids):
         pass
@@ -1751,14 +1751,14 @@ class Bullet(Simulator):
         if isinstance(link_ids, int):
             if link_ids == -1:
                 return self.get_base_position(body_id)
-            return np.array(self.sim.getLinkState(body_id, link_ids)[0])
+            return np.asarray(self.sim.getLinkState(body_id, link_ids)[0])
         positions = []
         for link_id in link_ids:
             if link_id == -1:
                 positions.append(self.get_base_position(body_id))
             else:
-                positions.append(np.array(self.sim.getLinkState(body_id, link_id)[0]))
-        return np.array(positions)
+                positions.append(np.asarray(self.sim.getLinkState(body_id, link_id)[0]))
+        return np.asarray(positions)
 
     def get_link_positions(self, body_id, link_ids):
         pass
@@ -1780,14 +1780,14 @@ class Bullet(Simulator):
         if isinstance(link_ids, int):
             if link_ids == -1:
                 return self.get_base_orientation(body_id)
-            return np.array(self.sim.getLinkState(body_id, link_ids)[1])
+            return np.asarray(self.sim.getLinkState(body_id, link_ids)[1])
         orientations = []
         for link_id in link_ids:
             if link_id == -1:
                 orientations.append(self.get_base_orientation(body_id))
             else:
-                orientations.append(np.array(self.sim.getLinkState(body_id, link_id)[1]))
-        return np.array(orientations)
+                orientations.append(np.asarray(self.sim.getLinkState(body_id, link_id)[1]))
+        return np.asarray(orientations)
 
     def get_link_orientations(self, body_id, link_ids):
         pass
@@ -1809,14 +1809,14 @@ class Bullet(Simulator):
         if isinstance(link_ids, int):
             if link_ids == -1:
                 return self.get_base_linear_velocity(body_id)
-            return np.array(self.sim.getLinkState(body_id, link_ids, computeLinkVelocity=1)[6])
+            return np.asarray(self.sim.getLinkState(body_id, link_ids, computeLinkVelocity=1)[6])
         velocities = []
         for link_id in link_ids:
             if link_id == -1:
                 velocities.append(self.get_base_linear_velocity(body_id))
             else:
-                velocities.append(np.array(self.sim.getLinkState(body_id, link_id, computeLinkVelocity=1)[6]))
-        return np.array(velocities)
+                velocities.append(np.asarray(self.sim.getLinkState(body_id, link_id, computeLinkVelocity=1)[6]))
+        return np.asarray(velocities)
 
     def get_link_world_angular_velocities(self, body_id, link_ids):
         """
@@ -1835,14 +1835,14 @@ class Bullet(Simulator):
         if isinstance(link_ids, int):
             if link_ids == -1:
                 return self.get_base_linear_velocity(body_id)
-            return np.array(self.sim.getLinkState(body_id, link_ids, computeLinkVelocity=1)[7])
+            return np.asarray(self.sim.getLinkState(body_id, link_ids, computeLinkVelocity=1)[7])
         velocities = []
         for link_id in link_ids:
             if link_id == -1:
                 velocities.append(self.get_base_linear_velocity(body_id))
             else:
-                velocities.append(np.array(self.sim.getLinkState(body_id, link_id, computeLinkVelocity=1)[7]))
-        return np.array(velocities)
+                velocities.append(np.asarray(self.sim.getLinkState(body_id, link_id, computeLinkVelocity=1)[7]))
+        return np.asarray(velocities)
 
     def get_link_world_velocities(self, body_id, link_ids):
         """
@@ -1864,7 +1864,7 @@ class Bullet(Simulator):
                 lin_vel, ang_vel = self.get_base_velocity(body_id)
                 return np.concatenate((lin_vel, ang_vel))
             lin_vel, ang_vel = self.sim.getLinkState(body_id, link_ids, computeLinkVelocity=1)[6:8]
-            return np.array(lin_vel + ang_vel)
+            return np.asarray(lin_vel + ang_vel)
         velocities = []
         for link_id in link_ids:
             if link_id == -1:  # base link
@@ -1872,7 +1872,7 @@ class Bullet(Simulator):
             else:
                 lin_vel, ang_vel = self.sim.getLinkState(body_id, link_id, computeLinkVelocity=1)[6:8]
             velocities.append(np.concatenate((lin_vel, ang_vel)))
-        return np.array(velocities)
+        return np.asarray(velocities)
 
     def get_link_velocities(self, body_id, link_ids):
         pass
@@ -1893,7 +1893,7 @@ class Bullet(Simulator):
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointInfo(body_id, joint_ids)[3] - 7
-        return np.array([self.sim.getJointInfo(body_id, joint_id)[3] for joint_id in joint_ids]) - 7
+        return np.asarray([self.sim.getJointInfo(body_id, joint_id)[3] for joint_id in joint_ids]) - 7
 
     def get_actuated_joint_ids(self, body_id):
         """
@@ -1985,7 +1985,7 @@ class Bullet(Simulator):
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointInfo(body_id, joint_ids)[6]
-        return np.array([self.sim.getJointInfo(body_id, joint_id)[6] for joint_id in joint_ids])
+        return np.asarray([self.sim.getJointInfo(body_id, joint_id)[6] for joint_id in joint_ids])
 
     def get_joint_frictions(self, body_id, joint_ids):
         """
@@ -2003,7 +2003,7 @@ class Bullet(Simulator):
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointInfo(body_id, joint_ids)[7]
-        return np.array([self.sim.getJointInfo(body_id, joint_id)[7] for joint_id in joint_ids])
+        return np.asarray([self.sim.getJointInfo(body_id, joint_id)[7] for joint_id in joint_ids])
 
     def get_joint_limits(self, body_id, joint_ids):
         """
@@ -2020,8 +2020,8 @@ class Bullet(Simulator):
                 np.float[N,2]: lower and upper limit for each specified joint
         """
         if isinstance(joint_ids, int):
-            return np.array(self.sim.getJointInfo(body_id, joint_ids)[8:10])
-        return np.array([self.sim.getJointInfo(body_id, joint_id)[8:10] for joint_id in joint_ids])
+            return np.asarray(self.sim.getJointInfo(body_id, joint_ids)[8:10])
+        return np.asarray([self.sim.getJointInfo(body_id, joint_id)[8:10] for joint_id in joint_ids])
 
     def get_joint_max_forces(self, body_id, joint_ids):
         """
@@ -2041,7 +2041,7 @@ class Bullet(Simulator):
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointInfo(body_id, joint_ids)[10]
-        return np.array([self.sim.getJointInfo(body_id, joint_id)[10] for joint_id in joint_ids])
+        return np.asarray([self.sim.getJointInfo(body_id, joint_id)[10] for joint_id in joint_ids])
 
     def get_joint_max_velocities(self, body_id, joint_ids):
         """
@@ -2061,7 +2061,7 @@ class Bullet(Simulator):
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointInfo(body_id, joint_ids)[11]
-        return np.array([self.sim.getJointInfo(body_id, joint_id)[11] for joint_id in joint_ids])
+        return np.asarray([self.sim.getJointInfo(body_id, joint_id)[11] for joint_id in joint_ids])
 
     def get_joint_axes(self, body_id, joint_ids):
         """
@@ -2078,8 +2078,8 @@ class Bullet(Simulator):
                 np.float[N,3]: list of joint axis
         """
         if isinstance(joint_ids, int):
-            return np.array(self.sim.getJointInfo(body_id, joint_ids)[-4])
-        return np.array([self.sim.getJointInfo(body_id, joint_id)[-4] for joint_id in joint_ids])
+            return np.asarray(self.sim.getJointInfo(body_id, joint_ids)[-4])
+        return np.asarray([self.sim.getJointInfo(body_id, joint_id)[-4] for joint_id in joint_ids])
 
     def set_joint_positions(self, body_id, joint_ids, positions, velocities=None, kps=None, kds=None, forces=None):
         """
@@ -2113,7 +2113,7 @@ class Bullet(Simulator):
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointState(body_id, joint_ids)[0]
-        return np.array([state[0] for state in self.sim.getJointStates(body_id, joint_ids)])
+        return np.asarray([state[0] for state in self.sim.getJointStates(body_id, joint_ids)])
 
     def set_joint_velocities(self, body_id, joint_ids, velocities, max_force=None):
         """
@@ -2152,7 +2152,7 @@ class Bullet(Simulator):
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointState(body_id, joint_ids)[1]
-        return np.array([state[1] for state in self.sim.getJointStates(body_id, joint_ids)])
+        return np.asarray([state[1] for state in self.sim.getJointStates(body_id, joint_ids)])
 
     def set_joint_accelerations(self, body_id, joint_ids, accelerations, q=None, dq=None):
         """
@@ -2270,7 +2270,7 @@ class Bullet(Simulator):
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointState(body_id, joint_ids)[3]
-        return np.array([state[3] for state in self.sim.getJointStates(body_id, joint_ids)])
+        return np.asarray([state[3] for state in self.sim.getJointStates(body_id, joint_ids)])
 
     def get_joint_reaction_forces(self, body_id, joint_ids):
         """
@@ -2288,8 +2288,8 @@ class Bullet(Simulator):
                 np.float[N,6]: joint reaction forces [N, Nm]
         """
         if isinstance(joint_ids, int):
-            return np.array(self.sim.getJointState(body_id, joint_ids)[2])
-        return np.array([state[2] for state in self.sim.getJointStates(body_id, joint_ids)])
+            return np.asarray(self.sim.getJointState(body_id, joint_ids)[2])
+        return np.asarray([state[2] for state in self.sim.getJointStates(body_id, joint_ids)])
 
     def get_joint_powers(self, body_id, joint_ids):
         """
@@ -2407,9 +2407,9 @@ class Bullet(Simulator):
         shapes = list(self.sim.getVisualShapeData(object_id, flags=flags))
         for idx, shape in enumerate(shapes):
             shapes[idx] = list(shape)
-            shapes[idx][3] = np.array(shape[3])
-            shapes[idx][5] = np.array(shape[5])
-            shapes[idx][6] = np.array(shape[6])
+            shapes[idx][3] = np.asarray(shape[3])
+            shapes[idx][5] = np.asarray(shape[5])
+            shapes[idx][6] = np.asarray(shape[6])
         return shapes
 
     def change_visual_shape(self, object_id, link_id, shape_id=None, texture_id=None, rgba_color=None,
@@ -2472,7 +2472,7 @@ class Bullet(Simulator):
         """
         view = self.sim.computeViewMatrix(cameraEyePosition=eye_position, cameraTargetPosition=target_position,
                                           cameraUpVector=up_vector)
-        return np.array(view).reshape(4, 4).T
+        return np.asarray(view).reshape(4, 4).T
 
     def compute_view_matrix_from_ypr(self, target_position, distance, yaw, pitch, roll, up_axis_index=2):
         """Compute the view matrix from the yaw, pitch, and roll angles.
@@ -2499,7 +2499,7 @@ class Bullet(Simulator):
         view = self.sim.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=target_position, distance=distance,
                                                           yaw=np.rad2deg(yaw), pitch=np.rad2deg(pitch),
                                                           roll=np.rad2deg(roll), upAxisIndex=up_axis_index)
-        return np.array(view).reshape(4, 4).T
+        return np.asarray(view).reshape(4, 4).T
 
     def compute_projection_matrix(self, left, right, bottom, top, near, far):
         """Compute the orthographic projection matrix.
@@ -2529,7 +2529,7 @@ class Bullet(Simulator):
             [2] http://www.thecodecrate.com/opengl-es/opengl-transformation-matrices/
         """
         proj = self.sim.computeProjectionMatrix(left, right, bottom, top, near, far)
-        return np.array(proj).reshape(4, 4).T
+        return np.asarray(proj).reshape(4, 4).T
 
     def compute_projection_matrix_fov(self, fov, aspect, near, far):
         """Compute the perspective projection matrix using the field of view (FOV).
@@ -2548,7 +2548,7 @@ class Bullet(Simulator):
             [2] http://www.thecodecrate.com/opengl-es/opengl-transformation-matrices/
         """
         proj = self.sim.computeProjectionMatrixFOV(fov, aspect, near, far)
-        return np.array(proj).reshape(4, 4).T
+        return np.asarray(proj).reshape(4, 4).T
 
     def get_camera_image(self, width, height, view_matrix=None, projection_matrix=None, light_direction=None,
                          light_color=None, light_distance=None, shadow=None, light_ambient_coeff=None,
@@ -2633,9 +2633,9 @@ class Bullet(Simulator):
             kwargs['flags'] = flags
 
         width, height, rgba, depth, segmentation = self.sim.getCameraImage(width, height, **kwargs)
-        rgba = np.array(rgba).reshape(width, height, 4)
-        depth = np.array(depth).reshape(width, height)
-        segmentation = np.array(segmentation).reshape(width, height)
+        rgba = np.asarray(rgba).reshape(width, height, 4)
+        depth = np.asarray(depth).reshape(width, height)
+        segmentation = np.asarray(segmentation).reshape(width, height)
         return width, height, rgba, depth, segmentation
 
     def get_rgba_image(self, width, height, view_matrix=None, projection_matrix=None, light_direction=None,
@@ -2707,7 +2707,7 @@ class Bullet(Simulator):
         if flags is not None:
             kwargs['flags'] = flags
 
-        img = np.array(self.sim.getCameraImage(width, height, **kwargs)[2])
+        img = np.asarray(self.sim.getCameraImage(width, height, **kwargs)[2])
         img = img.reshape(width, height, 4)  # RGBA
         return img
 
@@ -2784,7 +2784,7 @@ class Bullet(Simulator):
         if flags is not None:
             kwargs['flags'] = flags
 
-        img = np.array(self.sim.getCameraImage(width, height, **kwargs)[3])
+        img = np.asarray(self.sim.getCameraImage(width, height, **kwargs)[3])
         img = img.reshape(width, height)
         return img
 
@@ -2862,7 +2862,7 @@ class Bullet(Simulator):
         if flags is not None:
             kwargs['flags'] = flags
 
-        img = np.array(self.sim.getCameraImage(width, height, **kwargs)[4])
+        img = np.asarray(self.sim.getCameraImage(width, height, **kwargs)[4])
         img = img.reshape(width, height)
         return img
 
@@ -2944,7 +2944,8 @@ class Bullet(Simulator):
         if len(collision) == 0:
             return collision
         object_id, link_id, geom_type, dimensions, filename, position, orientation = collision
-        return object_id, link_id, geom_type, np.array(dimensions), filename, np.array(position), np.array(orientation)
+        return object_id, link_id, geom_type, np.asarray(dimensions), filename, np.asarray(position), \
+               np.asarray(orientation)
 
     def get_overlapping_objects(self, aabb_min, aabb_max):
         """
@@ -2976,7 +2977,7 @@ class Bullet(Simulator):
             np.float[3]: maximum coordinates of the axis aligned bounding box
         """
         aabb_min, aabb_max = self.sim.getAABB(body_id, link_id)
-        return np.array(aabb_min), np.array(aabb_max)
+        return np.asarray(aabb_min), np.asarray(aabb_max)
 
     def get_contact_points(self, body1, body2=None, link1_id=None, link2_id=None):
         """
@@ -3019,8 +3020,8 @@ class Bullet(Simulator):
         results = self.sim.getContactPoints(**kwargs)
         if len(results) == 0:
             return results
-        return [[r[0], r[1], r[2], r[3], r[4], np.array(r[5]), np.array(r[6]), np.array(r[7]), r[8], r[9], r[10],
-                 np.array(r[11]), r[12], np.array(r[13])] for r in results]
+        return [[r[0], r[1], r[2], r[3], r[4], np.asarray(r[5]), np.asarray(r[6]), np.asarray(r[7]), r[8], r[9], r[10],
+                 np.asarray(r[11]), r[12], np.asarray(r[13])] for r in results]
 
     def get_closest_points(self, body1, body2, distance, link1_id=None, link2_id=None):
         """
@@ -3061,8 +3062,8 @@ class Bullet(Simulator):
         results = self.sim.getClosestPoints(body1, body2, distance, **kwargs)
         if len(results) == 0:
             return results
-        return [[r[0], r[1], r[2], r[3], r[4], np.array(r[5]), np.array(r[6]), np.array(r[7]), r[8], r[9], r[10],
-                 np.array(r[11]), r[12], np.array(r[13])] for r in results]
+        return [[r[0], r[1], r[2], r[3], r[4], np.asarray(r[5]), np.asarray(r[6]), np.asarray(r[7]), r[8], r[9], r[10],
+                 np.asarray(r[11]), r[12], np.asarray(r[13])] for r in results]
 
     def ray_test(self, from_position, to_position):
         """
@@ -3085,7 +3086,7 @@ class Bullet(Simulator):
         if isinstance(to_position, np.ndarray):
             to_position = to_position.ravel().tolist()
         collisions = self.sim.rayTest(from_position, to_position)
-        return [[c[0], c[1], c[2], np.array(c[3]), np.array(c[4])] for c in collisions]
+        return [[c[0], c[1], c[2], np.asarray(c[3]), np.asarray(c[4])] for c in collisions]
 
     def ray_test_batch(self, from_positions, to_positions, parent_object_id=None, parent_link_id=None):
         """Perform a batch of raycasts to find the intersection information of the first objects hit.
@@ -3124,7 +3125,7 @@ class Bullet(Simulator):
         results = self.sim.rayTestBatch(from_positions, to_positions, **kwargs)
         if len(results) == 0:
             return results
-        return [[r[0], r[1], r[2], np.array(r[3]), np.array(r[4])] for r in results]
+        return [[r[0], r[1], r[2], np.asarray(r[3]), np.asarray(r[4])] for r in results]
 
     def set_collision_filter_group_mask(self, body_id, link_id, filter_group, filter_mask):
         """
@@ -3180,7 +3181,7 @@ class Bullet(Simulator):
         """
         info = list(self.sim.getDynamicsInfo(body_id, link_id))
         for i in range(2, 5):
-            info[i] = np.array(info[i])
+            info[i] = np.asarray(info[i])
         return info
 
     def change_dynamics(self, body_id, link_id=-1, mass=None, lateral_friction=None, spinning_friction=None,
@@ -3304,7 +3305,7 @@ class Bullet(Simulator):
         """
         if isinstance(q, np.ndarray):
             q = q.ravel().tolist()    # Note that pybullet doesn't accept numpy arrays here
-        return np.array(self.sim.calculateMassMatrix(body_id, q))
+        return np.asarray(self.sim.calculateMassMatrix(body_id, q))
 
     def calculate_inverse_kinematics(self, body_id, link_id, position, orientation=None, lower_limits=None,
                                      upper_limits=None, joint_ranges=None, rest_poses=None, joint_dampings=None,
@@ -3371,7 +3372,7 @@ class Bullet(Simulator):
         if threshold is not None:
             kwargs['residualThreshold'] = threshold
 
-        return np.array(self.sim.calculateInverseKinematics(body_id, link_id, position, **kwargs))
+        return np.asarray(self.sim.calculateInverseKinematics(body_id, link_id, position, **kwargs))
 
     def calculate_inverse_dynamics(self, body_id, q, dq, des_ddq):
         r"""
@@ -3428,7 +3429,7 @@ class Bullet(Simulator):
             des_ddq = des_ddq.ravel().tolist()
 
         # return the joint torques to be applied for the desired joint accelerations
-        return np.array(self.sim.calculateInverseDynamics(body_id, q, dq, des_ddq))
+        return np.asarray(self.sim.calculateInverseDynamics(body_id, q, dq, des_ddq))
 
     def calculate_forward_dynamics(self, body_id, q, dq, torques):
         r"""
@@ -3481,7 +3482,7 @@ class Bullet(Simulator):
             q = q.ravel().tolist()
 
         # compute and return joint accelerations
-        torques = np.array(torques)
+        torques = np.asarray(torques)
         Hinv = np.linalg.inv(self.calculate_mass_matrix(body_id, q))
         C = self.calculate_inverse_dynamics(body_id, q, dq, np.zeros(len(q)))
         acc = Hinv.dot(torques - C)
@@ -3757,13 +3758,13 @@ class Bullet(Simulator):
             horizontal, vertical, yaw, pitch, dist, target = self.sim.getDebugVisualizerCamera()
 
         # convert data to the correct data type
-        view = np.array(view).reshape(4, 4).T
-        proj = np.array(proj).reshape(4, 4).T
-        up_vec = np.array(up_vec)
-        forward_vec = np.array(forward_vec)
-        horizontal = np.array(horizontal)
-        vertical = np.array(vertical)
-        target = np.array(target)
+        view = np.asarray(view).reshape(4, 4).T
+        proj = np.asarray(proj).reshape(4, 4).T
+        up_vec = np.asarray(up_vec)
+        forward_vec = np.asarray(forward_vec)
+        horizontal = np.asarray(horizontal)
+        vertical = np.asarray(vertical)
+        target = np.asarray(target)
         yaw = np.deg2rad(yaw)
         pitch = np.deg2rad(pitch)
 
