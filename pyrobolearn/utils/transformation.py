@@ -47,7 +47,7 @@ def get_homogeneous_transform(position, orientation):
     if isinstance(orientation, quaternion.quaternion):
         R = quaternion.as_rotation_matrix(orientation)
     else:
-        orientation = np.array(orientation)
+        orientation = np.asarray(orientation)
         if orientation.shape == (3,):  # RPY Euler angles
             R = get_matrix_from_rpy(orientation)
         elif orientation.shape == (4,):  # quaternion in the form [x,y,z,w]
@@ -89,6 +89,79 @@ def pose_to_homogeneous(pose):
     pose = np.array(pose).flatten()
     position, orientation = pose[:3], pose[-4:]
     return get_homogeneous_transform(position=position, orientation=orientation)
+
+
+def get_quaternion(orientation, convert_to_quat=False, convention='xyzw'):
+    r"""
+    Return a quaternion from an arbitrary orientation (expressed as a quaternion, rotation matrix, roll-pitch-yaw
+    angles, or an axis-angle).
+
+    Args:
+        orientation (np.array[4], np.array[3,3], np.array[3], tuple of float and np.array[3]): orientation (expressed
+            as a quaternion [x,y,z,w], 3x3 rotation matrix, roll-pitch-yaw angles, or axis-angle).
+        convert_to_quat (bool): If True, it will return an instance of `quaternion.quaternion`. Otherwise, it will
+            return a numpy array.
+        convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
+            'wxyz'.
+
+    Returns:
+        np.array[4], quaternion.quaternion: quaternion.
+    """
+    if isinstance(orientation, quaternion.quaternion):  # quaternion
+        return orientation
+    if isinstance(orientation, tuple) and len(orientation) == 2:  # axis-angle
+        angle, axis = orientation
+        if isinstance(axis, (float, int)) and isinstance(angle, np.ndarray):
+            angle, axis = axis, angle
+        return get_quaternion_from_axis_angle(axis, angle, convert_to_quat, convention)
+    if isinstance(orientation, (np.ndarray, list)):
+        orientation = np.asarray(orientation)
+        if orientation.shape == (3,):  # RPY Euler angles
+            return get_quaternion_from_rpy(orientation, convert_to_quat, convention)
+        if orientation.shape == (4,):  # quaternion
+            if convention == 'wxyz':
+                x, y, z, w = orientation
+                return np.array([w, x, y, z])
+            return orientation
+        if orientation.shape == (3, 3):  # rotation matrix
+            return get_quaternion_from_matrix(orientation, convert_to_quat, convention)
+        raise ValueError("Expecting the shape of the orientation to be (3,), (3,3), or (4,), instead got: "
+                         "{}".format(orientation.shape))
+    raise TypeError("Expecting the given orientation to be a np.ndarray, quaternion, tuple or list, instead got: "
+                    "{}".format(type(orientation)))
+
+
+def get_rotation_matrix(orientation):
+    r"""
+    Return a rotation matrix from an arbitrary orientation (expressed as a quaternion, rotation matrix, roll-pitch-yaw
+    angles, or an axis-angle).
+
+    Args:
+        orientation (np.array[4], np.array[3,3], np.array[3], tuple of float and np.array[3]): orientation (expressed
+            as a quaternion [x,y,z,w], 3x3 rotation matrix, roll-pitch-yaw angles, or axis-angle).
+
+    Returns:
+        np.array[3,3]: rotation matrix.
+    """
+    if isinstance(orientation, quaternion.quaternion):  # quaternion
+        return get_matrix_from_quaternion(orientation)
+    if isinstance(orientation, tuple) and len(orientation) == 2:
+        angle, axis = orientation
+        if isinstance(axis, (float, int)) and isinstance(angle, np.ndarray):
+            angle, axis = axis, angle
+        return get_matrix_from_axis_angle(axis, angle)
+    if isinstance(orientation, (np.ndarray, list)):
+        orientation = np.asarray(orientation)
+        if orientation.shape == (3,):  # RPY Euler angles
+            return get_matrix_from_rpy(orientation)
+        if orientation.shape == (4,):  # quaternion
+            return get_matrix_from_quaternion(orientation)
+        if orientation.shape == (3, 3):  # rotation matrix
+            return orientation
+        raise ValueError("Expecting the shape of the orientation to be (3,), (3,3), or (4,), instead got: "
+                         "{}".format(orientation.shape))
+    raise TypeError("Expecting the given orientation to be a np.ndarray, quaternion, tuple or list, instead got: "
+                    "{}".format(type(orientation)))
 
 
 def get_matrix_from_axis_angle(axis, angle):
@@ -842,6 +915,8 @@ def slerp(q0, qf):
 
     Returns:
 
+    References:
+        [1] "Understanding Quaternions", https://www.3dgep.com/understanding-quaternions
     """
     pass
 
@@ -855,6 +930,8 @@ def squad(quaternions):
 
     Returns:
 
+    References:
+        [1] "Understanding Quaternions", https://www.3dgep.com/understanding-quaternions
     """
     pass
 

@@ -2159,7 +2159,7 @@ class Robot(ControllableBody):
     def calculate_inverse_differential_kinematics_velocity_manipulability(self, jacobian,
                                                                           target_velocity_manipulability, Km):
         r"""
-        Compute the inverse differential kinematics for velocity Manipulability; it will return a joint velocity for
+        Compute the inverse differential kinematics for velocity manipulability; it will return a joint velocity for
         all the actuated joints [1].
 
         Args:
@@ -2876,7 +2876,7 @@ class Robot(ControllableBody):
     def calculate_inverse_differential_kinematics_dynamic_manipulability(self, jacobian, inertia,
                                                                          target_dynamic_manipulability, Km):
         """
-        Compute the inverse differential kinematics for dynamic Manipulability; it will return a joint velocity for all
+        Compute the inverse differential kinematics for dynamic manipulability; it will return a joint velocity for all
         the actuated joints.
 
         Args:
