@@ -77,7 +77,7 @@ class World(object):
         self.camera = WorldCamera(self.simulator)
 
         # keep track of the all the unique ids present in the world
-        # the following dictionary contains {id1: [(method_name, args), [parent_ids], [child_ids]], id2: Body}
+        # the following dictionary contains {id1: [(method_name, kwargs), [parent_ids], [child_ids]], id2: Body}
         # ids like id1 include visual shapes, collision shapes, textures, bodies that were created here
         self.ids = collections.OrderedDict()
         self.bodies = {}  # this contains {id: Body}
@@ -537,7 +537,7 @@ class World(object):
                 for joint_id, position, velocity in zip(body.joints, positions, velocities):
                     self.sim.reset_joint_state(body_id, joint_id, position, velocity)
 
-    def load_urdf(self, filename, position, orientation=(0, 0, 0, 1), fixed_base=False, scale=1.):
+    def load_urdf(self, filename, position, orientation=(0, 0, 0, 1), fixed_base=False, scale=1., return_body=False):
         """
         Load the URDF specified by the given path. This will return the body described in the URDF.
 
@@ -548,51 +548,69 @@ class World(object):
             fixed_base (bool): if the base of the object should be fixed or not
             scale (float): scale factor for the object
             name (str, None): name of the object. If None, it will extract it from the URDF.
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id.
+            int, Body: unique id, or Body
         """
         body = self.sim.load_urdf(filename, position, orientation, use_fixed_base=fixed_base, scale=scale)
         self.bodies[body] = body
         self.ids[body] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        if return_body:
+            return self.wrap(body_id=body, wrapper=Body)
         return body
 
-    def load_sdf(self, filename, scaling=1.):
+    def load_sdf(self, filename, scaling=1., return_body=False):
         """
         Load the given SDF file; this will thus load all the bodies described in a SDF file.
 
         Args:
             filename (str): path to the SDF file
             scaling (float): scale factor for the object
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            list of int: list of unique ids.
+            list of int, list of Body: list of unique ids or bodies
         """
         bodies = self.sim.load_sdf(filename, scaling=scaling)
         self.ids[tuple(bodies)] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        bodies_ = []
         for body in bodies:
             self.bodies[body] = body
-        return bodies
+            if return_body:
+                bodies_.append(self.wrap(body_id=body, wrapper=Body))
+            else:
+                bodies_.append(body)
+        return bodies_
 
-    def load_mjcf(self, filename, scaling=1.):
+    def load_mjcf(self, filename, scaling=1., return_body=False):
         """
         Load the given MJCF file; this will thus load all the object described in a MJCF file.
 
         Args:
             filename (str): path to the MJCF file
             scaling (float): scale factor for the object
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            list of int: list of bodies
+            list of int, list of Body: list of bodies
         """
         bodies = self.sim.load_mjcf(filename, scaling=scaling)
         self.ids[tuple(bodies)] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        bodies_ = []
         for body in bodies:
             self.bodies[body] = body
-        return bodies
+            if return_body:
+                bodies_.append(self.wrap(body_id=body, wrapper=Body))
+            else:
+                bodies_.append(body)
+        return bodies_
 
     def create_body(self, position, visual_shape_id, collision_shape_id=-1, mass=0., orientation=(0., 0., 0., 1.),
-                    *args, **kwargs):
+                    return_body=False, *args, **kwargs):
         """Create a body in the simulator.
 
         Args:
@@ -602,6 +620,8 @@ class World(object):
                 for multiple multibodies (instancing)
             mass (float): mass of the base, in kg (if using SI units)
             orientation (np.float[4]): Orientation of base as quaternion [x,y,z,w]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
             int: non-negative unique id or -1 for failure.
@@ -610,6 +630,8 @@ class World(object):
                                     position=position, orientation=orientation, *args, **kwargs)
         self.bodies[body] = body
         self.ids[body] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        if return_body:
+            return self.wrap(body_id=body, wrapper=Body)
         return body
 
     def get_available_sdfs(self, fullpath=False):
@@ -1225,7 +1247,7 @@ class World(object):
         self.ids[shelf] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return shelf
 
-    def load_visual_sphere(self, position, radius=0.5, color=None):
+    def load_visual_sphere(self, position, radius=0.5, color=None, return_body=False):
         """
         Load a visual sphere in the world (only available in the simulator).
 
@@ -1233,17 +1255,21 @@ class World(object):
             position (float[3]): position of the sphere in Cartesian world space (in meters)
             radius (float): radius of the sphere (in meters)
             color (int[4], None): color of the sphere for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the visual sphere in the world
+            int, Body: unique id of the visual sphere in the world, or the sphere body
         """
         visual_shape = self.sim.create_visual_shape(self.sim.GEOM_SPHERE, radius=radius, rgba_color=color)
         sphere = self.sim.create_body(visual_shape_id=visual_shape, mass=0., position=position)
         self.bodies[sphere] = sphere
         self.ids[sphere] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        if return_body:
+            return self.wrap(body_id=sphere, wrapper=Body, name='sphere'+str(sphere))
         return sphere
 
-    def load_sphere(self, position, mass=1., radius=0.5, color=None):
+    def load_sphere(self, position, mass=1., radius=0.5, color=None, return_body=False):
         """
         Load a sphere in the world (only available in the simulator).
 
@@ -1252,9 +1278,11 @@ class World(object):
             mass (float): mass of the sphere (in kg). If mass = 0, the sphere won't move even if there is a collision.
             radius (float): radius of the sphere (in meters).
             color (int[4], None): color of the sphere for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the sphere in the world
+            int, Body: unique id of the sphere in the world, or the sphere body
         """
         collision_shape = self.sim.create_collision_shape(self.sim.GEOM_SPHERE, radius=radius)
         visual_shape = self.sim.create_visual_shape(self.sim.GEOM_SPHERE, radius=radius, rgba_color=color)
@@ -1264,9 +1292,12 @@ class World(object):
 
         self.bodies[sphere] = sphere
         self.ids[sphere] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        if return_body:
+            return self.wrap(body_id=sphere, wrapper=Body, name='sphere'+str(sphere))
         return sphere
 
-    def load_visual_box(self, position, orientation=(0, 0, 0, 1), dimensions=(1., 1., 1.), color=None):
+    def load_visual_box(self, position, orientation=(0, 0, 0, 1), dimensions=(1., 1., 1.), color=None,
+                        return_body=False):
         """
         Load a visual box in the world (only available in the simulator).
 
@@ -1275,20 +1306,25 @@ class World(object):
             orientation (float[4]): orientation of the box using quaternion [x,y,z,w].
             dimensions (float[3]): dimensions of the box
             color (int[4], None): color of the box for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the box in the world
+            int, Body: unique id of the box in the world, or the box body
         """
-        dimensions = np.array(dimensions) / 2.
-        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_BOX, half_extents=dimensions, rgba_color=color)
+        dimensions = np.asarray(dimensions)
+        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_BOX, half_extents=dimensions / 2., rgba_color=color)
 
         box = self.sim.create_body(mass=0., visual_shape_id=visual_shape, position=position, orientation=orientation)
 
         self.bodies[box] = box
         self.ids[box] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        if return_body:
+            return self.wrap(body_id=box, wrapper=Body, name='box'+str(box))
         return box
 
-    def load_box(self, position, orientation=(0, 0, 0, 1), mass=1., dimensions=(1., 1., 1.), color=None):
+    def load_box(self, position, orientation=(0, 0, 0, 1), mass=1., dimensions=(1., 1., 1.), color=None,
+                 return_body=False):
         """
         Load a box in the world (only available in the simulator).
 
@@ -1298,22 +1334,27 @@ class World(object):
             mass (float): mass of the box (in kg). If mass = 0, the box won't move even if there is a collision.
             dimensions (float[3]): dimensions of the box
             color (int[4], None): color of the box for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the box in the world
+            int, Body: unique id of the box in the world, or the box body
         """
-        dimensions = np.array(dimensions) / 2.
-        collision_shape = self.sim.create_collision_shape(self.sim.GEOM_BOX, half_extents=dimensions)
-        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_BOX, half_extents=dimensions, rgba_color=color)
+        dimensions = np.asarray(dimensions)
+        collision_shape = self.sim.create_collision_shape(self.sim.GEOM_BOX, half_extents=dimensions / 2.)
+        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_BOX, half_extents=dimensions / 2., rgba_color=color)
 
         box = self.sim.create_body(mass=mass, collision_shape_id=collision_shape, visual_shape_id=visual_shape,
                                    position=position, orientation=orientation)
 
         self.bodies[box] = box
         self.ids[box] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        if return_body:
+            return self.wrap(body_id=box, wrapper=Body, name='box'+str(box))
         return box
 
-    def load_visual_cylinder(self, position, orientation=(0, 0, 0, 1), radius=0.5, height=1., color=None):
+    def load_visual_cylinder(self, position, orientation=(0, 0, 0, 1), radius=0.5, height=1., color=None,
+                             return_body=False):
         """
         Load a visual cylinder in the world (only available in the simulator).
 
@@ -1323,9 +1364,11 @@ class World(object):
             radius (float): radius of the cylinder (in meters)
             height (float): height of the cylinder (in meters)
             color (int[4], None): color of the cylinder for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the cylinder in the world
+            int, Body: unique id of the cylinder in the world, or the cylinder body
         """
         visual_shape = self.sim.create_visual_shape(self.sim.GEOM_CYLINDER, radius=radius, length=height,
                                                     rgba_color=color)
@@ -1334,9 +1377,12 @@ class World(object):
                                         orientation=orientation)
         self.bodies[cylinder] = cylinder
         self.ids[cylinder] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        if return_body:
+            return self.wrap(body_id=cylinder, wrapper=Body, name='cylinder'+str(cylinder))
         return cylinder
 
-    def load_cylinder(self, position, orientation=(0, 0, 0, 1), mass=1., radius=0.5, height=1., color=None):
+    def load_cylinder(self, position, orientation=(0, 0, 0, 1), mass=1., radius=0.5, height=1., color=None,
+                      return_body=False):
         """
         Load a cylinder in the world (only available in the simulator).
 
@@ -1347,9 +1393,11 @@ class World(object):
             radius (float): radius of the cylinder (in meters)
             height (float): height of the cylinder (in meters)
             color (int[4], None): color of the cylinder for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the cylinder in the world
+            int, Body: unique id of the cylinder in the world, or the cylinder body
         """
         collision_shape = self.sim.create_collision_shape(self.sim.GEOM_CYLINDER, radius=radius, height=height)
         visual_shape = self.sim.create_visual_shape(self.sim.GEOM_CYLINDER, radius=radius, length=height,
@@ -1360,9 +1408,12 @@ class World(object):
 
         self.bodies[cylinder] = cylinder
         self.ids[cylinder] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        if return_body:
+            return self.wrap(body_id=cylinder, wrapper=Body, name='cylinder'+str(cylinder))
         return cylinder
 
-    def load_visual_capsule(self, position, orientation=(0, 0, 0, 1), radius=0.5, height=1., color=None):
+    def load_visual_capsule(self, position, orientation=(0, 0, 0, 1), radius=0.5, height=1., color=None,
+                            return_body=False):
         """
         Load a visual capsule in the world (only available in the simulator).
 
@@ -1372,21 +1423,25 @@ class World(object):
             radius (float): radius of the capsule (in meters)
             height (float): height of the capsule (in meters)
             color (int[4], None): color of the capsule for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the capsule in the world
+            int, Body: unique id of the capsule in the world, or the capsule body
         """
-        height = height/2.
-        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_CAPSULE, radius=radius, length=height,
+        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_CAPSULE, radius=radius, length=height/2.,
                                                     rgba_color=color)
         capsule = self.sim.create_body(mass=0., visual_shape_id=visual_shape, position=position,
                                        orientation=orientation)
 
         self.bodies[capsule] = capsule
         self.ids[capsule] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        if return_body:
+            return self.wrap(body_id=capsule, wrapper=Body, name='capsule'+str(capsule))
         return capsule
 
-    def load_capsule(self, position, orientation=(0, 0, 0, 1), mass=1., radius=0.5, height=1., color=None):
+    def load_capsule(self, position, orientation=(0, 0, 0, 1), mass=1., radius=0.5, height=1., color=None,
+                     return_body=False):
         """
         Load a capsule in the world (only available in the simulator).
 
@@ -1397,13 +1452,14 @@ class World(object):
             radius (float): radius of the capsule (in meters)
             height (float): height of the capsule (in meters)
             color (int[4], None): color of the capsule for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the capsule in the world
+            int, Body: unique id of the capsule in the world, or the caspule body
         """
-        height = height / 2.
-        collision_shape = self.sim.create_collision_shape(self.sim.GEOM_CAPSULE, radius=radius, height=height)
-        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_CAPSULE, radius=radius, length=height,
+        collision_shape = self.sim.create_collision_shape(self.sim.GEOM_CAPSULE, radius=radius, height=height / 2.)
+        visual_shape = self.sim.create_visual_shape(self.sim.GEOM_CAPSULE, radius=radius, length=height / 2.,
                                                     rgba_color=color)
         
         capsule = self.sim.create_body(mass=mass, collision_shape_id=collision_shape, visual_shape_id=visual_shape,
@@ -1411,9 +1467,12 @@ class World(object):
 
         self.bodies[capsule] = capsule
         self.ids[capsule] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        if return_body:
+            return self.wrap(body_id=capsule, wrapper=Body, name='capsule'+str(capsule))
         return capsule
 
-    def load_visual_mesh(self, filename, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None):
+    def load_visual_mesh(self, filename, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None,
+                         return_body=False):
         """
         Load a visual mesh in the world (only available in the simulator).
 
@@ -1424,18 +1483,22 @@ class World(object):
             orientation (float[4]): orientation of the mesh using quaternion [x,y,z,w].
             scale (float[3]): scale the mesh in the (x,y,z) directions
             color (int[4], None): color of the mesh for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the mesh in the world
+            int, Body: unique id of the mesh in the world, or the mesh body
         """
         mesh = self.sim.load_mesh(filename, position, orientation, mass=0., scale=scale, color=color,
                                   with_collision=False)
         self.bodies[mesh] = mesh
         self.ids[mesh] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        if return_body:
+            return self.wrap(body_id=mesh, wrapper=Body, name='mesh'+str(mesh))
         return mesh
 
     def load_mesh(self, filename, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None,
-                  flags=None):
+                  flags=None, return_body=False):
         """
         Load a mesh in the world (only available in the simulator).
 
@@ -1449,14 +1512,18 @@ class World(object):
             color (int[4], None): color of the mesh for red, green, blue, and alpha, each in range [0,1]
             flags (int, None): if flag = `sim.GEOM_FORCE_CONCAVE_TRIMESH` (=1), this will create a concave static
                 triangle mesh. This should not be used with dynamic/moving bodies, only for static (mass=0) terrain.
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+            unique id.
 
         Returns:
-            int: unique id of the mesh in the world
+            int, Body: unique id of the mesh in the world, or the mesh body
         """
         mesh = self.sim.load_mesh(filename, position, orientation, mass, scale, color, with_collision=True,
                                   flags=flags)
         self.bodies[mesh] = mesh
         self.ids[mesh] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        if return_body:
+            return self.wrap(body_id=mesh, wrapper=Body, name='mesh'+str(mesh))
         return mesh
 
     # The following commented code does not work currently because URDF_GEOM_PLANE is not set in Bullet
@@ -1511,7 +1578,7 @@ class World(object):
     #     return plane
 
     # Temporary because the code above doesn't work
-    def load_plane(self, position=(0., 0., 0.), orientation=(0., 0., 0., 1.), scale=1.):
+    def load_plane(self, position=(0., 0., 0.), orientation=(0., 0., 0., 1.), scale=1., return_body=False):
         """
         Load a plane in the world (only available in the simulator)
 
@@ -1519,16 +1586,21 @@ class World(object):
             position (float[3]): position of the plane
             orientation (float[4]): orientation of the plane
             scale (float): scale factor of the plane
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the plane
+            int, Body: unique id of the plane, or body instance
         """
         plane = self.sim.load_urdf('plane.urdf', position, orientation, use_fixed_base=True, scale=scale)
         self.bodies[plane] = plane
         self.ids[plane] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
+        if return_body:
+            return self.wrap(body_id=plane, wrapper=Body, name='plane'+str(plane))
         return plane
 
-    def load_visual_ellipsoid(self, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None):
+    def load_visual_ellipsoid(self, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None,
+                              return_body=False):
         """
         Load a visual ellipsoid (using a mesh) in the world (only available in the simulator).
 
@@ -1537,14 +1609,20 @@ class World(object):
             orientation (float[4]): orientation using quaternion [x,y,z,w].
             scale (float[3]): scale in the (x,y,z) directions
             color (int[4], None): color of the ellipsoid for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the ellipsoid in the world
+            int, body: unique id of the ellipsoid in the world, or body instance
         """
         filename = os.path.dirname(__file__) + '/meshes/ellipsoid.obj'
-        return self.load_visual_mesh(filename, position, orientation, scale=scale, color=color)
+        mesh = self.load_visual_mesh(filename, position, orientation, scale=scale, color=color)
+        if return_body:
+            return self.wrap(body_id=mesh, wrapper=Body, name='ellipsoid'+str(mesh))
+        return mesh
 
-    def load_ellipsoid(self, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None):
+    def load_ellipsoid(self, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None,
+                       return_body=False):
         """
         Load a ellipsoid (using a mesh) in the world (only available in the simulator).
 
@@ -1554,15 +1632,20 @@ class World(object):
             mass (float): mass [kg]
             scale (float[3]): scale in the (x,y,z) directions
             color (int[4], None): color of the ellipsoid for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the ellipsoid in the world
+            int, Body: unique id of the ellipsoid in the world, or body instance
         """
         filename = os.path.dirname(__file__) + '/meshes/ellipsoid.obj'
-        return self.load_mesh(filename, position, orientation, mass=mass, scale=scale, color=color)
+        mesh = self.load_mesh(filename, position, orientation, mass=mass, scale=scale, color=color)
+        if return_body:
+            return self.wrap(body_id=mesh, wrapper=Body, name='ellipsoid'+str(mesh))
+        return mesh
 
     def load_visual_right_triangular_prism(self, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.),
-                                           color=None):
+                                           color=None, return_body=False):
         """
         Load a visual right triangular prism (using a mesh) in the world (only available in the simulator).
 
@@ -1571,15 +1654,20 @@ class World(object):
             orientation (float[4]): orientation using quaternion [x,y,z,w].
             scale (float[3]): scale in the (x,y,z) directions
             color (int[4], None): color of the prism for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the triangular prism in the world
+            int, Body: unique id of the triangular prism in the world, or body instance
         """
         filename = os.path.dirname(__file__) + '/meshes/right_triangular_prism.obj'
-        return self.load_visual_mesh(filename, position, orientation, scale=scale, color=color)
+        mesh = self.load_visual_mesh(filename, position, orientation, scale=scale, color=color)
+        if return_body:
+            return self.wrap(body_id=mesh, wrapper=Body, name='right_triangular_prism'+str(mesh))
+        return mesh
 
     def load_right_triangular_prism(self, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.),
-                                    color=None):
+                                    color=None, return_body=False):
         """
         Load a right triangular prism (using a mesh) in the world (only available in the simulator).
 
@@ -1589,14 +1677,19 @@ class World(object):
             mass (float): mass [kg]
             scale (float[3]): scale in the (x,y,z) directions
             color (int[4], None): color of the prism for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the triangular prism in the world
+            int, Body: unique id of the triangular prism in the world, or body instance
         """
         filename = os.path.dirname(__file__) + '/meshes/right_triangular_prism.obj'
-        return self.load_mesh(filename, position, orientation, mass=mass, scale=scale, color=color)
+        mesh = self.load_mesh(filename, position, orientation, mass=mass, scale=scale, color=color)
+        if return_body:
+            return self.wrap(body_id=mesh, wrapper=Body, name='right_triangular_prism'+str(mesh))
+        return mesh
 
-    def load_visual_cone(self, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None):
+    def load_visual_cone(self, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None, return_body=False):
         """
         Load a visual cone (using a mesh) in the world (only available in the simulator).
 
@@ -1605,14 +1698,19 @@ class World(object):
             orientation (float[4]): orientation using quaternion [x,y,z,w].
             scale (float[3]): scale in the (x,y,z) directions
             color (int[4], None): color of the cone for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the cone in the world
+            int, Body: unique id of the cone in the world, or body instance
         """
         filename = os.path.dirname(__file__) + '/meshes/cone.obj'
-        return self.load_visual_mesh(filename, position, orientation, scale=scale, color=color)
+        mesh = self.load_visual_mesh(filename, position, orientation, scale=scale, color=color)
+        if return_body:
+            return self.wrap(body_id=mesh, wrapper=Body, name='cone'+str(mesh))
+        return mesh
 
-    def load_cone(self, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None):
+    def load_cone(self, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None, return_body=False):
         """
         Load a visual cone (using a mesh) in the world (only available in the simulator).
 
@@ -1622,21 +1720,104 @@ class World(object):
             mass (float): mass [kg]
             scale (float[3]): scale in the (x,y,z) directions
             color (int[4], None): color of the cone for red, green, blue, and alpha, each in range [0,1]
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
 
         Returns:
-            int: unique id of the cone in the world
+            int, Body: unique id of the cone in the world, or body instance
         """
         filename = os.path.dirname(__file__) + '/meshes/cone.obj'
-        return self.load_mesh(filename, position, orientation, mass=mass, scale=scale, color=color)
+        mesh = self.load_mesh(filename, position, orientation, mass=mass, scale=scale, color=color)
+        if return_body:
+            return self.wrap(body_id=mesh, wrapper=Body, name='cone'+str(mesh))
+        return mesh
 
-    def load_visual_arrow(self, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None):
+    def load_visual_arrow(self, position, orientation=(0, 0, 0, 1), scale=(1., 1., 1.), color=None, return_body=False):
         pass
 
-    def load_arrow(self, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None):
+    def load_arrow(self, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None,
+                   return_body=False):
         pass
 
-    def distribute_bodies(self, distributor, bodies):
-        pass
+    # TODO: add an orientation_range
+    def distribute(self, body, size=2, position_range=(-1, 1), return_body=False, *args, **kwargs):
+        r"""
+        Spawn several bodies in the specified range.
+
+        Args:
+            body (int, Body, callable): if int, it is assumed to be the unique id of a body that has been loaded in
+                the world. If callable, it is assumed to be a method of this class (such as `load_box`, `load_sphere`,
+                etc) that will load a body in the world. This method will be called multiple times to load the various
+                bodies in the world.
+            size (int): the total number of bodies to distribute. This takes into account if the given :attr:`body`
+                has already been spawned once (which is the case if type(body) is an int or an instance of Body).
+            position_range (tuple of float, tuple of np.array): range of the uniform distribution interval for the
+                position of each body. The first element is the lower boundary, and the second one the higher boundary
+                of the interval.
+            return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
+                unique id.
+            *args: list of arguments to be given to :attr:`body` if this last one is callable.
+            **kwargs: dictionary of arguments to be given to :attr:`body` if this last one is callable.
+
+        Returns:
+            list of int, list of Body: list of unique ids for each body, or list of bodies
+        """
+        # check size
+        if size < 1:
+            raise ValueError("Expecting the given `size` to be an integer bigger than 0, instead got: {}".format(size))
+
+        # create positions (using uniform distribution)
+        low, high = position_range
+        if isinstance(low, (float, int)) and isinstance(high, (float, int)):
+            positions = np.random.uniform(low=low, high=high, size=(size,))
+        else:
+            if isinstance(low, collections.Iterable):
+                positions = np.random.uniform(low=low, high=high, size=(size, len(low)))
+            else:
+                positions = np.random.uniform(low=low, high=high, size=(size, len(high)))
+
+        # check given body argument
+        bodies = []
+        if self.is_body_id(body):  # unique id
+            body = self.wrap(body, wrapper=Body)
+        elif isinstance(body, Body):  # Body
+            pass
+        elif callable(body) and hasattr(self, body.__name__) and 'position' in inspect.getargspec(body).args:
+            body = body(position=positions[0], *args, **kwargs)
+            body = self.wrap(body, wrapper=Body)
+            positions = positions[1:]
+        else:
+            raise TypeError("Expecting the given `body` to be a unique id (int), an instance of Body, or a method of "
+                            "`World`, instead got: {} (type={})".format(body, type(body)))
+
+        # add first given body
+        if return_body:
+            bodies.append(body)
+        else:
+            bodies.append(body.id)
+
+        # get method and previous arguments
+        method_name, kwargs = self.ids[body.id][0]
+        method = getattr(self, method_name)
+        kwargs = dict(kwargs)
+
+        # distribute the various other bodies  # TODO: check for collisions
+        for position in positions:
+
+            # update new position and create body
+            kwargs['position'] = position
+            body = method(**kwargs)
+
+            if return_body:
+                if not isinstance(body, Body):
+                    body = self.wrap(body, wrapper=Body)
+                bodies.append(body)
+            else:
+                if isinstance(body, Body):
+                    body = body.id
+                bodies.append(body)
+
+        return bodies
 
     def get_dynamics_info(self, body_id, link_id=-1):
         """
