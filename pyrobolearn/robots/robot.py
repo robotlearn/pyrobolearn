@@ -25,7 +25,8 @@ from pyrobolearn.robots.base import ControllableBody
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__credits__ = ["Brian Delhaisse", "Leonel Rozo", "Songyan Xin"]
+__credits__ = ["Brian Delhaisse (general)", "Leonel Rozo (manipulability)",
+               "Noemie Jaquier (manipulability)", "Songyan Xin (centroidal dynamics)"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
@@ -2022,7 +2023,7 @@ class Robot(ControllableBody):
             float: manipulability measure :math:`w(q)`
 
         References:
-            [1] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010, chap 3.5 and 3.9
+            [1] "Robotics: Modelling, Planning and Control" (chap 3.5 and 3.9), Siciliano et al., 2010
         """
         return np.sqrt(np.linalg.det(self.get_JJT(jacobian)))
 
@@ -2035,6 +2036,9 @@ class Robot(ControllableBody):
 
         Returns:
             np.array[D,D]: velocity manipulability
+
+        References:
+            [1] "Robotics: Modelling, Planning and Control" (section 3.9), Siciliano et al., 2010
         """
         return self.get_JJT(jacobian)
 
@@ -2047,6 +2051,9 @@ class Robot(ControllableBody):
 
         Returns:
             np.array[D,D]: force manipulability
+
+        References:
+            [1] "Robotics: Modelling, Planning and Control" (section 3.9), Siciliano et al., 2010
         """
         return np.linalg.inv(self.get_JJT(jacobian))
 
@@ -2067,7 +2074,7 @@ class Robot(ControllableBody):
             bool: True if in a singular configuration
 
         References:
-            [1] "Robotics: Modelling, Planning, and Control" (book), Siciliano et al., 2010, chap 3.3
+            [1] "Robotics: Modelling, Planning, and Control" (chap 3.3), Siciliano et al., 2010
         """
         # TODO: define close to singular configuration using SVD
         J = jacobian
@@ -3782,54 +3789,98 @@ class Robot(ControllableBody):
 
         return orientation, scale
 
-    def draw_velocity_manipulability_ellipsoid(self, link_id, Jlin=None, JJT=None, color=(0, 1, 0, 0.7)):
+    def draw_ellipsoid_from_matrix(self, ellipsoid, position, color=(0, 1, 0, 0.7)):
         r"""
-        evecs of JJ^T = directions
-        singular values of JJ^T = dimensions
+        Draw the manipulability ellipsoid at the specified link position (provided by the link id); the directions of
+        the ellipsoid are given by the eigenvectors of the ellipsoid matrix :math:`evecs(E)` and the dimension scales
+        are given by the singular values of :math:`\sigma(E)` where :math:`E` is the ellipsoid matrix.
+
+        Args:
+            ellipsoid (np.array): ellipsoid matrix (on which SVD will be performed to get the directions
+            position (np.array): cartesian world position to draw the ellipsoid
+            color (tuple of 4 float): RGBA color (each channel is between 0 and 1)
+
+        Returns:
+            int: id of the visual ellipsoid
+        """
+        orientation, scale = self.get_ellipsoid_orientation_and_scale(ellipsoid)
+        return self.draw3d_ellipsoid(position, orientation, scale=scale, color=color)
+
+    def draw_velocity_manipulability_ellipsoid(self, link_id, linear_jacobian=None, JJT=None, color=(0, 1, 0, 0.7)):
+        r"""
+        Draw the velocity manipulability ellipsoid using the linear jacobian; the directions of the ellipsoid are
+        given by the eigenvectors :math:`evecs(JJ^T)` and the dimension scales are given by the singular values of
+        :math:`JJ^T` where :math:`J` is the linear jacobian.
 
         Args:
             link_id (int): link id. This will be used to check where to draw the ellipsoid.
-            J (np.array[3,N], None): linear Jacobian matrix. It doesn't need to be provided if `JJT` is given.
+            linear_jacobian (np.array[3,N], None): linear Jacobian matrix. It doesn't need to be provided if `JJT` is
+                given.
             JJT (np.array[3,3], None): if None, it will compute it using the provided linear Jacobian matrix.
+            color (tuple of 4 float): RGBA color (each channel is between 0 and 1)
+
+        Returns:
+            int: id of the visual ellipsoid
+
+        References:
+            [1] "Robotics: Modelling, Planning and Control" (section 3.9), Siciliano et al., 2010
+        """
+        if JJT is None:
+            if linear_jacobian is None:
+                raise ValueError("Please provide the linear Jacobian matrix")
+            JJT = self.get_JJT(linear_jacobian)
+
+        position = self.get_link_world_positions(link_id)
+        return self.draw_ellipsoid_from_matrix(JJT, position=position, color=color)
+
+    def draw_force_manipulability_ellipsoid(self, link_id, linear_jacobian=None, JJT=None, color=(0, 0, 1, 0.7)):
+        r"""
+        Draw the force manipulability ellipsoid using the linear jacobian; the directions of the ellipsoid are
+        given by the eigenvectors :math:`evecs((JJ^T)^{-1})` and the dimension scales are given by the singular values
+        of :math:`(JJ^T)^{-1}` where :math:`J` is the linear jacobian.
+
+        Kineto-statics duality: direction with good velocity manipulability is obtained a direction along which poor
+        force manipulability is obtained.
+
+        Args:
+            link_id (int): link id. This will be used to check where to draw the ellipsoid.
+            linear_jacobian (np.array[3,N], None): linear Jacobian matrix. It doesn't need to be provided if `JJT` is
+                given.
+            JJT (np.array[3,3], None): if None, it will compute it using the provided linear Jacobian matrix.
+            color (tuple of 4 float): RGBA color (each channel is between 0 and 1)
 
         Returns:
             int: id of the visual ellipsoid
         """
         if JJT is None:
-            if Jlin is None:
+            if linear_jacobian is None:
                 raise ValueError("Please provide the linear Jacobian matrix")
-            JJT = self.get_JJT(Jlin)
+            JJT = self.get_JJT(linear_jacobian)
 
-        orientation, scale = self.get_ellipsoid_orientation_and_scale(JJT)
-
-        # load ellipsoid
         position = self.get_link_world_positions(link_id)
-        self.draw3d_ellipsoid(position, orientation, scale=scale, color=color)
+        return self.draw_ellipsoid_from_matrix(np.linalg.inv(JJT), position=position, color=color)
 
-    def draw_force_manipulability_ellipsoid(self, link_id, J=None, JJT=None):
-        r"""
-        Kineto-statics duality: direction with good velocity manipulability is obtained a direction along which poor
-        force manipulability is obtained.
-
-        ..math:: evecs((JJ^T)^{-1})
-
-        Args:
-            link_id:
-            J:
-            JJT:
-        """
-        pass
-
-    def update_manipulability_ellipsoid(self, link_id, ellipsoid_id):
+    def update_manipulability_ellipsoid(self, link_id, ellipsoid_id, ellipsoid, color=(0, 1, 0, 0.7)):
         """
         Update the position, orientation, and scaling of the given manipulability ellipsoid.
 
         Warnings: currently, the bullet simulator do not allow to update the scale, only the position and orientation.
+
+        Args:
+            link_id (int): link id. This will be used to check where to draw the ellipsoid.
+            ellipsoid_id (int): id of the ellipsoid to update.
+            ellipsoid (np.array): manipulability ellipsoid matrix
+            color (tuple of 4 float): RGBA color (each channel is between 0 and 1)
+
+        Returns:
+            int: id of the new visual ellipsoid
         """
-        pass
         # orientation, scale = self.get_ellipsoid_orientation_and_scale(ellipsoid)
         # position = self.get_link_world_positions(link_id)
         # self.sim.reset_base_pose(ellipsoid_id, position, orientation)
+        self.remove_manipulability_ellipsoid(ellipsoid_id)
+        position = self.get_link_world_positions(link_id)
+        return self.draw_ellipsoid_from_matrix(ellipsoid, position=position, color=color)
 
     def remove_manipulability_ellipsoid(self, ellipsoid_id):
         """

@@ -6,9 +6,9 @@ import numpy as np
 import scipy.linalg
 
 
-__author__ = "Leonel Rozo"
+__author__ = ["Leonel Rozo", "Noemie Jaquier"]
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__credits__ = ["Leonel Rozo"]
+__credits__ = ["Leonel Rozo", "Noemie Jaquier"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
@@ -152,7 +152,7 @@ def distance_spd(S1, S2):
 
 
 def parallel_transport(S1, S2):
-    """
+    r"""
     Parallel transport operation.
 
     Args:
