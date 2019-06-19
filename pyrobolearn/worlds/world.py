@@ -19,6 +19,7 @@ from pyrobolearn.simulators import Simulator
 from pyrobolearn.worlds.world_camera import WorldCamera
 # from pyrobolearn.utils import has_method, has_variable
 from pyrobolearn.robots import Body, Robot, robot_names_to_classes
+from pyrobolearn.utils.transformation import get_quaternion_from_rpy
 # TODO: to install the `gdal` library, run the script `pyrobolearn/scripts/install_gdal.sh`, by default do not
 #  import it
 from pyrobolearn.worlds.utils.heightmaps.diamond_square import diamond_square_heightmap, diamond_square_heightmap_2
@@ -452,7 +453,8 @@ class World(object):
                             'an instance of Robot'.format(type(robot)))
 
         self.bodies[robot.id] = robot
-        self.ids[robot.id] = [robot]
+        # self.ids[robot.id] = [robot]
+        self.ids[robot.id] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
         return robot
 
     def is_body_id(self, body_id):
@@ -952,7 +954,9 @@ class World(object):
             int: unique id of the floor in the world
         """
         # self.floor_id = self.sim.load_urdf('plane100.urdf', use_fixed_base=True, scale=scaling)
-        self.floor_id = self.sim.load_urdf('plane.urdf', use_fixed_base=True, scale=scaling)
+        self.floor_id = self.sim.load_urdf('plane.urdf', position=[0., 0., 0.], use_fixed_base=True, scale=scaling)
+        # distance = self.camera.distance
+        # self.camera.reset(distance=scaling * distance)
         return self.floor_id
 
     def load_terrain(self, heightmap, position=(0., 0., 0.), orientation=(.707, 0, 0, .707), scaling=1.,
@@ -1067,7 +1071,7 @@ class World(object):
         return heightmap
 
     # aliases
-    loadDEM = load_heightmap
+    load_dem = load_heightmap
 
     @staticmethod
     def generate_heightmap(algo=2, filename=None, width=256, height=256, n=8, min_height=0, max_height=255, noise=0,
@@ -1739,8 +1743,9 @@ class World(object):
                    return_body=False):
         pass
 
-    # TODO: add an orientation_range
-    def distribute(self, body, size=2, position_range=(-1, 1), return_body=False, *args, **kwargs):
+    # TODO: check collisions when distributing the various bodies (need to know the dimensions)
+    def distribute(self, body, size=2, position_range=(-1, 1), rpy_range=(0, 0), return_body=False, *args,
+                   **kwargs):
         r"""
         Spawn several bodies in the specified range.
 
@@ -1754,6 +1759,9 @@ class World(object):
             position_range (tuple of float, tuple of np.array): range of the uniform distribution interval for the
                 position of each body. The first element is the lower boundary, and the second one the higher boundary
                 of the interval.
+            rpy_range (tuple of float, tuple of np.array): range of the uniform distribution interval for the
+                orientation (expressed as roll-pitch-yaw angles) of each body. The first element is the lower boundary,
+                and the second one the higher boundary of the interval.
             return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
                 unique id.
             *args: list of arguments to be given to :attr:`body` if this last one is callable.
@@ -1776,6 +1784,10 @@ class World(object):
             else:
                 positions = np.random.uniform(low=low, high=high, size=(size, len(high)))
 
+        # create orientations (using uniform distribution)
+        low, high = rpy_range
+        rpys = np.random.uniform(low=low, high=high, size=(size, 3))
+
         # check given body argument
         bodies = []
         if self.is_body_id(body):  # unique id
@@ -1783,9 +1795,10 @@ class World(object):
         elif isinstance(body, Body):  # Body
             pass
         elif callable(body) and hasattr(self, body.__name__) and 'position' in inspect.getargspec(body).args:
-            body = body(position=positions[0], *args, **kwargs)
-            body = self.wrap(body, wrapper=Body)
-            positions = positions[1:]
+            body = body(position=positions[0], orientation=get_quaternion_from_rpy(rpys[0]), *args, **kwargs)
+            if not isinstance(body, Body):
+                body = self.wrap(body, wrapper=Body)
+            positions, rpys = positions[1:], rpys[1:]
         else:
             raise TypeError("Expecting the given `body` to be a unique id (int), an instance of Body, or a method of "
                             "`World`, instead got: {} (type={})".format(body, type(body)))
@@ -1801,11 +1814,16 @@ class World(object):
         method = getattr(self, method_name)
         kwargs = dict(kwargs)
 
+        if isinstance(body, Robot):  # if robot, get the class
+            if 'robot' in kwargs:
+                kwargs['robot'] = kwargs['robot'].__class__
+
         # distribute the various other bodies  # TODO: check for collisions
-        for position in positions:
+        for position, rpy in zip(positions, rpys):
 
             # update new position and create body
             kwargs['position'] = position
+            kwargs['orientation'] = get_quaternion_from_rpy(rpy)
             body = method(**kwargs)
 
             if return_body:
@@ -1944,10 +1962,10 @@ class DRCWorld(World):
 if __name__ == '__main__':
     import numpy as np
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
 
     # create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

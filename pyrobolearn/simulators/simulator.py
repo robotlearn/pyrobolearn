@@ -184,6 +184,10 @@ class Simulator(object):
         # main camera in the simulator
         self._camera = None
 
+        # default timestep
+        self.default_timestep = 1. / 240
+        self.dt = self.default_timestep
+
         # TODO: this is really bad to have attributes like that... It doesn't generalize well to other simulators...
         # import pybullet
         # for attribute in dir(pybullet):
@@ -213,6 +217,11 @@ class Simulator(object):
     def camera(self):
         """Return the camera (yaw, pitch, distance, target_position) or None."""
         return self._camera
+
+    @property
+    def timestep(self):
+        """Return the simulator time step."""
+        return self.get_time_step()
 
     #############
     # Operators #
@@ -296,6 +305,14 @@ class Simulator(object):
     def hide(self):
         """Hide the GUI."""
         self.render(False)
+
+    def get_time_step(self):
+        """Get the time step in the simulator.
+
+        Returns:
+            float: time step in the simulator
+        """
+        pass
 
     def set_time_step(self, time_step):
         """Set the time step in the simulator.

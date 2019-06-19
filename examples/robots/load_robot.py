@@ -1,33 +1,44 @@
-# This file creates a basic world, load each robot that can be found in the PRL framework
+#!/usr/bin/env python
+"""Load a robot in a basic world.
 
-from pyrobolearn.simulators import BulletSim
-from pyrobolearn.worlds import BasicWorld
-from pyrobolearn.robots import implemented_robots
+You can move in the world using the keyboard and mouse:
+- `ctrl + left click`: rotate the camera
+- `scroll wheel` or `ctrl + right click`: zoom in/out
+- `ctrl + middle click`: move the camera
+- `left click` on an object: if the object has a mass and a collision shape, you can interact with it with the mouse
+- `w`: wireframe (see collision shapes)
+- `g`: show/hide menu
+- `esc`: quit the simulator
+"""
 
-robot_not_working = set(['icub'])
+from itertools import count
+import argparse
 
-print("All the robots (total number of robots = {}): {}".format(len(implemented_robots), implemented_robots))
+import pyrobolearn as prl
+
+
+# get implemented robots
+robots = prl.robots.implemented_robots
+print("All the robots (total number of robots = {}): {}".format(len(robots), robots))
+
+# create parser to select the robot
+parser = argparse.ArgumentParser()
+parser.add_argument('-r', '--robot', help='the robot to load in the world', type=str,
+                    choices=robots, default='hyq2max')
+args = parser.parse_args()
+
 
 # create simulator
-sim = BulletSim()
+sim = prl.simulators.Bullet()
 
 # create basic world with floor and gravity
-world = BasicWorld(sim)
+world = prl.worlds.BasicWorld(sim)
 
-# create one robot at a time
-for i, robot_name in enumerate(implemented_robots):
-    if robot_name not in robot_not_working:
-        # instantiate the given robot
-        robot = world.load_robot(robot_name)
+# load the robot in the world (note that you can create the robot outside the world (not recommended),
+# and then give it to the `world.load_robot` method to let know the world that a robot was loaded)
+robot = world.load_robot(robot=args.robot, position=[0., 0.])
 
-        # print info about the robot
-        print("Robot n{}: {}".format(i+1, robot))
-        # robot.print_info()
-
-        # run for few moments in the world
-        for t in range(250):
-            # run one step and sleep a bit
-            world.step(sleep_dt=1./240)
-
-        # remove the robot from the world
-        world.remove(robot)
+# run simulator
+for _ in count():
+    # perform one step in the world
+    world.step(sleep_dt=1. / 240)

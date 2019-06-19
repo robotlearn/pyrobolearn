@@ -33,7 +33,7 @@ class PSControllerInterface(GameControllerInterface):
         [2] Hardware support: https://inputs.readthedocs.io/en/latest/user/hardwaresupport.html
     """
 
-    def __init__(self, use_thread=False, controller_name='Sony Interactive Entertainment Wireless Controller'):
+    def __init__(self, use_thread=False, sleep_dt=0, verbose=False, controller_name='Sony'):
         # Check if some gamepads are connected to the computer
         gamepads = devices.gamepads
         if len(gamepads) == 0:
@@ -45,6 +45,9 @@ class PSControllerInterface(GameControllerInterface):
             if controller_name in gamepad.name:
                 self.gamepad = gamepad
                 break
+
+        if verbose:
+            print(self.gamepad.name + ' detected.')
 
         if self.gamepad is None:
             raise ValueError("The specified gamepad/controller was not detected.")
@@ -65,7 +68,7 @@ class PSControllerInterface(GameControllerInterface):
         # last updated button
         self.last_updated_button = None
 
-        super(PSControllerInterface, self).__init__(use_thread)
+        super(PSControllerInterface, self).__init__(use_thread=use_thread, sleep_dt=sleep_dt, verbose=verbose)
 
     ##############
     # Properties #
@@ -165,7 +168,7 @@ class PSControllerInterface(GameControllerInterface):
             self.__setitem(event_type, self.map.get(code), state)
 
             # display info
-            if self.verbose:
+            if self.verbose and self.last_updated_button is not None:
                 print("Pushed button {} - state = {}".format(self.last_updated_button,
                                                              self.buttons[self.last_updated_button]))
 
@@ -218,8 +221,9 @@ class PSControllerInterface(GameControllerInterface):
                 self.last_updated_button = 'Dpad'
             elif key == 'LT' or key == 'RT':  # max 1023
                 self.buttons[key] = value / 1023.
-                self.last_updated_button = key
+                # self.last_updated_button = key
         elif event_type == 'Key':
+            print(event_type, key, value)
             self.buttons[key] = value
             self.last_updated_button = key
 
@@ -237,8 +241,8 @@ class PS3ControllerInterface(PSControllerInterface):
         [2] Hardware support: https://inputs.readthedocs.io/en/latest/user/hardwaresupport.html
     """
 
-    def __init__(self, use_thread=False):
-        super(PS3ControllerInterface, self).__init__(use_thread=use_thread,
+    def __init__(self, use_thread=False, sleep_dt=0, verbose=False,):
+        super(PS3ControllerInterface, self).__init__(use_thread=use_thread, sleep_dt=sleep_dt, verbose=verbose,
                                                      controller_name='Sony PLAYSTATION(R)3 Controller')
 
 
@@ -255,15 +259,16 @@ class PS4ControllerInterface(PSControllerInterface):
         [2] Hardware support: https://inputs.readthedocs.io/en/latest/user/hardwaresupport.html
     """
 
-    def __init__(self, use_thread=False):
-        super(PS4ControllerInterface, self).__init__(use_thread=use_thread,
+    def __init__(self, use_thread=False, sleep_dt=0, verbose=False,):
+        super(PS4ControllerInterface, self).__init__(use_thread=use_thread, sleep_dt=sleep_dt, verbose=verbose,
                                                      controller_name='Sony Interactive Entertainment Wireless '
                                                                      'Controller')
 
 
 # Tests
 if __name__ == '__main__':
-    device = devices.gamepads[0]
+    device = devices.gamepads[1]
+    print(device.name)
     while True:
         events = device.read()  # blocking=False) # get_gamepad()
         for event in events:

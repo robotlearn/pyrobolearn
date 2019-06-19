@@ -125,6 +125,10 @@ class Bullet(Simulator):
         # given parameters
         self.kwargs = {'render': render, 'kwargs': kwargs}
 
+        # define default timestep
+        self.default_timestep = 1. / 240
+        self.dt = self.default_timestep
+
         # go through the global variables / attributes defined in pybullet and set them here
         # this includes for instance: JOINT_REVOLUTE, POSITION_CONTROL, etc.
         # for attribute in dir(pybullet):
@@ -159,6 +163,11 @@ class Bullet(Simulator):
     def version(self):
         """Return the version of the simulator in a year-month-day format."""
         return self.sim.getAPIVersion()
+
+    @property
+    def timestep(self):
+        """Return the simulator time step."""
+        return self.dt
 
     #############
     # Operators #
@@ -386,6 +395,14 @@ class Bullet(Simulator):
         # set the render variable (useful when calling the method `is_rendering`)
         self._render = enable
 
+    def get_time_step(self):
+        """Get the time step in the simulator.
+
+        Returns:
+            float: time step in the simulator
+        """
+        return self.get_physics_properties()['fixed_time_step']
+
     def set_time_step(self, time_step):
         """Set the specified time step in the simulator.
 
@@ -401,6 +418,7 @@ class Bullet(Simulator):
             time_step (float): Each time you call 'step' the time step will proceed with 'time_step'.
         """
         # self.history.append(('set_time_step', {'time_step': time_step}))
+        self.dt = time_step
         self.sim.setTimeStep(timeStep=time_step)
 
     def set_real_time(self, enable=True):

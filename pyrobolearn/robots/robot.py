@@ -2182,7 +2182,7 @@ class Robot(ControllableBody):
         Me = logarithm_map([target_velocity_manipulability], velocity_manip[0:num_task_vars, 0:num_task_vars])[0]
         # print("Me: {}".format(Me))
         distance = distance_spd(target_velocity_manipulability, velocity_manip[0:num_task_vars, 0:num_task_vars])
-        # print("SPD dist: {}".format(distance))
+        # print("SPD distance: {}".format(distance))
 
         Jm_red = self.compute_velocity_manipulability_jacobian(jacobian, num_task_vars)
         # print("Jm: {}".format(Jm_red))
@@ -2899,7 +2899,7 @@ class Robot(ControllableBody):
         # print("Me: {}".format(Me))
         distance = distance_spd(target_dynamic_manipulability[0:num_task_vars, 0:num_task_vars],
                                 dynamic_manip[0:num_task_vars, 0:num_task_vars])
-        print("SPD dist: {}".format(distance))
+        print("SPD distance: {}".format(distance))
 
         Jm_red = self.compute_dynamic_manipulability_jacobian(jacobian, inertia, num_task_vars)
         # print("Jm: {}".format(Jm_red))

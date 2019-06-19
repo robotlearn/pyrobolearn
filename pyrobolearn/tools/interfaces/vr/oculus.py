@@ -25,7 +25,7 @@ from pyrobolearn.tools.interfaces.vr import VRInterface
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "GNU GPLv3"
+__license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
@@ -153,7 +153,7 @@ class OculusInterface(VRInterface):
                 # self.worldCamera.add_yaw_pitch(yaw, pitch, radian=False)
                 # print(pitch, yaw)
                 pos = self.world_camera.target_position
-                dist = self.world_camera.dist
+                dist = self.world_camera.distance
             elif name == 'BA': # button A: [touch, button]
                 pass
             elif name == 'BB': # button B: [touch, button]

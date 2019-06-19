@@ -14,3 +14,8 @@ and with collisions) that are movable, fixed, or are moving.
 4. `load_robot.py`: load a robot in a basic world and distribute randomly few objects on the floor.
 5. `load_heightmap.py`: load a terrain from a heightmap (png) and load a robot on it.
 6. `generate_terrain.py`: generate a terrain and distribute randomly few objects on the terrain.
+
+
+#### What to check next?
+
+Check the `pyrobolearn/examples/robots` folder.

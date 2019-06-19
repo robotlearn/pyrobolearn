@@ -1,7 +1,21 @@
 #!/usr/bin/env python
 """Provide the Xbox controller interfaces.
 
-This provides the interfaces for the PlayStation controllers (Xbox 360 and Xbox One) using the `inputs` library.
+This provides the interfaces for the Xbox controllers (Xbox 360 and Xbox One) using the `inputs` library.
+
+Troubleshooting:
+If the Xbox controller is not detected, please install the necessary driver. On Ubuntu 16.04, you can install the
+`xpad` driver by typing the following commands (see [1]):
+
+```bash
+sudo apt-get install git
+sudo apt-get install dkms
+sudo git clone https://github.com/paroj/xpad.git /usr/src/xpad-0.4
+sudo dkms install -m xpad -v 0.4
+```
+
+References:
+    [1] https://askubuntu.com/questions/783587/how-do-i-get-an-xbox-one-controller-to-work-with-16-04-not-steam
 """
 
 try:
@@ -72,6 +86,9 @@ class XboxControllerInterface(GameControllerInterface):
 
         if self.gamepad is None:
             raise ValueError("The specified gamepad/controller was not detected.")
+
+        if verbose:
+            print(self.gamepad.name + ' detected.')
 
         # translation
         buttons = ['BTN_SOUTH', 'BTN_EAST', 'BTN_WEST', 'BTN_NORTH', 'BTN_THUMBL', 'BTN_THUMBR', 'BTN_TL', 'BTN_TR',
@@ -185,7 +202,7 @@ class XboxControllerInterface(GameControllerInterface):
             self.__setitem(event_type, self.map.get(code), state)
 
             # display info
-            if self.verbose:
+            if self.verbose and self.last_updated_button is not None:
                 print("Pushed button {} - state = {}".format(self.last_updated_button,
                                                              self.buttons[self.last_updated_button]))
 
@@ -249,8 +266,9 @@ class Xbox360ControllerInterface(XboxControllerInterface):
 
     """
 
-    def __init__(self, use_thread=False):
-        super(Xbox360ControllerInterface, self).__init__(use_thread=use_thread, controller_name='X-Box 360')
+    def __init__(self, use_thread=False, sleep_dt=0, verbose=False):
+        super(Xbox360ControllerInterface, self).__init__(use_thread=use_thread, sleep_dt=sleep_dt,
+                                                         verbose=verbose, controller_name='X-Box 360')
 
 
 class XboxOneControllerInterface(XboxControllerInterface):
@@ -258,8 +276,9 @@ class XboxOneControllerInterface(XboxControllerInterface):
 
     """
 
-    def __init__(self, use_thread=False):
-        super(XboxOneControllerInterface, self).__init__(use_thread=use_thread, controller_name='X-Box One')
+    def __init__(self, use_thread=False, sleep_dt=0, verbose=False):
+        super(XboxOneControllerInterface, self).__init__(use_thread=use_thread, sleep_dt=sleep_dt,
+                                                         verbose=verbose, controller_name='X-Box One')
 
 
 # Tests

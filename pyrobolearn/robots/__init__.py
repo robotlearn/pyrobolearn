@@ -129,6 +129,9 @@ for s in ['__init__', 'actuators', 'sensors', 'legged_robot', 'manipulator', 'wh
 
 implemented_robots = list(implemented_robots)
 
+# TODO: fix problem with icub
+implemented_robots.remove('icub')
+
 
 # create dictionary that maps robot names to robot classes
 robot_names_to_classes = {}
