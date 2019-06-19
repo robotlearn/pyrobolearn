@@ -7,11 +7,15 @@ Dependencies:
 - `pyrobolearn.simulators`
 """
 
+import sys
 import numpy as np
 
 from pyrobolearn.utils.transformation import get_quaternion_from_matrix, get_rpy_from_matrix, get_rpy_from_quaternion
 from pyrobolearn.simulators import Simulator
 
+# define long for Python 3.x
+if int(sys.version[0]) == 3:
+    long = int
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -168,6 +172,14 @@ class WorldCamera(object):
         return self.sim.get_debug_visualizer()[5]
 
     @property
+    def lateral_vector(self):
+        """
+        Return the lateral axis of the camera (=cross product between forward and up vectors)
+        """
+        up_vector, forward_vector = self.sim.get_debug_visualizer()[4:6]
+        return np.cross(forward_vector, up_vector)
+
+    @property
     def yaw(self):
         """
         Return the yaw angle of the camera in radian
@@ -287,7 +299,6 @@ class WorldCamera(object):
     # Methods #
     ###########
 
-    # alias
     def get_debug_visualizer_camera(self):
         """
         Return all the information provided by the camera.
@@ -577,6 +588,54 @@ class WorldCamera(object):
         """Return the representation string of the object."""
         return self.__class__.__name__
 
+    def print_info(self):
+        """Print information about the camera.
+
+        int: width of the visualizer camera (in pixel)
+            int: height of the visualizer camera (in pixel)
+            np.float[4,4]: view matrix [4,4]
+            np.float[4,4]: perspective projection matrix [4,4]
+            np.float[3]: camera up vector expressed in the Cartesian world space
+            np.float[3]: forward axis of the camera expressed in the Cartesian world space
+            np.float[3]: This is a horizontal vector that can be used to generate rays (for mouse picking or creating
+                a simple ray tracer for example)
+            np.float[3]: This is a vertical vector that can be used to generate rays (for mouse picking or creating a
+                simple ray tracer for example)
+            float: yaw angle (in radians) of the camera, in Cartesian local space coordinates
+            float: pitch angle (in radians) of the camera, in Cartesian local space coordinates
+            float: distance between the camera and the camera target
+            np.float[3]: target of the camera, in Cartesian world space coordinates
+        """
+        info = self.info
+        view_inv = np.linalg.inv(info[2])
+        position = view_inv[:3, 3]
+        orientation = get_quaternion_from_matrix(view_inv[:3, :3])
+        print("\nCamera width and height: {}, {}".format(info[0], info[1]))
+        print("Camera position: {}".format(position))
+        print("Camera orientation (quaternion [x,y,z,w]): {}".format(orientation))
+        print("Camera target position: {}".format(info[11]))
+        print("Camera yaw and pitch angles (deg): {}, {}".format(np.rad2deg(info[8]), np.rad2deg(info[9])))
+        print("Camera distance: {}".format(info[10]))
+        print("Camera forward vector: {}".format(info[5]))
+        print("Camera up vector: {}".format(info[4]))
+
+    def follow(self, body_id, distance=None, yaw=None, pitch=None):
+        """
+        Follow the given body in the simulator with the world camera at the specified distance, yaw and pitch angles.
+
+        Args:
+            body_id (int, long): body to follow with the world camera.
+            distance (float, None): distance (in meter) from the camera and the body position. If None, it will take
+                the current distance.
+            yaw (float, None): camera yaw angle (in radians) left/right. If None, it will take the current yaw angle.
+            pitch (float, None): camera pitch angle (in radians) up/down. If None, it will take the current pitch angle.
+        """
+        if not isinstance(body_id, (int, long)):
+            raise TypeError("Expecting the given 'body_id' to be a unique id (int/long) returned by the simulator, "
+                            "instead got: {}".format(type(body_id)))
+        target_position = self.sim.get_base_position(body_id)
+        self.reset(distance=distance, yaw=yaw, pitch=pitch, target_position=target_position)
+
 
 # Tests
 if __name__ == '__main__':
@@ -619,4 +678,4 @@ if __name__ == '__main__':
 
         # step in the simulator
         sim.step()
-        time.sleep(1./254)
+        time.sleep(1./240)

@@ -394,15 +394,15 @@ class World(object):
         Follow the given body with the world camera at the specified distance, yaw and pitch angles.
 
         Args:
-            body (Body): body to follow with the world camera.
+            body (Body, int, long): body (or body id) to follow with the world camera.
             distance (float, None): distance (in meter) from the camera and the body position. If None, it will take
                 the current distance.
             yaw (float, None): camera yaw angle (in radians) left/right. If None, it will take the current yaw angle.
             pitch (float, None): camera pitch angle (in radians) up/down. If None, it will take the current pitch angle.
         """
-        if not isinstance(body, Body):
-            raise TypeError("Expecting the given body to be an instance of `Body`, instead got: {}".format(type(body)))
-        self.camera.reset(distance=distance, yaw=yaw, pitch=pitch, target_position=body.position)
+        if isinstance(body, Body):
+            body = body.id
+        self.camera.follow(body_id=body, distance=distance, yaw=yaw, pitch=pitch)
 
     def load_robot(self, robot, position=None, orientation=None, fixed_base=None, *args, **kwargs):
         """

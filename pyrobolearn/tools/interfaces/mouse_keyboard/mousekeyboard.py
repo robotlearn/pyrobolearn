@@ -97,7 +97,9 @@ class MouseKeyboardInterface(InputInterface):
         self.mouse_x, self.mouse_y = 0, 0
 
         # define variables for key events
-        self.key_pressed = []
+        self.key_pressed = set([])
+        self.key_down = set([])
+        self.key = Key
 
     ##############
     # Properties #
@@ -151,18 +153,24 @@ class MouseKeyboardInterface(InputInterface):
         events = self.simulator.get_keyboard_events()
 
         # create new list of key pressed
-        self.key_pressed = []
+        self.key_pressed, self.key_down = set([]), set([])
         if Key.shift in events:
-            self.key_pressed.append(Key.shift)
+            self.key_pressed.add(Key.shift)
+            self.key_down.add(Key.shift)
         if Key.alt in events:
-            self.key_pressed.append(Key.alt)
+            self.key_pressed.add(Key.alt)
+            self.key_down.add(Key.alt)
         if Key.ctrl in events:
-            self.key_pressed.append(Key.ctrl)
+            self.key_pressed.add(Key.ctrl)
+            self.key_down.add(Key.ctrl)
 
         # go through each keyboard event
         for key, state in events.items():
-            if state == Key.pressed:  # or state == Key.down:  # the key is pressed or down
-                self.key_pressed.append(key)
+            if state == Key.pressed:  # if the key is pressed
+                self.key_pressed.add(key)
+                self.key_down.add(key)  # a key pressed is also a key down
+            elif state == Key.down:  # if the key is down
+                self.key_down.add(key)
 
     def check_mouse_events(self):
         """Check the mouse events."""
