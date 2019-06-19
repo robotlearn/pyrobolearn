@@ -13,6 +13,56 @@ The framework has been tested with Python 2.7 and Ubuntu 16.04 and 18.04. We als
 
 ## Installation
 
+### Docker
+At the moment the docker is a self contained Ubuntu image with all the libraries installed. When launched we have access to a Python3.6 interpreter and we can import pyrobolearn directly.
+In the future, ROS may be splitted in another container and linked to this one.
+
+1. Install Docker and nvidia-docker
+```bash
+$ sudo apt-get update
+$ sudo apt install apt-transport-https ca-certificates curl software-properties-common
+$ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+$ sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable # you should replace bionic by your version
+$ sudo apt update
+$ sudo apt install docker-ce
+$ sudo systemctl status docker # check that docker is active
+```
+2. Build the image
+```bash
+$ docker build -t pyrobolearn .
+```
+3. Launch
+You can now start the python interpreter with every library already installed
+
+```bash
+$ docker run -p 11311:11311 -v catkin_ws:/pyrobolearn/catkin_ws/ -ti pyrobolearn python3
+```
+
+To open an interactive terminal in the docker image use:
+
+```bash
+$ docker run -p 11311:11311 -v catkin_ws:/pyrobolearn/catkin_ws/ -ti pyrobolearn /bin/bash
+```
+
+4. nvidia-docker
+if the GPU is not recognized in the interpreter, you can install nvidia-docker
+
+```bash
+$ curl -sL https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+$ distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+$ curl -sL https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+$ sudo apt-get update
+$ sudo apt-get install nvidia-docker2
+sudo pkill -SIGHUP dockerd
+```
+
+And use:
+```bash
+$ nvidia-docker run -p 11311:11311 -v catkin_ws:/pyrobolearn/catkin_ws/ -ti pyrobolearn
+```
+
+### Ubuntu
+
 1. First download the `pip` Python package manager and create a virtual environment for Python as described in the following link: https://packaging.python.org/guides/installing-using-pip-and-virtualenv/
 On Ubuntu, you can install `pip` and `virtualenv` by typing in the terminal: 
 
