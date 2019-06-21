@@ -216,7 +216,7 @@ if __name__ == '__main__':
                                    use_depth=use_depth, use_ir=use_ir)
 
     # plotting using matplotlib in interactive mode
-    fig, axes = plt.subplots(1,2)
+    fig, axes = plt.subplots(1, 2)
     plots = [None]*2
     titles = []
     if use_rgb:

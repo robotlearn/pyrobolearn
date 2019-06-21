@@ -55,6 +55,8 @@ class Interface(object):
                                    VR/AR tools, phones, etc. For more info, see the `InputOutputInterface` class.
     """
 
+    use_thread = False
+
     def __init__(self, use_thread=False, sleep_dt=0, verbose=False):
         """
         Initialize the interface.
@@ -71,6 +73,8 @@ class Interface(object):
         self.dt = sleep_dt
         self.data = None
         self.verbose = verbose
+
+        self.stop_thread = False
 
         if self.use_thread:
             self.thread = threading.Thread(target=self._run)
@@ -89,6 +93,8 @@ class Interface(object):
         """
         if self.use_thread:
             while True:
+                if self.stop_thread:  # if the thread should stop
+                    break
                 self.run(*args, **kwargs)
                 time.sleep(self.dt)
         else:
@@ -105,7 +111,8 @@ class Interface(object):
         """
         Stop and close the interface.
         """
-        pass
+        if self.use_thread:
+            self.stop_thread = True
 
     #############
     # Operators #
