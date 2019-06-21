@@ -1,0 +1,5 @@
+# Character Trajectories Data Set
+
+* webpage: https://archive.ics.uci.edu/ml/datasets/Character+Trajectories
+* link to download the dataset: https://archive.ics.uci.edu/ml/machine-learning-databases/character-trajectories/
+                    

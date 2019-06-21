@@ -1,0 +1,7 @@
+# IAM Online Handwriting Database
+
+* webpage: www.fki.inf.unibe.ch/databases/iam-on-line-handwriting-database
+* link to download the dataset: http://www.fki.inf.unibe.ch/databases/iam-on-line-handwriting-database/download-the-iam-on-line-handwriting-database
+
+Note that you need to register in order to download the datasets.
+                    
