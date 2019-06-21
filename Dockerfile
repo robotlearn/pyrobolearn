@@ -159,16 +159,58 @@ RUN mkdir build && cd build && cmake -DBUILD_PYTHON=ON -DPYBIND11_PYTHON_VERSION
 RUN cp build/python/openpose/pyopenpose.cpython-36m-x86_64-linux-gnu.so /usr/local/lib/python3.6/dist-packages/
 ENV OPENPOSE_PATH=/pyrobolearn/openpose/
 
+WORKDIR /pyrobolearn/
+
+# Audio
+RUN apt-get install -y libasound-dev portaudio19-dev libportaudio2 libportaudiocpp0 ffmpeg #libav-tools
+RUN yes | pip3 install pyaudio
+
+# GDAL
+
+RUN apt-get install -y libgdal-dev
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
+ENV C_INCLUDE_PATH=/usr/include/gdal
+RUN apt-get install -y python-gdal
+
+# INSTALL PYROBOLEARN
+RUN git clone https://github.com/robotlearn/pyrobolearn.git
+RUN cd /pyrobolearn/pyrobolearn/ && yes | pip3 install -e .
+
+WORKDIR /pyrobolearn/pyrobolearn/
+
+# gazebo models
+
+RUN apt-get install mercurial
+RUN hg clone https://bitbucket.org/osrf/gazebo_models/
+
+
+# trac ik
+# TODO not found libfcl-dev
+RUN apt-get install -y libccd-dev libccd2 libfcl0.5 libnlopt-dev libnlopt0 libeigen3-dev
+RUN yes | pip3 install nlopt
+RUN yes | pip3 install catkin_pkg
+
+
+RUN cd /pyrobolearn/catkin_ws/ && git clone https://github.com/ros/cmake_modules.git && catkin_make
+
+RUN apt-get install -y ros-melodic-cmake-modules
+ENV CMAKE_PREFIX_PATH /usr/local/share/trac_ik_lib/cmake/;/opt/ros/melodic/share/cmake_modules/cmake/
+RUN git clone https://bitbucket.org/traclabs/trac_ik.git
+RUN cd trac_ik/trac_ik_lib/ && mkdir build && cd build && cmake -Dkdl_parser_DIR=/opt/ros/melodic/share/kdl_parser/cmake/ -Dcmake_modules_DIR=/opt/ros/melodic/share/cmake_modules/cmake/ -DCATKIN_ENABLE_TESTING=FALSE -DPYTHON_VERSION=3.6 .. && make -j`nproc` && make install
+
+RUN apt-get install -y swig
+RUN cd trac_ik/trac_ik_python/ && mkdir build && cd build && cmake -Drospy_DIR=/opt/ros/melodic/share/rospy/cmake/ -Dtrac_ik_lib_DIR=/usr/local/share/trac_ik_lib/cmake/ -Dtf_conversions_DIR=/opt/ros/melodic/share/tf_conversions/cmake/ -DPYTHON_VERSION=3.6 .. && make -j`nproc` && make install
 
 ### Finishing
 
-WORKDIR /pyrobolearn/
+RUN mkdir /pyrobolearn/dev/
+
+VOLUME /pyrobolearn/dev/
+WORKDIR /pyrobolearn/dev/
 
 RUN ldconfig
-RUN cat /proc/driver/nvidia/version && nvcc -V
 RUN printenv
-
-ADD . .
+RUN cat /proc/driver/nvidia/version && nvcc -V
 
 # TODO maybe transform for alpine linux
 
