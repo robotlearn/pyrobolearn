@@ -69,11 +69,11 @@ class Coman(BipedRobot, BiManipulatorRobot):
 # Test
 if __name__ == "__main__":
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)
@@ -91,6 +91,8 @@ if __name__ == "__main__":
     robot.change_transparency()
     # robot.draw_link_coms()
     robot.draw_link_frames()
+    # robot.draw_joint_frames()
+    # robot.draw_joint_axes()
     # robot.draw_bounding_boxes(robot.right_leg[4])
 
     # run simulator

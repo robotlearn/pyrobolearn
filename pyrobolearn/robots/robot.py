@@ -833,31 +833,31 @@ class Robot(ControllableBody):
         # set the joint torques
         self.set_joint_torques(torques, joint_ids)
 
-    def set_joint_torques(self, torque=None, joint_ids=None):
+    def set_joint_torques(self, torques=None, joint_ids=None):
         """
         Set the torque to the given joint(s) (using force/torque control).
 
         Args:
-            torque (float, np.array[N], None): desired torque(s) to apply to the joint(s) [N]. If None, it will apply
+            torques (float, np.array[N], None): desired torque(s) to apply to the joint(s) [N]. If None, it will apply
                 a torque of 0 to the given joint(s).
             joint_ids (int, int[N], None): joint id, or list of joint ids. If None, it will set the joint torques to
                 all (actuated) joints.
         """
         if isinstance(joint_ids, int):
-            if torque is None:
-                torque = 0
+            if torques is None:
+                torques = 0
         else:
             if joint_ids is None:
                 joint_ids = self.joints
             if not isinstance(joint_ids, collections.Iterable):
                 raise TypeError("Expecting jointId to be a tuple, list, or numpy array, got instead "
                                 "{}".format(type(joint_ids)))
-            if torque is None:
-                torque = [0]*len(joint_ids)
-            elif isinstance(torque, (int, float)):
-                torque = [torque]*len(joint_ids)
+            if torques is None:
+                torques = [0] * len(joint_ids)
+            elif isinstance(torques, (int, float)):
+                torques = [torques] * len(joint_ids)
 
-        self.sim.set_joint_motor_control(self.id, joint_ids, self.sim.TORQUE_CONTROL, forces=torque)
+        self.sim.set_joint_motor_control(self.id, joint_ids, self.sim.TORQUE_CONTROL, forces=torques)
 
     def set_joint_motor_control(self, joint_ids, control_mode, **kwargs):
         r"""
@@ -1090,6 +1090,43 @@ class Robot(ControllableBody):
         return self.sim.get_link_states(self.id, link_ids, compute_velocity=compute_link_velocity,
                                         compute_forward_kinematics=compute_forward_kinematics)
 
+    def get_link_local_position(self, link_ids=None):
+        """
+        Get the local position offset of the inertial frame (CoM) of the specified links expressed in the URDF link
+        frame.
+
+        Args:
+            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the local position of all
+                links associated to actuated joints.
+
+        Returns:
+            if 1 link:
+                np.array[3]: local position offset of inertial frame (CoM) expressed in the URDF link frame
+            if multiple links: list of above
+        """
+        if isinstance(link_ids, int):
+            return self.get_link_states(self, link_ids, False, False)[2]
+        return [state[2] for state in self.get_link_states(self, link_ids, False, False)]
+
+    def get_link_local_orientations(self, link_ids=None):
+        """
+        Get the local orientation offset of the inertial frame (CoM) of the specified links expressed in the URDF link
+        frame.
+
+        Args:
+            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the local position of all
+                links associated to actuated joints.
+
+        Returns:
+            if 1 link:
+                np.array[4]: local orientation (quaternion [x,y,z,w]) offset of inertial frame (CoM) expressed in the
+                    URDF link frame
+            if multiple links: list of above
+        """
+        if isinstance(link_ids, int):
+            return self.get_link_states(self, link_ids, False, False)[3]
+        return [state[3] for state in self.get_link_states(self, link_ids, False, False)]
+
     def get_link_names(self, link_ids=None):
         r"""
         Return the name of the given link(s).
@@ -1132,7 +1169,7 @@ class Robot(ControllableBody):
 
     def get_link_frames(self, link_ids=None, flatten=False):
         r"""
-        Return the link frame position and orientation (expressed in the world space).
+        Return the link world frame position(s) and orientation(s).
 
         Args:
             link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the frame position of all
@@ -1148,10 +1185,10 @@ class Robot(ControllableBody):
                 np.array[Nx4], np.array[N,4]: orientation of each link frame [x,y,z,w]
 
         """
-        return self.get_link_frame_world_positions(link_ids, flatten), self.get_link_frame_world_orientations(link_ids,
+        return self.get_link_world_frame_positions(link_ids, flatten), self.get_link_world_frame_orientations(link_ids,
                                                                                                               flatten)
 
-    def get_link_frame_world_positions(self, link_ids=None, flatten=False):
+    def get_link_world_frame_positions(self, link_ids=None, flatten=False):
         r"""
         Return the frame position (in the Cartesian world space coordinates) of the given link(s).
 
@@ -1175,7 +1212,7 @@ class Robot(ControllableBody):
             return pos.reshape(-1)  # 1D array
         return pos  # 2D array
 
-    def get_link_frame_world_orientations(self, link_ids=None, flatten=False):
+    def get_link_world_frame_orientations(self, link_ids=None, flatten=False):
         r"""
         Return the frame orientation (in the Cartesian world space) of the given link(s).
 
@@ -2730,7 +2767,7 @@ class Robot(ControllableBody):
         """
         joint_ids = self.joints if q_idx is None else self.joints[q_idx]
         torques = self.get_coriolis_and_gravity_compensation_torques(q, dq, q_idx)
-        self.set_joint_torques(torque=torques + external_torques, joint_ids=joint_ids)
+        self.set_joint_torques(torques=torques + external_torques, joint_ids=joint_ids)
 
     # TODO: finish to implement the method + think about multiple links + think about dimensions
     def get_active_compliant_torques(self, q=None, dq=None, q_idx=None, jacobian=None, link_velocity=None,
@@ -3455,6 +3492,8 @@ class Robot(ControllableBody):
     # online plotting  # # WARNING: ALL THE FOLLOWING METHODS NEED A SIMULATOR IN WHICH TO RUN #
     ####################
 
+    # TODO: move these functions elsewhere
+
     def plot_joint_positions(self, joint_ids=None):
         pass
 
@@ -3486,12 +3525,14 @@ class Robot(ControllableBody):
     # draw # # WARNING: ALL THE FOLLOWING METHODS NEED A SIMULATOR IN WHICH TO RUN #
     ########
 
+    # TODO: move these functions elsewhere
+
     def _draw_sphere(self, position, radius=0.1, color=(1, 1, 1, 1)):
         visual = self.sim.create_visual_shape(self.sim.GEOM_SPHERE, radius=radius, rgba_color=color)
         body = self.sim.create_body(mass=0, visual_shape_id=visual, position=position)
         return body
 
-    def _draw_cylinder(self, position, orientation, radius=1, height=1, color=(1, 1, 1, 1)):
+    def _draw_cylinder(self, position, orientation, radius=1., height=1., color=(1, 1, 1, 1)):
         visual = self.sim.create_visual_shape(self.sim.GEOM_CYLINDER, radius=radius, length=height, rgba_color=color)
         body = self.sim.create_body(mass=0., visual_shape_id=visual, position=position, orientation=orientation)
         return body
@@ -3641,7 +3682,7 @@ class Robot(ControllableBody):
             self.sim.remove_body(self.projected_com_visual)
             self.projected_com_visual = None
 
-    # def drawProjectedCoM(self, radius=0.05, color=(1,0,0,1)):
+    # def draw_projected_com(self, radius=0.05, color=(1,0,0,1)):
     #     """
     #     draw the projected CoM on the walking surface
     #     """
@@ -3684,25 +3725,80 @@ class Robot(ControllableBody):
             link_ids = [link_ids]
 
         for link in link_ids:
-            if link in self.visual_shapes:
-                if link == -1:
-                    pos, orientation = self.get_base_pose()
-                else:
-                    pos = self.get_link_frame_world_positions(link)
-                    orientation = self.get_link_frame_world_orientations(link)
-                dim = self.visual_shapes[link]['dimensions']
-                # radius = min(dim) * scaling * 0.2
-                radius = 0.005 * scaling
-                # self._draw_sphere(pos, radius, color=(0,0,0,1))
-                # length = 4*radius
-                length = 0.05 * scaling
-                self._draw_frame(pos, orientation, radius, length)
+            # if link in self.visual_shapes:
+            if link == -1:
+                position, orientation = self.get_base_pose()
+            else:
+                # position = self.get_link_world_frame_positions(link)
+                # orientation = self.get_link_world_frame_orientations(link)
+                position = self.get_link_world_positions(link)
+                orientation = self.get_link_world_orientations(link)
 
-    def draw_joint_frames(self, joint_ids=None):
+            # dim = self.visual_shapes[link]['dimensions']
+            # radius = min(dim) * scaling * 0.2
+            radius = 0.005 * scaling
+            # self._draw_sphere(position, radius, color=(0,0,0,1))
+            # length = 4*radius
+            length = 0.05 * scaling
+            self._draw_frame(position, orientation, radius, length)
+
+    def draw_joint_frames(self, joint_ids=None, scaling=1.):
         """
-        Draw (actuated) joint frame
+        Draw the specified actuated joint frames.
+
+        Args:
+            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, draw all the actuated joint frames.
+            scaling (float): scaling factor
         """
-        pass
+        # check joints argument
+        if joint_ids is None:
+            joint_ids = self.joints
+        elif isinstance(joint_ids, int):
+            joint_ids = [joint_ids]
+        elif not isinstance(joint_ids, collections.Iterable):
+            raise TypeError("Expecting the given 'joint_ids' to be None, an int, or a list of int, instead got: "
+                            "{}".format(joint_ids))
+
+        positions = self.get_link_world_frame_positions(joint_ids)
+        orientations = self.get_link_world_frame_orientations(joint_ids)
+
+        # draw each joint axis
+        for joint, position, orientation in zip(joint_ids, positions, orientations):
+            radius = 0.005 * scaling
+            length = 0.05 * scaling
+            self._draw_frame(position, orientation, radius, length)
+
+    def draw_joint_axes(self, joint_ids=None, scaling=1.):
+        """
+        Draw the specified actuated joint axes.
+
+        Args:
+            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, draw all the actuated joint axes.
+            scaling (float): scaling factor
+        """
+        # check joints argument
+        if joint_ids is None:
+            joint_ids = self.joints
+        elif isinstance(joint_ids, int):
+            joint_ids = [joint_ids]
+        elif not isinstance(joint_ids, collections.Iterable):
+            raise TypeError("Expecting the given 'joint_ids' to be None, an int, or a list of int, instead got: "
+                            "{}".format(joint_ids))
+
+        positions = self.get_link_world_frame_positions(joint_ids)
+        orientations = self.get_link_world_frame_orientations(joint_ids)
+        joint_axes = self.get_joint_axes(joint_ids)
+
+        # draw each joint axis
+        for joint, position, orientation, axis in zip(joint_ids, positions, orientations, joint_axes):
+            radius = 0.008 * scaling
+            length = 0.08 * scaling
+            R = get_matrix_from_quaternion(orientation)
+            y = R.dot(length / 2. * axis) + position
+            qx = np.array([0.707, 0, 0, 0.707])  # 90deg around x
+
+            # draw joint axis cylinder
+            self._draw_cylinder(y, get_quaternion_product(orientation, qx), radius, length, color=(1, 1, 0, 1))
 
     def draw_bounding_boxes(self, link_ids=None):
         """

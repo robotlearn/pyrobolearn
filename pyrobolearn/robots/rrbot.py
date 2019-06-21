@@ -44,10 +44,11 @@ class RRBot(ManipulatorRobot):
         self.name = 'rrbot'
 
         # set initial joint positions
-        self.set_joint_positions(self.joints, [np.pi / 4, np.pi / 2])
+        self.reset_joint_states(q=[np.pi / 4, np.pi / 2], joint_ids=self.joints)
+        # self.set_joint_positions(self.joints, [np.pi / 4, np.pi / 2])
 
-        for _ in range(100):
-            self.sim.step()
+        # for _ in range(100):
+        #     self.sim.step()
 
         # disable each motor joint
         self.disable_motor()
@@ -57,7 +58,7 @@ class RRBot(ManipulatorRobot):
         self.enable_joint_force_torque_sensor(2)
 
         # Coriolis and gravity compensation (note that the set_joint_torques need to be called at each time step)
-        self.enable_coriolis_and_gravity_compensation()
+        # self.enable_coriolis_and_gravity_compensation()
 
     def get_force_torque_sensor(self, idx=0):
         return np.array(self.sim.getJointState(self.id, 2)[2])
