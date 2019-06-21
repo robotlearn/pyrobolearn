@@ -17,6 +17,7 @@ References:
     [3] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
 
+from pyrobolearn.utils.data_structures.orderedset import OrderedSet
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -44,6 +45,9 @@ class Simulator(object):
     [1] PyBullet: https://pybullet.org
     [2] PEP8: https://www.python.org/dev/peps/pep-0008/
     """
+
+    # keep track of the instantiated simulators
+    instances = OrderedSet()
 
     # TODO: this is really bad to have attributes like that... It doesn't generalize well to other simulators...
 
@@ -187,6 +191,9 @@ class Simulator(object):
         # default timestep
         self.default_timestep = 1. / 240
         self.dt = self.default_timestep
+
+        # add instance to the set of all instantiated simulators
+        self.__class__.instances.add(self)
 
         # TODO: this is really bad to have attributes like that... It doesn't generalize well to other simulators...
         # import pybullet

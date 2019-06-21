@@ -9,6 +9,7 @@ from pyrobolearn.robots.uav import RotaryWingUAV
 from pyrobolearn.utils.transformation import get_matrix_from_quaternion
 from pyrobolearn.utils.units import inches_to_meters, rpm_to_rad_per_second, rad_per_second_to_rpm
 
+
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __license__ = "GNU GPLv3"
@@ -278,7 +279,7 @@ class Quadcopter(RotaryWingUAV):
         """Turn the quadcopter to the left.
 
         Args:
-            speed (float): speed to turn to the left.
+            speed (float): positive speed to turn to the left.
         """
         velocities = self.stationary_velocities + speed * np.array([0, 1., 0., 1.]) * self.propeller_directions
         self.set_propeller_velocities(velocities)
@@ -287,7 +288,7 @@ class Quadcopter(RotaryWingUAV):
         """Turn the quadcopter to the right.
 
         Args:
-            speed (float): speed to turn to the right.
+            speed (float): positive speed to turn to the right.
         """
         velocities = self.stationary_velocities + speed * np.array([1., 0., 1., 0.]) * self.propeller_directions
         self.set_propeller_velocities(velocities)

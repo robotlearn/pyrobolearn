@@ -51,7 +51,7 @@ class F10Racecar(AckermannWheeledRobot):
         self.steering = [self.get_link_ids(link) for link in ['left_steering_hinge', 'right_steering_hinge']
                          if link in self.link_names]
 
-    def set_steering(self, angle):
+    def steer(self, angle):
         """Set steering angle"""
         angle = angle * np.ones(len(self.steering))
         self.set_joint_positions(angle, joint_ids=self.steering)

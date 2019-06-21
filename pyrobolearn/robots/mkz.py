@@ -54,7 +54,7 @@ class MKZ(AckermannWheeledRobot):
         self.steering = [self.get_link_ids(link) for link in ['steer_fl', 'steer_fr']
                          if link in self.link_names]
 
-    def set_steering(self, angle):
+    def steer(self, angle):
         """Set steering angle"""
         angle = angle * np.ones(len(self.steering))
         self.set_joint_positions(angle, joint_ids=self.steering)

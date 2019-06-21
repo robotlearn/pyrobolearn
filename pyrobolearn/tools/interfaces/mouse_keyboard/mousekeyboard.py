@@ -71,13 +71,14 @@ class MouseKeyboardInterface(InputInterface):
         triggered, 4 if it has been released.
     """
 
-    def __init__(self, simulator, verbose=False):
+    def __init__(self, simulator=None, verbose=False):
         """
         Initialize the Mouse-Keyboard Interface. This interface is a little bit special in the sense that we use
         the simulator to provide the mouse and keyboard events instead of using an external library.
 
         Args:
-            simulator (Simulator): simulator instance from which we capture mouse and keyboard events.
+            simulator (Simulator, None): simulator instance from which we capture mouse and keyboard events. If None,
+                it will look for the first instantiated simulator.
             verbose (bool): If True, print information on the standard output.
         """
         super(MouseKeyboardInterface, self).__init__(use_thread=False, sleep_dt=0, verbose=verbose)
@@ -113,18 +114,14 @@ class MouseKeyboardInterface(InputInterface):
     @simulator.setter
     def simulator(self, simulator):
         """Set the simulator instance."""
-        # if isinstance(simulator, Simulator):
-        #     pass
-        # elif isinstance(simulator, World):
-        #     simulator = simulator.simulator
-        # elif isinstance(simulator, Env):
-        #     simulator = simulator.world.simulator
-        # else:
-        # if not isinstance(simulator, Simulator):
-        #     raise TypeError("Expecting the simulator to be an instance of Simulator, "
-        #                     "got instead {}".format(type(simulator)))
-        # if isinstance(simulator, World):
-        #     simulator = simulator.simulator
+        if simulator is None:
+            if len(Simulator.instances) == 0:
+                raise RuntimeError("No simulator was given to the `MouseKeyboardInterface`, we thus tried to look "
+                                   "for an instantiated simulator but none was found...")
+            simulator = Simulator.instances[0]  # by default, we take the first instantiated simulator
+        if not isinstance(simulator, Simulator):
+            raise TypeError("Expecting the given 'simulator' to be an instance of `Simulator`, but got instead: "
+                            "{}".format(type(simulator)))
         self._simulator = simulator
 
     @property

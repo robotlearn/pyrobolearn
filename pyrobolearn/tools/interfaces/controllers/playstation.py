@@ -4,6 +4,8 @@
 This provides the interfaces for the PlayStation controllers (PS3 and PS4) using the `inputs` library.
 """
 
+import numpy as np
+
 try:
     from inputs import devices, get_gamepad
 except ImportError as e:
@@ -53,20 +55,22 @@ class PSControllerInterface(GameControllerInterface):
             raise ValueError("The specified gamepad/controller was not detected.")
 
         # translation
-        buttons = ['BTN_SOUTH', 'BTN_EAST', 'BTN_WEST', 'BTN_NORTH', 'BTN_THUMBL', 'BTN_THUMBR', 'BTN_TL', 'BTN_TL2',
-                   'BTN_TR', 'BTN_TR2', 'BTN_START', 'BTN_SELECT', 'BTN_MODE', 'ABS_HAT0X', 'ABS_HAT0Y', 'ABS_Z',
-                   'ABS_RZ', 'ABS_X', 'ABS_Y', 'ABS_RX', 'ABS_RY']
-        ps4_buttons = ['X', 'O', 'S', 'T', 'LJB', 'RJB', 'L1', 'L2', 'R1', 'R2', 'options', 'share', 'PS', 'L', 'R',
-                       'RT', 'LJX', 'LJY', 'RJX', 'RJY']
+        buttons = ['BTN_EAST', 'BTN_C', 'BTN_SOUTH', 'BTN_NORTH', 'BTN_SELECT', 'BTN_START', 'BTN_WEST', 'BTN_TL',
+                   'BTN_Z', 'BTN_TR', 'BTN_TR2', 'BTN_TL2', 'BTN_MODE', 'BTN_THUMBL', 'ABS_HAT0X', 'ABS_HAT0Y',
+                   'ABS_X', 'ABS_Y', 'ABS_Z', 'ABS_RZ']  # , 'ABS_RX', 'ABS_RY', 'BTN_THUMBR']
+        ps4_buttons = ['X', 'O', 'S', 'T', 'LJB', 'RJB', 'L1', 'L2', 'R1', 'R2', 'options', 'share', 'PS', 'pad',
+                       'DpadX', 'DpadY', 'LJX', 'LJY', 'RJX', 'RJY']
         self.map = dict(zip(buttons, ps4_buttons))
         self.inv_map = dict(zip(ps4_buttons, buttons))
 
         # buttons and their values
-        self.buttons = dict(zip(ps4_buttons[:12], [0] * 12))
-        self.buttons.update(dict(zip(['Dpad', 'LJ', 'RJ'], [[0, 0]] * 3)))
+        self.buttons = dict(zip(ps4_buttons[:14], [0] * 14))
+        self.buttons.update(dict(zip(['Dpad', 'LJ', 'RJ'], [np.array([0., 0.])] * 3)))
 
         # last updated button
         self.last_updated_button = None
+
+        # pushed buttons
 
         super(PSControllerInterface, self).__init__(use_thread=use_thread, sleep_dt=sleep_dt, verbose=verbose)
 
@@ -79,23 +83,32 @@ class PSControllerInterface(GameControllerInterface):
         """Button X"""
         return self.buttons['X']
 
+    # alias
+    cross = X
+
     @property
     def O(self):
         """Button O (circle)"""
         return self.buttons['O']
 
-    # alias (C = circle)
-    C = O
+    # alias
+    circle = O
 
     @property
     def S(self):
         """Button Square"""
         return self.buttons['S']
 
+    # alias
+    square = S
+
     @property
     def T(self):
         """Button Triangle"""
         return self.buttons['T']
+
+    # alias
+    triangle = T
 
     @property
     def LJB(self):
@@ -108,34 +121,44 @@ class PSControllerInterface(GameControllerInterface):
         return self.buttons['RJB']
 
     @property
-    def LB(self):
+    def L1(self):
         """left bumper; button for left index finger"""
-        return self.buttons['LB']
+        return self.buttons['L1']
 
     @property
-    def RB(self):
+    def R1(self):
         """right bumper; button for right index finger"""
-        return self.buttons['RB']
+        return self.buttons['R1']
 
     @property
-    def menu(self):
-        """menu button"""
-        return self.buttons['menu']
-
-    @property
-    def view(self):
-        """view button"""
-        return self.buttons['view']
-
-    @property
-    def LT(self):
+    def L2(self):
         """Left trigger; button for left middle finger"""
-        return self.buttons['LT']
+        return self.buttons['L2']
 
     @property
-    def RT(self):
+    def R2(self):
         """Right trigger; button for right middle finger"""
-        return self.buttons['RT']
+        return self.buttons['R2']
+
+    @property
+    def options(self):
+        """menu button"""
+        return self.buttons['options']
+
+    @property
+    def share(self):
+        """share button"""
+        return self.buttons['share']
+
+    @property
+    def PS(self):
+        """PS button"""
+        return self.buttons['PS']
+
+    @property
+    def pad(self):
+        """pad button"""
+        return self.buttons['pad']
 
     @property
     def Dpad(self):
@@ -155,6 +178,117 @@ class PSControllerInterface(GameControllerInterface):
     # aliases
     left_joystick = LJ
     right_joystick = RJ
+
+    # NOTE: the following buttons have been manually remapped to better correspond to what their name suggests
+    @property
+    def BTN_SOUTH(self):
+        """South button"""
+        return self.buttons['X']
+
+    @property
+    def BTN_EAST(self):
+        """East button"""
+        return self.buttons['O']
+
+    @property
+    def BTN_WEST(self):
+        """West button"""
+        return self.buttons['S']
+
+    @property
+    def BTN_NORTH(self):
+        """North button"""
+        return self.buttons['T']
+
+    @property
+    def BTN_C(self):
+        """Circle button"""
+        return self.buttons['O']
+
+    @property
+    def BTN_THUMBL(self):
+        """Left thumb button"""
+        return self.buttons['LJB']
+
+    @property
+    def BTN_THUMBR(self):
+        """Right thumb button"""
+        return self.buttons['RJB']
+
+    @property
+    def BTN_TL(self):
+        """Left bumper; button for left index finger"""
+        return self.buttons['L1']
+
+    @property
+    def BTN_TL2(self):
+        """Left bumper 2; button for left middle finger"""
+        return self.buttons['L2']
+
+    @property
+    def BTN_TR(self):
+        """Right bumper; button for right index finger"""
+        return self.buttons['R1']
+
+    @property
+    def BTN_TR2(self):
+        """Right bumper 2; button for right middle finger"""
+        return self.buttons['R2']
+
+    @property
+    def BTN_START(self):
+        """Start button"""
+        return self.buttons['share']
+
+    @property
+    def BTN_SELECT(self):
+        """Select button"""
+        return self.buttons['options']
+
+    @property
+    def BTN_MODE(self):
+        """Mode button"""
+        return self.buttons['PS']
+
+    @property
+    def ABS_Z(self):
+        """Left trigger; non-existent for PS controller; return the same as L2."""
+        return self.buttons['L2']
+
+    @property
+    def ABS_RZ(self):
+        """Right trigger; non-existent for PS controller; return the same as R2."""
+        return self.buttons['R2']
+
+    @property
+    def ABS_HAT0X(self):
+        """Directional pad X position"""
+        return self.buttons['Dpad'][0]
+
+    @property
+    def ABS_HAT0Y(self):
+        """Directional pad Y position"""
+        return self.buttons['Dpad'][1]
+
+    @property
+    def ABS_X(self):
+        """Left joystick X position"""
+        return self.buttons['LJ'][0]
+
+    @property
+    def ABS_Y(self):
+        """Left joystick Y position"""
+        return self.buttons['LJ'][1]
+
+    @property
+    def ABS_RX(self):
+        """Right joystick X position"""
+        return self.buttons['RJ'][0]
+
+    @property
+    def ABS_RY(self):
+        """Right joystick Y position"""
+        return self.buttons['RJ'][1]
 
     ###########
     # Methods #
@@ -202,16 +336,16 @@ class PSControllerInterface(GameControllerInterface):
 
         if event_type == 'Absolute':
             if key == 'LJX':
-                self.buttons['LJ'][0] = value / 32768.  # values between [-32768, 32767]
+                self.buttons['LJ'][0] = (value - 127.5) / 127.5  # values between [0, 255]
                 self.last_updated_button = 'LJ'
             elif key == 'LJY':
-                self.buttons['LJ'][1] = -1. * value / 32768.  # values between [-32767, 32768]
+                self.buttons['LJ'][1] = -1. * (value - 127.5) / 127.5  # values between [0, 255]
                 self.last_updated_button = 'LJ'
             elif key == 'RJX':
-                self.buttons['RJ'][0] = value / 32768.  # values between [-32768, 32767]
+                self.buttons['RJ'][0] = (value - 127.5) / 127.5  # values between [0, 255]
                 self.last_updated_button = 'RJ'
             elif key == 'RJY':
-                self.buttons['RJ'][1] = -1. * value / 32768.  # values between [-32767, 32768]
+                self.buttons['RJ'][1] = -1. * (value - 127.5) / 127.5  # values between [0, 255]
                 self.last_updated_button = 'RJ'
             elif key == 'DpadX':
                 self.buttons['Dpad'][0] = value  # left (-1) and right (1)
@@ -219,11 +353,11 @@ class PSControllerInterface(GameControllerInterface):
             elif key == 'DpadY':
                 self.buttons['Dpad'][1] = -1 * value  # down (-1) and high (1)
                 self.last_updated_button = 'Dpad'
-            elif key == 'LT' or key == 'RT':  # max 1023
-                self.buttons[key] = value / 1023.
-                # self.last_updated_button = key
+            # elif key == 'LT' or key == 'RT':  # max 1023
+            #     self.buttons[key] = value / 1023.
+            #     # self.last_updated_button = key
         elif event_type == 'Key':
-            print(event_type, key, value)
+            # print(event_type, key, value)
             self.buttons[key] = value
             self.last_updated_button = key
 
@@ -267,12 +401,41 @@ class PS4ControllerInterface(PSControllerInterface):
 
 # Tests
 if __name__ == '__main__':
-    device = devices.gamepads[1]
-    print(device.name)
+    # create controller
+    controller = PSControllerInterface(use_thread=True, sleep_dt=0.01)
+    print(controller.map)
+    print(controller.buttons)
+
+    # check buttons
     while True:
-        events = device.read()  # blocking=False) # get_gamepad()
-        for event in events:
-            event_type, code, state = event.ev_type, event.code, event.state
-            if event_type != 'Absolute':
-                if code != 'SYN_REPORT':
-                    print(code, state)
+        # controller.step()
+        if controller.cross:
+            print("X button has been pushed.")
+        if controller.square:
+            print("Square button has been pushed.")
+        if controller.circle:
+            print("Circle button has been pushed.")
+        if controller.triangle:
+            print("Triangle button has been pushed.")
+        if controller.L1:
+            print("L1 has been pushed.")
+        if controller.L2:
+            print("L2 has been pushed.")
+        if controller.R1:
+            print("R1 has been pushed.")
+        if controller.R2:
+            print("R2 has been pushed.")
+        if controller.LJB:
+            print("LJB has been pushed.")
+        if controller.RJB:
+            print("RJB has been pushed.")
+        if controller.options:
+            print("Options has been pushed.")
+        if controller.share:
+            print("Share has been pushed.")
+        if controller.PS:
+            print("PS has been pushed.")
+        if controller.pad:
+            print("Pad has been pushed.")
+
+        print("Left joystick: {}".format(controller.LJ[0]))

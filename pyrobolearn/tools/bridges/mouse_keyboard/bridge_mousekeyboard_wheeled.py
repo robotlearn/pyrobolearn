@@ -1,12 +1,16 @@
 #!/usr/bin/env python
-"""Bridges between controller interface and wheeled robots
+"""Define the Bridge between the mouse-keyboard interface and the world.
+
+Dependencies:
+- `pyrobolearn.tools.interfaces.MouseKeyboardInterface`
+- `pyrobolearn.tools.bridges.Bridge`
 """
 
 from abc import ABCMeta
 import numpy as np
 
-from pyrobolearn.tools.interfaces.controllers.controller import GameControllerInterface
-from pyrobolearn.tools.bridges.bridge import Bridge
+from pyrobolearn.tools.interfaces import MouseKeyboardInterface
+from pyrobolearn.tools.bridges import Bridge
 from pyrobolearn.robots.wheeled_robot import WheeledRobot, DifferentialWheeledRobot, AckermannWheeledRobot
 from pyrobolearn.worlds.world_camera import WorldCamera
 
@@ -23,27 +27,41 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class BridgeControllerWheeledRobot(Bridge):
-    r"""Bridge between GameController and a wheeled robot
+class BridgeMouseKeyboardWheeledRobot(Bridge):
+    r"""Bridge between MouseKeyboard and a wheeled robot
 
-    Bridge between the game controller and a wheeled robot.
+    Bridge between the mouse-keyboard and a wheeled robot.
 
-    Here is the mapping between the controller and the robot:
-    - left joystick: velocity of the wheeled robot
-    - south button (X on PlayStation and A on Xbox): change between the first-person and third-person view  # TODO
-    - east button (circle on PlayStation and B on Xbox): increase the speed  # TODO
-    - west button (square on PlayStation and X on Xbox): decrease the speed  # TODO
+    Mouse:
+        * predefined in simulator:
+            * `scroll wheel`: zoom
+            * `ctrl`/`alt` + `scroll button`: move the camera using the mouse
+            * `ctrl`/`alt` + `left-click`: rotate the camera using the mouse
+            * `left-click` and drag: transport the object
+
+    Keyboard:
+        * `top arrow`: move forward
+        * `bottom arrow`: move backward
+        * `left arrow`: turn/steer to the left
+        * `right arrow`: turn/steer to the right
+        * `space`: switch between first-person and third-person view.  # TODO
+        * predefined in simulator:
+            * `w`: show the wireframe (collision shapes)
+            * `s`: show the reference system
+            * `v`: show bounding boxes
+            * `g`: show/hide parts of the GUI the side columns
+            * `esc`: quit the simulator
     """
     __metaclass__ = ABCMeta
 
     def __init__(self, robot, interface=None, camera=None, first_person_view=False, speed=10,
                  priority=None, verbose=False):
         """
-        Initialize the Bridge between a game controller interface and a wheeled robot instance.
+        Initialize the Bridge between a Mouse-Keyboard interface and a wheeled robot instance.
 
         Args:
             robot (WheeledRobot): wheeled robot instance.
-            interface (GameControllerInterface): game controller interface.
+            interface (None, MouseKeyboardInterface): mouse keyboard interface. If None, it will create one.
             camera (WorldCamera): world camera instance. This will allow the user to switch between first-person and
                 third-person view. If None, it will create an instance of it.
             first_person_view (bool): if True, it will set the world camera to the first person view. If False, it
@@ -59,20 +77,17 @@ class BridgeControllerWheeledRobot(Bridge):
         self.speed = speed if speed > 0 else -speed
 
         # if interface not defined, create one.
-        if not isinstance(interface, GameControllerInterface):
-            raise TypeError
+        if not isinstance(interface, MouseKeyboardInterface):
+            interface = MouseKeyboardInterface(self.simulator)
 
         # call superclass
-        super(BridgeControllerWheeledRobot, self).__init__(interface, priority)
+        super(BridgeMouseKeyboardWheeledRobot, self).__init__(interface, priority)
 
         # camera
         self.camera = camera
         self.verbose = verbose
         self.fpv = first_person_view
         self.camera_pitch = self.camera.pitch
-
-        # joystick threshold (to remove noise)
-        self.threshold = 0.05
 
     ##############
     # Properties #
@@ -139,48 +154,34 @@ class BridgeControllerWheeledRobot(Bridge):
         self.fpv = not self.fpv
 
     def check_key_events(self):
-        left_joystick = self.interface.LJ  # (x,y)
-        # south_button = self.interface.BTN_SOUTH
-        # east_button = self.interface.BTN_EAST
-        # west_button = self.interface.BTN_WEST
-
-        # change camera view
-        # if south_button:
-        #     self.change_camera_view()
-
-        # change speed
-        # if east_button:
-        #     self.speed += 1
-        # if west_button:
-        #     self.speed -= 1
-
-        # move robot
-        # if np.linalg.norm(left_joystick) > self.threshold:
-        #     # print(left_joystick)
-        #     self.robot.move(velocity=self.speed * left_joystick)
-        # else:
-        #     self.robot.move(velocity=[0., 0.])
-        print(left_joystick[0])
+        pass
 
 
-class BridgeControllerDifferentialWheeledRobot(BridgeControllerWheeledRobot):
+class BridgeMouseKeyboardDifferentialWheeledRobot(BridgeMouseKeyboardWheeledRobot):
     r"""Bridge between the mouse-keyboard and a differential wheeled robot.
 
-    Here is the mapping between the controller and the robot:
-    - left joystick: velocity of the wheeled robot
-    - south button (X on PlayStation and A on Xbox): change between the first-person and third-person view.
-    - east button (circle on PlayStation and B on Xbox): increase the speed
-    - west button (square on PlayStation and X on Xbox): decrease the speed
+    Keyboard:
+        * `top arrow`: move forward
+        * `bottom arrow`: move backward
+        * `left arrow`: turn to the left
+        * `right arrow`: turn to the right
+        * `space`: switch between first-person and third-person view.
+        * predefined in simulator:
+            * `w`: show the wireframe (collision shapes)
+            * `s`: show the reference system
+            * `v`: show bounding boxes
+            * `g`: show/hide parts of the GUI the side columns
+            * `esc`: quit the simulator
     """
 
     def __init__(self, robot, interface=None, camera=None, first_person_view=False, speed=10, priority=None,
                  verbose=False):
         """
-        Initialize the Bridge between a game controller interface and a differential wheeled robot instance.
+        Initialize the Bridge between a Mouse-Keyboard interface and a differential wheeled robot instance.
 
         Args:
             robot (AckermannWheeledRobot): wheeled robot instance.
-            interface (GameControllerInterface): game controller interface.
+            interface (None, MouseKeyboardInterface): mouse keyboard interface. If None, it will create one.
             camera (WorldCamera): world camera instance. This will allow the user to switch between first-person and
                 third-person view. If None, it will create an instance of it.
             first_person_view (bool): if True, it will set the world camera to the first person view. If False, it
@@ -192,40 +193,56 @@ class BridgeControllerDifferentialWheeledRobot(BridgeControllerWheeledRobot):
         if not isinstance(robot, DifferentialWheeledRobot):
             raise TypeError("Expecting the given 'robot' to be an instance of `DifferentialWheeledRobot`, instead "
                             "got: {}".format(type(robot)))
-        super(BridgeControllerDifferentialWheeledRobot, self).__init__(robot, interface=interface, camera=camera,
-                                                                       first_person_view=first_person_view,
-                                                                       speed=speed, priority=priority,
-                                                                       verbose=verbose)
+        super(BridgeMouseKeyboardDifferentialWheeledRobot, self).__init__(robot, interface=interface, camera=camera,
+                                                                          first_person_view=first_person_view,
+                                                                          speed=speed, priority=priority,
+                                                                          verbose=verbose)
 
     def check_key_events(self):
-        super(BridgeControllerDifferentialWheeledRobot, self).check_key_events()
-        directional_pad = self.interface.Dpad  # (x,y)
+        key, pressed, down = self.interface.key, self.interface.key_pressed, self.interface.key_down
 
-        # move robot
-        if directional_pad[0] != 0:
-            self.robot.turn(directional_pad[0])
-        if directional_pad[1] != 0:
-            self.robot.drive_forward(directional_pad[1] * self.speed)
+        # change camera view
+        # if key.space in pressed:
+        #     self.change_camera_view()
+
+        # move the robot
+        if key.top_arrow in down:
+            self.robot.drive(speed=self.speed)
+        elif key.bottom_arrow in down:
+            self.robot.drive(speed=-self.speed)
+        elif key.left_arrow in down:
+            self.robot.turn(speed=self.speed)
+        elif key.right_arrow in down:
+            self.robot.turn(speed=-self.speed)
+        else:
+            self.robot.drive(speed=0)
 
 
-class BridgeControllerAckermannWheeledRobot(BridgeControllerWheeledRobot):
+class BridgeMouseKeyboardAckermannWheeledRobot(BridgeMouseKeyboardWheeledRobot):
     r"""Bridge between the mouse-keyboard and a Ackermann wheeled robot.
 
-    Here is the mapping between the controller and the robot:
-    - left joystick: velocity of the wheeled robot
-    - south button (X on PlayStation and A on Xbox): change between the first-person and third-person view.
-    - east button (circle on PlayStation and B on Xbox): increase the speed
-    - west button (square on PlayStation and X on Xbox): decrease the speed
+    Keyboard:
+        * `top arrow`: move forward
+        * `bottom arrow`: move backward
+        * `left arrow`: steer to the left
+        * `right arrow`: steer to the right
+        * `space`: switch between first-person and third-person view.
+        * predefined in simulator:
+            * `w`: show the wireframe (collision shapes)
+            * `s`: show the reference system
+            * `v`: show bounding boxes
+            * `g`: show/hide parts of the GUI the side columns
+            * `esc`: quit the simulator
     """
 
-    def __init__(self, robot, interface, camera=None, first_person_view=False, speed=10, priority=None,
+    def __init__(self, robot, interface=None, camera=None, first_person_view=False, speed=10, priority=None,
                  verbose=False):
         """
-        Initialize the Bridge between a game controller interface and a wheeled robot instance.
+        Initialize the Bridge between a Mouse-Keyboard interface and a wheeled robot instance.
 
         Args:
             robot (DifferentialWheeledRobot): wheeled robot instance.
-            interface (GameControllerInterface): game controller interface.
+            interface (None, MouseKeyboardInterface): mouse keyboard interface. If None, it will create one.
             camera (WorldCamera): world camera instance. This will allow the user to switch between first-person and
                 third-person view. If None, it will create an instance of it.
             first_person_view (bool): if True, it will set the world camera to the first person view. If False, it
@@ -237,16 +254,34 @@ class BridgeControllerAckermannWheeledRobot(BridgeControllerWheeledRobot):
         if not isinstance(robot, AckermannWheeledRobot):
             raise TypeError("Expecting the given 'robot' to be an instance of `AckermannWheeledRobot`, instead got: "
                             "{}".format(type(robot)))
-        super(BridgeControllerAckermannWheeledRobot, self).__init__(robot, interface=interface, camera=camera,
-                                                                    first_person_view=first_person_view,
-                                                                    speed=speed, priority=priority, verbose=verbose)
+        super(BridgeMouseKeyboardAckermannWheeledRobot, self).__init__(robot, interface=interface, camera=camera,
+                                                                       first_person_view=first_person_view,
+                                                                       speed=speed, priority=priority, verbose=verbose)
+
+    def check_key_events(self):
+        key, pressed, down = self.interface.key, self.interface.key_pressed, self.interface.key_down
+
+        # change camera view
+        # if key.space in pressed:
+        #     self.change_camera_view()
+
+        # move the robot
+        if key.top_arrow in down:
+            self.robot.drive(speed=self.speed)
+        elif key.bottom_arrow in down:
+            self.robot.drive(speed=self.speed)
+        elif key.left_arrow in down:
+            self.robot.steer(speed=self.speed)
+        elif key.right_arrow in down:
+            self.robot.steer(speed=-self.speed)
+        else:
+            self.robot.drive(speed=0)
 
 
 # Tests
 if __name__ == '__main__':
     from itertools import count
     import pyrobolearn as prl
-    from pyrobolearn.tools.interfaces.controllers.playstation import PSControllerInterface
 
     # create simulator
     sim = prl.simulators.Bullet()
@@ -256,13 +291,11 @@ if __name__ == '__main__':
 
     # load robot
     # robot = world.load_robot('epuck')
-    robot = prl.robots.Epuck(sim)
+    robot = prl.robots.Epuck(sim, position=[0, 0, 1.])
 
     # create bridge/interface
-    interface = PSControllerInterface(use_thread=True, sleep_dt=0.01)
-    bridge = BridgeControllerWheeledRobot(robot, interface=interface, verbose=True)
+    bridge = BridgeMouseKeyboardDifferentialWheeledRobot(robot, verbose=True)
 
-    # run simulator
     for _ in count():
-        bridge.step(update_interface=False)  # when using thread for the interface, it updates itself automatically
+        bridge.step(update_interface=True)
         world.step(sleep_dt=sim.dt)

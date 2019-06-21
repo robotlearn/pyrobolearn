@@ -6,6 +6,7 @@ import numpy as np
 
 from pyrobolearn.robots.robot import Robot
 
+
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
@@ -68,6 +69,14 @@ class WheeledRobot(Robot):
                 return wheel_ids
         return self.wheels
 
+    def move(self, velocity):
+        """Move the robot at the specified 2D velocity vector.
+
+        Args:
+            velocity (np.array[2]): 2D velocity vector defined in the xy plane. The magnitude represents the speed.
+        """
+        pass
+
     def drive(self, speed):
         if isinstance(speed, (int, float)):
             speed = speed * np.ones(self.num_wheels)
@@ -83,12 +92,6 @@ class WheeledRobot(Robot):
     def drive_backward(self, speed):
         self.drive(-speed)
 
-    def turn_right(self):
-        pass
-
-    def turn_left(self):
-        pass
-
 
 class DifferentialWheeledRobot(WheeledRobot):
     r"""Differential Wheeled Robot
@@ -100,17 +103,61 @@ class DifferentialWheeledRobot(WheeledRobot):
 
     Check also [2] for the different types of drive.
 
+    The kinematics of these kind of platforms (with two wheels) can be described mathematically by [4]:
+
+    .. math::
+
+        v &= \frac{r (\omega_R +  \omega_L)}{2} \\
+        \omega &= \frac{r (\omega_R - \omega_L)}{d}
+
+    where :math:`\omega_R` (resp. :math:`\omega_L`) is the angular velocity of the right (resp. left) wheel,
+    :math:`v` is the driving velocity of the platform, :math:`\omega` is its steering velocity, :math:`r` is the
+    radius of the wheels and :math:`d` is the distance between their centers.
+
+    This formulation is equivalent to:
+
+    .. math::
+
+        \omega_R &= v + \frac{d}{2r} \omega \\
+        \omega_L &= v - \frac{d}{2r} \omega
+
     References:
         [1] Wikipedia: https://en.wikipedia.org/wiki/Differential_wheeled_robot
         [2] "Pros and cons for different types of drive selection":
             https://robohub.org/pros-and-cons-for-different-types-of-drive-selection/
         [3] Wheel Control Theory:
             http://www.robotplatform.com/knowledge/Classification_of_Robots/wheel_control_theory.html
+        [4] "Robotics: Modelling, Planning and Control" (section 11.2), Siciliano et al., 2010
     """
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
         super(DifferentialWheeledRobot, self).__init__(simulator, urdf, position, orientation, fixed_base,
                                                        scale)
+
+    def turn(self, speed):
+        """Turn the robot. If the speed is positive, turn to the left, otherwise turn to the right (using the
+        right-hand rule).
+
+        Args:
+            speed (float): speed to turn to the left (if speed is positive) or to the right (if speed is negative).
+        """
+        pass
+
+    def turn_right(self, speed):
+        """Turn the quadcopter to the right.
+
+        Args:
+            speed (float): positive speed to turn to the right.
+        """
+        self.turn(speed)
+
+    def turn_left(self, speed):
+        """Turn the robot to the left.
+
+        Args:
+            speed (float): positive speed to turn to the left.
+        """
+        self.turn(-speed)
 
 
 class AckermannWheeledRobot(WheeledRobot):
@@ -136,6 +183,46 @@ class AckermannWheeledRobot(WheeledRobot):
 
         self.steering = 0   # id of steering joint
 
-    def set_steering(self, angle):
-        """Set steering angle"""
+    def move(self, velocity):
+        """Move the robot at the specified 2D velocity vector.
+
+        Args:
+            velocity (np.array[2]): 2D velocity vector defined in the xy plane. The magnitude represents the speed.
+        """
+        if velocity[0] > 0:  # forward
+            angle = np.arctan2(velocity[1], velocity[0])
+            magnitude = np.linalg.norm(velocity)
+            self.steer(angle)
+            self.drive_forward(magnitude)
+        else:  # backward
+            angle = np.arctan2(velocity[1], -velocity[0])
+            magnitude = np.linalg.norm(velocity)
+            self.steer(angle)
+            self.drive_backward(magnitude)
+
+    def steer(self, angle):
+        """Set steering angle. If the angle is positive, turn to the left, otherwise turn to the right (using the
+        right-hand rule).
+
+        Args:
+            angle (float): steering angle. If the angle is positive, steer to the left, otherwise, steer to the right.
+        """
         pass
+
+    def steer_left(self, angle):
+        """
+        Steer to the left at the specified angle.
+
+        Args:
+            angle (float): positive steering angle.
+        """
+        self.steer(angle)
+
+    def steer_right(self, angle):
+        """
+        Steer to the right at the specified angle.
+
+        Args:
+            angle (float): positive steering angle.
+        """
+        self.steer(-angle)

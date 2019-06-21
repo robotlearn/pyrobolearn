@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""Define the the `World` class which allows to specify what constitutes the world (i.e. what elements are in
- the world).
+"""Define the `World` class which allows to specify what constitutes the world (i.e. what elements are in the world).
 
 Dependencies:
 - `pyrobolearn.simulators`
@@ -58,8 +57,8 @@ class World(object):
     For an excellent overview of available 3D models/scenes, check references [1, 2].
 
     References:
-        [1] "3D Machine Learning": https://github.com/timzhang642/3D-Machine-Learning
-        [2] Open3D: http://www.open3d.org/
+        - [1] "3D Machine Learning": https://github.com/timzhang642/3D-Machine-Learning
+        - [2] Open3D: http://www.open3d.org/
     """
 
     def __init__(self, simulator, gravity=(0., 0., -9.81)):

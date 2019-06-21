@@ -18,6 +18,8 @@ References:
     [1] https://askubuntu.com/questions/783587/how-do-i-get-an-xbox-one-controller-to-work-with-16-04-not-steam
 """
 
+import numpy as np
+
 try:
     from inputs import devices
     # TODO: update the library inputs to make it non-blocking
@@ -71,7 +73,7 @@ class XboxControllerInterface(GameControllerInterface):
         [3] https://askubuntu.com/questions/783587/how-do-i-get-an-xbox-one-controller-to-work-with-16-04-not-steam
     """
 
-    def __init__(self, use_thread=False, sleep_dt=0, verbose=False, controller_name='X-Box One'):
+    def __init__(self, use_thread=False, sleep_dt=0, verbose=False, controller_name='X-Box'):
         # Check if some gamepads are connected to the computer
         gamepads = devices.gamepads
         if len(gamepads) == 0:
@@ -100,7 +102,7 @@ class XboxControllerInterface(GameControllerInterface):
 
         # buttons and their values
         self.buttons = dict(zip(xbox_buttons[:12], [0]*12))
-        self.buttons.update(dict(zip(['Dpad', 'LJ', 'RJ'], [[0,0]]*3)))
+        self.buttons.update(dict(zip(['Dpad', 'LJ', 'RJ'], [np.array([0., 0.])]*3)))
 
         # last updated button
         self.last_updated_button = None
@@ -143,12 +145,12 @@ class XboxControllerInterface(GameControllerInterface):
 
     @property
     def LB(self):
-        """left bumper; button for left index finger"""
+        """Left bumper; button for left index finger"""
         return self.buttons['LB']
 
     @property
     def RB(self):
-        """right bumper; button for right index finger"""
+        """Right bumper; button for right index finger"""
         return self.buttons['RB']
 
     @property
@@ -189,6 +191,116 @@ class XboxControllerInterface(GameControllerInterface):
     # aliases
     left_joystick = LJ
     right_joystick = RJ
+
+    @property
+    def BTN_SOUTH(self):
+        """South button"""
+        return self.buttons[self.map['BTN_SOUTH']]
+
+    @property
+    def BTN_EAST(self):
+        """East button"""
+        return self.buttons[self.map['BTN_EAST']]
+
+    @property
+    def BTN_WEST(self):
+        """West button"""
+        return self.buttons[self.map['BTN_WEST']]
+
+    @property
+    def BTN_NORTH(self):
+        """North button"""
+        return self.buttons[self.map['BTN_NORTH']]
+
+    @property
+    def BTN_C(self):
+        """Circle button; non-existent for Xbox controller; return the same as the B button."""
+        return self.buttons['B']
+
+    @property
+    def BTN_THUMBL(self):
+        """Left thumb button"""
+        return self.buttons[self.map['BTN_THUMBL']]
+
+    @property
+    def BTN_THUMBR(self):
+        """Right thumb button"""
+        return self.buttons[self.map['BTN_THUMBR']]
+
+    @property
+    def BTN_TL(self):
+        """Left bumper; button for left index finger"""
+        return self.buttons[self.map['BTN_TL']]
+
+    @property
+    def BTN_TL2(self):
+        """Left bumper 2; non-existent for Xbox controller; return the same as ABS_Z."""
+        return self.ABS_Z
+
+    @property
+    def BTN_TR(self):
+        """Right bumper; button for right index finger"""
+        return self.buttons[self.map['BTN_TR']]
+
+    @property
+    def BTN_TR2(self):
+        """Right bumper 2; non-existent for Xbox controller; return the same as ABS_RZ."""
+        return self.ABS_RZ
+
+    @property
+    def BTN_START(self):
+        """Start button"""
+        return self.buttons[self.map['BTN_START']]
+
+    @property
+    def BTN_SELECT(self):
+        """Select button"""
+        return self.buttons[self.map['BTN_SELECT']]
+
+    @property
+    def BTN_MODE(self):
+        """Mode button; non-existent for Xbox controller; return the same as BTN_SELECT."""
+        return self.BTN_SELECT
+
+    @property
+    def ABS_Z(self):
+        """Left trigger; button for left middle finger"""
+        return self.buttons['LT']
+
+    @property
+    def ABS_RZ(self):
+        """Right trigger; button for right middle finger"""
+        return self.buttons['RT']
+
+    @property
+    def ABS_HAT0X(self):
+        """Directional pad X position"""
+        return self.buttons['Dpad'][0]
+
+    @property
+    def ABS_HAT0Y(self):
+        """Directional pad Y position"""
+        return self.buttons['Dpad'][1]
+
+    @property
+    def ABS_X(self):
+        """Left joystick X position"""
+        return self.buttons['LJ'][0]
+
+    @property
+    def ABS_Y(self):
+        """Left joystick Y position"""
+        return self.buttons['LJ'][1]
+
+    @property
+    def ABS_RX(self):
+        """Right joystick X position"""
+        return self.buttons['RJ'][0]
+
+    @property
+    def ABS_RY(self):
+        """Right joystick Y position"""
+        return self.buttons['RJ'][1]
 
     ###########
     # Methods #
