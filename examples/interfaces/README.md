@@ -12,5 +12,6 @@ Here are few examples that depict the various interfaces available to the user:
 5. `asus_xtion.py`: use the Asus Xtion interface
 6. `openpose.py`: use the Openpose interface
 7. `speech.py`: use the speech (recognizer/translator) interface
+8. `spacemouse.py`: use the (3Dconnexion) SpaceMouse interface
 
 **Note**: some interfaces require to install different libraries, and possibly to configure them. Check the raised errors.

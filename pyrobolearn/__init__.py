@@ -1,3 +1,6 @@
+"""PyRoboLearn: a Python framework in Robot Learning for Education and Research.
+"""
+
 name = "pyrobolearn"
 
 import sys
