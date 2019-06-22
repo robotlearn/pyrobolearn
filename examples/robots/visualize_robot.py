@@ -36,8 +36,7 @@ import pyrobolearn as prl
 # create parser to select the robot
 robots = ['coman', 'hyq2max']  # prl.robots.implemented_robots
 parser = argparse.ArgumentParser()
-parser.add_argument('-r', '--robot', help='the robot to load in the world', type=str,
-                    choices=robots, default='hyq2max')
+parser.add_argument('-r', '--robot', help='the robot to load in the world', type=str, choices=robots, default='hyq2max')
 args = parser.parse_args()
 
 
@@ -57,7 +56,8 @@ for _ in range(100):
 # change visualization
 robot.change_transparency()
 robot.draw_link_coms()
-robot.draw_link_frames()
+robot.draw_link_frames(robot.legs[0])
+robot.draw_joint_frames(robot.legs[0])
 robot.draw_bounding_boxes(link_ids=-1)
 
 robot.draw_friction_cone(floor_id=world.floor_id)

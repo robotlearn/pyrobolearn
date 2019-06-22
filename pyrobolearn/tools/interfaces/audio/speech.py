@@ -329,8 +329,8 @@ if __name__ == '__main__':
 
     print("Available languages are: {}".format(SpeechRecognizerInterface.available_languages))
 
-    # interface = SpeechRecognizerInterface(verbose=True, lang='english')
-    interface = SpeechTranslatorInterface(verbose=True, from_lang='french', target_lang='english')
+    interface = SpeechRecognizerInterface(use_thread=True, verbose=True, lang='english')
+    # interface = SpeechTranslatorInterface(verbose=True, from_lang='french', target_lang='english')
 
     while True:
         data = interface.run()

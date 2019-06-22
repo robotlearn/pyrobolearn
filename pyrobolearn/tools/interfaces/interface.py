@@ -103,7 +103,7 @@ class Interface(object):
     # @thread_loop
     def run(self, *args, **kwargs):
         """
-        Code to be run by the interface. This needs to be implemented by the user
+        Code to be run by the interface. This needs to be implemented by the user.
         """
         pass
 

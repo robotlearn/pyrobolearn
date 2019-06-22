@@ -402,7 +402,7 @@ class PS4ControllerInterface(PSControllerInterface):
 # Tests
 if __name__ == '__main__':
     # create controller
-    controller = PSControllerInterface(use_thread=True, sleep_dt=0.01)
+    controller = PSControllerInterface(use_thread=True)
     print(controller.map)
     print(controller.buttons)
 

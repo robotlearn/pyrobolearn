@@ -63,16 +63,15 @@ class BridgeControllerWheeledRobot(Bridge):
             raise TypeError
 
         # call superclass
-        super(BridgeControllerWheeledRobot, self).__init__(interface, priority)
+        super(BridgeControllerWheeledRobot, self).__init__(interface, priority=priority, verbose=verbose)
 
         # camera
         self.camera = camera
-        self.verbose = verbose
         self.fpv = first_person_view
         self.camera_pitch = self.camera.pitch
 
         # joystick threshold (to remove noise)
-        self.threshold = 0.05
+        self.threshold = 0.1
 
     ##############
     # Properties #
@@ -139,28 +138,27 @@ class BridgeControllerWheeledRobot(Bridge):
         self.fpv = not self.fpv
 
     def check_key_events(self):
-        left_joystick = self.interface.LJ  # (x,y)
-        # south_button = self.interface.BTN_SOUTH
-        # east_button = self.interface.BTN_EAST
-        # west_button = self.interface.BTN_WEST
+        left_joystick = self.interface.LJ[::-1]  # (y,x)
+        south_button = self.interface.BTN_SOUTH
+        east_button = self.interface.BTN_EAST
+        west_button = self.interface.BTN_WEST
 
         # change camera view
         # if south_button:
         #     self.change_camera_view()
 
         # change speed
-        # if east_button:
-        #     self.speed += 1
-        # if west_button:
-        #     self.speed -= 1
+        if east_button:
+            self.speed += 1
+        if west_button:
+            self.speed -= 1
 
         # move robot
-        # if np.linalg.norm(left_joystick) > self.threshold:
-        #     # print(left_joystick)
-        #     self.robot.move(velocity=self.speed * left_joystick)
-        # else:
-        #     self.robot.move(velocity=[0., 0.])
-        print(left_joystick[0])
+        if np.linalg.norm(left_joystick) > self.threshold:
+            # print(left_joystick)
+            self.robot.move(velocity=self.speed * left_joystick)
+        else:
+            self.robot.move(velocity=[0., 0.])
 
 
 class BridgeControllerDifferentialWheeledRobot(BridgeControllerWheeledRobot):
@@ -199,7 +197,7 @@ class BridgeControllerDifferentialWheeledRobot(BridgeControllerWheeledRobot):
 
     def check_key_events(self):
         super(BridgeControllerDifferentialWheeledRobot, self).check_key_events()
-        directional_pad = self.interface.Dpad  # (x,y)
+        directional_pad = self.interface.Dpad[::-1]  # (y,x)
 
         # move robot
         if directional_pad[0] != 0:

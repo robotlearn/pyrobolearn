@@ -67,16 +67,15 @@ class BridgeControllerQuadcopter(Bridge):
                             "got: {}".format(type(interface)))
 
         # call superclass
-        super(BridgeControllerQuadcopter, self).__init__(interface, priority)
+        super(BridgeControllerQuadcopter, self).__init__(interface, priority=priority, verbose=verbose)
 
         # camera
         self.camera = camera
-        self.verbose = verbose
         self.fpv = first_person_view
         self.camera_pitch = self.camera.pitch
 
         # joystick threshold (to remove noise)
-        self.threshold = 0.05
+        self.threshold = 0.1
 
     ##############
     # Properties #
@@ -144,8 +143,8 @@ class BridgeControllerQuadcopter(Bridge):
 
     def check_events(self):
         # move the quadcopter
-        left_joystick = self.interface.LJ   # (x,y)
-        right_joystick = self.interface.RJ  # (x,y)
+        left_joystick = self.interface.LJ[::-1]   # (y,x)
+        right_joystick = self.interface.RJ[::-1]  # (y,x)
         south_button = self.interface.BTN_SOUTH
         east_button = self.interface.BTN_EAST
         west_button = self.interface.BTN_WEST

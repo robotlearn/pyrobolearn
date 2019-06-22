@@ -33,7 +33,7 @@ else:
     plt.ion()   # interactive mode on
 
     while True:
-        # if don't use thread call `step` or `run` (note that `run` returns the frame but not
+        # perform a `step` with the interface
         interface.step()
 
         # get the frame and plot it with matplotlib

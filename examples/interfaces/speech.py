@@ -33,4 +33,4 @@ interface = SpeechTranslatorInterface(verbose=True, from_lang=args.lang, target_
 
 # run the interface
 while True:
-    data = interface.run()
+    data = interface.step()

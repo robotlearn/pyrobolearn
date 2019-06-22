@@ -45,6 +45,8 @@ class BridgeMouseKeyboardWheeledRobot(Bridge):
         * `left arrow`: turn/steer to the left
         * `right arrow`: turn/steer to the right
         * `space`: switch between first-person and third-person view.  # TODO
+        * `shift`: increase speed
+        * `ctrl`: decrease speed
         * predefined in simulator:
             * `w`: show the wireframe (collision shapes)
             * `s`: show the reference system
@@ -143,8 +145,8 @@ class BridgeMouseKeyboardWheeledRobot(Bridge):
         pitch, yaw = get_rpy_from_quaternion(self.robot.orientation)[1:]
         if self.fpv:  # first-person view
             target_pos = self.robot.position + 2 * np.array([np.cos(yaw) * np.cos(pitch),
-                                                                  np.sin(yaw) * np.cos(pitch),
-                                                                  np.sin(pitch)])
+                                                             np.sin(yaw) * np.cos(pitch),
+                                                             np.sin(pitch)])
             self.camera.reset(distance=2, pitch=-pitch, yaw=yaw - np.pi / 2, target_position=target_pos)
         else:  # third-person view
             self.camera.follow(body_id=self.robot.id, distance=2, yaw=yaw - np.pi / 2, pitch=self.camera_pitch)
@@ -154,7 +156,16 @@ class BridgeMouseKeyboardWheeledRobot(Bridge):
         self.fpv = not self.fpv
 
     def check_key_events(self):
-        pass
+        key, pressed, down = self.interface.key, self.interface.key_pressed, self.interface.key_down
+
+        # change camera view
+        # if key.space in pressed:
+        #     self.change_camera_view()
+
+        if key.shift in pressed:
+            self.speed += 1
+        if key.ctrl in pressed:
+            self.speed -= 1
 
 
 class BridgeMouseKeyboardDifferentialWheeledRobot(BridgeMouseKeyboardWheeledRobot):
@@ -199,11 +210,8 @@ class BridgeMouseKeyboardDifferentialWheeledRobot(BridgeMouseKeyboardWheeledRobo
                                                                           verbose=verbose)
 
     def check_key_events(self):
+        super(BridgeMouseKeyboardDifferentialWheeledRobot, self).check_key_events()
         key, pressed, down = self.interface.key, self.interface.key_pressed, self.interface.key_down
-
-        # change camera view
-        # if key.space in pressed:
-        #     self.change_camera_view()
 
         # move the robot
         if key.top_arrow in down:
@@ -211,9 +219,9 @@ class BridgeMouseKeyboardDifferentialWheeledRobot(BridgeMouseKeyboardWheeledRobo
         elif key.bottom_arrow in down:
             self.robot.drive(speed=-self.speed)
         elif key.left_arrow in down:
-            self.robot.turn(speed=self.speed)
+            self.robot.turn(speed=self.speed/10.)
         elif key.right_arrow in down:
-            self.robot.turn(speed=-self.speed)
+            self.robot.turn(speed=-self.speed/10.)
         else:
             self.robot.drive(speed=0)
 
@@ -260,10 +268,6 @@ class BridgeMouseKeyboardAckermannWheeledRobot(BridgeMouseKeyboardWheeledRobot):
 
     def check_key_events(self):
         key, pressed, down = self.interface.key, self.interface.key_pressed, self.interface.key_down
-
-        # change camera view
-        # if key.space in pressed:
-        #     self.change_camera_view()
 
         # move the robot
         if key.top_arrow in down:

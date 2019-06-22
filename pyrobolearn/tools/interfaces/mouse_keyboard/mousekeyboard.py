@@ -71,7 +71,7 @@ class MouseKeyboardInterface(InputInterface):
         triggered, 4 if it has been released.
     """
 
-    def __init__(self, simulator=None, verbose=False):
+    def __init__(self, simulator=None, verbose=False, *args, **kwargs):
         """
         Initialize the Mouse-Keyboard Interface. This interface is a little bit special in the sense that we use
         the simulator to provide the mouse and keyboard events instead of using an external library.
@@ -223,12 +223,12 @@ class MouseKeyboardInterface(InputInterface):
 
 # Tests
 if __name__ == '__main__':
-    from pyrobolearn.simulators import BulletSim
     import time
     from itertools import count
+    from pyrobolearn.simulators import Bullet
 
     # create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create interface
     interface = MouseKeyboardInterface(sim, verbose=True)

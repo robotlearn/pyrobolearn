@@ -398,12 +398,15 @@ if __name__ == '__main__':
     import time
     from itertools import count
 
+    # set variable
+    use_thread = True
+
     # create interface
-    xbox = XboxOneControllerInterface()
+    xbox = XboxControllerInterface(use_thread=use_thread)
 
     for _ in count():
         # run one step with the interface
-        xbox.run()  # same as `step()` if we are not using threads
+        xbox.step()  # same as `step()` if we are not using threads
 
         # get the last update and print it
         b = xbox.last_updated_button
