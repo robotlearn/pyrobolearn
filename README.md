@@ -32,16 +32,18 @@ $ sudo systemctl status docker # check that docker is active
 $ docker build -t pyrobolearn .
 ```
 3. Launch
+
+
 You can now start the python interpreter with every library already installed
 
 ```bash
-$ docker run -p 11311:11311 -v catkin_ws:/pyrobolearn/catkin_ws/ -ti pyrobolearn python3
+$ docker run -p 11311:11311 -v $PWD/dev:/pyrobolearn/dev/:rw -ti pyrobolearn python3
 ```
 
 To open an interactive terminal in the docker image use:
 
 ```bash
-$ docker run -p 11311:11311 -v catkin_ws:/pyrobolearn/catkin_ws/ -ti pyrobolearn /bin/bash
+$ docker run -p 11311:11311 -v $PWD/dev:/pyrobolearn/dev/:rw -ti pyrobolearn /bin/bash
 ```
 
 4. nvidia-docker
@@ -58,7 +60,7 @@ sudo pkill -SIGHUP dockerd
 
 And use:
 ```bash
-$ nvidia-docker run -p 11311:11311 -v catkin_ws:/pyrobolearn/catkin_ws/ -ti pyrobolearn
+$ nvidia-docker run -p 11311:11311 -v $PWD/dev:/pyrobolearn/dev/:rw -ti pyrobolearn
 ```
 
 ### Ubuntu
