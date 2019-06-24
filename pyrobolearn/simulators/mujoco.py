@@ -17,6 +17,7 @@ References:
 """
 
 # TODO
+# import mujoco_py as mujoco
 
 from pyrobolearn.simulators.simulator import Simulator
 

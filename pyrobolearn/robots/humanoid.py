@@ -5,7 +5,7 @@
 import os
 
 from pyrobolearn.robots.legged_robot import BipedRobot
-from pyrobolearn.robots.manipulator import BiManipulatorRobot
+from pyrobolearn.robots.manipulator import BiManipulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -16,7 +16,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Humanoid(BipedRobot, BiManipulatorRobot):
+class Humanoid(BipedRobot, BiManipulator):
     r"""Humanoid Mujoco Model
 
     References:

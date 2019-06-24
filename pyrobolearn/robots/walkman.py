@@ -5,7 +5,7 @@
 import os
 
 from pyrobolearn.robots.legged_robot import BipedRobot
-from pyrobolearn.robots.manipulator import BiManipulatorRobot
+from pyrobolearn.robots.manipulator import BiManipulator
 from pyrobolearn.robots.sensors import CameraSensor
 
 __author__ = "Brian Delhaisse"
@@ -17,7 +17,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Walkman(BipedRobot, BiManipulatorRobot):
+class Walkman(BipedRobot, BiManipulator):
     r"""Walk-man robot
 
     The Walk-man robot is a humanoid robot developed at the Italian Institute of Technology (IIT) with ... degrees

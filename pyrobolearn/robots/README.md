@@ -5,7 +5,7 @@ This folder contains the various robots that can be used in the PRL framework. C
 ```python
 import pyrobolearn as prl
 
-sim = prl.simulators.BulletSim()
+sim = prl.simulators.Bullet()
 robot = prl.robots.<RobotClass>(sim)
 ```
 
@@ -14,7 +14,7 @@ or
 ```python
 import pyrobolearn as prl
 
-sim = prl.simulators.BulletSim()
+sim = prl.simulators.Bullet()
 world = prl.worlds.BasicWorld(sim)
 robot = world.loadRobot(<Robot_name_or_robot_class>)
 ```

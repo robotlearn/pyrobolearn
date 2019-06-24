@@ -6,8 +6,10 @@ import inspect
 
 # General robot class
 from .base import Body, MovableBody, ControllableBody
-from .actuators import *
-from .sensors import *
+from . import actuators
+from . import sensors
+# from .actuators import *
+# from .sensors import *
 from .robot import Robot
 
 # Categories/types of robots

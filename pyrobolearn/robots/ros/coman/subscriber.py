@@ -1,5 +1,9 @@
+#!/usr/bin/env python
+"""Define the Coman subscriber.
+"""
+
 import rospy
-#from std_msgs import msg as stdMsg
+# from std_msgs import msg as stdMsg
 from sensor_msgs import msg as senMsg
 from geometry_msgs import msg as geoMsg
 
@@ -7,14 +11,17 @@ import sys
 import numpy as np
 
 __author__ = "Brian Delhaisse"
-__email__ = "Brian.Delhaisse@iit.it"
+__copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
+__license__ = "GNU GPLv3"
 __version__ = "1.0.0"
-__date__ = "06/02/2017"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
 
 
 # ROS - Gazebo
-class ComanListener:
+class ComanSubscriber(object):
     """
     ROS node that subscribes to topics to get the state of the coman.
 
@@ -25,25 +32,28 @@ class ComanListener:
     - cameras
     """
 
-    def __init__(self):
+    def __init__(self, robot_id=None):
 
-        rospy.init_node('ComanListener')
+        if robot_id is None:
+            rospy.init_node('ComanSubscriber', anonymous=True)
+        else:
+            rospy.init_node('ComanSubscriber' + str(robot_id))
 
-        ### Joint States
+        # Joint States
         self.sub_joints = rospy.Subscriber(
             "/coman/joint_states", senMsg.JointState, self.joints_callback)
         self.joints = None
 
-        ### IMUs
-        self.sub_imu1 = rospy.Subscriber(
-            "/coman/sensor/IMU", senMsg.Imu, self.imu1_callback)
-        self.imu1 = None
+        # IMUs
+        # self.sub_imu1 = rospy.Subscriber(
+        #     "/coman/sensor/IMU", senMsg.Imu, self.imu1_callback)
+        # self.imu1 = None
 
         # self.sub_imu2 = rospy.Subscriber(
         #     "/coman/sensor/imu2", senMsg.Imu, self.imu2_callback)
         # self.imu2 = None
 
-        ### Force-Torque sensors
+        # Force-Torque sensors
         self.sub_ft_LForearm = rospy.Subscriber(
             "/coman/ft_sensor/LForearm", geoMsg.WrenchStamped, self.ft_LForearm_callback)
         self.ft_LForearm = None
@@ -60,7 +70,7 @@ class ComanListener:
             "/coman/ft_sensor/RAnkle", geoMsg.WrenchStamped, self.ft_RAnkle_callback)
         self.ft_RAnkle = None
 
-        ### Cameras
+        # Cameras
         self.sub_camera_rgb = rospy.Subscriber(
             "/camera/rgb/image_raw", senMsg.Image, self.camera_rgb_callback)
         self.camera_rgb = None

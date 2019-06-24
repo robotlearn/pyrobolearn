@@ -76,6 +76,3 @@ Here is the list of repos where you can find the original URDF/meshes of each ro
     * Currently (Apr.25, 2018), pybullet sets a mass of 1 and an identity inertia to links which don't have an inertia tag defined in the urdf (see bullet3/examples/Importers/ImportURDFDemo/UrdfParser.cpp, line 991-997). This is not desirable, and as such, you should set a mass/inertia of zero to fake/dummy links which are connected by a **fixed** joint. For other links connected by other type of joints, sets a reasonable inertia matrix; an identity matrix is often unreasonable (see ["Adding Physical and Collision Properties to a URDF Model"](http://wiki.ros.org/urdf/Tutorials/Adding%20Physical%20and%20Collision%20Properties%20to%20a%20URDF%20Model)).
     * The first link (often called base_link/world_link) shouldn't have a mass/inertia of zero, this causes the robot to float in the air. Remove the corresponding tag from the urdf.
     * I do not own the rights to the URDFs (see the corresponding repo and their associated license). They are just regrouped here for convenience, and slightly updated to be used with pybullet. Each URDF has a pybullet robot class associated with it.
-
----> TODO: ADD IN EACH FOLDER THEIR CORRESPONDING LICENSE.
-

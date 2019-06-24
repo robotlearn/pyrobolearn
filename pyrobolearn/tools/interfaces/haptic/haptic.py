@@ -3,6 +3,13 @@
 
 Prerequisites:
 - follow instructions in [4] on how to install h3dapi.
+- To use the Python library, you have to run `H3DLoad <file>.x3d` where in the `<file>.x3d` you make a reference to
+the Python script you want to run. Inside this Python script, you will be able to access to the Python library
+`H3DInterface`... This is bad... Need to find a better alternative.
+
+Troubleshooting:
+- Check: https://www.h3dapi.org/modules/mediawiki/index.php/H3DAPI_FAQ#Python
+-
 
 Dependencies:
 - `pyrobolearn.tools.interfaces`
@@ -18,7 +25,13 @@ References:
 
 # TODO
 
-# import H3DInterface as h3d
+try:
+    import H3DInterface as h3d
+except ImportError as e:
+    string = "\nHint: try to install h3dapi by following the instructions on: " \
+             "https://www.h3dapi.org/modules/mediawiki/index.php/H3DAPI_Installation" \
+             "\nNote that you will have to install the API from source to have the Python library."
+    raise ImportError(e.__str__() + string)
 
 from pyrobolearn.tools.interfaces import InputOutputInterface
 

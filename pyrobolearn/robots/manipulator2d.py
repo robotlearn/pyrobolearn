@@ -5,7 +5,7 @@
 import os
 import numpy as np
 
-from pyrobolearn.robots.manipulator import ManipulatorRobot
+from pyrobolearn.robots.manipulator import Manipulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -16,7 +16,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Manipulator2D(ManipulatorRobot):
+class Manipulator2D(Manipulator):
     r"""2D manipulator robot
 
     References:

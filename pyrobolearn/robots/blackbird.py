@@ -24,6 +24,7 @@ class Blackbird(BipedRobot):
 
     References:
         [1] https://hackaday.io/project/160882-blackbird-bipedal-robot
+        [2] https://github.com/G-Levine
     """
 
     def __init__(self,

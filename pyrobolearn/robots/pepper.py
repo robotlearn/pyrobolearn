@@ -5,7 +5,7 @@
 import os
 
 from pyrobolearn.robots.wheeled_robot import WheeledRobot
-from pyrobolearn.robots.manipulator import BiManipulatorRobot
+from pyrobolearn.robots.manipulator import BiManipulator
 from pyrobolearn.robots.sensors.camera import CameraSensor
 
 __author__ = "Brian Delhaisse"
@@ -17,7 +17,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Pepper(WheeledRobot, BiManipulatorRobot):
+class Pepper(WheeledRobot, BiManipulator):
     r"""Pepper robot.
 
     The Pepper robot is a robot from the Aldebaran company.

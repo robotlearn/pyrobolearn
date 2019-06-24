@@ -4,7 +4,7 @@
 
 import os
 
-from pyrobolearn.robots.manipulator import ManipulatorRobot
+from pyrobolearn.robots.manipulator import Manipulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -15,7 +15,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class KukaIIWA(ManipulatorRobot):
+class KukaIIWA(Manipulator):
     r"""Kuka IIWA robot
 
     IIWA stands for 'Intelligent Industrial Work Assistant'.  This robot has 7 DoFs, and an ATI F/T sensor at the

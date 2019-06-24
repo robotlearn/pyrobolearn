@@ -5,7 +5,7 @@
 import os
 
 from pyrobolearn.robots.legged_robot import BipedRobot
-from pyrobolearn.robots.manipulator import BiManipulatorRobot
+from pyrobolearn.robots.manipulator import BiManipulator
 from pyrobolearn.robots.hand import TwoHand
 
 __author__ = "Brian Delhaisse"
@@ -17,7 +17,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Hubo(BipedRobot, BiManipulatorRobot, TwoHand):
+class Hubo(BipedRobot, BiManipulator, TwoHand):
     r"""Hubo robot
 
     "The HUBO series of biped robots was developed by the Humanoid Robot Research Center at KAIST (Korea Advanced

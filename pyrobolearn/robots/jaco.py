@@ -4,7 +4,7 @@
 
 import os
 
-from pyrobolearn.robots.manipulator import ManipulatorRobot
+from pyrobolearn.robots.manipulator import Manipulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -15,7 +15,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Jaco(ManipulatorRobot):
+class Jaco(Manipulator):
     r"""Jaco (manipulator) robot
 
     References:

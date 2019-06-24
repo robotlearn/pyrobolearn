@@ -19,7 +19,8 @@ class PhantomX(HexapodRobot):
     r"""Phantom X Hexapod robot
 
     References:
-        [1] https://github.com/HumaRobotics/phantomx_description
+        [1] https://www.trossenrobotics.com/phantomx-ax-hexapod.aspx
+        [2] https://github.com/HumaRobotics/phantomx_description
     """
 
     def __init__(self,

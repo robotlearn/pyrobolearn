@@ -5,7 +5,7 @@
 import os
 
 from pyrobolearn.robots.wheeled_robot import WheeledRobot
-from pyrobolearn.robots.manipulator import ManipulatorRobot
+from pyrobolearn.robots.manipulator import Manipulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -16,7 +16,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Fetch(WheeledRobot, ManipulatorRobot):
+class Fetch(WheeledRobot, Manipulator):
     r"""Fetch robot
 
     References:

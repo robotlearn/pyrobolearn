@@ -7,7 +7,7 @@ These include: YoubotBase, KukaYoubotArm, Youbot, YoubotDualArm
 import os
 import numpy as np
 
-from pyrobolearn.robots.manipulator import ManipulatorRobot, BiManipulatorRobot
+from pyrobolearn.robots.manipulator import Manipulator, BiManipulator
 from pyrobolearn.robots.wheeled_robot import DifferentialWheeledRobot
 
 __author__ = "Brian Delhaisse"
@@ -51,7 +51,7 @@ class YoubotBase(DifferentialWheeledRobot):
         # self.wheel_directions = np.ones(len(self.wheels))
 
 
-class KukaYoubotArm(ManipulatorRobot):
+class KukaYoubotArm(Manipulator):
     r"""Kuka Youbot arm robot
 
     References:
@@ -79,7 +79,7 @@ class KukaYoubotArm(ManipulatorRobot):
         self.name = 'kuka_youbot_arm'
 
 
-class Youbot(ManipulatorRobot, DifferentialWheeledRobot):
+class Youbot(Manipulator, DifferentialWheeledRobot):
     r"""Youbot robot
 
     References:
@@ -111,7 +111,7 @@ class Youbot(ManipulatorRobot, DifferentialWheeledRobot):
         # self.wheel_directions = np.ones(len(self.wheels))
 
 
-class YoubotDualArm(BiManipulatorRobot, DifferentialWheeledRobot):
+class YoubotDualArm(BiManipulator, DifferentialWheeledRobot):
     r"""Youbot dual arm robot
 
     References:

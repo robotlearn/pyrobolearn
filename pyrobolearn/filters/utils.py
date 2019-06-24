@@ -17,7 +17,8 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-# Butterworth Filter
+# Butterworth Filter: "The Butterworth filter is a type of signal processing filter designed to have a frequency
+# response as flat as possible in the passband." (Wikipedia: https://en.wikipedia.org/wiki/Butterworth_filter)
 # Example from http://scipy-cookbook.readthedocs.io/items/ButterworthBandpass.html
 def butter_bandpass(lowcut, highcut, fs, order=5):
     nyq = 0.5 * fs

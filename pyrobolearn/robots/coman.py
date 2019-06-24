@@ -6,7 +6,7 @@ import os
 import numpy as np
 
 from pyrobolearn.robots.legged_robot import BipedRobot
-from pyrobolearn.robots.manipulator import BiManipulatorRobot
+from pyrobolearn.robots.manipulator import BiManipulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -17,7 +17,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Coman(BipedRobot, BiManipulatorRobot):
+class Coman(BipedRobot, BiManipulator):
     r"""Coman robot
 
     References:

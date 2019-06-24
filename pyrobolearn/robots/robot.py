@@ -55,7 +55,7 @@ class Robot(ControllableBody):
         """
         # check parameters
         if position is None:
-            position = (0., 0., 1.5)
+            position = (0., 0., 0)
         if orientation is None:
             orientation = (0, 0, 0, 1)
         if fixed_base is None:
