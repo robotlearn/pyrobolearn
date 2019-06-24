@@ -4,6 +4,7 @@
 name = "pyrobolearn"
 
 import sys
+import signal
 
 # logging
 import logging
@@ -86,11 +87,20 @@ from . import algos
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "GNU GPLv3"
+__license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
+
+
+# Capture a SIGINT in Python: make sure we quit PRL when Ctrl+C is pressed
+def signal_handler(sig, frame):
+    print('You pressed Ctrl+C!')
+    sys.exit(0)
+
+
+signal.signal(signal.SIGINT, signal_handler)
 
 
 # https://stackoverflow.com/questions/30483246/how-to-check-if-a-python-module-has-been-imported

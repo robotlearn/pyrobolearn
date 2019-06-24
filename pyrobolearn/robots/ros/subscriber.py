@@ -29,14 +29,13 @@ class SubscriberData(object):
         self.subscriber = rospy.Subscriber(topic, data_class, callback=self.callback)
         self.attributes = set([attr for attr in [attr for attr in dir(data_class) if not attr.startswith('_')]
                                if not callable(getattr(data_class, attr))])
-        self.subscriber_data = None
+        self.subscriber_data = data_class()
 
     def callback(self, data):
         self.subscriber_data = data
 
     def __getattr__(self, name):
-        if self.subscriber_data is not None:
-            return getattr(self.subscriber_data, name, None)
+        return getattr(self.subscriber_data, name)
 
     def unregister(self):
         self.subscriber.unregister()
@@ -124,13 +123,19 @@ class RobotSubscriber(Subscriber):
         self.create_subscriber('joint_states', self.name + '/joint_states', sensor_msg.JointState)
 
     def get_joint_positions(self, joint_ids):
-        return np.asarray(self.joint_states.position)[joint_ids]
+        if len(self.joint_states.position) >= len(joint_ids):
+            return np.asarray(self.joint_states.position)  # [joint_ids]
+        return np.asarray(self.joint_states.position)
 
     def get_joint_velocities(self, joint_ids):
-        return np.asarray(self.joint_states.velocity)[joint_ids]
+        if len(self.joint_states.velocity) >= len(joint_ids):
+            return np.asarray(self.joint_states.velocity)[joint_ids]
+        return np.asarray(self.joint_states.velocity)
 
     def get_joint_torques(self, joint_ids):
-        return np.asarray(self.joint_states.effort)[joint_ids]
+        if len(self.joint_states.effort) >= len(joint_ids):
+            return np.asarray(self.joint_states.effort)[joint_ids]
+        return np.asarray(self.joint_states.effort)
 
 
 # Tests
@@ -143,7 +148,7 @@ if __name__ == '__main__':
     print("Published topics: {}".format(rospy.get_published_topics()))
     print("Robot joint state attributes: {}".format(subscriber.joint_states.attributes))
 
-    for t in range(100):
+    for t in count():
         print(t)
         print("Joint position data: {}".format(subscriber.joint_states.position))
         time.sleep(0.1)

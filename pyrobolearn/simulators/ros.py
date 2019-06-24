@@ -18,10 +18,15 @@ References:
 """
 
 # TODO
-
-import rospy
+import os
+import subprocess
+import psutil
+import signal
+import importlib
+import inspect
 
 from pyrobolearn.simulators.simulator import Simulator
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -50,12 +55,12 @@ class ROS(Simulator):
     r"""ROS Interface
     """
 
-    def __init__(self, subscribe=False, publish=False, master_uri=11311, **kwargs):
+    def __init__(self, subscribe=False, publish=False, teleoperate=False, master_uri=11311, **kwargs):
         super(ROS, self).__init__(render=False)
 
         # Environment variable
         self.env = os.environ.copy()
-        self.env["ROS_MASTER_URI"] = "http://localhost:" + str(ros_master_uri)
+        self.env["ROS_MASTER_URI"] = "http://localhost:" + str(master_uri)
 
         # this is for the rospy methods such as: wait_for_service(), init_node(), ...
         os.environ['ROS_MASTER_URI'] = self.env['ROS_MASTER_URI']
@@ -64,12 +69,13 @@ class ROS(Simulator):
         self.roscore = None
         if "roscore" not in [p.name() for p in psutil.process_iter()]:
             # subprocess.Popen("roscore", env=self.env)
-            self.roscore = subprocess.Popen(["roscore", "-p", str(ros_master_uri)], env=self.env,
+            self.roscore = subprocess.Popen(["roscore", "-p", str(master_uri)], env=self.env,
                                             preexec_fn=os.setsid)  # , shell=True)
 
         # set variables
         self.subscribe = subscribe
         self.publish = publish
+        self.teleoperate = teleoperate
 
         # remember each publisher/subscriber
         self.subscribers = {}
@@ -77,6 +83,28 @@ class ROS(Simulator):
         self.models = []
 
         self.count_id = -1
+
+    def close(self):
+        """
+        Close everything
+        """
+        # delete each subscribers
+
+        # delete each publishers
+
+        # delete ROS
+        if self.roscore is not None:
+            os.killpg(os.getpgid(self.roscore.pid), signal.SIGTERM)
+
+    @property
+    def is_subscribing(self):
+        """Return True if we are subscribing to topics."""
+        return self.subscribe
+
+    @property
+    def is_publishing(self):
+        """Return True if we are publishing to topics."""
+        return self.publish
 
     def load_urdf(self, filename, position=None, orientation=None, use_maximal_coordinates=None,
                   use_fixed_base=None, flags=None, scale=None):
@@ -87,16 +115,6 @@ class ROS(Simulator):
         and other objects, it was created by the WillowGarage and the Open Source Robotics Foundation (OSRF).
         Many robots have public URDF files, you can find a description and tutorial here:
         http://wiki.ros.org/urdf/Tutorials
-
-        Important note:
-            most joints (slider, revolute, continuous) have motors enabled by default that prevent free
-            motion. This is similar to a robot joint with a very high-friction harmonic drive. You should set the joint
-            motor control mode and target settings using `pybullet.setJointMotorControl2`. See the
-            `setJointMotorControl2` API for more information.
-
-        Warning:
-            by default, PyBullet will cache some files to speed up loading. You can disable file caching using
-            `setPhysicsEngineParameter(enableFileCaching=0)`.
 
         Args:
             filename (str): a relative or absolute path to the URDF file on the file system of the physics server.
@@ -124,24 +142,48 @@ class ROS(Simulator):
         Returns:
             int (non-negative): unique id associated to the load model.
         """
-        # get path to directory of urdf
-        path = os.path.dirname(filename)
-        robot_directory_name = path.split('/')[-1]
-        path = path + '/../../ros/' + robot_directory_name + '/'
-
-        # check if valid robot directory
-
-        # load subscriber in simulator
-        if self.subscribe:
-            pass
-
-        # load publisher in simulator
-        if self.publish:
-            pass
-
+        id_ = self.count_id
         self.count_id += 1
 
-        return self.count_id
+        # get path to directory of urdf
+        path = os.path.dirname(os.path.abspath(filename))           # /path/to/pyrobolearn/robots/urdfs/<robot>/
+        robot_directory_name = path.split('/')[-1]                  # <robot>
+        path = path + '/../../ros/' + robot_directory_name + '/'    # /path/to/pyrobolearn/robots/ros/<robot>/
+
+        # check if valid robot directory
+        # if os.path.isdir(path):
+        robot_path = '/'.join(path.split('/')[-5:-2])
+        if robot_path == 'pyrobolearn/robots/urdfs':
+
+            # get corresponding subscriber/publisher
+            def check_ros(name, dictionary, id_):
+                # TODO: do I really need a class for each robot? Can I not just use RobotPublisher?
+                # if os.path.isfile(path + name + '.py'):
+                #     module = importlib.import_module('pyrobolearn.robots.ros.' + robot_directory_name + '.' + name)
+                #     classes = inspect.getmembers(module, inspect.isclass)  # list of (name, class)
+                #     length = len(name)
+                #     robot_name = ''.join(robot_directory_name.split('_'))
+                #
+                #     # go through each class and get the :attr:`name` corresponding to the robot and add it to the
+                #     # given :attr:`dictionary`
+                #     for name, cls in classes:
+                #         if name[:-length].lower() == robot_name:
+                #             dictionary[id_] = cls(id_=id_)
+                #             break
+                module = importlib.import_module('pyrobolearn.robots.ros.' + name)
+                classes = dict(inspect.getmembers(module, inspect.isclass))
+                cls = classes['Robot' + name.capitalize()]
+                dictionary[id_] = cls(name=robot_directory_name, id_=id_)
+
+            # load subscriber in simulator
+            if self.subscribe:
+                check_ros('subscriber', self.subscribers, id_)
+
+            # load publisher in simulator
+            if self.publish:
+                check_ros('publisher', self.publishers, id_)
+
+        return id_
 
     def get_joint_positions(self, body_id, joint_ids):
         """
@@ -158,7 +200,7 @@ class ROS(Simulator):
                 np.float[N]: joint positions [rad]
         """
         if body_id in self.subscribers:
-            return self.subscribers[body_id].get_joint_positions[joint_ids]
+            return self.subscribers[body_id].get_joint_positions(joint_ids)
 
     def set_joint_positions(self, body_id, joint_ids, positions, velocities=None, kps=None, kds=None, forces=None):
         """
@@ -175,6 +217,7 @@ class ROS(Simulator):
         """
         if body_id in self.publishers:
             self.publishers[body_id].set_joint_positions(joint_ids, positions)
+            self.publishers[body_id].publish('joint_states')
 
     def get_joint_velocities(self, body_id, joint_ids):
         """
@@ -190,7 +233,8 @@ class ROS(Simulator):
             if multiple joints:
                 np.float[N]: joint velocities [rad/s]
         """
-        pass
+        if body_id in self.subscribers:
+            return self.subscribers[body_id].get_joint_velocities(joint_ids)
 
     def set_joint_velocities(self, body_id, joint_ids, velocities, max_force=None):
         """
@@ -202,7 +246,9 @@ class ROS(Simulator):
             velocities (float, np.float[N]): desired velocity, or list of desired velocities [rad/s]
             max_force (None, float, np.float[N]): maximum motor forces/torques
         """
-        pass
+        if body_id in self.publishers:
+            self.publishers[body_id].set_joint_velocities(joint_ids, velocities)
+            self.publishers[body_id].publish('joint_states')
 
     def get_joint_torques(self, body_id, joint_ids):
         """
@@ -220,7 +266,8 @@ class ROS(Simulator):
             if multiple joints:
                 np.float[N]: torques associated to the given joints [Nm]
         """
-        pass
+        if body_id in self.subscribers:
+            return self.subscribers[body_id].get_joint_torques(joint_ids)
 
     def set_joint_torques(self, body_id, joint_ids, torques):
         """
@@ -231,4 +278,6 @@ class ROS(Simulator):
             joint_ids (int, list of int): joint id, or list of joint ids.
             torques (float, list of float): desired torque(s) to apply to the joint(s) [N].
         """
-        pass
+        if body_id in self.publishers:
+            self.publishers[body_id].set_joint_torques(joint_ids, torques)
+            self.publishers[body_id].publish('joint_states')

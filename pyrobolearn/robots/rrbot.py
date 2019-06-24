@@ -51,7 +51,7 @@ class RRBot(Manipulator):
         #     self.sim.step()
 
         # disable each motor joint
-        self.disable_motor()
+        # self.disable_motor()
         # self.sim.setJointMotorControlArray(self.id, self.joints, self.sim.VELOCITY_CONTROL, forces=forces)
 
         # enable F/T sensor at the end effector
@@ -78,6 +78,7 @@ if __name__ == "__main__":
 
     # load robot
     robot = RRBot(sim)
+    robot.disable_motor()
     # robot.add_joint_slider()
 
     print("Robot: {}".format(robot))

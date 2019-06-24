@@ -8,6 +8,9 @@ from .simulator import Simulator
 from .bullet import Bullet
 from .bullet import Bullet as BulletSim  # alias  # TODO: remove that alias
 
+# bullet ros simulator
+from .bullet_ros import BulletROS
+
 # dart simulator
 # from .dart import Dart
 

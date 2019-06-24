@@ -40,6 +40,9 @@ class PublisherData(object):
         if key in self.attributes:
             setattr(self.publisher_data, key, value)
 
+    def __getattr__(self, key):
+        return getattr(self.publisher_data, key)
+
 
 class Publisher(object):
     r"""Publisher class
@@ -89,7 +92,7 @@ class Publisher(object):
             for publisher in self.publishers.values():
                 publisher.publish()
         elif name is not None:
-            self.name.publish(data)
+            self.__dict__[name].publish(data)
 
     # def __getattr__(self, name):
     #     return self.publishers[name]
@@ -120,7 +123,8 @@ class RobotPublisher(Publisher):
         self.publishers['joint_states'] = self.joint_states
 
     def set_joint_positions(self, joint_ids, positions):
-        self.joint_states.position[joint_ids] = positions
+        # self.joint_states.position[joint_ids] = positions
+        self.joint_states.position = positions
 
     def set_joint_velocities(self, joint_ids, velocities):
         self.joint_states.velocity[joint_ids] = velocities
@@ -133,15 +137,16 @@ class RobotPublisher(Publisher):
 if __name__ == '__main__':
     # NOTE: run roscore before hand
     import numpy as np
+    from itertools import count
     import time
 
     publisher = RobotPublisher('walter')
+    print("Published topics: {}".format(rospy.get_published_topics()))
     print("Robot joint state attributes: {}".format(publisher.joint_states.attributes))
 
     publisher.joint_states.position = np.array(range(3))
 
-    for t in range(20):
+    for t in count():
+        print(t)
         publisher.publish()
         time.sleep(0.1)
-
-    print("Published topics: {}".format(rospy.get_published_topics()))
