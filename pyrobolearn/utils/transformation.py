@@ -10,6 +10,7 @@ References:
 
 import numpy as np
 import quaternion
+# from pyquaternion import Quaternion  # TODO: check API at http://kieranwynn.github.io/pyquaternion
 import sympy
 from collections import Iterable
 
@@ -610,6 +611,10 @@ def skew_matrix(vector):
                      [-y, x, 0.]])
 
 
+# alias (for people who use http://www.petercorke.com/RTB/r9/html/skew.html)
+skew = skew_matrix
+
+
 def vector_from_skew_matrix(matrix):
     r"""
     Convert skew-symmetric matrix to vector; this is the inverse of the function `skew_matrix`.
@@ -629,6 +634,10 @@ def vector_from_skew_matrix(matrix):
     return 0.5 * np.array([matrix[2, 1] - matrix[1, 2],
                            matrix[0, 2] - matrix[2, 0],
                            matrix[1, 0] - matrix[0, 1]])
+
+
+# alias (for people who use http://www.petercorke.com/RTB/r9/html/vex.html)
+vex = vector_from_skew_matrix
 
 
 def rotation_matrix_x(angle):
@@ -838,15 +847,17 @@ def get_quaternion_product(q1, q2, convention='xyzw'):
 
 
 def quaternion_error(quat_des, quat_cur):
-    """
-    Quaternion error between two quaternions.
+    r"""
+    Compute the orientation (vector) error between the current and desired quaternion; that is, it is the difference
+    between :math:`q_curr` and :math:`q_des`, which is given by: :math:`\Delta q = q_{curr}^{-1} q_{des}`.
+    Only the vector part is returned which can be used in PD control.
 
     Args:
-        quat_des (np.array[4], quaternion.quaternion): desired quaternion
-        quat_cur (np.array[4], quaternion.quaternion): current quaternion
+        quat_des (np.array[4]): desired quaternion [x,y,z,w]
+        quat_cur (np.array[4]): current quaternion [x,y,z,w]
 
     Returns:
-
+        np.array[3]: vector error between the current and desired quaternion
     """
     diff = quat_cur[-1] * quat_des[:3] - quat_des[-1] * quat_cur[:3] - skew_matrix(quat_des[:3]).dot(quat_cur[:3])
     return diff
@@ -905,35 +916,97 @@ def angular_velocity_from_quaternion(q1, q2):
     return 2 * logarithm_map(q1 * q2)
 
 
-def slerp(q0, qf):
+def slerp(q0, qf, t, t0=0., tf=1.):
     """
     Interpolate between two quaternions using Spherical Linear intERPolation (SLERP).
 
     Args:
-        q1:
-        q2:
+        q0 (np.array[4], quaternion.quaternion): initial quaternion.
+        qf (np.array[4], quaternion.quaternion): final quaternion.
+        t (float, list of float, np.array): the times to which the quaternions should be interpolated.
+        t0 (float): initial time corresponding to the initial quaternion.
+        tf (float): final time corresponding to the final quaternion.
 
     Returns:
+        np.array, quaternion, np.array of quaternion: one or multiple interpolated quaternions
 
     References:
-        [1] "Understanding Quaternions", https://www.3dgep.com/understanding-quaternions
+        - [1] "Understanding Quaternions", https://www.3dgep.com/understanding-quaternions
+        - [2] Documentation of numpy-quaternion
     """
-    pass
+    # convert if necessary
+    is_input_quaternion = True
+    if not isinstance(q0, quaternion.quaternion):
+        q0 = quaternion.quaternion(q0[3], q0[0], q0[1], q0[2])
+        is_input_quaternion = False
+    if not isinstance(qf, quaternion.quaternion):
+        qf = quaternion.quaternion(qf[3], qf[0], qf[1], qf[2])
+
+    t = np.asarray(t)
+
+    # interpolate using quaternion library
+    qs = quaternion.slerp(q0, qf, t0, tf, t)
+
+    # if we need to convert back to np.array
+    if not is_input_quaternion:
+        if isinstance(qs, np.ndarray):
+            qs = quaternion.as_float_array(qs)
+            qs = np.hstack((qs[:, 1:], qs[:, 0, np.newaxis]))
+            return qs
+        return np.array([qs.x, qs.y, qs.z, qs.w])
+    return qs
 
 
-def squad(quaternions):
+def squad(quaternions, times, t):
     r"""
     Smoothly interpolate over a list/path of rotations using Spherical and QUADrangle (SQUAD).
 
+    From [2]: "Spherical "quadrangular" interpolation of rotors with a cubic spline
+
+    This is the best way to interpolate rotations.  It uses the analog of a cubic spline, except that the interpolant
+    is confined to the rotor manifold in a natural way.  Alternative methods involving interpolation of other
+    coordinates on the rotation group or normalization of interpolated values give bad results. The results from this
+    method are as natural as any, and are continuous in first and second derivatives.
+
+    The input `R_in` rotors are assumed to be reasonably continuous (no sign flips), and the input `t` arrays are
+    assumed to be sorted. No checking is done for either case, and you may get silently bad results if these
+    conditions are violated."
+
     Args:
-        quaternions (list of np.array, list of quaternion.quaternion):
+        quaternions (list of np.array[4], list of quaternion.quaternion): A time-series of rotors (unit quaternions)
+            to be interpolated
+        times (np.array, list of float): the times corresponding to the quaternions.
+        t (np.array, list of float): the times to which the quaternions should be interpolated.
 
     Returns:
+        np.array, np.array of quaternion: interpolated quaternions
 
     References:
-        [1] "Understanding Quaternions", https://www.3dgep.com/understanding-quaternions
+        - [1] "Understanding Quaternions", https://www.3dgep.com/understanding-quaternions
+        - [2] Documentation of numpy-quaternion
     """
-    pass
+    # make sure that they are numpy arrays
+    quaternions = np.asarray(quaternions)
+    times = np.asarray(times)
+    t = np.asarray(t)
+
+    # check if we need to convert
+    are_input_quaternions = (quaternions.dtype == quaternion.quaternion)
+    if not are_input_quaternions:
+        qs = quaternions
+        quaternions = quaternion.from_float_array(np.hstack((qs[:, 0, np.newaxis], qs[:, 1:])))
+
+    # interpolate
+    qs = quaternion.squad(quaternions, times, t)
+
+    # if we need to convert back to np.array
+    if not are_input_quaternions:
+        if isinstance(qs, np.ndarray):
+            qs = quaternion.as_float_array(qs)
+            qs = np.hstack((qs[:, 1:], qs[:, 0, np.newaxis]))
+            return qs
+        return np.array([qs.x, qs.y, qs.z, qs.w])
+    return qs
 
 
 # Tests
