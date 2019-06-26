@@ -1,12 +1,28 @@
 PyRoboLearn
 ===========
 
+PyRoboLearn is a Python framework in robot learning for education and research. PyRoboLearn is meant to be a free and open-source tool.
+
 Goal
-----
 
 
 Problem formulation
 -------------------
+
+General idea.
+
+- lack of benchmarks
+- lack of flexibility and modularity
+- lack of generalization
+- high coupling
+
+For instance:
+
+Full example.
+
+
+Main idea of PyRoboLearn and solution to above problem.
+
 
 Hardware/Software requirements
 ------------------------------

@@ -1,7 +1,5 @@
-PyRoboLearn
-===========
 
-.. include:: ../../README.md
+.. include:: ../../README.rst
 
 Design Decisions
 ================

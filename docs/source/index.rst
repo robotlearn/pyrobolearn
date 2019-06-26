@@ -8,7 +8,7 @@ Welcome to PyRoboLearn's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: PyRoboLearn
+   :caption: Introduction
 
    readme
 
@@ -17,6 +17,23 @@ Welcome to PyRoboLearn's documentation!
    :caption: Installation
 
    installation
+
+.. toctree::
+   :maxdepth: 4
+   :caption: PyRoboLearn
+  
+   pyrobolearn
+   simulators
+   worlds 
+   robots
+   interfaces
+   states
+   actions
+   rewards
+   environments
+   models
+   approximators
+   algorithms
 
 .. toctree::
    :maxdepth: 2
