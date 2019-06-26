@@ -6,8 +6,6 @@ This framework revolves mainly around 7 axes: simulators, worlds, robots, interf
 
 **Warning**: The development of this framework is ongoing, and thus some substantial changes might occur. Sorry for the inconvenience.
 
-.. toctree::
-	:maxdepth: 2
 
 Requirements
 ------------
@@ -171,7 +169,6 @@ Acknowledgements
 
 Currently, we mainly use the PyBullet simulator.
 
-- *PyBullet, a Python module for physics simulation for games, robotics and machine learning*,
-Erwin Coumans and Yunfei Bai, 2016-2019
+- *PyBullet, a Python module for physics simulation for games, robotics and machine learning*, Erwin Coumans and Yunfei Bai, 2016-2019
 - references for each robot, model, and others can be found in the corresponding class documentation
 - Locomotion controllers were provided by Songyan Xin (see ``pyrobolearn/controllers/locomotion``)
