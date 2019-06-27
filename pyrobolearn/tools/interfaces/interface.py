@@ -94,6 +94,8 @@ class Interface(object):
         if self.use_thread:
             while True:
                 if self.stop_thread:  # if the thread should stop
+                    if self.verbose:
+                        print("Stopping the thread")
                     break
                 self.run(*args, **kwargs)
                 time.sleep(self.dt)
@@ -112,6 +114,8 @@ class Interface(object):
         Stop and close the interface.
         """
         if self.use_thread:
+            if self.verbose:
+                print("Asking for thread to stop...")
             self.stop_thread = True
 
     #############

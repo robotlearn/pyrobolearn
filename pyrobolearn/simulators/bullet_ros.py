@@ -22,7 +22,8 @@ References:
     - [4] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
 
-# TODO
+# TODO: finish this interface and move ROS stuffs to ros.py
+
 import os
 import subprocess
 import psutil
@@ -93,6 +94,33 @@ class BulletROS(Bullet):  # , ROS):
         self.subscribers = {}
         self.publishers = {}
 
+    ##############
+    # Properties #
+    ##############
+
+    @property
+    def is_subscribing(self):
+        """Return True if we are subscribing to topics."""
+        return self.subscribe
+
+    @property
+    def is_publishing(self):
+        """Return True if we are publishing to topics."""
+        return self.publish
+
+    ##################
+    # Static methods #
+    ##################
+
+    @staticmethod
+    def has_middleware_communication_layer():
+        """Return True if the simulator has a middleware communication layer (like ROS, YARP, etc)."""
+        return True
+
+    ###########
+    # Methods #
+    ###########
+
     def close(self):
         """
         Close everything
@@ -107,16 +135,6 @@ class BulletROS(Bullet):  # , ROS):
 
         # call parent destructor
         super(BulletROS, self).close()
-
-    @property
-    def is_subscribing(self):
-        """Return True if we are subscribing to topics."""
-        return self.subscribe
-
-    @property
-    def is_publishing(self):
-        """Return True if we are publishing to topics."""
-        return self.publish
 
     def load_urdf(self, filename, position=None, orientation=None, use_maximal_coordinates=None,
                   use_fixed_base=None, flags=None, scale=None):

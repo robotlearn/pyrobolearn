@@ -1335,7 +1335,7 @@ class World(object):
             position (float[3]): position of the box in the Cartesian world space (in meters)
             orientation (float[4]): orientation of the box using quaternion [x,y,z,w].
             mass (float): mass of the box (in kg). If mass = 0, the box won't move even if there is a collision.
-            dimensions (float[3]): dimensions of the box
+            dimensions (float[3]): dimensions of the box (in meter)
             color (int[4], None): color of the box for red, green, blue, and alpha, each in range [0,1]
             return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
                 unique id.

@@ -1141,11 +1141,9 @@ class Robot(ControllableBody):
             if multiple links:
                 str[N]: link names
         """
-        if isinstance(link_ids, int):
-            return self.sim.get_joint_info(self.id, link_ids)[12]
         if link_ids is None:
             link_ids = self.joints
-        return [self.sim.get_joint_info(self.id, link)[12] for link in link_ids]
+        return self.sim.get_link_names(self.id, link_ids)
 
     def get_link_masses(self, link_ids=None):
         r"""
@@ -1896,10 +1894,10 @@ class Robot(ControllableBody):
                 based on the current joint positions.
 
         Returns:
-            np.array[6,6,N]: CoM Jacobian
+            np.array[6,N]: CoM Jacobian
 
         References:
-            [1] "Whole-body cooperative balancing of humanoid robot using COG Jacobian", Sugihara et al., IROS, 2002
+            - [1] "Whole-body cooperative balancing of humanoid robot using COG Jacobian", Sugihara et al., IROS, 2002
         """
         # Get current joint position
         if q is None:

@@ -182,6 +182,40 @@ class BaseOrientationState(RobotState):
         self.data = self.robot.get_base_orientation()
 
 
+class BasePoseState(RobotState):
+    r"""Base pose state
+
+    This is the state that returns the base position [x,y,z] and orientation (expressed as a quaternion [x,y,z,w])
+    with respect to the world frame.
+    """
+
+    def __init__(self, robot, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the base pose state.
+
+        Args:
+            robot (Robot): instance of Robot which allows to access to the robot state
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
+        super(BasePoseState, self).__init__(robot, window_size=window_size, axis=axis, ticks=ticks)
+
+    def _read(self):
+        """Read the base position state data."""
+        self.data = self.robot.get_base_pose()
+
+
 class BaseLinearVelocityState(RobotState):
     r"""Base linear velocity state
 
@@ -246,3 +280,37 @@ class BaseAngularVelocityState(RobotState):
     def _read(self):
         """Read the base angular velocity state data."""
         self.data = self.robot.get_base_angular_velocity()
+
+
+class BaseVelocityState(RobotState):
+    r"""Base velocity state
+
+    This is the state that returns the base linear [vx, vy, vz] and angular velocity [wx, wy, wz] with respect to the
+    world frame.
+    """
+
+    def __init__(self, robot, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the base velocity state.
+
+        Args:
+            robot (Robot): instance of Robot which allows to access to the robot state
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
+        super(BaseVelocityState, self).__init__(robot, window_size=window_size, axis=axis, ticks=ticks)
+
+    def _read(self):
+        """Read the base linear velocity state data."""
+        self.data = self.robot.get_base_velocity()

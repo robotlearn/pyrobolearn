@@ -13,9 +13,9 @@ Dependencies in PRL:
 * `pyrobolearn.simulators.simulator.Simulator`
 
 References:
-    [1] PyBullet: https://pybullet.org
-    [2] PyBullet Quickstart Guide: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA
-    [3] PEP8: https://www.python.org/dev/peps/pep-0008/
+    - [1] PyBullet: https://pybullet.org
+    - [2] PyBullet Quickstart Guide: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA
+    - [3] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
 
 # general imports
@@ -74,9 +74,9 @@ class Bullet(Simulator):
         sim = Bullet()
 
     References:
-        [1] "PyBullet, a Python module for physics simulation for games, robotics and machine learning", Erwin Coumans
-            and Yunfei Bai, 2016-2019
-        [1] PyBullet Quickstart Guide: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA
+        - [1] "PyBullet, a Python module for physics simulation for games, robotics and machine learning", Erwin
+            Coumans and Yunfei Bai, 2016-2019
+        - [2] PyBullet Quickstart Guide: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA
             Erwin Coumans and Yunfei Bai, 2017/2018
     """
 
@@ -227,6 +227,15 @@ class Bullet(Simulator):
         # update the memodict
         memo[self] = sim
         return sim
+
+    ##################
+    # Static methods #
+    ##################
+
+    @staticmethod
+    def simulate_soft_bodies():
+        """Return True if the simulator can simulate soft bodies."""
+        return True
 
     ###########
     # Methods #
@@ -1728,8 +1737,17 @@ class Bullet(Simulator):
                 str[N]: link names
         """
         if isinstance(link_ids, int):
+            if link_ids == -1:
+                return self.get_base_name(body_id)
             return self.sim.getJointInfo(body_id, link_ids)[12]
-        return [self.sim.getJointInfo(body_id, link_id)[12] for link_id in link_ids]
+
+        link_names = []
+        for link_id in link_ids:
+            if link_id == -1:
+                link_names.append(self.get_base_name(body_id))
+            else:
+                link_names.append(self.sim.getJointInfo(body_id, link_id)[12])
+        return link_names
 
     def get_link_masses(self, body_id, link_ids):
         """

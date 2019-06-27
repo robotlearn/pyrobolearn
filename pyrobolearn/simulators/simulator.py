@@ -262,6 +262,35 @@ class Simulator(object):
         memo[self] = sim
         return sim
 
+    ##################
+    # Static methods #
+    ##################
+
+    @staticmethod
+    def simulate_gas_dynamics():
+        """Return True if the simulator can simulate gases."""
+        return False
+
+    @staticmethod
+    def simulate_liquid_dynamics():
+        """Return True if the simulator can simulate liquids."""
+        return False
+
+    @staticmethod
+    def simulate_fluid_dynamics():
+        """Return True if the simulator can simulate fluids (gases and liquids)."""
+        return Simulator.simulate_gas_dynamics() and Simulator.simulate_liquid_dynamics()
+
+    @staticmethod
+    def simulate_soft_bodies():
+        """Return True if the simulator can simulate soft bodies."""
+        return False
+
+    @staticmethod
+    def has_middleware_communication_layer():
+        """Return True if the simulator has a middleware communication layer (like ROS, YARP, etc)."""
+        return False
+
     ###########
     # Methods #
     ###########
