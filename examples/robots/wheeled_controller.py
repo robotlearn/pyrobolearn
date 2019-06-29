@@ -58,7 +58,7 @@ sim = prl.simulators.Bullet()
 # create basic world (with a floor and gravity enabled by default)
 world = prl.worlds.BasicWorld(sim)
 
-# load quadcopter
+# load wheeled robot
 robot = prl.robots.Epuck(sim, position=[0., 0.])
 world.load_robot(robot)
 

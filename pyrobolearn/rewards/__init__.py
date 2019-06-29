@@ -1,6 +1,7 @@
 
 # import abstract reward class and operations
-from .reward import *
+from .reward import Reward, ceil, cos, cosh, degrees, exp, expm1, floor, frexp, isinf, isnan, log, log10, log1p, \
+    radians, sin, sinh, sqrt, tan, tanh, trunc
 
 # import basic rewards
 from .basic_rewards import *

@@ -426,7 +426,7 @@ class DistanceCost(Cost):
     cost to change.
     """
 
-    def __init__(self):
+    def __init__(self, body1, body2):
         super(DistanceCost, self).__init__()
 
     def loss(self, object1, object2):

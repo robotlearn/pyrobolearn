@@ -191,7 +191,7 @@ class BridgeMouseKeyboardDifferentialWheeledRobot(BridgeMouseKeyboardWheeledRobo
         Initialize the Bridge between a Mouse-Keyboard interface and a differential wheeled robot instance.
 
         Args:
-            robot (AckermannWheeledRobot): wheeled robot instance.
+            robot (DifferentialWheeledRobot): wheeled robot instance.
             interface (None, MouseKeyboardInterface): mouse keyboard interface. If None, it will create one.
             camera (WorldCamera): world camera instance. This will allow the user to switch between first-person and
                 third-person view. If None, it will create an instance of it.
