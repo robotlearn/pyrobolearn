@@ -30,7 +30,7 @@ from pyrobolearn.simulators.simulator import Simulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__credits__ = ["Brian Delhaisse"]
+__credits__ = ["ROS (Willow Garage)", "Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
@@ -38,18 +38,8 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class ROSModel(object):
-    r"""ROS Model
-
-    """
-
-    def __init__(self, filename):
-        self.urdf = filename
-        # get ros services and ros topics from URDF
-
-        # create
-        pass
-
+# TODO: maybe I should inherit from MiddleWare instead of Simulator... Then we can give these MiddleWare to different
+#  simulators. Other communication middleware layer includes YARP, etc.
 
 class ROS(Simulator):
     r"""ROS Interface

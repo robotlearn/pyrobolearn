@@ -35,7 +35,7 @@ from pyrobolearn.simulators.simulator import Simulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__credits__ = ["Brian Delhaisse"]
+__credits__ = ["Bullet (Erwin Coumans and Yunfei Bai)", "Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
@@ -317,14 +317,14 @@ class Bullet(Simulator):
         #     pass
 
     def step(self, sleep_time=0.):
-        """Perform a step in the simulator.
+        """Perform a step in the simulator, and sleep the specified amount of time.
 
         "stepSimulation will perform all the actions in a single forward dynamics simulation step such as collision
         detection, constraint solving and integration. The default timestep is 1/240 second, it can be changed using
         the setTimeStep or setPhysicsEngineParameter API." [1]
 
         Args:
-            sleep_time (float): time to sleep after performing one step in the simulation.
+            sleep_time (float): amount of time to sleep after performing one step in the simulation.
         """
         self.sim.stepSimulation()
         time.sleep(sleep_time)

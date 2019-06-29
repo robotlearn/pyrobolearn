@@ -111,6 +111,7 @@ class Simulator(object):
     GEOM_MESH = 5
     GEOM_PLANE = 6
     GEOM_CAPSULE = 7
+    GEOM_CONE = 8       # NEW
 
     GUI = 1
     GUI_MAIN_THREAD = 8
@@ -310,10 +311,10 @@ class Simulator(object):
         pass
 
     def step(self, sleep_time=0):
-        """Perform a step in the simulator, and sleep the specified time.
+        """Perform a step in the simulator, and sleep the specified amount of time.
 
         Args:
-            sleep_time (float): time to sleep after performing one step in the simulation.
+            sleep_time (float): amount of time to sleep after performing one step in the simulation.
         """
         pass
 

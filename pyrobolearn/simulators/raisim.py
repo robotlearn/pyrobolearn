@@ -28,7 +28,7 @@ from pyrobolearn.simulators.simulator import Simulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__credits__ = ["Brian Delhaisse"]
+__credits__ = ["RaiSim (ETHz)", "Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
@@ -130,10 +130,10 @@ class Raisim(Simulator):
         pass
 
     def step(self, sleep_time=0):
-        """Perform a step in the simulator, and sleep the specified time.
+        """Perform a step in the simulator, and sleep the specified amount of time.
 
         Args:
-            sleep_time (float): time to sleep after performing one step in the simulation.
+            sleep_time (float): amount of time to sleep after performing one step in the simulation.
         """
         pass
 
