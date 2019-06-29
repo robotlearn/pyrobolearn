@@ -1,9 +1,9 @@
 Robots
 ======
 
-Robots constitute one of the main elements in the *PyRoboLearn* (PRL) framework. PRL provides a high-level abstraction and common interface to all the robots, allowing it for a better consistency and generalization between them. This allows for instance to check if one particular controller or algorithm works with other robots as well.
+Robots constitute one of the main elements in the *PyRoboLearn* (PRL) framework. PRL provides a high-level abstraction and common interface to many robots, offering better consistency and generalization between them. This allows for instance to check if one particular controller or algorithm works with other robots as well.
 
-More than 64 robots have been implemented in PRL and include various kind of robotic platforms. Among them, manipulators, biped robots, quadrupeds, hexapods, wheeled robots, quadcopters, and many others as shown below:
+More than 60+ robots are currently available in PRL covering a large range of robotic platforms. Among them, manipulators, biped robots, quadrupeds, hexapods, wheeled robots, quadcopters, and many others as shown below:
 
 
 GIF
@@ -40,7 +40,31 @@ GIF
     :width: 9%
     :alt: walkman
 
-Note that for few of them such as the ones that require the simulation of fluids such as quadcopters. The corresponding class implements the dynamical simulation. For such classes, as I did not spend too much time one it, some improvements might be needed for better realism.
+Note that for few of them such as the ones that require the simulation of fluids (e.g. quadcopters). If the simulator does not simulate fluids, the corresponding robot class implements a simple dynamics simulation. For such classes, as I did not spend too much time one it, some improvements might be needed for better realism.
+
+
+Design
+------
+
+The most abstract class is the ``Body`` class which is described in `pyrobolearn/robots/base.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/robots/base.py>`_. From it, you can already access to multiple functionalities/attributes, such as its position and orientation. It only depends on the simulator.
+
+
+.. figure:: ../UML/robots.png
+    :alt: UML diagram for Robot
+    :align: center
+
+    UML diagram for Robot
+
+
+Inheriting from one of its child classes is the most interesting (for our purpose) ``Robot`` class, described in `robot.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/robots/robot.py>`_. It is the parent class of several classes such as:
+
+- ``Manipulator`` defined in `manipulator.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/robots/manipulator.py>`_
+- ``LeggedRobot`` defined in `legged_robot.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/robots/legged_robot.py>`_
+- ``WheeledRobot`` defined in `wheeled_robot.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/robots/wheeled_robot.py>`_
+- ``Hand`` defined in `hand.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/robots/hand.py>`_
+- etc.
+
+Note that ``Robot`` only depends on the simulator interface (aggregation relationship), and is independent of other modules in PRL (at the exception of some util methods that are useful to perform some transformations).
 
 
 How to use a robot in PRL?
@@ -79,25 +103,8 @@ How to use a robot in PRL?
 
 You can check for more examples in the `examples/robots <https://github.com/robotlearn/pyrobolearn/tree/master/examples/robots>`_ folder. You can also check for `examples/kinematics <https://github.com/robotlearn/pyrobolearn/tree/master/examples/kinematics>`_ and `examples/dynamics <https://github.com/robotlearn/pyrobolearn/tree/master/examples/dynamics>`_.
 
-
-Design
-------
-
-The most abstract class is the ``Body`` class which is described in `pyrobolearn/robots/base.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/robots/base.py>`_. From it, you can already access to multiple functionalities/attributes, such as its position and orientation. It only depends on the simulator.
-
-.. image:: ../UML/robots.png
-    :alt: UML diagram for Robot
-    :align: center
-
-Inheriting from one of its child classes is the most interesting (for our purpose) ``Robot`` class, described in `robot.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/robots/robot.py>`_. It is the parent class of several classes such as:
-
-- ``Manipulator`` defined in `manipulator.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/robots/manipulator.py>`_
-- ``LeggedRobot`` defined in `legged_robot.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/robots/legged_robot.py>`_
-- ``WheeledRobot`` defined in `wheeled_robot.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/robots/wheeled_robot.py>`_
-- ``Hand`` defined in `hand.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/robots/hand.py>`_
-- etc.
-
-Note that ``Robot`` only depends on the simulator interface (aggregation relationship), and is independent of other modules in PRL (at the exception of some util methods that are useful to perform some transformations).
+- Kinematics
+- Dynamics
 
 
 How to create your own robot?
@@ -201,7 +208,7 @@ To illustrate how to create your own robot, let's assume you want to create a hu
             ...
 
 
-3. If you want to be able to load your robot from the world using its name (by calling ``world.load_robot('asimov')``), add the Python file ``asimov.py`` in the `pyrobolearn/robots/ <https://github.com/robotlearn/pyrobolearn/tree/master/pyrobolearn/robots>`_ folder. The ``__init__.py`` inside that folder will automatically go through all the files and add the robots inside the ``implemented_robots`` list which is accessed by ``World``. Note that you can also accessed to this list by calling ``pyrobolearn.robots.implemented_robots``. If you also want to be able to call your robot using ``from pyrobolearn.robots import Asimov``, you will have to add the line ``from .asimov import Asimov`` in the `pyrobolearn/robots/__init__.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/robots/__init__.py>`_.
+3. If you want to be able to load your robot from the world using its name (by calling ``world.load_robot('asimov')``), add the Python file ``asimov.py`` in the `pyrobolearn/robots/ <https://github.com/robotlearn/pyrobolearn/tree/master/pyrobolearn/robots>`_ folder. The ``__init__.py`` inside that folder will automatically go through all the files and add the robots inside the ``implemented_robots`` list which is accessed by ``World``. Note that you can also access this list by calling ``pyrobolearn.robots.implemented_robots``. If you also want to be able to call your robot using ``from pyrobolearn.robots import Asimov``, you will have to add the line ``from .asimov import Asimov`` in the `pyrobolearn/robots/__init__.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/robots/__init__.py>`_.
 
 4. Now, you can call your robot in the framework.
 
@@ -237,12 +244,14 @@ FAQs and Troubleshootings
 -------------------------
 
 - The mass/inertia matrix of some links are not correct in the simulator, what should I do?
-    * If you use the Bullet simulator (which uses ``pybullet``), you have to specify the mass and inertia matrix for each link. If a link doesn't have these attributes defined, pybullet automatically attribute a mass of 1kg and an identity inertia matrix (which is ridiculous huge). Normally, links without a mass and inertia matrices defined in a URDF file are dummy links that are used to represent a reference frame. To set a reasonable inertia matrix, please refer to `"Adding Physical and Collision Properties to a URDF Model" <http://wiki.ros.org/urdf/Tutorials/Adding%20Physical%20and%20Collision%20Properties%20to%20a%20URDF%20Model>`_ and `"Inertial parameters of triangle meshes" <http://gazebosim.org/tutorials?tut=inertia&cat=build_robot>`_.
-    * It is possible that some masses / inertia matrices have not been correctly set in the original URDF. I cleaned most of the URDF files but some links might have escaped my attention. Please open an issue on `Github <https://github.com/robotlearn/pyrobolearn>`_, or check the 2 `links <http://wiki.ros.org/urdf/Tutorials/Adding%20Physical%20and%20Collision%20Properties%20to%20a%20URDF%20Model>`_ `above <http://gazebosim.org/tutorials?tut=inertia&cat=build_robot>`_ on how to set reasonable inertia values.
+    - If you use the Bullet simulator (which uses ``pybullet``), you have to specify the mass and inertia matrix for each link. If a link doesn't have these attributes defined, pybullet automatically attribute a mass of 1kg and an identity inertia matrix (which is ridiculous huge). Normally, links without a mass and inertia matrices defined in a URDF file are dummy links that are used to represent a reference frame. To set a reasonable inertia matrix, please refer to `"Adding Physical and Collision Properties to a URDF Model" <http://wiki.ros.org/urdf/Tutorials/Adding%20Physical%20and%20Collision%20Properties%20to%20a%20URDF%20Model>`_ and `"Inertial parameters of triangle meshes" <http://gazebosim.org/tutorials?tut=inertia&cat=build_robot>`_.
+    - It is possible that some masses / inertia matrices have not been correctly set in the original URDF. I cleaned most of the URDF files but some links might have escaped my attention. Please open an issue on `Github <https://github.com/robotlearn/pyrobolearn>`_, or check the 2 `links <http://wiki.ros.org/urdf/Tutorials/Adding%20Physical%20and%20Collision%20Properties%20to%20a%20URDF%20Model>`_ `above <http://gazebosim.org/tutorials?tut=inertia&cat=build_robot>`_ on how to set reasonable inertia values.
 
 - How to convert a xacro file to a URDF file? Type ``rosrun xacro xacro --inorder path/to/<robot>.urdf.xacro > <robot>.urdf`` or ``rosrun xacro xacro.py --inorder path/to/<robot>.urdf.xacro > <robot>.urdf``
 
 - When I set the ``fixed_base`` to ``False``, the robot has still a fixed base, what is happening? The first link (often called base_link or world_link in most URDF files) shouldn't have a mass/inertia of zero, this causes the robot to have a fixed base. Remove the corresponding tag from the urdf.
+
+- What are the differences when a robot has a floating-based and a fixed base? When the robot has a floating base, the total number of degrees of freedom becomes 6 + the number of actuated joints. This appears when computing the Jacobian and Inertia matrices.
 
 - I noticed that some functionalities are missing in one of the robot class? I probably forgot to implement it. Please open an issue on `Github <https://github.com/robotlearn/pyrobolearn>`_ or create a pull request.
 

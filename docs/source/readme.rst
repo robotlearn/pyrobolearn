@@ -1,11 +1,6 @@
 
 .. include:: ../../README.rst
 
-Design Decisions
-================
-
-.. image:: ../UML/pyrobolearn_uml.png
-
 Citation
 ========
 

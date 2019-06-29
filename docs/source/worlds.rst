@@ -4,6 +4,22 @@ Worlds
 The world is the second important item in PRL; it is, with the ``Body`` class (see next section), the only class that can access the simulator. As it name implies, it allows you to create a world in the simulator, load various objects in it, and change the world's and objects' physical properties. From it, you can also access to the main camera (if the GUI is enabled in the simulator), and move it as you wish. The world can be seen as a wrapper around the simulator which provides you extra functionalities where each function calls different methods of the simulator. Finally, the world also allows you to load and generate terrains.
 
 
+Design
+------
+
+As it can be seen on the UML diagram below the ``World`` depends on the ``Simulator`` and the various ``Body`` (see next section) loaded in it (as well as few util functions).
+
+
+.. figure:: ../UML/world.png
+    :alt: UML diagram for World
+    :align: center
+
+    UML diagram for world
+
+
+Later, we will see that world is notably given to the environment along with the states and rewards.
+
+
 How to use the world in PRL?
 ----------------------------
 
@@ -39,18 +55,6 @@ Note that you can get access to the world camera, and change its position and or
 For more examples, you can check the `examples/worlds <https://github.com/robotlearn/pyrobolearn/tree/master/examples/worlds>`_ folder.
 
 
-Design
-------
-
-As it can be seen on the UML diagram below the ``World`` depends on the ``Simulator`` and the various ``Body`` (see next section) loaded in it (as well as few util functions).
-
-
-UML picture
-
-
-Later, we will see that world is notably given to the environment along with the states and rewards.
-
-
 How to create your own world?
 -----------------------------
 
@@ -75,3 +79,4 @@ Where can I find 3d models to load in the world?
 - `Gazebo database <https://bitbucket.org/osrf/gazebo_models/src/default/>`_
 - `Turbosquid <www.turbosquid.com>`_
 - `free3d <free3d.com>`_
+- `sketchfab <sketchfab.com>`_

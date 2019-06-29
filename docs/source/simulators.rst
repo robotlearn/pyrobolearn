@@ -1,11 +1,29 @@
 Simulators
 ==========
 
-The simulator is the starting point in the *%PyRoboLearn** (PRL) framework. To avoid a tight coupling with a particular simulator, a ``Simulator`` interface class (from which all the other simulators inherit from) has been implemented. Other .
+The simulator is the starting point in the **PyRoboLearn** (PRL) framework. To avoid a tight coupling with a particular simulator, a ``Simulator`` interface class (from which all the other simulators inherit from) has been implemented. Other .
 
-We provide the ``Bullet`` interface.
+We provide the ``Bullet`` interface, which uses the ``pybullet`` library.
 
 The general idea is that you would be able to change the simulator if you wish without having to modify any other lines of code. See example below.
+
+
+Design
+------
+
+The important goal when designing the simulators was that it should be a stand alone interface.
+
+
+.. figure:: ../UML/simulator.png
+    :alt: UML diagram for Simulators
+    :align: center
+
+    UML diagram for simulators
+
+
+Currently, the only fully functional simulator is ``Bullet``. While other simulators have been considered such as Gazebo (with ROS), Mujoco, Dart, and others, few of them required a particular license or do not have strong Python bindings.
+
+Note that each simulator implements static methods which provide information about the simulator itself; if it can for instance simulate fluids or not, etc.
 
 
 How to use a particular simulator in PRL?
@@ -39,20 +57,20 @@ For the moment, the only fully operational interface is ``Bullet``. Some few oth
 You can check for more examples in the `examples/simulators <https://github.com/robotlearn/pyrobolearn/tree/master/examples/simulators>`_ folder.
 
 
-Design
-------
-
-The important goal when designing the simulators was that it should be a stand alone interface.
-
-UML
-
-
-
 How to create an interface to a simulator?
 ------------------------------------------
 
 To create your own Simulator, you have to inherit from the ``Simulator`` class defined in `pyrobolearn/simulators/simulator.py <https://github.com/robotlearn/pyrobolearn/blob/master/pyrobolearn/simulators/simulator.py>`_.
 
+
+.. code-block:: python
+
+    import pyrobolearn as prl
+
+
+    class MySimulator(prl.simulators.Simulator):
+        """Description"""
+        # implement all the abstract methods in Simulator
 
 
 FAQs and Troubleshootings
@@ -69,6 +87,7 @@ Future works
 ------------
 
 My main objectives for future works are the implementation of:
+
 - the Mujoco interface; I originally did not start with it as it is closed-source and requires a License. However, it is used a lot in research and thus it could be interesting to have it as well.
 - the Gazebo-ROS interface; a part has already been implemented but it is far from over.
 - the Isaac interface if Nvidia provided a nice Python API.
