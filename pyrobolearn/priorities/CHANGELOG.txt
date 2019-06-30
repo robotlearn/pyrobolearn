@@ -1,0 +1,9 @@
+
+26/06/2019
+
+- Translated most C++ code from the `OpenSoT` library to Python
+- made it a standalone library (does not depend on other libraries (or middleware layers) except numpy)
+- Add more complete documentation for each class and method (this was seriously lacking in the original OpenSoT)
+- Improve methods and made them more Pythonic
+- Add few extra constraints and tasks (based on Songyan Xin's work)
+- Integration with the PyRoboLearn framework through the robot model

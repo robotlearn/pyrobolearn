@@ -70,6 +70,7 @@ class UnilateralContact(DynamicConstraint):
 
     Mechanical constraint which prevents penetration between two bodies.
     """
+    pass
 
 
 class WrenchLimits(DynamicConstraint):

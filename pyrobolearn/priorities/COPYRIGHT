@@ -1,0 +1,3 @@
+Copyright (c) 2014, Alessio Rocchi <alessio.rocchi@iit.it>, Enrico Mingo Hoffman <enrico.mingo@iit.it>, Arturo Laurenzi <arturo.laurenzi@iit.it>, Cheng Fang <cheng.fang@iit.it>
+Translated from C++ to Python by Brian Delhaisse <briandelhaisse@gmail.com> (see CHANGELOG file)
+C++ Forked Version available at https://github.com/yangweiyou/OpenSoT
