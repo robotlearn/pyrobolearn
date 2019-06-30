@@ -34,7 +34,7 @@ class WebcamInterface(CameraInterface):
     tool (such as openpose).
 
     References:
-        [1] https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_gui/py_video_display/py_video_display.html
+        - [1] https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_gui/py_video_display/py_video_display.html
     """
 
     def __init__(self, webcam_id=0, filename=None, fps=20, frame_size=(640, 480), codec='XVID',

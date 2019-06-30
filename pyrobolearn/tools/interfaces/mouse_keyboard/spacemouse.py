@@ -7,7 +7,7 @@ Prerequisites:
 
 Troubleshooting:
 - if you get 'OSError: libspnav.so: cannot open shared object file: No such file or directory', you have to copy-paste
-the file '/usr/lib/libspnav.so.0' to '/usr/lib/libspnav.so'
+  the file '/usr/lib/libspnav.so.0' to '/usr/lib/libspnav.so'
 
 Dependencies:
 - `pyrobolearn.tools.interfaces`
