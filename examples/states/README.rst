@@ -15,10 +15,8 @@ States can also be given to dynamical models (which predicts the next state give
 Here are few examples that you can find in this folder:
 
 1. ``basics.py``: demonstrate the various features of the ``State`` class.
-2. ``robot.py``: get the joint states of a specific robot and print them.
-3. ``world.py``: get the pose state of an object loaded in the world.
-4. ``sensor.py``: get the state of a sensor.
-5. ``interface.py``: get the state from a game controller interface.
+2. ``world.py``: get the pose state of an object loaded in the world.
+3. ``robot.py``: get the joint states of a specific robot and print them.
 
 
 Simple Example
