@@ -185,13 +185,13 @@ CoMr = robot.get_center_of_mass_position()  # Desired CoM
 print("CoMr: {}".format(CoMr))
 
 if robot.name == 'centauro':
-    xref_l1f = robot.get_link_frame_world_positions(left_foot1_id)  # Desired position for left foot
-    xref_r1f = robot.get_link_frame_world_positions(right_foot1_id)  # Desired position for right foot
-    xref_l2f = robot.get_link_frame_world_positions(left_foot2_id)  # Desired position for left foot
-    xref_r2f = robot.get_link_frame_world_positions(right_foot2_id)  # Desired position for right foot
+    xref_l1f = robot.get_link_world_frame_positions(left_foot1_id)  # Desired position for left foot
+    xref_r1f = robot.get_link_world_frame_positions(right_foot1_id)  # Desired position for right foot
+    xref_l2f = robot.get_link_world_frame_positions(left_foot2_id)  # Desired position for left foot
+    xref_r2f = robot.get_link_world_frame_positions(right_foot2_id)  # Desired position for right foot
 else:
-    xref_lf = robot.get_link_frame_world_positions(left_foot_id)  # Desired position for left foot
-    xref_rf = robot.get_link_frame_world_positions(right_foot_id)  # Desired position for right foot
+    xref_lf = robot.get_link_world_frame_positions(left_foot_id)  # Desired position for left foot
+    xref_rf = robot.get_link_world_frame_positions(right_foot_id)  # Desired position for right foot
 
 
 # Display initial and desired manipulability ellipsoid
@@ -220,13 +220,13 @@ for i in range(num_samples):
     robot.draw_com_position(0.03)
 
     if robot.name == 'centauro':
-        xt_l1f = robot.get_link_frame_world_positions(left_foot1_id)  # Current position for left foot
-        xt_r1f = robot.get_link_frame_world_positions(right_foot1_id)  # Current position for right foot
-        xt_l2f = robot.get_link_frame_world_positions(left_foot2_id)  # Current position for left foot
-        xt_r2f = robot.get_link_frame_world_positions(right_foot2_id)  # Current position for right foot
+        xt_l1f = robot.get_link_world_frame_positions(left_foot1_id)  # Current position for left foot
+        xt_r1f = robot.get_link_world_frame_positions(right_foot1_id)  # Current position for right foot
+        xt_l2f = robot.get_link_world_frame_positions(left_foot2_id)  # Current position for left foot
+        xt_r2f = robot.get_link_world_frame_positions(right_foot2_id)  # Current position for right foot
     else:
-        xt_lf = robot.get_link_frame_world_positions(left_foot_id)  # Current left foot pos
-        xt_rf = robot.get_link_frame_world_positions(right_foot_id)  # Current right foot pos
+        xt_lf = robot.get_link_world_frame_positions(left_foot_id)  # Current left foot pos
+        xt_rf = robot.get_link_world_frame_positions(right_foot_id)  # Current right foot pos
 
     # Simple balance control with IK kinematics for CoM and feet
     # Get Jacobians: Jcom, Jlf, and Jrf

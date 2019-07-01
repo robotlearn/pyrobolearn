@@ -2236,7 +2236,7 @@ class Robot(ControllableBody):
 
         Args:
             jacobian (np.array[D,N]): jacobian matrix
-            num_task_vars (float): number of task variables (usually 3 or 6)
+            num_task_vars (int): number of task variables (usually 3 or 6)
 
         Returns:
             np.array[(num_task_vars * num_task_vars + num_task_vars) / 2, N]: manipulability jacobian matrix
@@ -2264,7 +2264,7 @@ class Robot(ControllableBody):
 
         # Manipulability Jacobian in matrix form (Mandel notation)
         # num_vars = len(num_task_vars)
-        Jm_red = np.zeros(((num_task_vars * num_task_vars + num_task_vars) / 2, np.sum(num_dofs)))
+        Jm_red = np.zeros((int((num_task_vars * num_task_vars + num_task_vars) / 2), np.sum(num_dofs)))
         # print("Jm_red.shape: {}".format(Jm_red.shape))
 
         for i in range(Jm.shape[2]):
@@ -2954,7 +2954,7 @@ class Robot(ControllableBody):
         Args:
             jacobian (np.array[D,N]): Jacobian matrix
             inertia (np.array[N,N]): inertia matrix
-            num_task_vars (float): number of task variables (usually 3 or 6)
+            num_task_vars (int): number of task variables (usually 3 or 6)
 
         Returns:
             np.array[(num_task_vars * num_task_vars + num_task_vars) / 2, N]: manipulability jacobian matrix
@@ -2983,7 +2983,7 @@ class Robot(ControllableBody):
 
         # # Manipulability Jacobian in matrix form (Mandel notation)
         # num_vars = len(num_task_vars)
-        Jm_red = np.zeros(((num_task_vars * num_task_vars + num_task_vars) / 2, np.sum(num_dofs)))
+        Jm_red = np.zeros((int((num_task_vars * num_task_vars + num_task_vars) / 2), np.sum(num_dofs)))
         # print("Jm_red.shape: {}".format(Jm_red.shape))
 
         for i in range(Jm.shape[2]):

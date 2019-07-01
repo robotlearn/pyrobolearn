@@ -987,7 +987,9 @@ class Bullet(Simulator):
         Returns:
             str: base name
         """
-        return self.sim.getBodyInfo(body_id)
+        name = self.sim.getBodyInfo(body_id)
+        name = name if isinstance(name, str) else name.decode("utf-8")
+        return name
 
     def get_body_id(self, index):
         """
@@ -1182,7 +1184,9 @@ class Bullet(Simulator):
         Returns:
             str: base name
         """
-        return self.sim.getBodyInfo(body_id)[0]
+        name = self.sim.getBodyInfo(body_id)[0]
+        name = name if isinstance(name, str) else name.decode("utf-8")
+        return name
 
     def get_center_of_mass_position(self, body_id, link_ids=None):
         """
@@ -1515,6 +1519,8 @@ class Bullet(Simulator):
             [16] int:       parent link index, -1 for base
         """
         info = list(self.sim.getJointInfo(body_id, joint_id))
+        info[1] = info[1] if isinstance(info[1], str) else info[1].decode("utf-8")  # bytes vs str (Py2 vs Py3)
+        info[12] = info[12] if isinstance(info[12], str) else info[12].decode("utf-8")
         info[13] = np.asarray(info[13])
         info[14] = np.asarray(info[14])
         info[15] = np.asarray(info[15])
@@ -1739,14 +1745,18 @@ class Bullet(Simulator):
         if isinstance(link_ids, int):
             if link_ids == -1:
                 return self.get_base_name(body_id)
-            return self.sim.getJointInfo(body_id, link_ids)[12]
+            name = self.sim.getJointInfo(body_id, link_ids)[12]
+            name = name if isinstance(name, str) else name.decode("utf-8")  # bytes vs str (Py2 vs Py3)
+            return name
 
         link_names = []
         for link_id in link_ids:
             if link_id == -1:
                 link_names.append(self.get_base_name(body_id))
             else:
-                link_names.append(self.sim.getJointInfo(body_id, link_id)[12])
+                name = self.sim.getJointInfo(body_id, link_id)[12]
+                name = name if isinstance(name, str) else name.decode("utf-8")  # bytes vs str (Py2 vs Py3)
+                link_names.append(name)
         return link_names
 
     def get_link_masses(self, body_id, link_ids):
@@ -1967,8 +1977,16 @@ class Bullet(Simulator):
                 str[N]: name of each joint
         """
         if isinstance(joint_ids, int):
-            return self.sim.getJointInfo(body_id, joint_ids)[1]
-        return [self.sim.getJointInfo(body_id, joint_id)[1] for joint_id in joint_ids]
+            name = self.sim.getJointInfo(body_id, joint_ids)[1]
+            name = name if isinstance(name, str) else name.decode("utf-8")
+            return name
+
+        names = []
+        for joint_id in joint_ids:
+            name = self.sim.getJointInfo(body_id, joint_id)[1]
+            name = name if isinstance(name, str) else name.decode("utf-8")
+            names.append(name)
+        return names
 
     def get_joint_type_ids(self, body_id, joint_ids):
         """

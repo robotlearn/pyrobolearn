@@ -43,7 +43,7 @@ sphere = Body(sim, body_id=sphere)
 for t in count():
 
     # if no more joint positions, get out of the loop
-    if t > len(positions):
+    if t >= len(positions):
         break
 
     # set joint positions

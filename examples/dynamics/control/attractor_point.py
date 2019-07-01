@@ -58,9 +58,9 @@ for _ in count():
     F = K.dot(x_des - x) - D.dot(dx)
 
     # add torques resulting from them
-    # torques += Jlin.T.dot(F)
+    torques += Jlin.T.dot(F)
     # torques += Jlin.T.dot(- D.dot(dx))  # active compliance
-    # torques = Jlin.T.dot(F)             #
+    # torques = Jlin.T.dot(F)
 
     # impedance control
     robot.set_joint_torques(torques=torques)
