@@ -15,16 +15,19 @@ world = prl.worlds.BasicWorld(sim)
 
 # create robot
 robot = world.load_robot('kuka_iiwa')
-print(robot)
+end_effector_id = robot.end_effectors[0]
+robot.print_info()
 
 # desired position
-sphere = world.load_visual_sphere([0.5, 0., 0.5], radius=0.05, color=(1, 0, 0, 0.5), return_body=True)
+sphere = world.load_visual_sphere([0.5, 0., 0.], radius=0.05, color=(1, 0, 0, 0.5), return_body=True)
 
 # create state
-state = prl.states.LinkPositionState(robot, link_ids=robot.end_effectors)
+state = prl.states.LinkWorldPositionState(robot, link_ids=end_effector_id)
 
 # create reward
-# reward = prl.rewards.DistanceCost()
+# note that the given 'sphere' to the cost is not a state, and thus a PositionState will automatically be created
+# for that 'sphere', and called at each time the reward is computed.
+reward = prl.rewards.DistanceCost(state, sphere)
 
 # run simulation
 for t in count():
@@ -32,7 +35,7 @@ for t in count():
     state()
 
     # compute reward
-    # print("Reward value = {}".format(reward()))
+    print("Reward value = {}".format(reward()))
 
     # perform a step in the simulator
     world.step(sim.dt)

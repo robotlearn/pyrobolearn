@@ -19,6 +19,7 @@ import copy
 import numpy as np
 import torch
 
+import pyrobolearn as prl
 from pyrobolearn.robots.robot import Robot
 # from objective import Objective
 import pyrobolearn.states as states
@@ -406,31 +407,68 @@ class ContactInvariantCost(Cost):
         super(ContactInvariantCost, self).__init__()
 
 
-class PowerConsumptionCost(Cost):
-    """Power Consumption Cost.
-
-    It penalizes power consumption using u^TWu where W is a weight matrix, and u is the control vector.
-    """
-
-    def __init__(self):
-        super(PowerConsumptionCost, self).__init__()
-
-    def loss(self, robot):
-        return np.dot(robot.get_joint_torques(), robot.get_joint_velocities())
-
-
 class DistanceCost(Cost):
     """Distance Cost.
 
     It penalizes the distance between 2 objects. One of the 2 objects must be movable in order for this
     cost to change.
+
+    Mathematically, the cost is given by:
+
+    .. math:: c(l1, l2) = d(l1, l2) = - || l1 - l2 ||_2
+
+    where :math:`l1` represents a link attached to the first body, and :math:`l2` represents a link attached on the
+    second body. The distance function used is the Euclidean distance (=L2 norm).
     """
 
-    def __init__(self, body1, body2):
+    def __init__(self, body1, body2, link_id1=-1, link_id2=-1):
+        r"""
+        Initialize the distance cost.
+
+        Args:
+            body1 (BasePositionState, PositionState, LinkWorldPositionState, Body, Robot): first position state. If
+                Body, it will wrap it with a `PositionState`. If Robot, it will wrap it with a `PositionState` or
+                `LinkPositionState` depending on the value of :attr:`link_id1`.
+            body2 (BasePositionState, PositionState, LinkWorldPositionState, Body, Robot): second position state. If
+                Body, it will wrap it with a `PositionState`. If Robot, it will wrap it with a `PositionState` or
+                `LinkPositionState` depending on the value of :attr:`link_id1`.
+            link_id1 (int): link id associated with the first body that we are interested in. This is only used if
+                the given :attr:`body1` is not a state.
+            link_id2 (int): link id associated with the second body that we are interested in. This is only used if
+                the given :attr:`body2` is not a state.
+        """
         super(DistanceCost, self).__init__()
 
-    def loss(self, object1, object2):
-        pass
+        def check_body_type(body, id_, link_id):
+            update_state = False
+            if isinstance(body, prl.robots.Body):
+                body = states.PositionState(body)
+                update_state = True
+            elif isinstance(body, Robot):
+                if link_id == -1:
+                    body = states.PositionState(body)
+                else:
+                    body = states.LinkWorldPositionState(body, link_ids=link_id)
+                update_state = True
+            elif not isinstance(body, (states.BasePositionState, states.PositionState, states.LinkWorldPositionState)):
+                raise TypeError("Expecting the given 'body"+str(id_)+"' to be an instance of `Body`, `Robot`, "
+                                "`BasePositionState`, `PositionState` or `LinkWorldPositionState`, instead got: "
+                                "{}".format(type(body), id_))
+            return body, update_state
+
+        self.body1, self.update_state1 = check_body_type(body1, id_=1, link_id=link_id1)
+        self.body2, self.update_state2 = check_body_type(body2, id_=2, link_id=link_id2)
+
+    def compute(self):
+        if self.update_state1:
+            self.body1()
+        if self.update_state2:
+            self.body2()
+        p1 = self.body1.data[0]
+        p2 = self.body2.data[0]
+        print("P1: {}".format(p1))
+        print("P2: {}".format(p2))
+        return - np.linalg.norm(p1 - p2)
 
 
 class ImpactCost(Cost):
@@ -442,7 +480,7 @@ class ImpactCost(Cost):
     def __init__(self):
         super(ImpactCost, self).__init__()
 
-    def loss(self, object1, object2):
+    def compute(self, object1, object2):
         pass
 
 
@@ -455,7 +493,7 @@ class DriftCost(Cost):
     def __init__(self):
         super(DriftCost, self).__init__()
 
-    def loss(self, object, direction):
+    def compute(self, object, direction):
         pass
 
 
@@ -467,7 +505,7 @@ class ShakeCost(Cost):
     def __init__(self):
         super(ShakeCost, self).__init__()
 
-    def loss(self, object, direction):
+    def compute(self, object, direction):
         pass
 
 

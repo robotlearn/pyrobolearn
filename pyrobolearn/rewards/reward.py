@@ -15,6 +15,7 @@ Dependencies:
 - `pyrobolearn.actions`
 """
 
+import sys
 import numpy as np
 import collections
 import operator
@@ -366,7 +367,13 @@ class Reward(object):
         b = b.range if isinstance(b, Reward) else (b, b)
 
         # check that you do not have a possible division or modulo by zero
-        if op in {operator.__div__, operator.__floordiv__, operator.__truediv__, operator.__mod__}:
+
+        if sys.version_info[0] == 2:  # Python 2
+            dangerous_operators = {operator.__div__, operator.__floordiv__, operator.__truediv__, operator.__mod__}
+        else:  # In Python 3, there is no __div__
+            dangerous_operators = {operator.__floordiv__, operator.__truediv__, operator.__mod__}
+
+        if op in dangerous_operators:
             if b[0] <= 0 <= b[1]:
                 raise ValueError("Zero is between the lower and upper bound of the range of `other`. This is not "
                                  "accepted as it can lead to a division or modulo by zero.")

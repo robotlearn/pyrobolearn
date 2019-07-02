@@ -2686,6 +2686,7 @@ class Bullet(Simulator):
         if flags is not None:
             kwargs['flags'] = flags
 
+        width, height = int(width), int(height)
         width, height, rgba, depth, segmentation = self.sim.getCameraImage(width, height, **kwargs)
         rgba = np.asarray(rgba).reshape(width, height, 4)
         depth = np.asarray(depth).reshape(width, height)

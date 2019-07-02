@@ -213,7 +213,6 @@ class BulletROS(Bullet):  # , ROS):
                 module = importlib.import_module('pyrobolearn.robots.ros.' + name)
                 classes = dict(inspect.getmembers(module, inspect.isclass))
                 cls = classes['Robot' + name.capitalize()]
-                print("class: ".format(cls))
                 dictionary[id_] = cls(name=robot_directory_name, id_=id_)
 
             # load subscriber in simulator
