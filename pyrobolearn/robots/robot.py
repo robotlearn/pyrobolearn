@@ -1402,19 +1402,27 @@ class Robot(ControllableBody):
             if multiple links:
                 np.array[Nx6], np.array[N,6]: linear and angular velocity of each link
         """
+        # if one link, compute the linear and angular velocity of that link
         if isinstance(link_ids, int):
+            if link_ids == -1:
+                return self.get_base_velocity(concatenate=True)
             lin_vel, ang_vel = self.sim.get_link_state(self.id, link_ids, compute_velocity=True)[6:8]
-            return np.array(lin_vel + ang_vel)
+            return np.concatenate((lin_vel, ang_vel))
+
+        # if multiple links, compute the linear and angular velocity of each link
         if link_ids is None:
             link_ids = self.joints
-        vel = []
+        velocities = []
         for link in link_ids:
             lin_vel, ang_vel = self.sim.get_link_state(self.id, link, compute_velocity=True)[6:8]
-            vel.append(lin_vel + ang_vel)
-        vel = np.array(vel)
+            velocities.append(np.concatenate((lin_vel, ang_vel)))
+        velocities = np.asarray(velocities)
+
+        # if we need to flatten the velocities (N, 6) --> (N*6,)
         if flatten:
-            return vel.reshape(-1)  # 1d array
-        return vel  # 2D array
+            return velocities.reshape(-1)  # 1d array
+
+        return velocities  # 2D array
 
     def get_link_linear_velocities(self, link_ids=None, wrt_link_id=None, flatten=True):
         r"""
