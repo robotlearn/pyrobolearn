@@ -11,7 +11,7 @@ except ImportError: # for pip <= 9.0.3
     from pip.req import parse_requirements
 
 # get description from readme file
-with open('README.md', 'r') as f:
+with open('README.rst', 'r') as f:
     long_description = f.read()
 
 # get the required packages

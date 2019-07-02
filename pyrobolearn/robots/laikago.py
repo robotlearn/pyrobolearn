@@ -55,7 +55,7 @@ class Laikago(QuadrupedRobot):
 
     def get_home_joint_positions(self):
         """Return the joint positions for the home position"""
-        return np.zeros(self.num_dofs)
+        return np.zeros(self.num_actuated_joints)
 
 
 # Test

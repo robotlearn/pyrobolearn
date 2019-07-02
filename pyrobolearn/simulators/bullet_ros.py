@@ -192,7 +192,7 @@ class BulletROS(Bullet):  # , ROS):
 
         # check if valid robot directory
         # if os.path.isdir(path):
-        robot_path = '/'.join(path.split('/')[-5:-2])
+        robot_path = '/'.join(path.split('/')[-4:-1])
         if robot_path == 'pyrobolearn/robots/urdfs':
 
             # get corresponding subscriber/publisher
@@ -213,6 +213,7 @@ class BulletROS(Bullet):  # , ROS):
                 module = importlib.import_module('pyrobolearn.robots.ros.' + name)
                 classes = dict(inspect.getmembers(module, inspect.isclass))
                 cls = classes['Robot' + name.capitalize()]
+                print("class: ".format(cls))
                 dictionary[id_] = cls(name=robot_directory_name, id_=id_)
 
             # load subscriber in simulator

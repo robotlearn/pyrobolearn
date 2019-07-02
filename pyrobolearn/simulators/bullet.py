@@ -3298,9 +3298,9 @@ class Bullet(Simulator):
 
     def calculate_jacobian(self, body_id, link_id, local_position, q, dq, des_ddq):
         r"""
-        Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q), J_{ang}(q)]^T`, such that:
+        Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q)^T, J_{ang}(q)^T]^T`, such that:
 
-        .. math:: v = [\dot{p}, \omega]^T = J(q) \dot{q}
+        .. math:: v = [\dot{p}^T, \omega^T]^T = J(q) \dot{q}
 
         where :math:`\dot{p}` is the Cartesian linear velocity of the link, and :math:`\omega` is its angular velocity.
 
