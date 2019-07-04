@@ -23,7 +23,6 @@ torch>=1.0.0
 torchvision>=0.2.1
 
 # simulators
-psutils
 pybullet>=2.4.1
 gym>=0.10.9
 # -e git+https://github.com/benelot/pybullet-gym#egg=pybullet-gym
