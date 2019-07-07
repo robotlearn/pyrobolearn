@@ -185,6 +185,11 @@ class Body(object):
         """Return the linear velocity of the body's base."""
         return self.sim.get_base_linear_velocity(self.id)
 
+    @linear_velocity.setter
+    def linear_velocity(self, velocity):
+        """Set the linear velocity of the body's base; this only makes sense in the simulator."""
+        self.sim.reset_base_linear_velocity(self.id, velocity)
+
     @property
     def angular_velocity(self):
         """Return the angular velocity of the body's base."""

@@ -1683,9 +1683,9 @@ class Robot(ControllableBody):
     # TODO: allow to slice the Jacobian to only get what interests the user
     def get_jacobian(self, link_id, q=None, local_position=None):
         r"""
-        Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q), J_{ang}(q)]^T`, such that:
+        Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q)^T, J_{ang}(q)^T]^T`, such that:
 
-        .. math:: v = [\dot{p}, \omega]^T = J(q) \dot{q}
+        .. math:: v = [\dot{p}^T, \omega^T]^T = J(q) \dot{q}
 
         where :math:`\dot{p}` is the Cartesian linear velocity of the link, and :math:`\omega` is its angular velocity.
 
@@ -1851,11 +1851,13 @@ class Robot(ControllableBody):
         Compute the derivative of the Jacobian wrt joint values (hybrid Jacobian representation). The computation is
         based on [1].
 
+        .. math:: \frac{d}{dq} J(q)
+
         Args:
             jacobian (np.array[6,N], np.array[6,6+N]): jacobian matrix J.
 
         Returns:
-            np.array[6,6,N]: derivative of the Jacobian wrt joint values (dJ/dq)
+            np.array[6,N,N]: derivative of the Jacobian wrt joint values (dJ/dq)
 
         References:
             [1] "Symbolic differentiation of the velocity mapping for a serial kinematic chain", Bruyninck et al.,
@@ -1870,21 +1872,21 @@ class Robot(ControllableBody):
             for j in range(nb_cols):
                 J_i, J_j = jacobian[:, i], jacobian[:, j]
                 if j < i:
-                    # J_grad[0:3, i, j] = np.cross(J_j[3:6], J_i[0:3])  # Slow implementation
+                    # J_grad[0:3, i, j] = np.cross(J_j[3:6], J_i[0:3])   # Slow implementation
                     J_grad[0, i, j] = J_j[4] * J_i[2] - J_j[5] * J_i[1]
                     J_grad[1, i, j] = J_j[5] * J_i[0] - J_j[3] * J_i[2]
                     J_grad[2, i, j] = J_j[3] * J_i[1] - J_j[4] * J_i[0]
-                    # J_grad[3:6, i, j] = np.cross(J_j[3:6], J_i[3:6]) # Slow implementation
+                    # J_grad[3:6, i, j] = np.cross(J_j[3:6], J_i[3:6])  # Slow implementation
                     J_grad[3, i, j] = J_j[4] * J_i[5] - J_j[5] * J_i[4]
                     J_grad[4, i, j] = J_j[5] * J_i[3] - J_j[3] * J_i[5]
                     J_grad[5, i, j] = J_j[3] * J_i[4] - J_j[4] * J_i[3]
                 elif j > i:
-                    # J_grad[0:3, i, j] = -np.cross(J_j[0:3], J_i[3:6]) # Slow implementation
+                    # J_grad[0:3, i, j] = -np.cross(J_j[0:3], J_i[3:6])  # Slow implementation
                     J_grad[0, i, j] = - J_j[1] * J_i[5] + J_j[2] * J_i[4]
                     J_grad[1, i, j] = - J_j[2] * J_i[3] + J_j[0] * J_i[5]
                     J_grad[2, i, j] = - J_j[0] * J_i[4] + J_j[1] * J_i[3]
                 else:
-                    # J_grad[0:3, i, j] = np.cross(J_i[3:6], J_i[0:3]) # Slow implementation
+                    # J_grad[0:3, i, j] = np.cross(J_i[3:6], J_i[0:3])  # Slow implementation
                     J_grad[0, i, j] = J_i[4] * J_i[2] - J_i[5] * J_i[1]
                     J_grad[1, i, j] = J_i[5] * J_i[0] - J_i[3] * J_i[2]
                     J_grad[2, i, j] = J_i[3] * J_i[1] - J_i[4] * J_i[0]
@@ -2685,6 +2687,9 @@ class Robot(ControllableBody):
         if q_idx is None:
             return self.sim.calculate_inverse_dynamics(self.id, q, dq, ddq)
         return self.sim.calculate_inverse_dynamics(self.id, q, dq, ddq)[q_idx]
+
+    # alias
+    get_nonlinear_effects = get_coriolis_and_gravity_compensation_torques
 
     def get_gravity_compensation_torques(self, q=None, q_idx=None):
         r"""
