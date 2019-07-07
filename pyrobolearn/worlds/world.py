@@ -942,6 +942,44 @@ class World(object):
             return self.sim.get_closest_points(body1=body.id, body2=body2, distance=radius,
                                                link1_id=link_id, link2_id=link2_id)
 
+    def get_contact_bodies(self):
+        pass
+
+    def attach(self, body1, body2, link1=-1, link2=-1, contact_point=None):
+        """
+        Attach two bodies (links) together at the specified contact points.
+
+        To detach them, call ``world.detach(body1, body2, link1, link2)``.
+
+        Args:
+            body1 (int, Body): body unique id, or a Body instance.
+            body2 (int, Body): body unique id, or a Body instance.
+            link1 (int, None): link id. By default, it will be the base (=-1).
+            link2 (int, None): link id. By default, it will be the base (=-1).
+            contact_point (np.array[3], None): the contact point. If None, it will compute it. If there are multiple
+                contact points, it will attach the links to each one of them.
+
+        Returns:
+            bool: True if it was successful.
+        """
+        pass
+
+    def detach(self, body1, body2, link1=-1, link2=-1, contact_point=None):
+        """
+        Detach two bodies that were previously attached.
+
+        Args:
+            body1:
+            body2:
+            link1:
+            link2:
+            contact_point:
+
+        Returns:
+            bool: True if it was successful.
+        """
+        pass
+
     def load_floor(self, scaling=1.):
         """
         Load a basic floor in the world.
@@ -1878,12 +1916,14 @@ class World(object):
         print("Contact damping coefficient (-1 if not available): {}".format(info[8]))
         print("Contact stiffness coefficient (-1 if not available): {}".format(info[9]))
 
-    def change_dynamics(self, lateral_friction=1., spinning_friction=0., rolling_friction=0., restitution=0.,
-                        linear_damping=0.04, angular_damping=0.04, contact_stiffness=-1, contact_damping=-1, **kwargs):
+    def change_dynamics(self, body_id=None, lateral_friction=1., spinning_friction=0., rolling_friction=0.,
+                        restitution=0., linear_damping=0.04, angular_damping=0.04, contact_stiffness=-1,
+                        contact_damping=-1, **kwargs):
         """
-        Change the world floor dynamics.
+        Change the dynamics of a body. If no body is specified, it will be change the world floor dynamics.
 
         Args:
+            body_id (int, None): unique body id. If None, it will be the world floor.
             lateral_friction (float): lateral (linear) contact friction
             spinning_friction (float): torsional friction around the contact normal
             rolling_friction (float): torsional friction orthogonal to contact normal
@@ -1895,7 +1935,9 @@ class World(object):
                 `contact_stiffness`. This overrides the value if it was specified in the URDF file in the contact
                 section.
         """
-        self.sim.change_dynamics(body_id=self.floor_id, link_id=-1, lateral_friction=lateral_friction,
+        if body_id is None:
+            body_id = self.floor_id
+        self.sim.change_dynamics(body_id=body_id, link_id=-1, lateral_friction=lateral_friction,
                                  spinning_friction=spinning_friction, rolling_friction=rolling_friction,
                                  restitution=restitution, linear_damping=linear_damping,
                                  angular_damping=angular_damping, contact_stiffness=contact_stiffness,
