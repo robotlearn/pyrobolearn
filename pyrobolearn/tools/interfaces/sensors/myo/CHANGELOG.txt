@@ -1,0 +1,7 @@
+
+2014: Danny Zhu wrote the myo-raw package (https://github.com/dzhu/myo-raw).
+
+2015: Fernando Cosentino wrote the PyoConnect package (http://www.fernandocosentino.net/pyoconnect/) based on myo-raw.
+
+2019: Brian Delhaisse implemented the `onEMG` function, cleaned the ``MyoRaw`` and ``PyoConnectLib`` classes, added
+a more complete documentation, and only print information if the ``verbose`` attribute is set.

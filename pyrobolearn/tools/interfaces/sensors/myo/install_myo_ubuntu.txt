@@ -1,0 +1,26 @@
+Installation of Myo Armband on Ubuntu 16.04/18.04
+=================================================
+
+The following instructions are based on the instructions given in: http://www.fernandocosentino.net/pyoconnect/
+
+In a terminal:
+
+# plug bluetooth adapter
+# permission to ttyACM0 - must logout from your session then login again, or reboot your system.
+sudo usermod -a -G dialout $USER
+
+# dependencies
+sudo apt-get install python-pip
+sudo pip install pySerial --upgrade
+sudo pip install enum34
+sudo pip install PyUserInput
+sudo apt-get install python-xlib
+sudo apt-get install python-tk
+
+# now logout from your session then login again, or reboot your system
+
+Check that the dialout group has been added:
+$ groups
+
+Check that you can see ttyACM0:
+$ ls /dev/ttyACM*
