@@ -154,9 +154,9 @@ class LeggedRobot(Robot):
 
         .. math::
 
-            x_{CoP} = \frac{\sum_i x_i f^i_n}{\sum{i} f^i_n}
-            y_{CoP} = \frac{\sum_i y_i f^i_n}{\sum{i} f^i_n}
-            z_{CoP} = \frac{\sum_i z_i f^i_n}{\sum{i} f^i_n}
+            x_{CoP} = \frac{\sum_i x_i f^i_n}{\sum_i f^i_n}
+            y_{CoP} = \frac{\sum_i y_i f^i_n}{\sum_i f^i_n}
+            z_{CoP} = \frac{\sum_i z_i f^i_n}{\sum_i f^i_n}
 
         where :math:`[x_i, y_i, z_i]` are the coordinates of the contact point :math:`i` on which the normal force
         :math:`f^i_n` acts.
@@ -172,8 +172,8 @@ class LeggedRobot(Robot):
             np.array[3], None: center of pressure. None if the robot is not in contact with the ground.
 
         References:
-            [1] "Postural Stability of Biped Robots and Foot-Rotation Index (FRI) Point", Goswami, 1999
-            [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
+            - [1] "Postural Stability of Biped Robots and Foot-Rotation Index (FRI) Point", Goswami, 1999
+            - [2] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
             Implications", Popovic et al., 2005
         """
         if floor_id is not None:
@@ -254,10 +254,10 @@ class LeggedRobot(Robot):
             np.array[3], None: zero-moment point. None if the ground reaction force in z is 0.
 
         References:
-            [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
+            - [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
             Implications", Popovic et al., 2005
-            [2] "Biped Walking Pattern Generation by using Preview Control of ZMP", Kajita et al., 2003
-            [3] "Exploiting Angular Momentum to Enhance Bipedal Center-of-Mass Control", Hofmann et al., 2009
+            - [2] "Biped Walking Pattern Generation by using Preview Control of ZMP", Kajita et al., 2003
+            - [3] "Exploiting Angular Momentum to Enhance Bipedal Center-of-Mass Control", Hofmann et al., 2009
         """
         # if we need to update the CoM
         if update_com:
@@ -327,8 +327,8 @@ class LeggedRobot(Robot):
             - the FRI coincides with the ZMP when the foot is stationary. [1]
 
         References:
-            [1] "Postural Stability of Biped Robots and the Foot-Rotation Indicator (FRI) Point", Goswami, 1999
-            [2] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
+            - [1] "Postural Stability of Biped Robots and the Foot-Rotation Indicator (FRI) Point", Goswami, 1999
+            - [2] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
             Implications", Popovic et al., 2005
         """
         raise NotImplementedError
@@ -362,7 +362,7 @@ class LeggedRobot(Robot):
             np.array[3], None: centroidal moment pivot point. None if the ground reaction force in z is 0.
 
         References:
-            [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
+            - [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
             Implications", Popovic et al., 2005
         """
         # update the CoM
@@ -410,7 +410,7 @@ class LeggedRobot(Robot):
     #     \dot{y}, \dot{z}]` are the CoM position and velocity, :math:`b > 0` is a time-constant of the DCM dynamics.
     #
     #     References:
-    #         [1] "Three-dimensional Bipedal Walking Control Based on Divergent Component of Motion", Englsberger et
+    #         - [1] "Three-dimensional Bipedal Walking Control Based on Divergent Component of Motion", Englsberger et
     #             al., 2015
     #     """
     #     pass
@@ -458,7 +458,7 @@ class LeggedRobot(Robot):
             lifetime (float): lifetime of the support polygon before it disappears.
 
         References:
-            [1] "A Universal Stability Criterion of the Foot Contact of Legged Robots- Adios ZMP"
+            - [1] "A Universal Stability Criterion of the Foot Contact of Legged Robots- Adios ZMP"
         """
         # get contact points between the robot's links and the floor
         points = self.sim.get_contact_points(body1=self.id, body2=floor_id)
@@ -501,8 +501,8 @@ class LeggedRobot(Robot):
             height (float): maximum height of the cone in the simulator.
 
         References:
-            [1] https://scaron.info/teaching/friction-cones.html
-            [2] "Stability of Surface Contacts for Humanoid Robots: Closed-Form Formulae of the Contact Wrench Cone
+            - [1] https://scaron.info/teaching/friction-cones.html
+            - [2] "Stability of Surface Contacts for Humanoid Robots: Closed-Form Formulae of the Contact Wrench Cone
                 for Rectangular Support Areas", Caron et al., 2015
         """
         filename = os.path.dirname(__file__) + '/../worlds/meshes/cone.obj'
@@ -564,8 +564,8 @@ class LeggedRobot(Robot):
             height (float): maximum height of the pyramid in the simulator.
 
         References:
-            [1] https://scaron.info/teaching/friction-cones.html
-            [2] "Stability of Surface Contacts for Humanoid Robots: Closed-Form Formulae of the Contact Wrench Cone
+            - [1] https://scaron.info/teaching/friction-cones.html
+            - [2] "Stability of Surface Contacts for Humanoid Robots: Closed-Form Formulae of the Contact Wrench Cone
                 for Rectangular Support Areas", Caron et al., 2015
         """
         filename = os.path.dirname(__file__) + '/../worlds/meshes/pyramid.obj'

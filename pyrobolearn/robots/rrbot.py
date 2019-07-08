@@ -5,7 +5,7 @@
 import os
 import numpy as np
 
-from pyrobolearn.robots.manipulator import ManipulatorRobot
+from pyrobolearn.robots.manipulator import Manipulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -16,7 +16,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class RRBot(ManipulatorRobot):
+class RRBot(Manipulator):
     r"""RRBot
 
     Note that in the URDF, the continuous joints were replace by revolute joints. Be careful, that the limit values
@@ -44,20 +44,21 @@ class RRBot(ManipulatorRobot):
         self.name = 'rrbot'
 
         # set initial joint positions
-        self.set_joint_positions(self.joints, [np.pi / 4, np.pi / 2])
+        self.reset_joint_states(q=[np.pi / 4, np.pi / 2], joint_ids=self.joints)
+        # self.set_joint_positions(self.joints, [np.pi / 4, np.pi / 2])
 
-        for _ in range(100):
-            self.sim.step()
+        # for _ in range(100):
+        #     self.sim.step()
 
         # disable each motor joint
-        self.disable_motor()
+        # self.disable_motor()
         # self.sim.setJointMotorControlArray(self.id, self.joints, self.sim.VELOCITY_CONTROL, forces=forces)
 
         # enable F/T sensor at the end effector
         self.enable_joint_force_torque_sensor(2)
 
         # Coriolis and gravity compensation (note that the set_joint_torques need to be called at each time step)
-        self.enable_coriolis_and_gravity_compensation()
+        # self.enable_coriolis_and_gravity_compensation()
 
     def get_force_torque_sensor(self, idx=0):
         return np.array(self.sim.getJointState(self.id, 2)[2])
@@ -77,6 +78,7 @@ if __name__ == "__main__":
 
     # load robot
     robot = RRBot(sim)
+    robot.disable_motor()
     # robot.add_joint_slider()
 
     print("Robot: {}".format(robot))

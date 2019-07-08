@@ -99,8 +99,8 @@ class CameraSensor(LinkSensor):
         """
         super(CameraSensor, self).__init__(simulator, body_id, link_id, position, orientation, rate)
 
-        self.width = width
-        self.height = height
+        self.width = int(width)
+        self.height = int(height)
         self.distance = distance
 
         # compute projection matrix (orthographic or perspective matrix)
@@ -123,15 +123,14 @@ class CameraSensor(LinkSensor):
         """
         Get the associated projection matrix.
         """
-        return np.array(self._P).reshape(4, 4).T
+        return self._P
 
     @property
     def V(self):
         """
         Get the associated view matrix.
         """
-        self.getV()
-        return np.array(self._V).reshape(4, 4).T
+        return self.getV()
 
     def getV(self):
         """
@@ -169,10 +168,10 @@ class CameraSensor(LinkSensor):
         """
         Return the captured RGBA image. 'A' stands for alpha channel (for opacity/transparency)
         """
-        img = np.array(self.sim.get_camera_image(self.width, self.height, self.getV(), self._P,
-                                                 shadow=1,  # lightDirection=[1,1,1],
-                                                 # renderer=self.sim.ER_TINY_RENDERER)[2])
-                                                 renderer=self.sim.ER_BULLET_HARDWARE_OPENGL)[2])
+        img = self.sim.get_camera_image(self.width, self.height, self.getV(), self._P,
+                                        shadow=1,  # lightDirection=[1,1,1],
+                                        # renderer=self.sim.ER_TINY_RENDERER)[2])
+                                        renderer=self.sim.ER_BULLET_HARDWARE_OPENGL)[2]
         img = img.reshape(self.width, self.height, 4)  # RGBA
         return img
 
@@ -180,8 +179,8 @@ class CameraSensor(LinkSensor):
         """
         Return the depth image.
         """
-        img = np.array(self.sim.get_camera_image(self.width, self.height, self.getV(), self._P,
-                                                 renderer=self.sim.ER_BULLET_HARDWARE_OPENGL)[3])
+        img = self.sim.get_camera_image(self.width, self.height, self.getV(), self._P,
+                                        renderer=self.sim.ER_BULLET_HARDWARE_OPENGL)[3]
         img = img.reshape(self.width, self.height)
         return img
 
@@ -190,8 +189,8 @@ class CameraSensor(LinkSensor):
         Return the RGBA and depth images.
         """
         rgba, depth = self.sim.get_camera_image(self.width, self.height, self.getV(), self._P)[2:4]
-        rgba = np.array(rgba).reshape(self.width, self.height, 4)
-        depth = np.array(depth).reshape(self.width, self.height)
+        rgba = rgba.reshape(self.width, self.height, 4)
+        depth = depth.reshape(self.width, self.height)
         if concatenate:
             return np.dstack((rgba, depth))
         return rgba, depth

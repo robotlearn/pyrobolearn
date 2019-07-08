@@ -8,16 +8,25 @@ Set the `solver_flag` to a number between 0 and 1 (see lines [19,22]) to select 
 
 import numpy as np
 from itertools import count
+import argparse
 
 from pyrobolearn.simulators import Bullet
 from pyrobolearn.worlds import BasicWorld
 from pyrobolearn.robots import KukaIIWA
 
 
+# create parser to select the IK solver
+parser = argparse.ArgumentParser()
+parser.add_argument('-s', '--solver', help='the IK solver to select (0: use robot.calculate_inverse_kinematics(), '
+                                           '1: use damped-least-squares IK using Jacobian)', type=int,
+                    choices=[0, 1], default=1)
+args = parser.parse_args()
+
+
 # select IK solver, by setting the flag:
 # 0 = pybullet + calculate_inverse_kinematics()
 # 1 = pybullet + damped-least-squares IK using Jacobian (provided by pybullet)
-solver_flag = 1  # 1 and 4 gives pretty good results
+solver_flag = args.solver  # 1 gives a pretty good result
 
 
 # Create simulator
@@ -34,6 +43,7 @@ robot.print_info()
 dt = 1./240
 link_id = robot.get_end_effector_ids(end_effector=0)
 joint_ids = robot.joints  # actuated joint
+# joint_ids = joint_ids[2:]
 damping = 0.01  # for damped-least-squares IK
 wrt_link_id = -1  # robot.get_link_ids('iiwa_link_1')
 
@@ -41,11 +51,10 @@ wrt_link_id = -1  # robot.get_link_ids('iiwa_link_1')
 xd = np.array([0.5, 0., 0.5])
 world.load_visual_sphere(xd, radius=0.05, color=(1, 0, 0, 0.5))
 
-# joint_ids = joint_ids[2:]
-
+# change the robot visual
 robot.change_transparency()
-robot.draw_link_frames([-1, 0])
-robot.draw_bounding_boxes(joint_ids[0])
+robot.draw_link_frames(link_ids=[-1, 0])
+robot.draw_bounding_boxes(link_ids=joint_ids[0])
 # robot.draw_link_coms([-1,0])
 
 qIdx = robot.get_q_indices(joint_ids)

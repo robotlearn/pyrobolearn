@@ -42,13 +42,15 @@ class FixedReward(Reward):
         if not isinstance(value, (int, float)):
             raise TypeError("Expecting a number")
         self.value = value
-        self.range = (value, value) if range is None else range
+        self.range = (value, value) if range is None or (isinstance(range, (tuple, list)) and len(range) == 0) \
+            else range
 
         if value < self.range[0] or value > self.range[1]:
             raise ValueError("The given value (={}) is not in the specified range = {}".format(value, self.range))
 
-    def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, str(self.value))
+    def __str__(self):
+        """Return a string describing the reward."""
+        return '%s(%s, range=%s)' % (self.__class__.__name__, str(self.value), str(self.range))
 
     def _compute(self):
         return self.value

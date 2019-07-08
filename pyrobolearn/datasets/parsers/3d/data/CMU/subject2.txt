@@ -1,0 +1,15 @@
+
+			Subject #2 (various expressions and human behaviors)
+
+02_01	02_01.tvd	02_01.c3d	02_01.amc	02_01.avi	walk	
+02_02	02_02.tvd	02_02.c3d	02_02.amc	02_02.mpg	02_02.avi	walk	
+02_03	02_03.tvd	02_03.c3d	02_03.amc	02_03.mpg	02_03.avi	run/jog	
+02_04	02_04.tvd	02_04.c3d	02_04.amc	02_04.mpg	02_04.avi	jump, balance	
+02_05	02_05.tvd	02_05.c3d	02_05.amc	02_05.mpg	02_05.avi	punch/strike	
+02_06	02_06.tvd	02_06.c3d	02_06.amc	02_06.mpg	02_06.avi	bend over, scoop up, rise, lift arm	
+02_07	02_07.tvd	02_07.c3d	02_07.amc	02_07.mpg	02_07.avi	swordplay	
+02_08	02_08.tvd	02_08.c3d	02_08.amc	02_08.mpg	02_08.avi	swordplay	
+02_09	02_09.tvd	02_09.c3d	02_09.amc	02_09.mpg	02_09.avi	swordplay	
+02_10	02_10.tvd	02_10.c3d	02_10.amc	02_10.mpg	02_10.avi	wash self	
+
+

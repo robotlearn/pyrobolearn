@@ -1,0 +1,3 @@
+# CMU Dataset
+
+* webpage (link to download the dataset): mocap.cs.cmu.edu/search.php

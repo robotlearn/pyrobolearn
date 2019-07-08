@@ -4,7 +4,7 @@
 
 import os
 
-from pyrobolearn.robots.manipulator import ManipulatorRobot
+from pyrobolearn.robots.manipulator import Manipulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -15,7 +15,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class KukaLWR(ManipulatorRobot):
+class KukaLWR(Manipulator):
     r"""Kuka LWR robot
 
     LWR stands for 'Light Weight Robot'. This robot has 7 DoFs, and an ATI F/T sensor at the end-effector.

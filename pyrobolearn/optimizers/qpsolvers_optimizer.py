@@ -111,7 +111,8 @@ class QP(Optimizer):
         Initialize the QP solver.
 
         Args:
-            method (str): ['cvxopt', 'cvxpy', 'ecos', 'gurobi', 'mosek', 'osqp', 'qpoases', 'quadprog']
+            method (str): QP method/library to use. Select between ['cvxopt', 'cvxpy', 'ecos', 'gurobi', 'mosek',
+                'osqp', 'qpoases', 'quadprog']
         """
         super(QP, self).__init__(*args, **kwargs)
 
@@ -126,8 +127,18 @@ class QP(Optimizer):
         methods = ['cvxopt', 'osqp', 'quadprog']
         self.sym_proj = True if self.method in set(methods) else False
 
-    def is_symmetric(self, X, tol=1e-8):
+    ##################
+    # Static Methods #
+    ##################
+
+    @staticmethod
+    def is_symmetric(X, tol=1e-8):
+        """Check if the given matrix is symmetric."""
         return np.allclose(X, X.T, atol=tol)
+
+    ###########
+    # Methods #
+    ###########
 
     def optimize(self, P, q, x0=None, G=None, h=None, A=None, b=None):
         r"""
@@ -135,7 +146,7 @@ class QP(Optimizer):
 
         .. math::
 
-            \min_{x \in R^n} \frac{1}{2} x^T P x + q^T x
+            \min_{x \in \mathbb{R}^N} \frac{1}{2} x^T P x + q^T x
 
         subject to
 
@@ -143,6 +154,22 @@ class QP(Optimizer):
 
             Gx \leq h
             Ax = b
+
+        Args:
+            P (np.array[N,N]): matrix used in the QP objective function where `N` is the size of the vector `x` being
+                optimized.
+            q (np.array[N]): vector used in the QP objective function where `N` is the size of the vector `x` being
+                optimized.
+            G (np.array[M,N]): matrix used in the inequality constraint, where `M` is the number of inequalities, and
+                `N` is the size of the vector `x` being optimized. Note that if you have lower and upper bounds for
+                the vector `x`, you can set :attr:`G` to be the concatenation of :math:`[-I, I]^\top`, where :math:`I`
+                is the identity matrix.
+            h (np.array[M]): vector used in the inequality constraint, where `M` is the number of inequalities. Note
+                that if you have lower and upper bounds for the vector `x`, you can set :attr:`h` to be the
+                concatenation of :math:`[-b_l^\top, b_u^\top]`, where :math:`b_l` and :math:`b_u` are the lower and
+                upper bounds respectively.
+            A (np.array[K,N]): matrix used in the equality constraint.
+            b (np.array[K,N]): vector used in the equality constraint.
 
         Returns:
             np.array: QP solution

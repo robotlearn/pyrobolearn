@@ -57,9 +57,9 @@ class NLopt(Optimizer):
         Initialize the non-linear optimizer.
 
         Args:
-            method:
-            submethod:
-            seed:
+            method (str): primary optimization method to be used.
+            submethod (str): sub-optimization method to be used in the primary optimization method.
+            seed (None, int): random seed
             *args:
             **kwargs:
         """

@@ -3,6 +3,10 @@
 
 This file provides the Kernelized Movement Primitive (KMP) model, and uses the Gaussian mixture model as well as
 the Gaussian distribution defined respectively in `gmm.py` and `gaussian.py`.
+
+References:
+    - [1] "Kernelized Movement Primitives", Huang et al., 2017
+    - [2] https://github.com/yanlongtu/robInfLib
 """
 
 import numpy as np
@@ -15,7 +19,7 @@ from pyrobolearn.models.gmm import GMM, Gaussian
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__credits__ = ["Brian Delhaisse"]
+__credits__ = ["Yanlong Huang (paper + Matlab)", "Brian Delhaisse (Python)"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
@@ -24,13 +28,13 @@ __status__ = "Development"
 
 
 class RBF(object):
-    """
+    r"""
     RBF kernel.
 
     .. math:: k(x1, x2) = \sigma^2 * \exp(- ||x_1 - x_2||^2 / l)
 
     where :math:`x1` and :math:`x2` are two vectors, :math:`\sigma^2` is the variance, and :math:`l` is
-    the lengthscale.
+    the length scale.
     """
 
     def __init__(self, variance=1., lengthscale=1.):
@@ -45,11 +49,11 @@ class RBF(object):
         self.l = lengthscale
 
     def k(self, x1, x2=None):
-        """
+        r"""
         Compute kernel function: :math:`k(x1, x2) = \sigma^2 * \exp(- ||x_1 - x_2||^2 / l)`
 
         where :math:`x1` and :math:`x2` are two vectors, :math:`\sigma^2` is the variance, and :math:`l` is
-        the lengthscale.
+        the length scale.
 
         Args:
             x1 (float, np.array): 1st value
@@ -78,7 +82,7 @@ class KMP(object):
     model.
 
     References:
-        [1] "Kernelized Movement Primitives", Huang et al., 2017
+        - [1] "Kernelized Movement Primitives", Huang et al., 2017
     """
 
     def __init__(self, kernel_fct=None, database=None):
@@ -86,8 +90,9 @@ class KMP(object):
         Initialize the KMP.
 
         Args:
-            kernel_fct (None, callable): kernel function. If None, it will use the `GPy.kern.RBF` with a variance
-                of 1, and a lengthscale of 2.
+            kernel_fct (None, callable): kernel function. If None, it will use the `RBF` kernel with a variance
+                of 1, and a length scale of 2.
+            database (None, list): initial database.
         """
         super(KMP, self).__init__()
 
@@ -204,14 +209,14 @@ class KMP(object):
                 the number of trajectories, T is its length, and O is the output data dimension.
             gmm (None, GMM): the reference generative model. If None, it will create a GMM.
             gmm_num_components (int): the number of components for the underlying reference GMM.
-            dist (callable, None): callable function which accepts two data points from X, and compute the distance
+            distance (callable, None): callable function which accepts two data points from X, and compute the distance
                 between them. If None and `sample_from_gmm` is False, it will use the 2-norm.
-            database_threshold (float): threshold associated with the `dist` argument above. If the distance between
+            database_threshold (float): threshold associated with the `distance` argument above. If the distance between
                 a new data point and data point in the database is below the threshold, it will be added to
                 the database.
             database_size_limit (int): limit size of the database.
             sample_from_gmm (bool): If we should sample from the generative model to get the inputs to put in the
-                database. If True, it doesn't use the `dist` and `database_threshold` parameters.
+                database. If True, it doesn't use the `distance` and `database_threshold` parameters.
             gmm_init (str): how the Gaussians should be initialized. Possible values are 'random' or 'kmeans'.
             gmm_reg (float): regularization term for the GMM (that are added to the Gaussians)
             gmm_num_iters (int): the maximum number of iterations to train the reference model (GMM)
@@ -406,12 +411,12 @@ class KMP(object):
             prior_reg (float): prior regularization term
             dist (callable, None): callable function which accepts two data points from X, and compute the distance
                 between them. If None and `sample_from_gmm` is False, it will use the 2-norm.
-            database_threshold (float): threshold associated with the `dist` argument above. If the distance between
+            database_threshold (float): threshold associated with the `distance` argument above. If the distance between
                 a new data point and data point in the database is below the threshold, it will be added to
                 the database.
             database_size_limit (int): limit size of the database.
             sample_from_gmm (bool): If we should sample from the generative model to get the inputs to put in the
-                database. If True, it doesn't use the `dist` and `database_threshold` parameters.
+                database. If True, it doesn't use the `distance` and `database_threshold` parameters.
             gmm_init (str): how the Gaussians should be initialized. Possible values are 'random' or 'kmeans'.
             gmm_reg (float): regularization term for the GMM (that are added to the Gaussians)
             gmm_num_iters (int): the maximum number of iterations to train the reference model (GMM)
@@ -423,7 +428,7 @@ class KMP(object):
                 `N` is the size of the kernel matrix.
 
         References:
-            [1] "Kernelized Movement Primitives", Huang et al., 2017
+            - [1] "Kernelized Movement Primitives", Huang et al., 2017
         """
         # TODO: replace gmm by joint generative model
 
@@ -545,7 +550,7 @@ class KMP(object):
         # compute k vector (which compares given input data with previous ones)
         I = np.identity(self.output_dim)
         k = np.array([self.K(x, x_prev) * I for x_prev, _ in self.database])    # shape: NxOxO
-        k = k.reshape(-1,1).T     # shape: OxNO
+        k = k.reshape(-1, 1).T     # shape: OxNO
         return k
 
     def predict(self, x):
@@ -667,7 +672,7 @@ class KMP(object):
                 wants a high precision around the new data point.
             dist (callable, None): callable function which accepts two data points from X, and compute the distance
                 between them. If None and `sample_from_gmm` is False, it will use the 2-norm.
-            threshold (float): threshold associated with the `dist` argument above. If the distance between
+            threshold (float): threshold associated with the `distance` argument above. If the distance between
                 a new data point and data point in the database is below the threshold, it will be added to
                 the database.
             update_database (bool): If True, it will modify permanently the original database by including the new
@@ -1019,3 +1024,4 @@ if __name__ == "__main__":
     # predict with KMP
 
     # plot prediction
+    pass

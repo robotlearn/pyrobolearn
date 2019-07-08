@@ -153,7 +153,7 @@ class OculusInterface(VRInterface):
                 # self.worldCamera.add_yaw_pitch(yaw, pitch, radian=False)
                 # print(pitch, yaw)
                 pos = self.world_camera.target_position
-                dist = self.world_camera.dist
+                dist = self.world_camera.distance
             elif name == 'BA': # button A: [touch, button]
                 pass
             elif name == 'BB': # button B: [touch, button]

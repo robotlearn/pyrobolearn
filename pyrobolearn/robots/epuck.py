@@ -49,15 +49,33 @@ class Epuck(DifferentialWheeledRobot):
                        if link in self.link_names]
         self.wheel_directions = np.ones(len(self.wheels))
 
+    def turn(self, speed):
+        """Turn the robot. If the speed is positive, turn to the left, otherwise turn to the right (using the
+        right-hand rule).
+
+        Args:
+            speed (float): speed to turn to the left (if speed is positive) or to the right (if speed is negative).
+        """
+        self.set_joint_velocities(speed * np.array([-1, 1]), self.wheels)
+
+    def move(self, velocity):
+        """Move the robot at the specified 2D velocity vector.
+
+        Args:
+            velocity (np.array[2]): 2D velocity vector defined in the xy plane. The magnitude represents the speed.
+        """
+        velocities = np.array([velocity[0] + velocity[1], velocity[0] - velocity[1]])
+        self.set_joint_velocities(velocities=velocities)
+
 
 # Test
 if __name__ == "__main__":
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)
@@ -79,5 +97,7 @@ if __name__ == "__main__":
     for _ in count():
         # robots[0].update_joint_slider()
         for robot in robots:
-            robot.drive(5)
+            # robot.drive(5)
+            # robot.turn(5)
+            robot.move([0., 1.])
         world.step(sleep_dt=1./240)

@@ -1,0 +1,4 @@
+# HWRT Database of Handwritten symbols
+
+* webpage: www.martin-thoma.de/write-math/data/
+* link to download the dataset: i13pc106.ira.uka.de/~mthoma/hwrt/2015-01-28-data.tar

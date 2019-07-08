@@ -54,6 +54,39 @@ class RotaryWingUAV(UAVRobot):
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
         super(RotaryWingUAV, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
+    def hover(self):
+        pass
+
+    def move(self, velocity):
+        pass
+
+    def ascend(self, speed=0):
+        pass
+
+    def descend(self, speed=0):
+        pass
+
+    def turn(self, speed=0):
+        pass
+
+    def turn_left(self, speed=0):
+        pass
+
+    def turn_right(self, speed=0):
+        pass
+
+    def move_forward(self, speed=0):
+        pass
+
+    def move_backward(self, speed=0):
+        pass
+
+    def move_left(self, speed=0):
+        pass
+
+    def move_right(self, speed=0):
+        pass
+
 
 class FlappingWingUAV(UAVRobot):
     r"""Flapping Wing Robot

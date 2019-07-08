@@ -13,9 +13,9 @@ Dependencies in PRL:
 * `pyrobolearn.simulators.simulator.Simulator`
 
 References:
-    [1] PyBullet: https://pybullet.org
-    [2] PyBullet Quickstart Guide: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA
-    [3] PEP8: https://www.python.org/dev/peps/pep-0008/
+    - [1] PyBullet: https://pybullet.org
+    - [2] PyBullet Quickstart Guide: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA
+    - [3] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
 
 # general imports
@@ -35,7 +35,7 @@ from pyrobolearn.simulators.simulator import Simulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__credits__ = ["Brian Delhaisse"]
+__credits__ = ["Bullet (Erwin Coumans and Yunfei Bai)", "Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
@@ -74,9 +74,9 @@ class Bullet(Simulator):
         sim = Bullet()
 
     References:
-        [1] "PyBullet, a Python module for physics simulation for games, robotics and machine learning", Erwin Coumans
-            and Yunfei Bai, 2016-2019
-        [1] PyBullet Quickstart Guide: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA
+        - [1] "PyBullet, a Python module for physics simulation for games, robotics and machine learning", Erwin
+            Coumans and Yunfei Bai, 2016-2019
+        - [2] PyBullet Quickstart Guide: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA
             Erwin Coumans and Yunfei Bai, 2017/2018
     """
 
@@ -125,6 +125,10 @@ class Bullet(Simulator):
         # given parameters
         self.kwargs = {'render': render, 'kwargs': kwargs}
 
+        # define default timestep
+        self.default_timestep = 1. / 240
+        self.dt = self.default_timestep
+
         # go through the global variables / attributes defined in pybullet and set them here
         # this includes for instance: JOINT_REVOLUTE, POSITION_CONTROL, etc.
         # for attribute in dir(pybullet):
@@ -159,6 +163,11 @@ class Bullet(Simulator):
     def version(self):
         """Return the version of the simulator in a year-month-day format."""
         return self.sim.getAPIVersion()
+
+    @property
+    def timestep(self):
+        """Return the simulator time step."""
+        return self.dt
 
     #############
     # Operators #
@@ -218,6 +227,15 @@ class Bullet(Simulator):
         # update the memodict
         memo[self] = sim
         return sim
+
+    ##################
+    # Static methods #
+    ##################
+
+    @staticmethod
+    def simulate_soft_bodies():
+        """Return True if the simulator can simulate soft bodies."""
+        return True
 
     ###########
     # Methods #
@@ -299,14 +317,14 @@ class Bullet(Simulator):
         #     pass
 
     def step(self, sleep_time=0.):
-        """Perform a step in the simulator.
+        """Perform a step in the simulator, and sleep the specified amount of time.
 
         "stepSimulation will perform all the actions in a single forward dynamics simulation step such as collision
         detection, constraint solving and integration. The default timestep is 1/240 second, it can be changed using
         the setTimeStep or setPhysicsEngineParameter API." [1]
 
         Args:
-            sleep_time (float): time to sleep after performing one step in the simulation.
+            sleep_time (float): amount of time to sleep after performing one step in the simulation.
         """
         self.sim.stepSimulation()
         time.sleep(sleep_time)
@@ -386,6 +404,14 @@ class Bullet(Simulator):
         # set the render variable (useful when calling the method `is_rendering`)
         self._render = enable
 
+    def get_time_step(self):
+        """Get the time step in the simulator.
+
+        Returns:
+            float: time step in the simulator
+        """
+        return self.get_physics_properties()['fixed_time_step']
+
     def set_time_step(self, time_step):
         """Set the specified time step in the simulator.
 
@@ -401,6 +427,7 @@ class Bullet(Simulator):
             time_step (float): Each time you call 'step' the time step will proceed with 'time_step'.
         """
         # self.history.append(('set_time_step', {'time_step': time_step}))
+        self.dt = time_step
         self.sim.setTimeStep(timeStep=time_step)
 
     def set_real_time(self, enable=True):
@@ -960,7 +987,9 @@ class Bullet(Simulator):
         Returns:
             str: base name
         """
-        return self.sim.getBodyInfo(body_id)
+        name = self.sim.getBodyInfo(body_id)
+        name = name if isinstance(name, str) else name.decode("utf-8")
+        return name
 
     def get_body_id(self, index):
         """
@@ -1155,7 +1184,9 @@ class Bullet(Simulator):
         Returns:
             str: base name
         """
-        return self.sim.getBodyInfo(body_id)[0]
+        name = self.sim.getBodyInfo(body_id)[0]
+        name = name if isinstance(name, str) else name.decode("utf-8")
+        return name
 
     def get_center_of_mass_position(self, body_id, link_ids=None):
         """
@@ -1488,6 +1519,8 @@ class Bullet(Simulator):
             [16] int:       parent link index, -1 for base
         """
         info = list(self.sim.getJointInfo(body_id, joint_id))
+        info[1] = info[1] if isinstance(info[1], str) else info[1].decode("utf-8")  # bytes vs str (Py2 vs Py3)
+        info[12] = info[12] if isinstance(info[12], str) else info[12].decode("utf-8")
         info[13] = np.asarray(info[13])
         info[14] = np.asarray(info[14])
         info[15] = np.asarray(info[15])
@@ -1710,8 +1743,21 @@ class Bullet(Simulator):
                 str[N]: link names
         """
         if isinstance(link_ids, int):
-            return self.sim.getJointInfo(body_id, link_ids)[12]
-        return [self.sim.getJointInfo(body_id, link_id)[12] for link_id in link_ids]
+            if link_ids == -1:
+                return self.get_base_name(body_id)
+            name = self.sim.getJointInfo(body_id, link_ids)[12]
+            name = name if isinstance(name, str) else name.decode("utf-8")  # bytes vs str (Py2 vs Py3)
+            return name
+
+        link_names = []
+        for link_id in link_ids:
+            if link_id == -1:
+                link_names.append(self.get_base_name(body_id))
+            else:
+                name = self.sim.getJointInfo(body_id, link_id)[12]
+                name = name if isinstance(name, str) else name.decode("utf-8")  # bytes vs str (Py2 vs Py3)
+                link_names.append(name)
+        return link_names
 
     def get_link_masses(self, body_id, link_ids):
         """
@@ -1931,8 +1977,16 @@ class Bullet(Simulator):
                 str[N]: name of each joint
         """
         if isinstance(joint_ids, int):
-            return self.sim.getJointInfo(body_id, joint_ids)[1]
-        return [self.sim.getJointInfo(body_id, joint_id)[1] for joint_id in joint_ids]
+            name = self.sim.getJointInfo(body_id, joint_ids)[1]
+            name = name if isinstance(name, str) else name.decode("utf-8")
+            return name
+
+        names = []
+        for joint_id in joint_ids:
+            name = self.sim.getJointInfo(body_id, joint_id)[1]
+            name = name if isinstance(name, str) else name.decode("utf-8")
+            names.append(name)
+        return names
 
     def get_joint_type_ids(self, body_id, joint_ids):
         """
@@ -2632,6 +2686,7 @@ class Bullet(Simulator):
         if flags is not None:
             kwargs['flags'] = flags
 
+        width, height = int(width), int(height)
         width, height, rgba, depth, segmentation = self.sim.getCameraImage(width, height, **kwargs)
         rgba = np.asarray(rgba).reshape(width, height, 4)
         depth = np.asarray(depth).reshape(width, height)
@@ -3244,9 +3299,9 @@ class Bullet(Simulator):
 
     def calculate_jacobian(self, body_id, link_id, local_position, q, dq, des_ddq):
         r"""
-        Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q), J_{ang}(q)]^T`, such that:
+        Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q)^T, J_{ang}(q)^T]^T`, such that:
 
-        .. math:: v = [\dot{p}, \omega]^T = J(q) \dot{q}
+        .. math:: v = [\dot{p}^T, \omega^T]^T = J(q) \dot{q}
 
         where :math:`\dot{p}` is the Cartesian linear velocity of the link, and :math:`\omega` is its angular velocity.
 

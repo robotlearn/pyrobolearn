@@ -15,12 +15,15 @@ Dependencies:
 - `pyrobolearn.actions`
 """
 
+import sys
+import numpy as np
+import collections
 import operator
 import copy
 
 # from pyrobolearn.rewards.objective import Objective
-from pyrobolearn.states import *
-from pyrobolearn.actions import *
+from pyrobolearn.states import State
+from pyrobolearn.actions import Action
 
 
 __author__ = "Brian Delhaisse"
@@ -291,27 +294,27 @@ class Reward(object):
         """Compute the reward function."""
         return self.compute()  # **kwargs)
 
-    def __copy__(self):
-        """Return a shallow copy of the reward function. This can be overridden in the child class."""
-        return self.__class__(state=self.state, action=self.action, rewards=self.rewards, range=self.range)
-
-    def __deepcopy__(self, memo={}):
-        """Return a deep copy of the reward function. This can be overridden in the child class.
-
-        Args:
-            memo (dict): memo dictionary of objects already copied during the current copying pass
-        """
-        if self in memo:
-            return memo[self]
-
-        state = copy.deepcopy(self.state, memo)
-        action = copy.deepcopy(self.action, memo)
-        rewards = [copy.deepcopy(reward, memo) for reward in self.rewards]
-        range = copy.deepcopy(self.range)
-        reward = self.__class__(state=state, action=action, rewards=rewards, range=range)
-
-        memo[self] = reward
-        return reward
+    # def __copy__(self):
+    #     """Return a shallow copy of the reward function. This can be overridden in the child class."""
+    #     return self.__class__(state=self.state, action=self.action, rewards=self.rewards, range=self.range)
+    #
+    # def __deepcopy__(self, memo={}):
+    #     """Return a deep copy of the reward function. This can be overridden in the child class.
+    #
+    #     Args:
+    #         memo (dict): memo dictionary of objects already copied during the current copying pass
+    #     """
+    #     if self in memo:
+    #         return memo[self]
+    #
+    #     state = copy.deepcopy(self.state, memo)
+    #     action = copy.deepcopy(self.action, memo)
+    #     rewards = [copy.deepcopy(reward, memo) for reward in self.rewards]
+    #     range = copy.deepcopy(self.range)
+    #     reward = self.__class__(state=state, action=action, rewards=rewards, range=range)
+    #
+    #     memo[self] = reward
+    #     return reward
 
     # for unary and binary operators, see `__init__()` method.
 
@@ -364,7 +367,13 @@ class Reward(object):
         b = b.range if isinstance(b, Reward) else (b, b)
 
         # check that you do not have a possible division or modulo by zero
-        if op in {operator.__div__, operator.__floordiv__, operator.__truediv__, operator.__mod__}:
+
+        if sys.version_info[0] == 2:  # Python 2
+            dangerous_operators = {operator.__div__, operator.__floordiv__, operator.__truediv__, operator.__mod__}
+        else:  # In Python 3, there is no __div__
+            dangerous_operators = {operator.__floordiv__, operator.__truediv__, operator.__mod__}
+
+        if op in dangerous_operators:
             if b[0] <= 0 <= b[1]:
                 raise ValueError("Zero is between the lower and upper bound of the range of `other`. This is not "
                                  "accepted as it can lead to a division or modulo by zero.")

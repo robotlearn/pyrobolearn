@@ -4,12 +4,14 @@
 This includes rotation matrices, euler angles (RPY), axis-angle, and quaternions.
 
 References:
-    [1] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010, chapter 2 and 3
-    [2] "Understanding Quaternions", https://www.3dgep.com/understanding-quaternions
+    - [1] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010, chapter 2 and 3
+    - [2] "Understanding Quaternions", https://www.3dgep.com/understanding-quaternions
+    - [3] "Orientation in Cartesian Space Dynamic Movement Primitives", Ude et al., 2014
 """
 
 import numpy as np
 import quaternion
+# from pyquaternion import Quaternion  # TODO: check API at http://kieranwynn.github.io/pyquaternion
 import sympy
 from collections import Iterable
 
@@ -601,13 +603,17 @@ def skew_matrix(vector):
         np.array[3,3]: skew-symmetric matrix
 
     References:
-        [1] Wikipedia: https://en.wikipedia.org/wiki/Skew-symmetric_matrix#Cross_product
-        [2] "Robotics: Modelling, Planning and Control" (sec 3.1.1), by Siciliano et al., 2010
+        - [1] Wikipedia: https://en.wikipedia.org/wiki/Skew-symmetric_matrix#Cross_product
+        - [2] "Robotics: Modelling, Planning and Control" (sec 3.1.1), by Siciliano et al., 2010
     """
     x, y, z = np.array(vector).flatten()
     return np.array([[0., -z, y],
                      [z, 0., -x],
                      [-y, x, 0.]])
+
+
+# alias (for people who use http://www.petercorke.com/RTB/r9/html/skew.html)
+skew = skew_matrix
 
 
 def vector_from_skew_matrix(matrix):
@@ -623,12 +629,16 @@ def vector_from_skew_matrix(matrix):
         np.array[3]: vector which produced the skew-symmetric matrix
 
     References:
-        [1] Wikipedia: https://en.wikipedia.org/wiki/Skew-symmetric_matrix#Cross_product
-        [2] "Robotics: Modelling, Planning and Control" (sec 3.1.1), by Siciliano et al., 2010
+        - [1] Wikipedia: https://en.wikipedia.org/wiki/Skew-symmetric_matrix#Cross_product
+        - [2] "Robotics: Modelling, Planning and Control" (sec 3.1.1), by Siciliano et al., 2010
     """
     return 0.5 * np.array([matrix[2, 1] - matrix[1, 2],
                            matrix[0, 2] - matrix[2, 0],
                            matrix[1, 0] - matrix[0, 1]])
+
+
+# alias (for people who use http://www.petercorke.com/RTB/r9/html/vex.html)
+vex = vector_from_skew_matrix
 
 
 def rotation_matrix_x(angle):
@@ -742,7 +752,7 @@ def get_quaternion_norm(q):
         float: norm of a quaternion
 
     References:
-        [1] https://www.3dgep.com/understanding-quaternions/#Quaternions
+        - [1] https://www.3dgep.com/understanding-quaternions/#Quaternions
     """
     return np.sqrt(q[0]**2 + q[1]**2 + q[2]**2 + q[3]**2)
 
@@ -838,15 +848,17 @@ def get_quaternion_product(q1, q2, convention='xyzw'):
 
 
 def quaternion_error(quat_des, quat_cur):
-    """
-    Quaternion error between two quaternions.
+    r"""
+    Compute the orientation (vector) error between the current and desired quaternion; that is, it is the difference
+    between :math:`q_curr` and :math:`q_des`, which is given by: :math:`\Delta q = q_{curr}^{-1} q_{des}`.
+    Only the vector part is returned which can be used in PD control.
 
     Args:
-        quat_des (np.array[4], quaternion.quaternion): desired quaternion
-        quat_cur (np.array[4], quaternion.quaternion): current quaternion
+        quat_des (np.array[4]): desired quaternion [x,y,z,w]
+        quat_cur (np.array[4]): current quaternion [x,y,z,w]
 
     Returns:
-
+        np.array[3]: vector error between the current and desired quaternion
     """
     diff = quat_cur[-1] * quat_des[:3] - quat_des[-1] * quat_cur[:3] - skew_matrix(quat_des[:3]).dot(quat_cur[:3])
     return diff
@@ -854,7 +866,20 @@ def quaternion_error(quat_des, quat_cur):
 
 def logarithm_map(q):
     r"""
-    Apply the logarithm map to a quaternion; :math:`log : S^3 \rightarrow R^3`.
+    Apply the logarithm map to a quaternion; :math:`log : S^3 \rightarrow R^3`, where :math:`\mathbb{S}^3` is a unit
+    sphere in :math:`\mathbb{R}^4`.
+
+    The mapping is given by:
+
+    .. math::
+
+        \log(q) = \log(s + \pmb{v}) = \left\{ \begin{array}{ll}
+                \arccos(s) \frac{pmb{v}}{||\pmb{v}||}, & \pmb{v} \neq \pmb{0} \\
+                [0, 0, 0]^\top, & \text{otherwise}
+            \end{array} \right.
+
+    where a quaternion :math:`q` is represented as :math:`s + \pmb{v}` with :math:`s \in \mathbb{R}` being the scalar
+    part and :math:`\pmb{v} \in \mathbb{R}^3` the vector part.
 
     Args:
         q (float[4]): quaternion
@@ -863,17 +888,33 @@ def logarithm_map(q):
         float[3]: resulting 3d vector
     """
     q = quat_converter.convert_to(q)
-    v, u = q.w, np.array([q.x, q.y, q.z])
+    s, v = q.w, np.array([q.x, q.y, q.z])
 
     zero = np.zeros(3)
-    if np.allclose(u, zero):
+    if np.allclose(v, zero):
         return zero
-    return np.arccos(v) * u / np.linalg.norm(u)
+    return np.arccos(s) * v / np.linalg.norm(v)
 
 
 def exponential_map(r):
     r"""
-    Apply the exponential map to a 3d vector representing an orientation; :math:`exp : R^3 \rightarrow S^3`
+    Apply the exponential map to a 3d vector representing an orientation;
+    :math:`exp : \mathbb{R}^3 \rightarrow \mathbb{S}^3`, where :math:`\mathbb{S}^3` is a unit sphere in
+    :math:`\mathbb{R}^4`.
+
+    The mapping is given by:
+
+    .. math::
+
+        \exp(\pmb{r}) = \left\{ \begin{array}{ll}
+                \cos(||\pmb{r}||) + \sin(||\pmb{r}||) \frac{r}{||r||}, & \pmb{r} \neq \pmb{0} \\
+                1, & \text{otherwise}
+            \end{array} \right.
+
+
+    where :math:`\pmb{r} \in \mathbb{R}^3`, and we use the following representation for the quaternion
+    :math:`q = s + \pmb{v}` where :math:`s \in \mathbb{R}` is its scalar part, and :math:`\pmb{v} \in \mathbb{R}^3` is
+    its vector part.
 
     Args:
         r (float[3]): 3d vector
@@ -890,8 +931,16 @@ def exponential_map(r):
 
 def angular_velocity_from_quaternion(q1, q2):
     r"""
-    Compute the angular velocity that rotates quaternion q2 into q1 within unit time.
+    Compute the angular velocity that rotates quaternion :math:`q2` into :math:`q1` within unit time.
     Convert the difference between 2 quaternions using the logarithm map.
+
+    .. math::
+
+        \omega = 2 \log(q_1 * \bar{q}_2)
+
+    where :math:`\omega` is the resulting angular velocity, :math:`\bar{q}_2` is the conjugate of :math:`q_2`, and
+    :math:`\log: \mathbb{S}^3 \rightarrow \mathbb{R}^3` is the logarithm map that maps the unit quaternion (that is
+    on a unit sphere :math:`\mathbb{S}^3` in :math:`\mathbb{R}^4` into the Euclidean space :math:`\mathbb{R}^3`.
 
     Args:
         q1: first (desired) quaternion
@@ -902,38 +951,209 @@ def angular_velocity_from_quaternion(q1, q2):
     """
     q1 = quat_converter.convert_to(q1)
     q2 = quat_converter.convert_to(q2)
-    return 2 * logarithm_map(q1 * q2)
+    return 2 * logarithm_map(q1 * q2.conjugate())
 
 
-def slerp(q0, qf):
+def quaternion_distance(q1, q2):
+    r"""
+    Compute the distance metric (on :math:`\mathbb{S}^3`) betwen two quaternions :math:`q_1` and :math:`q_2`:
+
+    Assuming a quaternion :math:`q` is represented as :math:`s + \pmb{v}` where :math:`s \in \mathbb{R}` is the scalar
+    part and :math:`\pmb{v} \in \mathbb{R}^3` is the vector part, the distance is given by:
+
+        d(q_1, q_2) = \left\{ \begin{array}{ll}
+                2\pi, & q1 * \bar{q}_2 = -1 + [0,0,0]^\top \\
+                2 || \log(q_1 * \bar{q}_2) ||, & \text{otherwise}
+            \end{array} \right.
+
+    where :math:`-1 + [0,0,0]^\top` is the only singularity on :math:`\mathbb{S}^3`.
+
+    Note that this distance is not a metric on :math:`SO(3)` (the set of all orientations, which is by the way not a
+    vector space but a group and a real 3d manifold).
+
+    Args:
+        q1: first quaternion
+        q2: second quaternion
+
+    Returns:
+        float: distance between the 2 given quaternions
+    """
+    q1 = quat_converter.convert_to(q1)
+    q2 = quat_converter.convert_to(q2)
+
+    q = q1 * q2.conjugate()
+    s, v = q.w, np.array([q.x, q.y, q.z])
+
+    if np.allclose(s, -1) and np.allclose(v, np.zeros(3)):
+        return 2 * np.pi
+    return 2 * np.linalg.norm(logarithm_map(q))
+
+
+def trajectory_tracking_error(p_des, p_curr, q_des, q_curr, gamma=1.):
+    r"""
+    Compute the trajectory tracking error as provided in [1]. This tracking error is given by:
+
+    .. math:: e(p_d, p_c, q_d, q_c) = ||p_d - p_c|| + \gamma d(q_d, q_c),
+
+    where :math:`p_d` and :math:`p_c` are the desired and current 3d position, :math:`q_d` and :math:`q_c` are the
+    desired and current orientations represented as quaternions, :math:`\gamma` is a weighting factor, and
+    :math:`d(\cdot, \cdot)` is the distance metric on the unit sphere :math:`\mathbb{S}^3` (see `quaternion_distance`
+    function for more info).
+
+    Args:
+        p_des (np.array[3]): desired position
+        p_curr (np.array[3]): current position
+        q_des: desired orientation (quaternion)
+        q_curr: current orientation (quaternion)
+
+    Returns:
+        float: the trajectory tracking error
+
+    References:
+        - [1] "Orientation in Cartesian Space Dynamic Movement Primitives", Ude et al., 2014
+    """
+    return np.linalg.norm(p_des - p_curr) + gamma * quaternion_distance(q_des, q_curr)
+
+
+def quaternion_derivative(rate, q):
+    r"""
+    Return the quaternion derivative
+
+    .. math:: \dot{q}(t) = \frac{1}{2} \omega(t) * q(t)
+
+    where :math:`\omega(t)` is the angular velocity a time :math:`t` which is treated here as a quaternion with a 0
+    scalar value, :math:`q(t)` is the quaternion at time :math:`t`, :math:`\dot{q}(t)` is the derivative of the
+    quaternion and :math:`*` is the quaternion product operator.
+
+    Args:
+        rate (np.array[3]): angular velocity at time t.
+        q: unit quaternion at time t.
+
+    Returns:
+        quaternion: a unit quaternion describing the rotation rate.
+
+    References:
+        - [1] "Orientation in Cartesian Space Dynamic Movement Primitives", Ude et al., 2014
+    """
+    w = quaternion.quaternion(0, rate[0], rate[1], rate[2])
+    return 0.5 * get_quaternion_product(w, q)
+
+
+def quaternion_integrate(rate, q, dt=0):
+    r"""
+    Integrate a quaternion
+
+    .. math:: q(t + \Delta t) = \exp(\frac{\Delta t}{2} \omega(t)) * q(t)
+
+    where :math:`\omega(t)` is the angular velocity a time :math:`t`, :math:`q(t)` is the quaternion at time :math:`t`,
+    :math:`\Delta t` is the time difference to move forward in the future, and :math:`*` is the quaternion product
+    operator.
+
+    Args:
+        rate (np.array[3]): angular velocity at time t.
+        q: unit quaternion at time t.
+        dt (float): time difference to move forward in the future.
+
+    Returns:
+        quaternion: the resulting unit quaternion after :math:`t + \Delta t`.
+
+    References:
+        - [1] "Orientation in Cartesian Space Dynamic Movement Primitives", Ude et al., 2014
+    """
+    return get_quaternion_product(exponential_map(dt/2. * rate), q)
+
+
+def slerp(q0, qf, t, t0=0., tf=1.):
     """
     Interpolate between two quaternions using Spherical Linear intERPolation (SLERP).
 
     Args:
-        q1:
-        q2:
+        q0 (np.array[4], quaternion.quaternion): initial quaternion.
+        qf (np.array[4], quaternion.quaternion): final quaternion.
+        t (float, list of float, np.array): the times to which the quaternions should be interpolated.
+        t0 (float): initial time corresponding to the initial quaternion.
+        tf (float): final time corresponding to the final quaternion.
 
     Returns:
+        np.array, quaternion, np.array of quaternion: one or multiple interpolated quaternions
 
     References:
-        [1] "Understanding Quaternions", https://www.3dgep.com/understanding-quaternions
+        - [1] "Understanding Quaternions", https://www.3dgep.com/understanding-quaternions
+        - [2] Documentation of numpy-quaternion
     """
-    pass
+    # convert if necessary
+    is_input_quaternion = True
+    if not isinstance(q0, quaternion.quaternion):
+        q0 = quaternion.quaternion(q0[3], q0[0], q0[1], q0[2])
+        is_input_quaternion = False
+    if not isinstance(qf, quaternion.quaternion):
+        qf = quaternion.quaternion(qf[3], qf[0], qf[1], qf[2])
+
+    t = np.asarray(t)
+
+    # interpolate using quaternion library
+    qs = quaternion.slerp(q0, qf, t0, tf, t)
+
+    # if we need to convert back to np.array
+    if not is_input_quaternion:
+        if isinstance(qs, np.ndarray):
+            qs = quaternion.as_float_array(qs)
+            qs = np.hstack((qs[:, 1:], qs[:, 0, np.newaxis]))
+            return qs
+        return np.array([qs.x, qs.y, qs.z, qs.w])
+    return qs
 
 
-def squad(quaternions):
+def squad(quaternions, times, t):
     r"""
     Smoothly interpolate over a list/path of rotations using Spherical and QUADrangle (SQUAD).
 
+    From [2]: "Spherical "quadrangular" interpolation of rotors with a cubic spline
+
+    This is the best way to interpolate rotations.  It uses the analog of a cubic spline, except that the interpolant
+    is confined to the rotor manifold in a natural way.  Alternative methods involving interpolation of other
+    coordinates on the rotation group or normalization of interpolated values give bad results. The results from this
+    method are as natural as any, and are continuous in first and second derivatives.
+
+    The input `R_in` rotors are assumed to be reasonably continuous (no sign flips), and the input `t` arrays are
+    assumed to be sorted. No checking is done for either case, and you may get silently bad results if these
+    conditions are violated."
+
     Args:
-        quaternions (list of np.array, list of quaternion.quaternion):
+        quaternions (list of np.array[4], list of quaternion.quaternion): A time-series of rotors (unit quaternions)
+            to be interpolated
+        times (np.array, list of float): the times corresponding to the quaternions.
+        t (np.array, list of float): the times to which the quaternions should be interpolated.
 
     Returns:
+        np.array, np.array of quaternion: interpolated quaternions
 
     References:
-        [1] "Understanding Quaternions", https://www.3dgep.com/understanding-quaternions
+        - [1] "Understanding Quaternions", https://www.3dgep.com/understanding-quaternions
+        - [2] Documentation of numpy-quaternion
     """
-    pass
+    # make sure that they are numpy arrays
+    quaternions = np.asarray(quaternions)
+    times = np.asarray(times)
+    t = np.asarray(t)
+
+    # check if we need to convert
+    are_input_quaternions = (quaternions.dtype == quaternion.quaternion)
+    if not are_input_quaternions:
+        qs = quaternions
+        quaternions = quaternion.from_float_array(np.hstack((qs[:, 0, np.newaxis], qs[:, 1:])))
+
+    # interpolate
+    qs = quaternion.squad(quaternions, times, t)
+
+    # if we need to convert back to np.array
+    if not are_input_quaternions:
+        if isinstance(qs, np.ndarray):
+            qs = quaternion.as_float_array(qs)
+            qs = np.hstack((qs[:, 1:], qs[:, 0, np.newaxis]))
+            return qs
+        return np.array([qs.x, qs.y, qs.z, qs.w])
+    return qs
 
 
 # Tests

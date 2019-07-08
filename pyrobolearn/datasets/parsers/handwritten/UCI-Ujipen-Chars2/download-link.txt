@@ -1,0 +1,4 @@
+# UJI Pen Characters (V2) Data Set
+
+* webpage: archive.ics.uci.edu/ml/datasets/UJI+Pen+Characters+(Version+2)
+* link to download the dataset: http://archive.ics.uci.edu/ml/machine-learning-databases/uji-penchars/version2/

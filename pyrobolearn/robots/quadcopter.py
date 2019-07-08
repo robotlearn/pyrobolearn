@@ -7,7 +7,8 @@ import numpy as np
 
 from pyrobolearn.robots.uav import RotaryWingUAV
 from pyrobolearn.utils.transformation import get_matrix_from_quaternion
-from pyrobolearn.utils.units import inches_to_meters, rpm_to_rad_per_second
+from pyrobolearn.utils.units import inches_to_meters, rpm_to_rad_per_second, rad_per_second_to_rpm
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -62,6 +63,8 @@ class Quadcopter(RotaryWingUAV):
         [7] "Propeller Static & Dynamic Thrust Calculation":
             https://www.electricrcaircraftguy.com/2013/09/propeller-static-dynamic-thrust-equation.html
             https://www.electricrcaircraftguy.com/2014/04/propeller-static-dynamic-thrust-equation-background.html
+        [8] "Flying Principle of a Quadrotor" (from the course "Autonomous Navigation for Flying Robots" on EdX),
+            Jurgen, https://jsturm.de/publications/data/lecture_1_part_3.pdf
     """
 
     def __init__(self,
@@ -96,7 +99,7 @@ class Quadcopter(RotaryWingUAV):
 
         # joints 1 and 3 are CCW, and joints 2 and 4 are CW
         # CCW = +1, CW = -1
-        self.turning_directions = [+1, -1, +1, -1]
+        self.propeller_directions = np.array([+1, -1, +1, -1])
 
         # Propeller pitches are around 0.0762m (3 inches) and 0.127m (5 inches)
         # (from https://www.dronezon.com/learn-about-drones-quadcopters/how-a-quadcopter-works-with-propellers-and\
@@ -111,6 +114,12 @@ class Quadcopter(RotaryWingUAV):
         # some constants
         self.k1 = 1./3.29546
         self.k2 = 1.5
+
+        # joint velocity to fly on the spot (hovering)
+        v = self.get_stationary_joint_velocity()
+        self.stationary_velocities = np.array([v, -v, v, -v])
+
+        # initially: propellers[0] = +x, propellers[1] = -y, propellers[2] = -x, propellers[3] = +y
 
     def calculate_thrust_force(self, angular_speed, area, propeller_pitch, v0=0, air_density=1.225):
         r"""
@@ -159,7 +168,7 @@ class Quadcopter(RotaryWingUAV):
         super(Quadcopter, self).set_joint_velocities(velocities, joint_ids, forces, max_velocity)
 
         # calculate thrust force of the given joints, and apply it on the link
-        for jnt, d, v in zip(joint_ids, self.turning_directions, velocities):
+        for jnt, d, v in zip(joint_ids, self.propeller_directions, velocities):
             if max_velocity and v > self.max_velocity:
                 v = self.max_velocity
 
@@ -188,18 +197,147 @@ class Quadcopter(RotaryWingUAV):
         p = self.propeller_pitch
         return (60 / p) * (fg / (self.air_density * self.area) * (p / (self.k1 * self.diameter))**self.k2)**0.5
 
-    # def gravityCompensate(self):
+    # def gravity_compensate(self):
     #     pass
+
+    def hover(self):
+        """Hover; let the quadcopter fly on the spot."""
+        self.set_propeller_velocities(self.stationary_velocities)
+
+    @staticmethod
+    def rpm_to_rad_per_second(rpm):
+        """
+        Convert the revolutions per minute to rad/sec.
+
+        Args:
+            rpm (float): revolutions per minute.
+
+        Returns:
+            float: rad/sec
+        """
+        return rpm_to_rad_per_second(rpm)
+
+    @staticmethod
+    def rad_per_second_to_rpm(omega):
+        """
+        Convert rad/sec to revolutions/minute.
+
+        Args:
+            omega (float): angular velocity (rad/sec)
+
+        Returns:
+            float: revolutions/minute
+        """
+        return rad_per_second_to_rpm(omega)
+
+    def move(self, velocity):
+        """Move the robot at the specified 3D velocity vector.
+
+        Args:
+            velocity (np.array[3]): 3D velocity vector defined in the xy plane. The magnitude represents the speed.
+        """
+        speed = np.linalg.norm(velocity[:2])
+        angle = np.arctan2(velocity[1], velocity[0])
+        angles = np.array([angle]*4) + np.array([0, np.pi/2, np.pi, 3*np.pi/2])
+        idx = angles > np.pi
+        angles[idx] = 2*np.pi - angles[idx]  # convert from range [0, 2pi[ to [-pi, pi[
+        velocities = np.abs(angles / np.pi)
+        velocities = self.stationary_velocities + speed * velocities * self.propeller_directions
+        if len(velocity) > 2:  # z direction
+            velocities += 10 * velocity[2] * self.propeller_directions  # 10 is a random constant
+        self.set_propeller_velocities(velocities)
+
+    def ascend(self, speed=0):
+        """Make the quadcopter ascend.
+
+        Args:
+            speed (float): speed to ascend.
+        """
+        self.set_propeller_velocities(self.stationary_velocities + speed * self.propeller_directions)
+
+    def descend(self, speed=0):
+        """Make the quadcopter descend.
+
+        Args:
+            speed (float): speed to descend.
+        """
+        self.set_propeller_velocities(self.stationary_velocities - speed * self.propeller_directions)
+
+    def turn(self, speed=0):
+        """Turn the quadcopter. If the speed is positive, turn to the left, otherwise turn to the right (using the
+        right-hand rule).
+
+        Args:
+            speed (float): speed to turn to the left (if speed is positive) or to the right (if speed is negative).
+        """
+        if speed > 0:
+            self.turn_left(np.abs(speed))
+        else:
+            self.turn_right(np.abs(speed))
+
+    def turn_left(self, speed=0):
+        """Turn the quadcopter to the left.
+
+        Args:
+            speed (float): positive speed to turn to the left.
+        """
+        velocities = self.stationary_velocities + speed * np.array([0, 1., 0., 1.]) * self.propeller_directions
+        self.set_propeller_velocities(velocities)
+
+    def turn_right(self, speed=0):
+        """Turn the quadcopter to the right.
+
+        Args:
+            speed (float): positive speed to turn to the right.
+        """
+        velocities = self.stationary_velocities + speed * np.array([1., 0., 1., 0.]) * self.propeller_directions
+        self.set_propeller_velocities(velocities)
+
+    def move_forward(self, speed=0):
+        """Move the quadcopter forward.
+
+        Args:
+            speed (float): speed to move forward.
+        """
+        velocities = self.stationary_velocities + speed * np.array([0., 0.5, 1., 0.5]) * self.propeller_directions
+        self.set_propeller_velocities(velocities)
+
+    def move_backward(self, speed=0):
+        """Move the quadcopter backward.
+
+        Args:
+            speed (float): speed to move backward.
+        """
+        velocities = self.stationary_velocities + speed * np.array([1., 0.5, 0., 0.5]) * self.propeller_directions
+        self.set_propeller_velocities(velocities)
+
+    def move_left(self, speed=0):
+        """Tilt the quadcopter to the left.
+
+        Args:
+            speed (float): speed to move to the left.
+        """
+        velocities = self.stationary_velocities + speed * np.array([0.5, 1., 0.5, 0.]) * self.propeller_directions
+        self.set_propeller_velocities(velocities)
+
+    def move_right(self, speed=0):
+        """Tilt the quadcopter to the right.
+
+        Args:
+            speed (float): speed to move to the right.
+        """
+        velocities = self.stationary_velocities + speed * np.array([0.5, 0., 0.5, 1.]) * self.propeller_directions
+        self.set_propeller_velocities(velocities)
 
 
 # Test
 if __name__ == "__main__":
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

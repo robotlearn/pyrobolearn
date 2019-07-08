@@ -26,7 +26,7 @@ from pyrobolearn.simulators.simulator import Simulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__credits__ = ["Brian Delhaisse"]
+__credits__ = ["Nvidia Isaac", "Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
@@ -49,4 +49,5 @@ class Isaac(Simulator):
     """
 
     def __init__(self, render=True, **kwargs):
-        super(Isaac, self).__init__()
+        super(Isaac, self).__init__(render=render)
+        raise NotImplementedError

@@ -7,11 +7,15 @@ Dependencies:
 - `pyrobolearn.simulators`
 """
 
+import sys
 import numpy as np
 
 from pyrobolearn.utils.transformation import get_quaternion_from_matrix, get_rpy_from_matrix, get_rpy_from_quaternion
 from pyrobolearn.simulators import Simulator
 
+# define long for Python 3.x
+if int(sys.version[0]) == 3:
+    long = int
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -168,6 +172,14 @@ class WorldCamera(object):
         return self.sim.get_debug_visualizer()[5]
 
     @property
+    def lateral_vector(self):
+        """
+        Return the lateral axis of the camera (=cross product between forward and up vectors)
+        """
+        up_vector, forward_vector = self.sim.get_debug_visualizer()[4:6]
+        return np.cross(forward_vector, up_vector)
+
+    @property
     def yaw(self):
         """
         Return the yaw angle of the camera in radian
@@ -180,8 +192,8 @@ class WorldCamera(object):
         Set the yaw angle of the camera in radian. The yaw angle is positive when looking on the left and negative
         when looking on the right.
         """
-        pitch, dist, target_position = self.sim.get_debug_visualizer()[-3:]
-        self.reset(dist, yaw, pitch, target_position)
+        pitch, distance, target_position = self.sim.get_debug_visualizer()[-3:]
+        self.reset(distance, yaw, pitch, target_position)
 
     @property
     def pitch(self):
@@ -196,23 +208,23 @@ class WorldCamera(object):
         Set the pitch angle of the camera in radian. The pitch angle is negative when looking down and positive when
         looking up.
         """
-        yaw, _, dist, target_position = self.sim.get_debug_visualizer()[-4:]
-        self.reset(dist, yaw, pitch, target_position)
+        yaw, _, distance, target_position = self.sim.get_debug_visualizer()[-4:]
+        self.reset(distance, yaw, pitch, target_position)
 
     @property
-    def dist(self):
+    def distance(self):
         """
         Return the distance between the camera and the camera target.
         """
         return self.sim.get_debug_visualizer()[10]
 
-    @dist.setter
-    def dist(self, dist):
+    @distance.setter
+    def distance(self, distance):
         """
         Set the distance of the camera (in meter) with respect to the target position.
         """
         yaw, pitch, _, target_position = self.sim.get_debug_visualizer()[-4:]
-        self.reset(dist, yaw, pitch, target_position)
+        self.reset(distance, yaw, pitch, target_position)
 
     @property
     def target_position(self):
@@ -226,8 +238,8 @@ class WorldCamera(object):
         """
         Set the target position of the camera in the Cartesian world space coordinates.
         """
-        yaw, pitch, dist = self.sim.get_debug_visualizer()[-4:-1]
-        self.reset(dist, yaw, pitch, position)
+        yaw, pitch, distance = self.sim.get_debug_visualizer()[-4:-1]
+        self.reset(distance, yaw, pitch, position)
 
     @property
     def position(self):
@@ -245,12 +257,12 @@ class WorldCamera(object):
         """
         target = self.target_position
         vector = (target - position)
-        dist = np.sqrt(np.sum(vector**2))
-        vector = vector / dist
+        distance = np.sqrt(np.sum(vector**2))
+        vector = vector / distance
         pitch = np.arcsin(vector[2])  # [-pi/2, pi/2]
         # pitch = np.arctan2(vector[2], vector[1])
         yaw = np.arctan2(vector[1], vector[0])  # [-pi, pi]
-        self.reset(dist, yaw, pitch, target)
+        self.reset(distance, yaw, pitch, target)
 
     @property
     def orientation(self):
@@ -279,15 +291,14 @@ class WorldCamera(object):
                              "angles, instead got: {}".format(orientation))
 
         # reset the camera
-        dist, target_position = self.sim.get_debug_visualizer()[-2:]
+        distance, target_position = self.sim.get_debug_visualizer()[-2:]
         _, pitch, yaw = rpy
-        self.reset(dist, yaw, pitch, target_position)
+        self.reset(distance, yaw, pitch, target_position)
 
     ###########
     # Methods #
     ###########
 
-    # alias
     def get_debug_visualizer_camera(self):
         """
         Return all the information provided by the camera.
@@ -437,8 +448,8 @@ class WorldCamera(object):
         """
         if radian:
             yaw, pitch = np.rad2deg(yaw), np.rad2deg(pitch)
-        dist, target_pos = self.sim.get_debug_visualizer()[-2:]
-        self.sim.reset_debug_visualizer(dist, yaw, pitch, target_pos)
+        distance, target_pos = self.sim.get_debug_visualizer()[-2:]
+        self.sim.reset_debug_visualizer(distance, yaw, pitch, target_pos)
 
     def add_yaw_pitch(self, dyaw, dpitch, radian=True):
         """
@@ -449,12 +460,12 @@ class WorldCamera(object):
             dpitch (float): small amount to add to the camera's current pitch angle
             radian (bool): If the given pitch and yaw angles are in radian.
         """
-        yaw, pitch, dist, target_pos = self.sim.get_debug_visualizer()[-4:]
+        yaw, pitch, distance, target_pos = self.sim.get_debug_visualizer()[-4:]
         if radian:
             dyaw, dpitch = np.rad2deg(dyaw), np.rad2deg(dpitch)
         yaw += dyaw
         pitch += dpitch
-        self.sim.reset_debug_visualizer(dist, yaw, pitch, target_pos)
+        self.sim.reset_debug_visualizer(distance, yaw, pitch, target_pos)
 
     def get_rgb_image(self):
         """
@@ -577,15 +588,63 @@ class WorldCamera(object):
         """Return the representation string of the object."""
         return self.__class__.__name__
 
+    def print_info(self):
+        """Print information about the camera.
+
+        int: width of the visualizer camera (in pixel)
+            int: height of the visualizer camera (in pixel)
+            np.float[4,4]: view matrix [4,4]
+            np.float[4,4]: perspective projection matrix [4,4]
+            np.float[3]: camera up vector expressed in the Cartesian world space
+            np.float[3]: forward axis of the camera expressed in the Cartesian world space
+            np.float[3]: This is a horizontal vector that can be used to generate rays (for mouse picking or creating
+                a simple ray tracer for example)
+            np.float[3]: This is a vertical vector that can be used to generate rays (for mouse picking or creating a
+                simple ray tracer for example)
+            float: yaw angle (in radians) of the camera, in Cartesian local space coordinates
+            float: pitch angle (in radians) of the camera, in Cartesian local space coordinates
+            float: distance between the camera and the camera target
+            np.float[3]: target of the camera, in Cartesian world space coordinates
+        """
+        info = self.info
+        view_inv = np.linalg.inv(info[2])
+        position = view_inv[:3, 3]
+        orientation = get_quaternion_from_matrix(view_inv[:3, :3])
+        print("\nCamera width and height: {}, {}".format(info[0], info[1]))
+        print("Camera position: {}".format(position))
+        print("Camera orientation (quaternion [x,y,z,w]): {}".format(orientation))
+        print("Camera target position: {}".format(info[11]))
+        print("Camera yaw and pitch angles (deg): {}, {}".format(np.rad2deg(info[8]), np.rad2deg(info[9])))
+        print("Camera distance: {}".format(info[10]))
+        print("Camera forward vector: {}".format(info[5]))
+        print("Camera up vector: {}".format(info[4]))
+
+    def follow(self, body_id, distance=None, yaw=None, pitch=None):
+        """
+        Follow the given body in the simulator with the world camera at the specified distance, yaw and pitch angles.
+
+        Args:
+            body_id (int, long): body to follow with the world camera.
+            distance (float, None): distance (in meter) from the camera and the body position. If None, it will take
+                the current distance.
+            yaw (float, None): camera yaw angle (in radians) left/right. If None, it will take the current yaw angle.
+            pitch (float, None): camera pitch angle (in radians) up/down. If None, it will take the current pitch angle.
+        """
+        if not isinstance(body_id, (int, long)):
+            raise TypeError("Expecting the given 'body_id' to be a unique id (int/long) returned by the simulator, "
+                            "instead got: {}".format(type(body_id)))
+        target_position = self.sim.get_base_position(body_id)
+        self.reset(distance=distance, yaw=yaw, pitch=pitch, target_position=target_position)
+
 
 # Tests
 if __name__ == '__main__':
     from itertools import count
     import time
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
 
     # create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # load floor
     floor_id = sim.load_urdf('plane.urdf', use_fixed_base=True)
@@ -603,13 +662,13 @@ if __name__ == '__main__':
         position = camera.position
         yaw = camera.yaw
         pitch = camera.pitch
-        dist = camera.dist
+        distance = camera.distance
         target_position = camera.target_position
         print("Position: {}".format(position))
         print("Target position: {}".format(target_position))
         print("Yaw: {}".format(np.rad2deg(yaw)))
         print("Pitch: {}".format(np.rad2deg(pitch)))
-        print("Distance: {}".format(dist))
+        print("Distance: {}".format(distance))
         print("##########\n")
 
         # move camera
@@ -619,4 +678,4 @@ if __name__ == '__main__':
 
         # step in the simulator
         sim.step()
-        time.sleep(1./254)
+        time.sleep(1./240)

@@ -31,7 +31,7 @@ def tensor_matrix_product(tensor, matrix, mode):
     N = len(tensor.shape)
 
     # Compute the complement of the set of modes
-    modec = range(0, N)
+    modec = list(range(0, N))
     modec.remove(mode)
 
     # Permutation of the tensor

@@ -17,6 +17,7 @@ References:
     [3] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
 
+from pyrobolearn.utils.data_structures.orderedset import OrderedSet
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -44,6 +45,9 @@ class Simulator(object):
     [1] PyBullet: https://pybullet.org
     [2] PEP8: https://www.python.org/dev/peps/pep-0008/
     """
+
+    # keep track of the instantiated simulators
+    instances = OrderedSet()
 
     # TODO: this is really bad to have attributes like that... It doesn't generalize well to other simulators...
 
@@ -107,6 +111,7 @@ class Simulator(object):
     GEOM_MESH = 5
     GEOM_PLANE = 6
     GEOM_CAPSULE = 7
+    GEOM_CONE = 8       # NEW
 
     GUI = 1
     GUI_MAIN_THREAD = 8
@@ -184,6 +189,13 @@ class Simulator(object):
         # main camera in the simulator
         self._camera = None
 
+        # default timestep
+        self.default_timestep = 1. / 240
+        self.dt = self.default_timestep
+
+        # add instance to the set of all instantiated simulators
+        self.__class__.instances.add(self)
+
         # TODO: this is really bad to have attributes like that... It doesn't generalize well to other simulators...
         # import pybullet
         # for attribute in dir(pybullet):
@@ -213,6 +225,11 @@ class Simulator(object):
     def camera(self):
         """Return the camera (yaw, pitch, distance, target_position) or None."""
         return self._camera
+
+    @property
+    def timestep(self):
+        """Return the simulator time step."""
+        return self.get_time_step()
 
     #############
     # Operators #
@@ -246,6 +263,35 @@ class Simulator(object):
         memo[self] = sim
         return sim
 
+    ##################
+    # Static methods #
+    ##################
+
+    @staticmethod
+    def simulate_gas_dynamics():
+        """Return True if the simulator can simulate gases."""
+        return False
+
+    @staticmethod
+    def simulate_liquid_dynamics():
+        """Return True if the simulator can simulate liquids."""
+        return False
+
+    @staticmethod
+    def simulate_fluid_dynamics():
+        """Return True if the simulator can simulate fluids (gases and liquids)."""
+        return Simulator.simulate_gas_dynamics() and Simulator.simulate_liquid_dynamics()
+
+    @staticmethod
+    def simulate_soft_bodies():
+        """Return True if the simulator can simulate soft bodies."""
+        return False
+
+    @staticmethod
+    def has_middleware_communication_layer():
+        """Return True if the simulator has a middleware communication layer (like ROS, YARP, etc)."""
+        return False
+
     ###########
     # Methods #
     ###########
@@ -265,10 +311,10 @@ class Simulator(object):
         pass
 
     def step(self, sleep_time=0):
-        """Perform a step in the simulator, and sleep the specified time.
+        """Perform a step in the simulator, and sleep the specified amount of time.
 
         Args:
-            sleep_time (float): time to sleep after performing one step in the simulation.
+            sleep_time (float): amount of time to sleep after performing one step in the simulation.
         """
         pass
 
@@ -296,6 +342,14 @@ class Simulator(object):
     def hide(self):
         """Hide the GUI."""
         self.render(False)
+
+    def get_time_step(self):
+        """Get the time step in the simulator.
+
+        Returns:
+            float: time step in the simulator
+        """
+        pass
 
     def set_time_step(self, time_step):
         """Set the time step in the simulator.

@@ -4,7 +4,7 @@
 
 import os
 
-from pyrobolearn.robots.manipulator import ManipulatorRobot
+from pyrobolearn.robots.manipulator import Manipulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -15,7 +15,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class KR5(ManipulatorRobot):
+class KR5(Manipulator):
     r"""Kuka KR5 sixx R650 robot
 
     Payload of 5.00kg and a reach of 650mm or 850mm.

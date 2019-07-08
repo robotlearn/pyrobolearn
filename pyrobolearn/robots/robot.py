@@ -55,7 +55,7 @@ class Robot(ControllableBody):
         """
         # check parameters
         if position is None:
-            position = (0., 0., 1.5)
+            position = (0., 0., 0)
         if orientation is None:
             orientation = (0, 0, 0, 1)
         if fixed_base is None:
@@ -833,31 +833,31 @@ class Robot(ControllableBody):
         # set the joint torques
         self.set_joint_torques(torques, joint_ids)
 
-    def set_joint_torques(self, torque=None, joint_ids=None):
+    def set_joint_torques(self, torques=None, joint_ids=None):
         """
         Set the torque to the given joint(s) (using force/torque control).
 
         Args:
-            torque (float, np.array[N], None): desired torque(s) to apply to the joint(s) [N]. If None, it will apply
+            torques (float, np.array[N], None): desired torque(s) to apply to the joint(s) [N]. If None, it will apply
                 a torque of 0 to the given joint(s).
             joint_ids (int, int[N], None): joint id, or list of joint ids. If None, it will set the joint torques to
                 all (actuated) joints.
         """
         if isinstance(joint_ids, int):
-            if torque is None:
-                torque = 0
+            if torques is None:
+                torques = 0
         else:
             if joint_ids is None:
                 joint_ids = self.joints
             if not isinstance(joint_ids, collections.Iterable):
                 raise TypeError("Expecting jointId to be a tuple, list, or numpy array, got instead "
                                 "{}".format(type(joint_ids)))
-            if torque is None:
-                torque = [0]*len(joint_ids)
-            elif isinstance(torque, (int, float)):
-                torque = [torque]*len(joint_ids)
+            if torques is None:
+                torques = [0] * len(joint_ids)
+            elif isinstance(torques, (int, float)):
+                torques = [torques] * len(joint_ids)
 
-        self.sim.set_joint_motor_control(self.id, joint_ids, self.sim.TORQUE_CONTROL, forces=torque)
+        self.sim.set_joint_motor_control(self.id, joint_ids, self.sim.TORQUE_CONTROL, forces=torques)
 
     def set_joint_motor_control(self, joint_ids, control_mode, **kwargs):
         r"""
@@ -1090,6 +1090,43 @@ class Robot(ControllableBody):
         return self.sim.get_link_states(self.id, link_ids, compute_velocity=compute_link_velocity,
                                         compute_forward_kinematics=compute_forward_kinematics)
 
+    def get_link_local_position(self, link_ids=None):
+        """
+        Get the local position offset of the inertial frame (CoM) of the specified links expressed in the URDF link
+        frame.
+
+        Args:
+            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the local position of all
+                links associated to actuated joints.
+
+        Returns:
+            if 1 link:
+                np.array[3]: local position offset of inertial frame (CoM) expressed in the URDF link frame
+            if multiple links: list of above
+        """
+        if isinstance(link_ids, int):
+            return self.get_link_states(self, link_ids, False, False)[2]
+        return [state[2] for state in self.get_link_states(self, link_ids, False, False)]
+
+    def get_link_local_orientations(self, link_ids=None):
+        """
+        Get the local orientation offset of the inertial frame (CoM) of the specified links expressed in the URDF link
+        frame.
+
+        Args:
+            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the local position of all
+                links associated to actuated joints.
+
+        Returns:
+            if 1 link:
+                np.array[4]: local orientation (quaternion [x,y,z,w]) offset of inertial frame (CoM) expressed in the
+                    URDF link frame
+            if multiple links: list of above
+        """
+        if isinstance(link_ids, int):
+            return self.get_link_states(self, link_ids, False, False)[3]
+        return [state[3] for state in self.get_link_states(self, link_ids, False, False)]
+
     def get_link_names(self, link_ids=None):
         r"""
         Return the name of the given link(s).
@@ -1104,11 +1141,9 @@ class Robot(ControllableBody):
             if multiple links:
                 str[N]: link names
         """
-        if isinstance(link_ids, int):
-            return self.sim.get_joint_info(self.id, link_ids)[12]
         if link_ids is None:
             link_ids = self.joints
-        return [self.sim.get_joint_info(self.id, link)[12] for link in link_ids]
+        return self.sim.get_link_names(self.id, link_ids)
 
     def get_link_masses(self, link_ids=None):
         r"""
@@ -1132,7 +1167,7 @@ class Robot(ControllableBody):
 
     def get_link_frames(self, link_ids=None, flatten=False):
         r"""
-        Return the link frame position and orientation (expressed in the world space).
+        Return the link world frame position(s) and orientation(s).
 
         Args:
             link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the frame position of all
@@ -1148,10 +1183,10 @@ class Robot(ControllableBody):
                 np.array[Nx4], np.array[N,4]: orientation of each link frame [x,y,z,w]
 
         """
-        return self.get_link_frame_world_positions(link_ids, flatten), self.get_link_frame_world_orientations(link_ids,
+        return self.get_link_world_frame_positions(link_ids, flatten), self.get_link_world_frame_orientations(link_ids,
                                                                                                               flatten)
 
-    def get_link_frame_world_positions(self, link_ids=None, flatten=False):
+    def get_link_world_frame_positions(self, link_ids=None, flatten=False):
         r"""
         Return the frame position (in the Cartesian world space coordinates) of the given link(s).
 
@@ -1175,7 +1210,7 @@ class Robot(ControllableBody):
             return pos.reshape(-1)  # 1D array
         return pos  # 2D array
 
-    def get_link_frame_world_orientations(self, link_ids=None, flatten=False):
+    def get_link_world_frame_orientations(self, link_ids=None, flatten=False):
         r"""
         Return the frame orientation (in the Cartesian world space) of the given link(s).
 
@@ -1367,19 +1402,27 @@ class Robot(ControllableBody):
             if multiple links:
                 np.array[Nx6], np.array[N,6]: linear and angular velocity of each link
         """
+        # if one link, compute the linear and angular velocity of that link
         if isinstance(link_ids, int):
+            if link_ids == -1:
+                return self.get_base_velocity(concatenate=True)
             lin_vel, ang_vel = self.sim.get_link_state(self.id, link_ids, compute_velocity=True)[6:8]
-            return np.array(lin_vel + ang_vel)
+            return np.concatenate((lin_vel, ang_vel))
+
+        # if multiple links, compute the linear and angular velocity of each link
         if link_ids is None:
             link_ids = self.joints
-        vel = []
+        velocities = []
         for link in link_ids:
             lin_vel, ang_vel = self.sim.get_link_state(self.id, link, compute_velocity=True)[6:8]
-            vel.append(lin_vel + ang_vel)
-        vel = np.array(vel)
+            velocities.append(np.concatenate((lin_vel, ang_vel)))
+        velocities = np.asarray(velocities)
+
+        # if we need to flatten the velocities (N, 6) --> (N*6,)
         if flatten:
-            return vel.reshape(-1)  # 1d array
-        return vel  # 2D array
+            return velocities.reshape(-1)  # 1d array
+
+        return velocities  # 2D array
 
     def get_link_linear_velocities(self, link_ids=None, wrt_link_id=None, flatten=True):
         r"""
@@ -1640,9 +1683,9 @@ class Robot(ControllableBody):
     # TODO: allow to slice the Jacobian to only get what interests the user
     def get_jacobian(self, link_id, q=None, local_position=None):
         r"""
-        Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q), J_{ang}(q)]^T`, such that:
+        Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q)^T, J_{ang}(q)^T]^T`, such that:
 
-        .. math:: v = [\dot{p}, \omega]^T = J(q) \dot{q}
+        .. math:: v = [\dot{p}^T, \omega^T]^T = J(q) \dot{q}
 
         where :math:`\dot{p}` is the Cartesian linear velocity of the link, and :math:`\omega` is its angular velocity.
 
@@ -1808,11 +1851,13 @@ class Robot(ControllableBody):
         Compute the derivative of the Jacobian wrt joint values (hybrid Jacobian representation). The computation is
         based on [1].
 
+        .. math:: \frac{d}{dq} J(q)
+
         Args:
             jacobian (np.array[6,N], np.array[6,6+N]): jacobian matrix J.
 
         Returns:
-            np.array[6,6,N]: derivative of the Jacobian wrt joint values (dJ/dq)
+            np.array[6,N,N]: derivative of the Jacobian wrt joint values (dJ/dq)
 
         References:
             [1] "Symbolic differentiation of the velocity mapping for a serial kinematic chain", Bruyninck et al.,
@@ -1827,21 +1872,21 @@ class Robot(ControllableBody):
             for j in range(nb_cols):
                 J_i, J_j = jacobian[:, i], jacobian[:, j]
                 if j < i:
-                    # J_grad[0:3, i, j] = np.cross(J_j[3:6], J_i[0:3])  # Slow implementation
+                    # J_grad[0:3, i, j] = np.cross(J_j[3:6], J_i[0:3])   # Slow implementation
                     J_grad[0, i, j] = J_j[4] * J_i[2] - J_j[5] * J_i[1]
                     J_grad[1, i, j] = J_j[5] * J_i[0] - J_j[3] * J_i[2]
                     J_grad[2, i, j] = J_j[3] * J_i[1] - J_j[4] * J_i[0]
-                    # J_grad[3:6, i, j] = np.cross(J_j[3:6], J_i[3:6]) # Slow implementation
+                    # J_grad[3:6, i, j] = np.cross(J_j[3:6], J_i[3:6])  # Slow implementation
                     J_grad[3, i, j] = J_j[4] * J_i[5] - J_j[5] * J_i[4]
                     J_grad[4, i, j] = J_j[5] * J_i[3] - J_j[3] * J_i[5]
                     J_grad[5, i, j] = J_j[3] * J_i[4] - J_j[4] * J_i[3]
                 elif j > i:
-                    # J_grad[0:3, i, j] = -np.cross(J_j[0:3], J_i[3:6]) # Slow implementation
+                    # J_grad[0:3, i, j] = -np.cross(J_j[0:3], J_i[3:6])  # Slow implementation
                     J_grad[0, i, j] = - J_j[1] * J_i[5] + J_j[2] * J_i[4]
                     J_grad[1, i, j] = - J_j[2] * J_i[3] + J_j[0] * J_i[5]
                     J_grad[2, i, j] = - J_j[0] * J_i[4] + J_j[1] * J_i[3]
                 else:
-                    # J_grad[0:3, i, j] = np.cross(J_i[3:6], J_i[0:3]) # Slow implementation
+                    # J_grad[0:3, i, j] = np.cross(J_i[3:6], J_i[0:3])  # Slow implementation
                     J_grad[0, i, j] = J_i[4] * J_i[2] - J_i[5] * J_i[1]
                     J_grad[1, i, j] = J_i[5] * J_i[0] - J_i[3] * J_i[2]
                     J_grad[2, i, j] = J_i[3] * J_i[1] - J_i[4] * J_i[0]
@@ -1859,10 +1904,10 @@ class Robot(ControllableBody):
                 based on the current joint positions.
 
         Returns:
-            np.array[6,6,N]: CoM Jacobian
+            np.array[6,N]: CoM Jacobian
 
         References:
-            [1] "Whole-body cooperative balancing of humanoid robot using COG Jacobian", Sugihara et al., IROS, 2002
+            - [1] "Whole-body cooperative balancing of humanoid robot using COG Jacobian", Sugihara et al., IROS, 2002
         """
         # Get current joint position
         if q is None:
@@ -2182,7 +2227,7 @@ class Robot(ControllableBody):
         Me = logarithm_map([target_velocity_manipulability], velocity_manip[0:num_task_vars, 0:num_task_vars])[0]
         # print("Me: {}".format(Me))
         distance = distance_spd(target_velocity_manipulability, velocity_manip[0:num_task_vars, 0:num_task_vars])
-        # print("SPD dist: {}".format(distance))
+        # print("SPD distance: {}".format(distance))
 
         Jm_red = self.compute_velocity_manipulability_jacobian(jacobian, num_task_vars)
         # print("Jm: {}".format(Jm_red))
@@ -2201,7 +2246,7 @@ class Robot(ControllableBody):
 
         Args:
             jacobian (np.array[D,N]): jacobian matrix
-            num_task_vars (float): number of task variables (usually 3 or 6)
+            num_task_vars (int): number of task variables (usually 3 or 6)
 
         Returns:
             np.array[(num_task_vars * num_task_vars + num_task_vars) / 2, N]: manipulability jacobian matrix
@@ -2229,7 +2274,7 @@ class Robot(ControllableBody):
 
         # Manipulability Jacobian in matrix form (Mandel notation)
         # num_vars = len(num_task_vars)
-        Jm_red = np.zeros(((num_task_vars * num_task_vars + num_task_vars) / 2, np.sum(num_dofs)))
+        Jm_red = np.zeros((int((num_task_vars * num_task_vars + num_task_vars) / 2), np.sum(num_dofs)))
         # print("Jm_red.shape: {}".format(Jm_red.shape))
 
         for i in range(Jm.shape[2]):
@@ -2643,6 +2688,9 @@ class Robot(ControllableBody):
             return self.sim.calculate_inverse_dynamics(self.id, q, dq, ddq)
         return self.sim.calculate_inverse_dynamics(self.id, q, dq, ddq)[q_idx]
 
+    # alias
+    get_nonlinear_effects = get_coriolis_and_gravity_compensation_torques
+
     def get_gravity_compensation_torques(self, q=None, q_idx=None):
         r"""
         Return the torques that need to be applied to the robot joints such that it compensates for gravity.
@@ -2730,7 +2778,7 @@ class Robot(ControllableBody):
         """
         joint_ids = self.joints if q_idx is None else self.joints[q_idx]
         torques = self.get_coriolis_and_gravity_compensation_torques(q, dq, q_idx)
-        self.set_joint_torques(torque=torques + external_torques, joint_ids=joint_ids)
+        self.set_joint_torques(torques=torques + external_torques, joint_ids=joint_ids)
 
     # TODO: finish to implement the method + think about multiple links + think about dimensions
     def get_active_compliant_torques(self, q=None, dq=None, q_idx=None, jacobian=None, link_velocity=None,
@@ -2899,7 +2947,7 @@ class Robot(ControllableBody):
         # print("Me: {}".format(Me))
         distance = distance_spd(target_dynamic_manipulability[0:num_task_vars, 0:num_task_vars],
                                 dynamic_manip[0:num_task_vars, 0:num_task_vars])
-        print("SPD dist: {}".format(distance))
+        print("SPD distance: {}".format(distance))
 
         Jm_red = self.compute_dynamic_manipulability_jacobian(jacobian, inertia, num_task_vars)
         # print("Jm: {}".format(Jm_red))
@@ -2919,7 +2967,7 @@ class Robot(ControllableBody):
         Args:
             jacobian (np.array[D,N]): Jacobian matrix
             inertia (np.array[N,N]): inertia matrix
-            num_task_vars (float): number of task variables (usually 3 or 6)
+            num_task_vars (int): number of task variables (usually 3 or 6)
 
         Returns:
             np.array[(num_task_vars * num_task_vars + num_task_vars) / 2, N]: manipulability jacobian matrix
@@ -2948,7 +2996,7 @@ class Robot(ControllableBody):
 
         # # Manipulability Jacobian in matrix form (Mandel notation)
         # num_vars = len(num_task_vars)
-        Jm_red = np.zeros(((num_task_vars * num_task_vars + num_task_vars) / 2, np.sum(num_dofs)))
+        Jm_red = np.zeros((int((num_task_vars * num_task_vars + num_task_vars) / 2), np.sum(num_dofs)))
         # print("Jm_red.shape: {}".format(Jm_red.shape))
 
         for i in range(Jm.shape[2]):
@@ -3455,6 +3503,8 @@ class Robot(ControllableBody):
     # online plotting  # # WARNING: ALL THE FOLLOWING METHODS NEED A SIMULATOR IN WHICH TO RUN #
     ####################
 
+    # TODO: move these functions elsewhere
+
     def plot_joint_positions(self, joint_ids=None):
         pass
 
@@ -3486,12 +3536,14 @@ class Robot(ControllableBody):
     # draw # # WARNING: ALL THE FOLLOWING METHODS NEED A SIMULATOR IN WHICH TO RUN #
     ########
 
+    # TODO: move these functions elsewhere
+
     def _draw_sphere(self, position, radius=0.1, color=(1, 1, 1, 1)):
         visual = self.sim.create_visual_shape(self.sim.GEOM_SPHERE, radius=radius, rgba_color=color)
         body = self.sim.create_body(mass=0, visual_shape_id=visual, position=position)
         return body
 
-    def _draw_cylinder(self, position, orientation, radius=1, height=1, color=(1, 1, 1, 1)):
+    def _draw_cylinder(self, position, orientation, radius=1., height=1., color=(1, 1, 1, 1)):
         visual = self.sim.create_visual_shape(self.sim.GEOM_CYLINDER, radius=radius, length=height, rgba_color=color)
         body = self.sim.create_body(mass=0., visual_shape_id=visual, position=position, orientation=orientation)
         return body
@@ -3641,7 +3693,7 @@ class Robot(ControllableBody):
             self.sim.remove_body(self.projected_com_visual)
             self.projected_com_visual = None
 
-    # def drawProjectedCoM(self, radius=0.05, color=(1,0,0,1)):
+    # def draw_projected_com(self, radius=0.05, color=(1,0,0,1)):
     #     """
     #     draw the projected CoM on the walking surface
     #     """
@@ -3684,25 +3736,80 @@ class Robot(ControllableBody):
             link_ids = [link_ids]
 
         for link in link_ids:
-            if link in self.visual_shapes:
-                if link == -1:
-                    pos, orientation = self.get_base_pose()
-                else:
-                    pos = self.get_link_frame_world_positions(link)
-                    orientation = self.get_link_frame_world_orientations(link)
-                dim = self.visual_shapes[link]['dimensions']
-                # radius = min(dim) * scaling * 0.2
-                radius = 0.005 * scaling
-                # self._draw_sphere(pos, radius, color=(0,0,0,1))
-                # length = 4*radius
-                length = 0.05 * scaling
-                self._draw_frame(pos, orientation, radius, length)
+            # if link in self.visual_shapes:
+            if link == -1:
+                position, orientation = self.get_base_pose()
+            else:
+                # position = self.get_link_world_frame_positions(link)
+                # orientation = self.get_link_world_frame_orientations(link)
+                position = self.get_link_world_positions(link)
+                orientation = self.get_link_world_orientations(link)
 
-    def draw_joint_frames(self, joint_ids=None):
+            # dim = self.visual_shapes[link]['dimensions']
+            # radius = min(dim) * scaling * 0.2
+            radius = 0.005 * scaling
+            # self._draw_sphere(position, radius, color=(0,0,0,1))
+            # length = 4*radius
+            length = 0.05 * scaling
+            self._draw_frame(position, orientation, radius, length)
+
+    def draw_joint_frames(self, joint_ids=None, scaling=1.):
         """
-        Draw (actuated) joint frame
+        Draw the specified actuated joint frames.
+
+        Args:
+            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, draw all the actuated joint frames.
+            scaling (float): scaling factor
         """
-        pass
+        # check joints argument
+        if joint_ids is None:
+            joint_ids = self.joints
+        elif isinstance(joint_ids, int):
+            joint_ids = [joint_ids]
+        elif not isinstance(joint_ids, collections.Iterable):
+            raise TypeError("Expecting the given 'joint_ids' to be None, an int, or a list of int, instead got: "
+                            "{}".format(joint_ids))
+
+        positions = self.get_link_world_frame_positions(joint_ids)
+        orientations = self.get_link_world_frame_orientations(joint_ids)
+
+        # draw each joint axis
+        for joint, position, orientation in zip(joint_ids, positions, orientations):
+            radius = 0.005 * scaling
+            length = 0.05 * scaling
+            self._draw_frame(position, orientation, radius, length)
+
+    def draw_joint_axes(self, joint_ids=None, scaling=1.):
+        """
+        Draw the specified actuated joint axes.
+
+        Args:
+            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, draw all the actuated joint axes.
+            scaling (float): scaling factor
+        """
+        # check joints argument
+        if joint_ids is None:
+            joint_ids = self.joints
+        elif isinstance(joint_ids, int):
+            joint_ids = [joint_ids]
+        elif not isinstance(joint_ids, collections.Iterable):
+            raise TypeError("Expecting the given 'joint_ids' to be None, an int, or a list of int, instead got: "
+                            "{}".format(joint_ids))
+
+        positions = self.get_link_world_frame_positions(joint_ids)
+        orientations = self.get_link_world_frame_orientations(joint_ids)
+        joint_axes = self.get_joint_axes(joint_ids)
+
+        # draw each joint axis
+        for joint, position, orientation, axis in zip(joint_ids, positions, orientations, joint_axes):
+            radius = 0.008 * scaling
+            length = 0.08 * scaling
+            R = get_matrix_from_quaternion(orientation)
+            y = R.dot(length / 2. * axis) + position
+            qx = np.array([0.707, 0, 0, 0.707])  # 90deg around x
+
+            # draw joint axis cylinder
+            self._draw_cylinder(y, get_quaternion_product(orientation, qx), radius, length, color=(1, 1, 0, 1))
 
     def draw_bounding_boxes(self, link_ids=None):
         """

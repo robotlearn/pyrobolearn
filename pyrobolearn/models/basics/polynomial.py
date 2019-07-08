@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Define the polynomial learning model.
+r"""Define the polynomial learning model.
 
 The polynomial model is a discriminative deterministic model given by: :math:`y = f(x) = W \phi(x)`, where
 :math:`\phi` is a function that returns a transformed input vector (possibly of higher dimension).
@@ -99,7 +99,7 @@ class Polynomial(object):
     """
 
     def __init__(self, num_inputs, num_outputs, polynomial_fct):
-        """
+        r"""
         Initialize the polynomial model: :math:`y = W \phi(x)`
 
         Args:

@@ -4,6 +4,8 @@
 
 import numpy as np
 
+from pyrobolearn.utils.transformation import slerp, squad
+
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]

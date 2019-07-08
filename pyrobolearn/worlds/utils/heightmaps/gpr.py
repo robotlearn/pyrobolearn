@@ -24,7 +24,7 @@ def gpr_heightmap(init_values, x, y, kernel=None, alpha=1e-10, min_height=0, max
     Generate a heightmap using gaussian process regression. The advantages of using this method over others to
     generate terrains lies in the capacity of adding prior knowledge through the kernel and the given initial values.
     For instance, using a RBF kernel means that we want a smooth terrain instead of a bumpy one.
-    Furthermore, it allows to generate heightmaps which are not necessary square; i.e. they can be rectangular.
+    Furthermore, it allows to generate heightmaps which are not necessary square; i.e. they can be rectangular. 
 
     Warnings: this is pretty difficult to exploit if the given data is not consistent. See `heigthmap_rbf` for
         a better way to generate heightmap.
@@ -65,8 +65,8 @@ def gpr_heightmap(init_values, x, y, kernel=None, alpha=1e-10, min_height=0, max
         >>> heightmap = gpr_heightmap(init_values, x, y)
 
     References:
-        [1] "Gaussian Processes for Machine Learning", Rasmussen and Williams, 2006
-        [2] Sklearn: https://scikit-learn.org/stable/modules/gaussian_process.html
+        - [1] "Gaussian Processes for Machine Learning", Rasmussen and Williams, 2006
+        - [2] Sklearn: https://scikit-learn.org/stable/modules/gaussian_process.html
     """
     # check given x and y
     if len(x.shape) == 1 and len(y.shape) == 1:

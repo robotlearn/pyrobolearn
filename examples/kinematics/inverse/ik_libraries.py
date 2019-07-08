@@ -14,40 +14,23 @@ Set the `solver_flag` to a number between 0 and 4 (see lines [53,60]) to select 
 import os
 import numpy as np
 from itertools import count
+import argparse
 
 from pyrobolearn.simulators import Bullet
 from pyrobolearn.worlds import BasicWorld
 from pyrobolearn.robots import KukaIIWA
 
 
-# import PyKDL
-try:
-    import PyKDL as kdl
-except ImportError as e:
-    raise ImportError(repr(e) + '\nTry to install `PyKDL`: '
-                                'sudo apt-get install ros-<distribution>-python-orocos-kdl'
-                                'or install it manually from `https://github.com/orocos/orocos_kinematics_dynamics`')
-
-# import kdl_parser_py
-try:
-    import kdl_parser_py.urdf as KDLParser
-except ImportError as e:
-    raise ImportError(repr(e) + '\nTry to install `kdl_parser_py`: '
-                                'sudo apt-get install ros-<distribution>-kdl-parser-py')
-
-# import track_ik_python
-try:
-    from trac_ik_python.trac_ik import IK as TracIK
-except ImportError as e:
-    raise ImportError(repr(e) + '\nTry to install `trac_ik_python`: '
-                                'sudo apt-get install ros-<distribution>-trac-ik-python')
-
-# import rbdl
-try:
-    import rbdl
-except ImportError as e:
-    raise ImportError(repr(e) + '\nTry to install `rbdl` manually from `https://bitbucket.org/rbdl/rbdl`')
-
+# create parser to select the IK solver
+parser = argparse.ArgumentParser()
+parser.add_argument('-s', '--solver', help='the IK solver to select:\n'
+                                           '0: use robot.calculate_inverse_kinematics()\n'
+                                           '1: use damped-least-squares IK using Jacobian (provided by simulator)\n'
+                                           '2: use PyKDL\n'
+                                           '3: use trac_ik\n'
+                                           '4: use rbdl + damped-least-squares IK using Jacobian (provided by rbdl)',
+                    type=int, choices=[0, 1, 2, 3, 4], default=1)
+args = parser.parse_args()
 
 # TO BE SET BY THE USER
 # select IK solver, by setting the flag:
@@ -56,7 +39,39 @@ except ImportError as e:
 # 2 = PyKDL
 # 3 = trac_ik
 # 4 = rbdl + damped-least-squares IK using Jacobian (provided by rbdl)
-solver_flag = 1  # 1 and 4 gives pretty good results
+solver_flag = args.solver  # 1 and 4 gives pretty good results
+
+if solver_flag == 2:  # PyKDL
+    # import PyKDL
+    try:
+        import PyKDL as kdl
+    except ImportError as e:
+        raise ImportError(repr(e) + '\nTry to install `PyKDL`: '
+                                    'sudo apt-get install ros-<distribution>-python-orocos-kdl'
+                                    'or install it manually from '
+                                    '`https://github.com/orocos/orocos_kinematics_dynamics`')
+
+    # import kdl_parser_py
+    try:
+        import kdl_parser_py.urdf as kdl_parser
+    except ImportError as e:
+        raise ImportError(repr(e) + '\nTry to install `kdl_parser_py`: '
+                                    'sudo apt-get install ros-<distribution>-kdl-parser-py')
+
+elif solver_flag == 3:  # trac_ik_python
+    # import trac_ik_python
+    try:
+        from trac_ik_python.trac_ik import IK as trac_ik
+    except ImportError as e:
+        raise ImportError(repr(e) + '\nTry to install `trac_ik_python`: '
+                                    'sudo apt-get install ros-<distribution>-trac-ik-python')
+
+elif solver_flag == 4:  # rbdl
+    # import rbdl
+    try:
+        import rbdl
+    except ImportError as e:
+        raise ImportError(repr(e) + '\nTry to install `rbdl` manually from `https://bitbucket.org/rbdl/rbdl`')
 
 
 # Create simulator
@@ -181,7 +196,7 @@ elif solver_flag == 1:
 ##################
 elif solver_flag == 2:
     print("Using PyKDL:")
-    model = KDLParser.treeFromFile(urdf)
+    model = kdl_parser.treeFromFile(urdf)
     if model[0]:
         model = model[1]
     else:
@@ -237,7 +252,7 @@ elif solver_flag == 3:
     urdf_string = open(urdf, 'r').read()
 
     # create IK solver
-    ik_solver = TracIK(base_link=base_name, tip_link=end_effector_name, urdf_string=urdf_string, solve_type='Distance')
+    ik_solver = trac_ik(base_link=base_name, tip_link=end_effector_name, urdf_string=urdf_string, solve_type='Distance')
 
     # define upper and lower limits (optional)
     # lb, ub = -np.ones(6)*100, np.ones(6)*100

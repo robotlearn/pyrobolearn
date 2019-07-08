@@ -36,10 +36,10 @@ class OpenPoseInterface(CameraInterface):
     3D) pictures and map them to the human kinematic skeleton.
 
     References:
-        [1] OpenPose: github.com/CMU-Perceptual-Computing-Lab/openpose
-        [2] PyOpenPose (official): github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/modules/python_module.md
-        [3] OpenPose output format: github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/output.md
-        [4] PyOpenPose (python wrappers): github.com/FORTH-ModelBasedTracker/PyOpenPose
+        - [1] OpenPose: github.com/CMU-Perceptual-Computing-Lab/openpose
+        - [2] PyOpenPose (official): github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/modules/python_module.md
+        - [3] OpenPose output format: github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/output.md
+        - [4] PyOpenPose (python wrappers): github.com/FORTH-ModelBasedTracker/PyOpenPose
     """
 
     def __init__(self, camera=None, detect_face=False, detect_hands=False, openpose_path=None,
@@ -60,6 +60,14 @@ class OpenPoseInterface(CameraInterface):
             verbose (bool): If True, it will print information about the state of the interface. This is let to the
                 programmer what he / she wishes to print.
         """
+        # Check the path to the openpose folder (which contains various models and test images)
+        if openpose_path is None:
+            if 'OPENPOSE_PATH' not in os.environ:
+                raise ValueError("The OPENPOSE_PATH environment variable has not been set properly. Please "
+                                 "then provide the path to the openpose folder by specifying the `openpose_path` "
+                                 "argument")
+            openpose_path = os.environ['OPENPOSE_PATH']
+        self.openpose_path = openpose_path
 
         # save variables
         self.detect_face = detect_face
@@ -108,18 +116,9 @@ class OpenPoseInterface(CameraInterface):
                            ['Mouth' + str(i-48) for i in range(48, 68)] + ['REye6'] + ['LEye6']
         self.face_joint_names_to_ids = dict(zip(self.face_joints, range(len(self.face_joints))))
 
-        # Check the path to the openpose folder (which contains various models and test images)
-        if openpose_path is None:
-            if 'OPENPOSE_PATH' not in os.environ:
-                raise ValueError("The OPENPOSE_PATH environment variable has not been set properly. Please "
-                                 "then provide the path to the openpose folder by specifying the `openpose_path` "
-                                 "argument")
-            openpose_path = os.environ['OPENPOSE_PATH']
-        self.openpose_path = openpose_path
-
         # specify the parameters
         params = dict()
-        params["model_folder"] = path + "models/"
+        params["model_folder"] = openpose_path + "/models/"
         if detect_face:
             params["face"] = True
         if detect_hands:
@@ -243,7 +242,7 @@ class OpenPoseInterface(CameraInterface):
 # Tests
 if __name__ == '__main__':
     path = '/home/brian/repos/openpose/'
-    interface = OpenPoseInterface(openpose_path=path)  # , use_thread=False, sleep_dt=1./10, verbose=True)
+    interface = OpenPoseInterface(openpose_path=path)  # use_thread=True, sleep_dt=1./10, verbose=True)
 
     while True:
         frame, keypoints = interface.run()

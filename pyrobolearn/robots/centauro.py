@@ -7,7 +7,7 @@ import numpy as np
 
 from pyrobolearn.robots.legged_robot import QuadrupedRobot
 from pyrobolearn.robots.wheeled_robot import WheeledRobot
-from pyrobolearn.robots.manipulator import BiManipulatorRobot
+from pyrobolearn.robots.manipulator import BiManipulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -18,7 +18,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Centauro(WheeledRobot, QuadrupedRobot, BiManipulatorRobot):
+class Centauro(WheeledRobot, QuadrupedRobot, BiManipulator):
     r"""Centauro robot
 
     References:

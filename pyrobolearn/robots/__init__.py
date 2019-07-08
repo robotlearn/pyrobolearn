@@ -6,8 +6,10 @@ import inspect
 
 # General robot class
 from .base import Body, MovableBody, ControllableBody
-from .actuators import *
-from .sensors import *
+from . import actuators
+from . import sensors
+# from .actuators import *
+# from .sensors import *
 from .robot import Robot
 
 # Categories/types of robots
@@ -128,6 +130,9 @@ for s in ['__init__', 'actuators', 'sensors', 'legged_robot', 'manipulator', 'wh
         implemented_robots.remove(s)
 
 implemented_robots = list(implemented_robots)
+
+# TODO: fix problem with icub
+implemented_robots.remove('icub')
 
 
 # create dictionary that maps robot names to robot classes

@@ -5,7 +5,7 @@
 import os
 
 from pyrobolearn.robots.legged_robot import BipedRobot
-from pyrobolearn.robots.manipulator import BiManipulatorRobot
+from pyrobolearn.robots.manipulator import BiManipulator
 from pyrobolearn.robots.hand import TwoHand
 
 __author__ = "Brian Delhaisse"
@@ -17,7 +17,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Nao(BipedRobot, BiManipulatorRobot, TwoHand):
+class Nao(BipedRobot, BiManipulator, TwoHand):
     r"""Nao robot
 
     """

@@ -1,0 +1,5 @@
+# ICDAR2013 - Handwriting Stroke Recovery from Offline Data (Kaggle)
+
+* webpage: https://www.kaggle.com/c/icdar2013-stroke-recovery-from-offline-data
+* link to download the dataset: https://www.kaggle.com/c/icdar2013-stroke-recovery-from-offline-data/data
+                    

@@ -1,0 +1,124 @@
+Installation of LeapMotion on Ubuntu 16.04/18.04
+================================================
+
+After downloading the "Desktop Setup" available here: https://www.leapmotion.com/setup/desktop/
+
+If you have an error during the Linux installation such as the following:
+
+$ sudo dpkg --install Leap-2.3.1+31549-x64.deb
+
+Selecting previously unselected package leap.
+(Reading database ... 478480 files and directories currently installed.)
+Preparing to unpack Leap-2.3.1+31549-x64.deb ...
+Unpacking leap (2.3.1+31549) ...
+Setting up leap (2.3.1+31549) ...
+Leap Motion installed under /usr/bin and /usr/sbin
+Failed to start leapd.service: Unit leapd.service not found.
+dpkg: error processing package leap (--install):
+ subprocess installed post-installation script returned error exit status 5
+Processing triggers for ureadahead (0.100.0-19) ...
+Errors were encountered while processing:
+ leap
+
+
+
+Please follow the next steps (taken from https://forums.leapmotion.com/t/linux-install-of-sdk-fails/5158/6):
+
+1. After the install failure, I simply uninstalled with:
+
+sudo dpkg -r leap
+
+2. Now, with no leap installed yet, I followed the post above and just created the file as mentioned there (I used the
+terminal to write the following command, to use the nano text editor as root user):
+
+sudo nano /lib/systemd/system/leapd.service
+
+3. I pasted that content (reproduced here for easiness):
+(also please note that on Ubuntu terminal, you paste with CTRL+SHIFT+V instead of just CTRL+V)
+
+# Found by Kevin Cole 2014.11.22 at
+# https://github.com/atejeda/leap-fedora-rpm
+#
+# Remember to:
+#
+#   ln -s /lib/systemd/system/leapd.service /etc/systemd/system/leapd.service
+#   systemctl daemon-reload
+#
+[Unit]
+Description=LeapMotion Daemon
+After=syslog.target
+[Service]
+Type=simple
+ExecStart=/usr/sbin/leapd
+[Install]
+WantedBy=multi-user.target
+
+4. Saved (CTRL+O then ENTER), and exited (CTRL+X)
+
+5. Still using the terminal, executed the two commands from that same post, BUT I included the sudo prefix to run them
+as root user:
+
+sudo ln -s /lib/systemd/system/leapd.service /etc/systemd/system/leapd.service
+sudo systemctl daemon-reload
+
+6. All is right now and we can properly install. So, I just installed the original package:as in the official Leap
+guide:
+
+sudo dpkg --install Leap-2.3.1+31549-x64.deb
+
+(please just note that I'm using a x64 Ubuntu, so I installed the 64 bits package)
+
+The above command should output someting similar to:
+
+Selecting previously unselected package leap.
+(Reading database ... 478480 files and directories currently installed.)
+Preparing to unpack Leap-2.3.1+31549-x64.deb ...
+Unpacking leap (2.3.1+31549) ...
+Setting up leap (2.3.1+31549) ...
+Leap Motion installed under /usr/bin and /usr/sbin
+Check Leap Motion daemon with:
+  service leapd status
+Open the Leap Motion GUI with:
+  LeapControlPanel
+See /usr/share/Leap/README.linux for more information.
+
+
+7. Done!!!
+
+8. You can try to open the Leap Motion GUI
+
+$ LeapControlPanel
+
+
+
+Installation of the LeapMotion SDK
+==================================
+
+To install the SDK, go to: https://developer.leapmotion.com/sdk/v2 
+and download the SDK (this will require you to sign up).
+
+You can check the following link for more information on how to use the SDK in Python:
+https://developer-archive.leapmotion.com/documentation/python/index.html
+
+You can copy-paste the following files:
+
+- Leap.py
+- LeapPython.so
+- libLeap.so
+
+in your /usr/local/lib/python<version>/dist-packages/. Or set your PYTHONPATH environment variable to where these files
+are on your system.
+
+By default, Leap only supports Python 2.7 as described here:
+
+"The LeapPython library included in the Leap Motion SDK supports only Python 2.7. However, the SDK also includes the
+SWIG interface file used to generate the LeapPython source code, so advanced users can generate and compile their own
+version of LeapPython. For instructions, refer to Generating a Python 3.3.0 Wrapper with SWIG 2.0.9 in our support
+knowledge base."
+
+For more info, check the following link:
+https://developer-archive.leapmotion.com/documentation/python/devguide/Project_Setup.html
+
+
+If at one point, the daemon is not running, you can run it again using:
+$ sudo service leapd restart

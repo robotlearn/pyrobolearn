@@ -1,12 +1,13 @@
 
 # import model interface
-from .model import ModelInterface
+from . import models
 
 # import constraints
-from .constraints import *
+from . import constraints
 
 # import tasks
-from .tasks import *
+from . import tasks
 
 # import solvers
-from .solver import *
+from . import solvers
+

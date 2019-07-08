@@ -14,7 +14,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class ManipulatorRobot(Robot):
+class Manipulator(Robot):
     r"""Manipulator robot
 
     Manipulator robots are robots that use some of its end-effectors to manipulate objects in its environment.
@@ -27,7 +27,7 @@ class ManipulatorRobot(Robot):
                  orientation=(0, 0, 0, 1),
                  fixed_base=False,
                  scale=1.):
-        super(ManipulatorRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
+        super(Manipulator, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.arms = []  # list of arms where an arm is a list of links
         self.hands = []  # list of end-effectors/hands
@@ -117,7 +117,7 @@ class ManipulatorRobot(Robot):
         return self.hands
 
 
-class BiManipulatorRobot(ManipulatorRobot):
+class BiManipulator(Manipulator):
     r"""Bi-manipulator Robot
 
     Bi-manipulators are robots that have two manipulators to manipulate objects in the environment.
@@ -125,7 +125,7 @@ class BiManipulatorRobot(ManipulatorRobot):
 
     def __init__(self, simulator, urdf, position=(0, 0, 1.5), orientation=(0, 0, 0, 1), fixed_base=False,
                  scale=1.):
-        super(BiManipulatorRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
+        super(BiManipulator, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_arm_id = 0
         self.left_hand_id = 0

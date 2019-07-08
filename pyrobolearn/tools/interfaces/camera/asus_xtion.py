@@ -56,9 +56,9 @@ class AsusXtionInterface(CameraInterface):
     to check if it is correctly detected and working properly.
 
     References:
-        [1] https://github.com/danielelic/PyOpenNI2-Utility
-        [2] https://github.com/kanishkaganguly/OpenNIMultiSensorCapture
-        [3] https://docs.opencv.org/3.1.0/d7/d6f/tutorial_kinect_openni.html
+        - [1] https://github.com/danielelic/PyOpenNI2-Utility
+        - [2] https://github.com/kanishkaganguly/OpenNIMultiSensorCapture
+        - [3] https://docs.opencv.org/3.1.0/d7/d6f/tutorial_kinect_openni.html
     """
 
     def __init__(self, use_thread=False, sleep_dt=0., verbose=False, use_rgb=True, use_depth=True, use_ir=False):
@@ -216,7 +216,7 @@ if __name__ == '__main__':
                                    use_depth=use_depth, use_ir=use_ir)
 
     # plotting using matplotlib in interactive mode
-    fig, axes = plt.subplots(1,2)
+    fig, axes = plt.subplots(1, 2)
     plots = [None]*2
     titles = []
     if use_rgb:
