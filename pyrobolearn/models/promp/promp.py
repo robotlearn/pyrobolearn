@@ -2,16 +2,21 @@
 """Define the Probabilistic Movement Primitive class
 
 This file defines the Probabilistic Movement Primitive (ProMP) model, and use the Gaussian distribution defined
-in `gaussian.py`
+in `gaussian.py`.
+
+References
+    - [1] "Probabilistic Movement Primitives", Paraschos et al., 2013
+    - [2] "Using Probabilistic Movement Primitives in Robotics", Paraschos et al., 2018
 """
 
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 import numpy as np
-from scipy.linalg import block_diag
-import scipy.interpolate
+# import scipy.interpolate
 
 from pyrobolearn.models.model import Model
 from pyrobolearn.models.gaussian import Gaussian
+from pyrobolearn.models.promp.canonical_systems import LinearCS
+from pyrobolearn.models.promp.basis_functions import BasisMatrix, GaussianBM, VonMisesBM, BlockDiagonalMatrix
 
 
 __author__ = "Brian Delhaisse"
@@ -24,570 +29,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-################### Canonical Systems #######################
-
-class CS(object):
-    r"""Canonical System
-    """
-    pass
-
-
-class LinearCS(CS):
-    r"""Linear Canonical System.
-
-    A canonical system (CS) allows to modulate temporarily the ProMP, that is, it provides the phase that drives
-    the ProMP [1].
-    The phase variable was introduced to avoid an explicit dependency with time in the ProMP equations. Canonical
-    systems can be categorized in two main categories:
-    * discrete CS: used for discrete movements (such as reaching, pushing/pulling, hitting, etc)
-    * rhythmic CS: used for rhythmic movements (such as walking, running, dribbling, sewing, flipping a pancake, etc)
-
-    Each of these systems are described by differential equations which are solved using Euler's method.
-    See their corresponding classes `DiscreteCS` and `RhythmicCS` for more information.
-
-    References:
-        [1] "Probabilistic Movement Primitives", Paraschos et al., 2013
-        [2] "Using Probabilistic Movement Primitives in Robotics", Paraschos et al., 2018
-    """
-
-    __metaclass__ = ABCMeta
-
-    def __init__(self, dt=0.01, T=1.):
-        """Initialize the canonical system.
-
-        Args:
-            dt (float): the time step used in Euler's method when solving the differential equation
-                A very small step will lead to a better accuracy but will take more time.
-            T (float): total time for the movement (period)
-        """
-        # set variables
-        self.dt = dt
-        self.T = T
-        self.timesteps = int(T / self.dt)
-        # rescale integration step (same as np.linspace(0.,T.,timesteps) instead of np.arange(0,T,dt))
-        self.dt = self.T / (self.timesteps - 1.)
-
-        # initial time
-        self.t0 = 0.
-
-        # slope
-        if self.T <= 0:
-            raise ValueError("Expecting the period T to be bigger than 0")
-        self.slope = 1. / self.T
-
-        # reset the phase variable
-        self.reset()
-
-    ##############
-    # Properties #
-    ##############
-
-    @property
-    def initial_phase(self):
-        """Return the initial phase"""
-        return self.t0
-
-    @property
-    def final_phase(self):
-        """Return the final phase"""
-        return self.T
-
-    @property
-    def num_timesteps(self):
-        """Return the number of timesteps"""
-        return self.timesteps
-
-    ###########
-    # Methods #
-    ###########
-
-    def reset(self):
-        """
-        Reset the phase variable to its initial phase.
-        """
-        self.s = self.t0
-
-    def step(self, tau=1.0, error_coupling=1.0):
-        """
-        Perform a step using Euler's method; increment the phase by a small amount.
-
-        Args:
-            tau (float): speed. Increase tau to make the system faster, and decrease it to make it slower.
-
-        Returns:
-            float: current phase
-        """
-        s = self.s
-        self.s += tau * self.slope * self.dt
-
-        # return previous 's' such that it starts from t0
-        return s
-
-    # aliases
-    predict = step
-    forward = step
-
-    def grad(self, t=None):
-        """
-        Compute the gradient of the phase variable with respect to time, i.e. :math:`ds/dt(t)`.
-
-        Args:
-            t (float, None): time variable
-
-        Returns:
-            float: gradient evaluated at the given time
-        """
-        return self.slope
-
-    def rollout(self, tau=1.0, error_coupling=1.0):
-        """
-        Generate phase variable in an open loop fashion from the initial to the final phase.
-
-        Args:
-            tau (float): Increase tau to make the system faster, and decrease it to make it slower.
-            error_coupling (float): slow down if the error is > 1
-
-        Returns:
-            np.array[T]: value of phase variable at each time step
-        """
-        timesteps = int(self.timesteps * tau)
-        self.s_track = np.zeros(timesteps)
-
-        # reset
-        self.reset()
-
-        # roll
-        for t in range(timesteps):
-            self.s_track[t] = self.s
-            self.step(tau, error_coupling)
-
-        return self.s_track
-
-
-
-#################### Basis Functions ##########################
-
-class BasisFunction(object):
-    r"""Basis Function
-
-    The choice of basis function depends on the type of movement the user which to model; a discrete (aka stroke-based)
-    or rhythmic movement.
-    """
-    __metaclass__ = ABCMeta
-
-    def __init__(self):
-        pass
-
-    ###########
-    # Methods #
-    ###########
-
-    def compute(self, s):
-        """
-        Predict the value of the basis function given the phase variable :math:`s`
-
-        Args:
-            s (float): phase value
-
-        Returns:
-            float: value of the basis function evaluated at the given phase
-        """
-        raise NotImplementedError
-
-    # # aliases
-    # predict = compute
-    # forward = compute
-
-    @abstractmethod
-    def grad(self, s):
-        """
-        Compute the gradient of the basis function with respect to the phase variable :math:`s`, evaluated at
-        the given phase.
-
-        Args:
-            s (float): phase value
-
-        Returns:
-            float: gradient evaluated at the given phase
-        """
-        raise NotImplementedError
-
-    # @abstractmethod
-    # def grad_t(self, s):        # TODO: use automatic differentiation
-    #     """
-    #     Compute the gradient of the basis function with respect to the time variable :math:`t`, evaluated at
-    #     the given phase :math:`s(t)`.
-    #
-    #     Args:
-    #         s (float): phase value s(t)
-    #
-    #     Returns:
-    #         float: gradient evaluated at the given phase s(t)
-    #     """
-    #     raise NotImplementedError
-
-    #############
-    # Operators #
-    #############
-
-    def __call__(self, s):
-        """Predict value of basis function given phase"""
-        return self.compute(s)
-
-# alias
-BF = BasisFunction
-
-class GaussianBF(BF):
-    r"""Gaussian Basis Function
-
-    This basis function is given by the formula:
-
-    .. math:: b(s) = \exp \left( - \frac{1}{2 h} (s - c)^2 \right)
-
-    where :math:`c` is the center, and :math:`h` is the width of the basis.
-
-    This is often used for discrete movement primitives.
-    """
-
-    def __init__(self, center=0., width=1.):
-        """Initialize basis function
-
-        Args:
-            center (float, np.ndarray): center of the distribution
-            width (float, np.ndarray): width of the distribution
-        """
-        super(GaussianBF, self).__init__()
-
-        if isinstance(center, np.ndarray): pass
-
-        self.c = center
-        if width <= 0:
-            raise ValueError("Invalid `width` argument: the width of the basis has to be strictly positive")
-        self.h = width
-
-    def compute(self, s):
-        """
-        Predict the value of the basis function given the phase variable :math:`s`, given by:
-
-        .. math:: b(s) = \exp \left( - \frac{1}{2 h} (s - c)^2 \right)
-
-        where :math:`c` is the center, and :math:`h` is the width of the basis.
-
-        Args:
-            s (float): phase value
-
-        Returns:
-            float: value of the basis function evaluated at the given phase
-        """
-        if isinstance(s, np.ndarray):
-            s = s[:, None]
-        return np.exp( - 0.5 / self.h * (s - self.c)**2 )
-
-    def grad(self, s):
-        """
-        Return the gradient of the basis function :math:`b(s)` with respect to the phase variable :math:`s`,
-        evaluated at the given phase.
-
-        For the Gaussian basis function, this results in:
-
-        .. math::
-
-            \frac{d b(s)}{ds} = - b(s) \frac{(s - c)}{h}
-
-        Args:
-            s (float): phase value
-
-        Returns:
-            float: gradient evaluated at the given phase
-        """
-        s1 = s[:, None] if isinstance(s, np.ndarray) else s
-        return - self(s) * (s1 - self.c) / self.h
-
-
-# aliases
-GBF = GaussianBF
-
-
-class VonMisesBF(BF):
-    r"""Von-Mises Basis Function
-
-    This basis function is given by the formula:
-
-    .. math:: b(s) = \exp \left( \frac{ \cos( 2\pi (s - c)) }{h} \right)
-
-    where :math:`c` is the center, and :math:`h` is the width of the basis.
-
-    This is often used for rhythmic movement primitives.
-    """
-
-    def __init__(self, center=0, width=1.):
-        """Initialize basis function
-
-        Args:
-            center (float, np.ndarray): center of the basis fct
-            width (float, np.ndarray): width of the distribution
-        """
-        super(VonMisesBF, self).__init__()
-        self.c = center
-        if width <= 0:
-            raise ValueError("Invalid `width` argument: the width of the basis has to be strictly positive")
-        self.h = width
-
-    def compute(self, s):
-        """
-        Predict the value of the basis function given the phase variable :math:`s`, given by:
-
-        .. math:: b(s) = \exp \left( \frac{ \cos( 2\pi (s - c)) }{h} \right)
-
-        where :math:`c` is the center, and :math:`h` is the width of the basis.
-
-        Args:
-            s (float): phase value
-
-        Returns:
-            float: value of the basis function evaluated at the given phase
-        """
-        if isinstance(s, np.ndarray):
-            s = s[:, None]
-        return np.exp(np.cos(2*np.pi * (s - self.c)) / self.h)
-
-    def grad(self, s):
-        """
-        Return the gradient of the basis function :math:`b(s)` with respect to the phase variable :math:`s`,
-        evaluated at the given phase.
-
-        For the Von-Mises basis function, this results in:
-
-        .. math::
-
-            \frac{d b(s)}{ds} = - b(s) 2\pi \frac{ \sin(2 \pi (s - c)) }{ h }
-
-        Args:
-            s (float): phase value
-
-        Returns:
-            float: gradient evaluated at the given phase
-        """
-        s1 = s[:, None] if isinstance(s, np.ndarray) else s
-        return - 2 * np.pi * self(s) * np.sin(2 * np.pi * (s1 - self.c)) / self.h
-
-
-# aliases
-CBF = VonMisesBF    # Circular Basis Function
-
-
-class Matrix(object):
-    """callable matrix"""
-    def __call__(self, s):
-        raise NotImplementedError
-
-
-class BasisMatrix(Matrix):
-    r"""Basis matrix
-
-    The basis matrix contains the basis functions, and the derivative of the basis functions.
-
-    This is given by:
-
-    .. math:: \Phi(s) = [\phi(s) \dot{\phi}(s)] \in \mathcal{R}^{M \times 2}
-
-    where :math:`s` is the phase variable, and :math:`M` is the total number of components.
-    """
-
-    def __init__(self, matrix):
-        """
-        Initialize the basis matrix.
-
-        Args:
-            matrix (np.array[M,D]): 2D matrix containing callable functions
-        """
-        self.matrix = matrix
-
-        # get shape
-        self._shape = self(0.).shape
-
-    @property
-    def shape(self):
-        """Return the shape of the matrix"""
-        return self._shape
-
-    @property
-    def num_basis(self):
-        """return the number of basis function"""
-        return self._shape[0]
-
-    def evaluate(self, s):
-        """
-        Return matrix evaluated at the given phase.
-
-        Args:
-            s (float, np.array[T]): phase value(s)
-
-        Returns:
-            np.array: array of shape Mx2, or MxTx2
-        """
-        # matrix = np.array([[fct(s) for fct in row]
-        #                    for row in self.matrix])
-        matrix = np.array([fct(s) for fct in self.matrix]).T
-        return matrix
-
-    def __call__(self, s):
-        """
-        Return matrix evaluated at the given phase.
-
-        Args:
-            s (float): phase value
-
-        Returns:
-            np.array: array of shape 2xM, or Tx2xM
-        """
-        return self.evaluate(s)
-
-
-class GaussianBM(BasisMatrix):
-    r"""Gaussian Basis Matrix
-
-    Matrix containing Gaussian basis functions.
-    """
-
-    def __init__(self, cs, num_basis, basis_width=1.):
-        """
-        Initialize the Gaussian basis matrix.
-
-        Args:
-            cs (CS): canonical system
-            num_basis (int): number of basis functions
-            basis_width (float): width of the basis functions
-        """
-
-        # create derivative of basis function wrt to time
-        def dphi_t(cs, phi):
-            def step(s):
-                return phi.grad(s) * cs.grad()
-            return step
-
-        # distribute centers for the Gaussian basis functions
-        # the centers are placed uniformly between [-2*width, 1+2*width]
-        if num_basis == 1:
-            centers = (1.+4*basis_width)/2.
-        else:
-            centers =  np.linspace(-2*basis_width, 1+2*basis_width, num_basis)
-
-        # create basis function and its derivative
-        phi = GaussianBF(centers, basis_width)
-        dphi = dphi_t(cs, phi)
-
-        # create basis matrix (shape: Mx2)
-        matrix = np.array([phi, dphi])
-
-        # call superclass constructor
-        super(GaussianBM, self).__init__(matrix)
-
-
-class VonMisesBM(BasisMatrix):
-    r"""Von-Mises Basis Matrix
-
-    Matrix containing Von-Mises basis functions.
-    """
-
-    def __init__(self, cs, num_basis, basis_width=1.):
-        """
-        Initialize the Von-Mises basis matrix.
-
-        Args:
-            cs (CS): canonical system
-            num_basis (int): number of basis functions
-            basis_width (float): width of the basis functions
-        """
-        # create derivative of basis function wrt to time
-        def dphi_t(cs, phi):
-            def step(s):
-                return phi.grad(s) * cs.grad()
-            return step
-
-        # distribute centers for the Gaussian basis functions
-        # the centers are placed uniformly between [-2*width, 1+2*width]
-        if num_basis == 1:
-            centers = (1. + 4 * basis_width) / 2.
-        else:
-            centers = np.linspace(-2 * basis_width, 1 + 2 * basis_width, num_basis)
-
-        # create basis function and its derivative
-        phi = VonMisesBF(centers, basis_width)
-        dphi = dphi_t(cs, phi)
-
-        # create basis matrix
-        matrix = np.array([phi, dphi])
-        super(VonMisesBM, self).__init__(matrix)
-
-
-class BlockDiagonalMatrix(Matrix):
-    r"""Callable Block Diagonal matrix
-    """
-
-    def __init__(self, matrices):
-        """
-        Initialize the block diagonal matrix which contains callable matrices in its diagonal.
-
-        Args:
-            matrices (list[BasisMatrix]): list of callable matrices
-        """
-        self.matrices = matrices
-
-    @property
-    def shape(self):
-        """Return the shape of the block diagonal matrix"""
-        shape = 0
-        for matrix in self.matrices:
-            shape += np.array(matrix.shape)
-        return tuple(shape)
-
-    @property
-    def num_basis(self):
-        """Return the number of basis per dimensions"""
-        return [matrix.num_basis for matrix in self.matrices]
-
-    def evaluate(self, s):
-        """
-        Evaluate the block diagonal matrix on the given input.
-
-        Args:
-            s (float, np.array): input value
-
-        Returns:
-            np.array: block diagonal matrix
-        """
-        return block_diag(*[matrix(s) for matrix in self.matrices])
-
-    def __call__(self, s):
-        """
-        Evaluate the block diagonal matrix on the given input.
-
-        Args:
-            s (float, np.array): input value
-
-        Returns:
-            np.array: block diagonal matrix
-        """
-        return self.evaluate(s)
-
-    def __getitem__(self, idx):
-        """
-        Return a desired chunk of the block diagonal matrix.
-
-        Args:
-            idx (int, slice): index of the basis matrix(ces) we wish to keep
-
-        Returns:
-            BlockDiagonalMatrix: return the desired chunk of the diagonal matrix
-        """
-        return BlockDiagonalMatrix(matrices=self.matrices[idx])
-
-
-
-######################## ProMP ##############################
-
-class ProMP(object):
+class ProMP(object):  # Model
     r"""Probabilistic Movement Primitives
 
     This class implements the ProMP framework proposed in [1]. This works by putting a prior over the weight
@@ -631,7 +73,7 @@ class ProMP(object):
     In the imitation learning case, when learning from demonstrations, instead of maximizing the likelihood we maximize
     the marginal likelihood (type-II MLE), that is:
 
-    .. math:: \theta^* = argmax_{\theta} p(\tau ; \theta) = argmax_{\theta} \int p(\tau | w) p(w ; \theta) dw
+    .. math:: \theta^* = \argmax_{\theta} p(\tau ; \theta) = argmax_{\theta} \int p(\tau | w) p(w ; \theta) dw
 
 
     Modulation of via-points, final position and velocities by conditioning:
@@ -645,9 +87,10 @@ class ProMP(object):
     * combination
     * blending / sequencing
 
+
     References:
-        [1] "Probabilistic Movement Primitives", Paraschos et al., 2013
-        [2] "Using Probabilistic Movement Primitives in Robotics", Paraschos et al., 2018
+        - [1] "Probabilistic Movement Primitives", Paraschos et al., 2013
+        - [2] "Using Probabilistic Movement Primitives in Robotics", Paraschos et al., 2018
     """
 
     __metaclass__ = ABCMeta
@@ -665,10 +108,15 @@ class ProMP(object):
             weights_covariance (None): covariance on the weights
             canonical_system (None, CS): canonical system
             noise_covariance (float, np.array[2Dx2D]): covariance on the noise
-            Phi (None, Matrix[DM,2D]): callable basis matrix
+            Phi (None, BasisMatrix[DM,2D]): callable basis matrix
             promps (list[ProMP], None): list of ProMPs (useful when combining different ProMPs)
         """
         super(ProMP, self).__init__()
+
+        # check Phi # TODO: check shape
+        if Phi is not None and not isinstance(Phi, BasisMatrix):
+            raise TypeError("Expecting the given basis matrix Phi to be an instance of `BasisMatrix`, instead got: "
+                            "{}".format(Phi))
 
         # check if multiple promps are given
         if promps:
@@ -686,7 +134,7 @@ class ProMP(object):
                 promp, next_promp = promps[i], promps[i+1]
 
                 # check if the basis matrix has been defined
-                if not promp.Phi:
+                if promp.Phi is None:
                     raise ValueError("The ProMP {} doesn't have a basis matrix defined".format(i))
 
                 # check if each ProMP has the same dimensionality (i.e. the same number of DoF)
@@ -701,7 +149,7 @@ class ProMP(object):
 
         # else, define one promp
         else:
-            if Phi:
+            if Phi is not None:
                 # basis matrix (shape should be: DMx2D where D=nb of DoFs, and M=nb of basis fcts)
                 num_dofs = Phi.shape[1] / 2
             else:
@@ -715,13 +163,13 @@ class ProMP(object):
             # create Gaussian weight distribution (with shape(mean) = DM, shape(cov) = DMxDM)
             if isinstance(weights, Gaussian):
                 # check that it matches with the dimension of Phi if specified
-                if Phi:
+                if Phi is not None:
                     if Phi.shape[0] != weights.mean.size:
                         raise ValueError("Mismatch between the dimensions of Phi and the weights; got Phi.shape[0]={} "
                                          "and weights.size={}".format(Phi.shape[0], weights.mean.size))
             else:
                 # infer the size of the weights
-                if Phi:
+                if Phi is not None:
                     size = Phi.shape[0]
                     if weights:
                         if weights.size != size:
@@ -759,7 +207,6 @@ class ProMP(object):
                 noise_covariance = noise_covariance * np.identity(2 * num_dofs)
             self._noise = Gaussian(np.zeros(2 * num_dofs), noise_covariance)
 
-
         # set the variables
         self.D = num_dofs
         self._weights = weights
@@ -771,7 +218,6 @@ class ProMP(object):
 
         # create canonical system
         self.cs = canonical_system if canonical_system is not None else LinearCS()
-
 
     ##############
     # Properties #
@@ -876,7 +322,7 @@ class ProMP(object):
                     p = priority(s)
                     if not isinstance(p, (float, int)):
                         raise TypeError("The callable function/class doesn't return a float/int number given "
-                                         "the phase value")
+                                        "the phase value.")
                     if p < 0 or p > 1:
                         raise ValueError("The callable function returned a priority which is not between 0 and 1; "
                                          "given the phase value s={}, it returned the priority p={}".format(s, p))
@@ -885,7 +331,7 @@ class ProMP(object):
                 self.cs.reset()
                 s = self.cs.rollout()
                 p = priority(s)
-                if not isinstance(p, np.array):
+                if not isinstance(p, np.ndarray):
                     raise TypeError("The callable function/class doesn't return an np.array given the phase values")
                 if np.all(p < 0) or np.all(p > 1):
                     raise ValueError("Some priority exponents returned by the callable function/class are not between "
@@ -912,38 +358,37 @@ class ProMP(object):
         pass
 
     @staticmethod
-    def isParametric():
+    def is_parametric():
         """The ProMP is a parametric model"""
         return True
 
     @staticmethod
-    def isLinear():
+    def is_linear():
         """The ProMP has linear parameters"""
         return True
 
     @staticmethod
-    def isRecurrent():
-        """The ProMP is not a recurrent model where outputs depen                                                                                                                                     ds on previous inputs. Its sequential nature
+    def is_recurrent():
+        """The ProMP is not a recurrent model where outputs depends on previous inputs. Its sequential nature
         is due to the fact that the time is given as an input to the ProMP model"""
         return False
 
     @staticmethod
-    def isProbabilistic():
+    def is_probabilistic():
         """The ProMP is a probabilistic model which parametrizes a normal distribution (by specifying its mean
         and covariance)"""
         return True
 
     @staticmethod
-    def isDiscriminative():
-        """The ProMP is a discriminative model which predicts :math:`p(y|x)` where :math:`x` is the (time) input,
+    def is_discriminative():
+        r"""The ProMP is a discriminative model which predicts :math:`p(y|x)` where :math:`x` is the (time) input,
         and :math:`y` is the output"""
         return True
 
     @staticmethod
-    def isGenerative():
+    def is_generative():
         """The ProMP is not a generative model, and thus we can not sample from it"""
         return False
-
 
     ###########
     # Methods #
@@ -951,13 +396,13 @@ class ProMP(object):
 
     def parameters(self):
         """Returns an iterator over the model parameters."""
-        #yield self.weights
+        # yield self.weights
         yield self.weights.mean
         yield self.weights.cov
 
     def named_parameters(self):
         """Returns an iterator over the model parameters, yielding both the name and the parameter itself"""
-        #yield "Gaussian", self.weights
+        # yield "Gaussian", self.weights
         yield "mean", self.weights.mean
         yield "covariance", self.weights.cov
 
@@ -966,7 +411,7 @@ class ProMP(object):
         self.cs.reset()
 
     def basis(self, s):
-        """
+        r"""
         Return the basis matrix evaluated at the given phase(s).
 
         Args:
@@ -978,7 +423,7 @@ class ProMP(object):
         return self.Phi(s)
 
     def weighted_basis(self, s):
-        """
+        r"""
         Return the weighted basis evaluated at the given phase(s), that is, `Phi(s) * w`, where `w` is the weight
         mean vector, and the product is a broadcast product (and not a dot/scalar product).
 
@@ -991,7 +436,7 @@ class ProMP(object):
         return (self.Phi(s).T * self.weights.mean).T
 
     def predict_conditional(self, s, weights=None):
-        """
+        r"""
         Predict conditional output distribution given the weights :math:`p(y_t|w)`.
 
         This is given by:
@@ -1032,7 +477,7 @@ class ProMP(object):
                 gaussian_results = []
                 for gaussian, priority in zip(gaussians, priorities):
                     covs, means = [], []
-                    for g, p in zip(gaussians, priorities):
+                    for g, p in zip(gaussian, priority):  # zip(gaussians, priorities)
                         # compute covariance and mean
                         prec = g.prec
                         cov = p * prec
@@ -1055,7 +500,7 @@ class ProMP(object):
         return [Gaussian(mean=self.Phi(phase).T.dot(weights), covariance=self.noise.cov) for phase in s]
 
     def predict_marginal(self, s):
-        """
+        r"""
         Predict marginal output distribution :math:`p(y_t; \theta)`.
 
         .. math::
@@ -1119,7 +564,7 @@ class ProMP(object):
         return [(self.Phi(phase).T * self.weights + self.noise) for phase in s]
 
     def predict(self, s, sample=False, method='conditional'):
-        """
+        r"""
         Predict output mean :math:`\mu_y` given input data :math:`s`.
 
         .. math:: \mu_y = \Phi(s)^T \mu_w + \epsilon_y
@@ -1158,7 +603,7 @@ class ProMP(object):
             return np.array([g.mode for g in gaussians])
 
     def predict_proba(self, s, method='marginal', return_gaussian=True):
-        """
+        r"""
         Predict the probability of output :math:`\mathcal{N}(\mu_y, \Sigma_y)` given input data :math:`s`.
 
         .. math::
@@ -1203,7 +648,7 @@ class ProMP(object):
         return np.array([gaussian.mean for gaussian in y]), np.array([gaussian.cov for gaussian in y])
 
     def step(self, tau=1., sample=False, method='marginal'):
-        """
+        r"""
         Perform one step forward with the canonical system, and return the deterministic predicted output, given by:
 
         .. math:: y = \Phi(s)^T \mu_w + \epsilon_y
@@ -1224,7 +669,7 @@ class ProMP(object):
         return self.predict(s, sample=sample, method=method)
 
     def step_proba(self, tau=1., method='marginal', return_gaussian=True):
-        """
+        r"""
         Perform one step forward with the canonical system, and return the predicted output distribution
         :math:`p(y_t | w)` and :math:`p(y_t ; \theta)` based on the specified `method`.
 
@@ -1245,7 +690,7 @@ class ProMP(object):
         return self.predict_proba(s, method=method, return_gaussian=return_gaussian)
 
     def rollout(self, tau=1., sample=False, method='marginal'):
-        """
+        r"""
         Perform a complete rollout; predict a whole trajectory from the initial phase to final one.
 
         Args:
@@ -1267,7 +712,7 @@ class ProMP(object):
         return self.predict(s, sample=sample, method=method)
 
     def rollout_proba(self, tau=1., method='marginal', return_gaussian=True):
-        """
+        r"""
         Perform a complete probabilistic rollout; predict a whole probabilistic trajectory from the initial phase to
         final one.
 
@@ -1307,7 +752,7 @@ class ProMP(object):
         return self.weights.sample(size=size, seed=seed)
 
     def sample_trajectory(self, size=None):
-        """
+        r"""
         Sample one complete trajectory.
 
         .. math:: \tau \sim p(\tau; \theta) = \prod_{t=1}^T p(y_t; \theta)
@@ -1326,7 +771,7 @@ class ProMP(object):
         return np.array([self.rollout(tau=1., sample=True, method='marginal') for _ in range(size)])
 
     def sample_from_prediction(self, s, size=None, seed=None, method='conditional'):
-        """
+        r"""
         Sample from predicted output distribution :math:`y_t \sim p(y_t | w)` or :math:`y_t \sim p(y_t; \theta)`,
         based on the specified `method`.
 
@@ -1345,7 +790,7 @@ class ProMP(object):
         return gaussian.sample(size=size, seed=seed)
 
     def sample_from_conditional(self, s, size=None, seed=None):
-        """
+        r"""
         Sample output from the likelihood (conditional probability).
 
         .. math:: y_t \sim p(y_t | w)
@@ -1370,7 +815,7 @@ class ProMP(object):
         return gaussian.sample(size=size, seed=seed)
 
     def sample_from_marginal_likelihood(self, s, size=None, seed=None):
-        """
+        r"""
         Sample output from the marginal likelihood.
 
         .. math:: y_t \sim p(y_t; \theta)
@@ -1394,7 +839,7 @@ class ProMP(object):
         return gaussian.sample(size=size, seed=seed)
 
     def likelihood(self, y, s=None):
-        """
+        r"""
         Compute the likelihood of the output data given the input data.
 
         .. math:: p(y_{1:T} | w) = \prod_{t=1}^T \mathcal{N}(y_t | \Phi(s_t)^\top \mu_w, \Sigma_y)
@@ -1429,7 +874,7 @@ class ProMP(object):
     pdf = likelihood
 
     def log_likelihood(self, y, s=None):
-        """
+        r"""
         Compute the log-likelihood.
 
         .. math:: \log p(y_{1:T} | w) = \sum_{t=1}^T \log \mathcal{N}(y_t | \Phi(s_t)^\top \mu_w, \Sigma_y)
@@ -1449,7 +894,7 @@ class ProMP(object):
     log_pdf = log_likelihood
 
     def marginal_likelihood(self, y, s=None):
-        """
+        r"""
         Compute the marginal likelihood (which is the loss being optimized in ProMPs) by assuming that we have
         independence between the output vectors :math:`y_t`.
 
@@ -1506,7 +951,7 @@ class ProMP(object):
         return np.prod([gaussian.pdf(yt) for yt, gaussian in zip(y, gaussians)])
 
     def log_marginal_likelihood(self, y, s):
-        """
+        r"""
         Compute the marginal log-likelihood (which is the loss being optimized in ProMPs).
 
         If we assume independence between each sample :math:`y_t` then:
@@ -1529,7 +974,7 @@ class ProMP(object):
         return np.log(self.marginal_likelihood(y,s))
 
     def joint_distribution(self, y, Phi_or_s, y_cov=None):
-        """
+        r"""
         Compute and return the joint distribution between the weights and the output vector :math:`p(w, y)`. This will
         be useful when computing the posterior conditional probability of the weights given the output vector
         :math:`p(w|y)`.
@@ -1572,7 +1017,7 @@ class ProMP(object):
         return Gaussian(mean=joint_mean, covariance=joint_cov)
 
     def posterior_weights(self, y, Phi_or_s, y_cov=None):
-        """
+        r"""
         Compute the posterior distribution on the weights given the output vector :math:`p(w|y)`.
 
         .. math:: p(w|y) = \mathcal{\mu_w', \Sigma_w'}
@@ -1613,7 +1058,7 @@ class ProMP(object):
         return weight
 
     def compute_loss(self, Y, kind='marginal_log_likelihood'):
-        """
+        r"""
         Compute the loss on the whole given data.
 
         Args:
@@ -1639,7 +1084,7 @@ class ProMP(object):
             raise ValueError("The specified kind of loss has not been implemented")
 
     def expectation_maximization(self, Y, num_iters=1000, threshold=1e-4, verbose=False):
-        """
+        r"""
         Learn the parameters :math:`\theta = \{\mu_w, \Sigma_w\}` of the Gaussian distribution put on the weights.
 
         Args:
@@ -1705,7 +1150,7 @@ class ProMP(object):
 
     # TODO: implement following method
     def maximum_marginal_likelihood(self, Y, prior_reg=1., num_iters=1000, threshold=1e-4, verbose=False):
-        """
+        r"""
         Compute the closed-form solutions for the mean and covariance that maximizes the marginal likelihood.
 
         Assuming independence in time between the predicted output, we have
@@ -1734,7 +1179,7 @@ class ProMP(object):
         # return results
 
     def linear_ridge_regression(self, Y, prior_reg=1.):
-        """
+        r"""
         Learn the weights for the ProMP using linear ridge regression.
 
         Args:
@@ -1783,7 +1228,7 @@ class ProMP(object):
         return results
 
     def imitate(self, Y, prior_reg=1., method='lrr', num_iters=1000, threshold=1e-4, verbose=False):
-        """
+        r"""
         Imitate given trajectories, i.e. learn the parameters :math:`\theta = \{\mu_w, \Sigma_w\}` of the Gaussian
         distribution put on the weights.
 
@@ -1820,7 +1265,7 @@ class ProMP(object):
     fit = imitate
 
     def condition(self, s, y_desired_mean, y_desired_covariance):
-        """
+        r"""
         Modulate the trajectory distribution by conditioning.
 
         .. math:: p(w | y^*)
@@ -1849,10 +1294,10 @@ class ProMP(object):
         return self.posterior_weights(y_desired_mean, s, y_cov=y_desired_covariance)
 
     # alias
-    #modulate = condition
+    # modulate = condition
 
     def combine(self, mps, priorities):
-        """
+        r"""
         Modulate the trajectory distribution by combining/co-activating different movement primitives. This returns
         a ProMP which represents the combination of the given ProMPs.
 
@@ -1873,7 +1318,7 @@ class ProMP(object):
         return self.blend(mps=mps, priorities=priorities)
 
     def blend(self, mps, priorities):
-        """
+        r"""
         Modulate the trajectory distribution by blending different movement primitives together. This returns
         a ProMP which represents the combination of the given ProMPs.
 
@@ -1912,7 +1357,7 @@ class ProMP(object):
 
     # alias
     # TODO def sequence
-    #sequence = blend
+    # sequence = blend
 
     def power(self, priority):
         """
@@ -1924,7 +1369,7 @@ class ProMP(object):
         self.priority = priority
 
     def multiply(self, other):
-        """
+        r"""
         Multiply a ProMP with another ProMP.
 
         The resulting prediction (in the case for the marginal prediction) will be given by:
@@ -1955,8 +1400,6 @@ class ProMP(object):
                 return ProMP(promps=[self, other])
         else:
             raise TypeError("Trying to multiply a ProMP with {}, which has not be defined".format(type(other)))
-
-
 
     #############
     # Operators #
@@ -2005,7 +1448,7 @@ class ProMP(object):
             promp = DiscreteProMP(num_dofs=num_dofs, weights=self.weights[idx])
         elif isinstance(self, RhythmicProMP):
             promp = RhythmicProMP(num_dofs=num_dofs, weights=self.weights[idx])
-        else: # ProMP
+        else:  # ProMP
             promp = ProMP(num_dofs=num_dofs, weights=self.weights[idx])
 
         # set block diagonal basis matrix
@@ -2030,7 +1473,6 @@ class ProMP(object):
     def __rmul__(self, other):
         """Multiply this ProMP with another one"""
         return self.multiply(other)
-
 
 
 class DiscreteProMP(ProMP):
@@ -2067,7 +1509,6 @@ class DiscreteProMP(ProMP):
         else:
             self.Phi = BlockDiagonalMatrix([GaussianBM(self.cs, num_basis, basis_width=basis_width)
                                             for _ in range(num_dofs)])
-
 
 
 class RhythmicProMP(ProMP):
@@ -2107,35 +1548,10 @@ class RhythmicProMP(ProMP):
                                             for _ in range(num_dofs)])
 
 
-
-
 # TESTS
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    # num_basis, width = 10, 1.
-    # centers = np.linspace(-2 * width, 1 + 2 * width, num_basis)
-    # cs = LinearCS()
-    # phi = GaussianBF(centers, width)
-    # s = 0.5
-    # #s = np.array([0.5, 0.6, 0.7])
-    # print(phi(s).shape)     # shape: TxM
-    # print(phi(s))
-    #
-    # # create dphi function
-    # def dphi_t(cs, phi):
-    #     def step(s):
-    #         return phi.grad(s) * cs.grad()
-    #     return step
-    #
-    # dphi = dphi_t(cs, phi)
-    # print(dphi(s).shape)
-    # print(dphi(s))
-    #
-    # bm = GaussianBM(cs, num_basis, width)
-    # bm = VonMisesBM(cs, num_basis, width)
-    # print(bm(s).shape)
-    # print(bm(s))
 
     def plot_state(Y, title=None, linewidth=1.):
         y, dy = Y.T
@@ -2153,14 +1569,16 @@ if __name__ == "__main__":
         plt.title('dy(t)')
         plt.plot(dy, linewidth=linewidth)  # TxN
 
-    def plot_weigthed_basis(promp):
+
+    def plot_weighted_basis(promp):
         phi_track = promp.weighted_basis(t)  # shape: DM,T,2D
 
         plt.subplot(1, 2, 1)
-        plt.plot(phi_track[:,:,0].T, linewidth=0.5)
+        plt.plot(phi_track[:, :, 0].T, linewidth=0.5)
 
         plt.subplot(1, 2, 2)
-        plt.plot(phi_track[:,:,1].T, linewidth=0.5)
+        plt.plot(phi_track[:, :, 1].T, linewidth=0.5)
+
 
     # create data and plot it
     N = 8
@@ -2168,7 +1586,7 @@ if __name__ == "__main__":
     eps = 0.1
     y = np.array([np.sin(2*np.pi*t) + eps * np.random.rand(len(t)) for _ in range(N)])      # shape: NxT
     dy = np.array([2*np.pi*np.cos(2*np.pi*t) + eps * np.random.rand(len(t)) for _ in range(N)])     # shape: NxT
-    Y = np.dstack((y, dy)) # N,T,2D  --> why not N,2D,T
+    Y = np.dstack((y, dy))  # N,T,2D  --> why not N,2D,T
     plot_state(Y, title='Training data')
     plt.show()
 
@@ -2176,21 +1594,21 @@ if __name__ == "__main__":
     promp = DiscreteProMP(num_dofs=1, num_basis=10, basis_width=1./20)
 
     # plot the basis function activations
-    plt.plot(promp.Phi(t)[:,:,0].T)
+    plt.plot(promp.Phi(t)[:, :, 0].T)
     plt.title('basis functions')
     plt.show()
 
     # plot ProMPs
     y_pred = promp.rollout()
     plot_state(y_pred[None], title='ProMP prediction before learning', linewidth=2.)    # shape: N,T,2D
-    plot_weigthed_basis(promp)
+    plot_weighted_basis(promp)
     plt.show()
 
     # learn from demonstrations
     promp.imitate(Y)
     y_pred = promp.rollout()
     plot_state(y_pred[None], title='ProMP prediction after learning', linewidth=2.)   # N,T,2D
-    plot_weigthed_basis(promp)
+    plot_weighted_basis(promp)
     plt.show()
 
     # modulation: final positions (goals)

@@ -122,12 +122,12 @@ class GMM(object):
 
 
     References:
-        [1] "Pattern Recognition and Machine Learning" (chap 2, 3, 9, and 10), Bishop, 2006
-        [2] "Machine Learning: a Probabilistic Perspective" (chap 3 and 11), Murphy, 2012
-        [3] "Robot Programming by Demonstration: a Probabilistic Approach" (chap 2), Calinon, 2009
-        [4] "A Tutorial on Task-Parameterized Movement Learning and Retrieval", Calinon, 2015
-        [5] "Programming by Demonstration on Riemannian Manifolds" (PhD thesis, chap 1 and 2), Zeerstraten, 2017
-        [6] "Learning Control", Calinon et al., 2018
+        - [1] "Pattern Recognition and Machine Learning" (chap 2, 3, 9, and 10), Bishop, 2006
+        - [2] "Machine Learning: a Probabilistic Perspective" (chap 3 and 11), Murphy, 2012
+        - [3] "Robot Programming by Demonstration: a Probabilistic Approach" (chap 2), Calinon, 2009
+        - [4] "A Tutorial on Task-Parameterized Movement Learning and Retrieval", Calinon, 2015
+        - [5] "Programming by Demonstration on Riemannian Manifolds" (PhD thesis, chap 1 and 2), Zeerstraten, 2017
+        - [6] "Learning Control", Calinon et al., 2018
 
     The code was inspired by the following codes:
     - `gaussian.py`: defines the Gaussian distribution
@@ -557,7 +557,7 @@ class GMM(object):
             float: posterior
 
         References:
-            [1] "Pattern Recognition and Machine Learning" (eq. 9.75), Bishop, 2006
+            - [1] "Pattern Recognition and Machine Learning" (eq. 9.75), Bishop, 2006
         """
         # if hidden variable is an index
         if isinstance(z, int):
@@ -605,7 +605,7 @@ class GMM(object):
             float: log posterior
 
         References:
-            [1] "Pattern Recognition and Machine Learning" (eq. 9.75), Bishop, 2006
+            - [1] "Pattern Recognition and Machine Learning" (eq. 9.75), Bishop, 2006
         """
         return np.log(self.posterior_pdf(x, z))
 
@@ -642,12 +642,12 @@ class GMM(object):
         Args:
             x (np.array[N,D], np.array[D]): data vector/matrix
 
-        References:
-            [1] "Pattern Recognition and Machine Learning" (chap 9.4), Bishop, 2006
-
         Returns:
             float: expected value of the complete data log-likelihood (under the posterior distribution of the latent
                 variables)
+
+        References:
+            - [1] "Pattern Recognition and Machine Learning" (chap 9.4), Bishop, 2006
         """
         # get useful variables
         responsibilities = self.responsibilities(x)     # shape: K if one data point, otherwise NxK
@@ -801,7 +801,7 @@ class GMM(object):
             data:
 
         References:
-            [1] "Robot Programming by Demonstration: A Probabilistic Approach", Calinon, 2009, Chap 2.9.3
+            - [1] "Robot Programming by Demonstration: A Probabilistic Approach", Calinon, 2009, Chap 2.9.3
         """
         pass
 
@@ -1040,9 +1040,9 @@ class GMM(object):
             int, np.int[N]: component index/indices (if the argument kind == 'complete')
         """
         idx = self.sample_hidden(size=size, seed=seed)
-        if isinstance(idx, int): # just one
-            return self.gaussians[idx].sample() # shape: D
-        return np.array([self.gaussians[i].sample() for i in idx]) # shape: NxD
+        if isinstance(idx, int):  # just one
+            return self.gaussians[idx].sample()  # shape: D
+        return np.array([self.gaussians[i].sample() for i in idx])  # shape: NxD
 
     def responsibilities(self, x, k=None, axis=1):
         r"""
@@ -1126,8 +1126,8 @@ class GMM(object):
             GMM: conditioned gaussian mixture model
 
         References:
-            [1] "Robot Programming by Demonstration: a Probabilistic Approach" (chap 2), Calinon, 2009
-            [2] "A Tutorial on Task-Parameterized Movement Learning and Retrieval", Calinon, 2015
+            - [1] "Robot Programming by Demonstration: a Probabilistic Approach" (chap 2), Calinon, 2009
+            - [2] "A Tutorial on Task-Parameterized Movement Learning and Retrieval", Calinon, 2015
         """
         priors = self.responsibilities(x_in)
         gaussians = [g.condition(x_in, idx_out, idx_in) for g in self.gaussians]
@@ -1384,7 +1384,7 @@ class GMM(object):
             np.array: gradient of the same shape (as the variable from which we take the gradient)
 
         References:
-            [1] "The Matrix Cookbook" (math.uwaterloo.ca/~hwolkowi/matrixcookbook.pdf), Petersen and Pedersen, 2012
+            - [1] "The Matrix Cookbook" (math.uwaterloo.ca/~hwolkowi/matrixcookbook.pdf), Petersen and Pedersen, 2012
         """
         # TODO: check when x is a matrix
 
@@ -1614,7 +1614,7 @@ class VBGMM(GMM):
     as much so as to render usage unpractical." from [1]
 
     References:
-        [1] sklearn
+        - [1] sklearn
     """
 
     def __init__(self, num_components):
@@ -1625,7 +1625,7 @@ class TPGMM(GMM):
     r"""Task-Parametrized Gaussian Mixtured Model
 
     References:
-        [1] "A Tutorial on Task-Parameterized Movement Learning and Retrieval", Calinon, 2015
+        - [1] "A Tutorial on Task-Parameterized Movement Learning and Retrieval", Calinon, 2015
     """
 
     def __init__(self, num_frames, num_components):
@@ -1733,7 +1733,6 @@ if __name__ == "__main__":
     plt.show()
 
     # samples from the GMM and plot
-
 
     # GMR: condition on the input variable and plot
 
