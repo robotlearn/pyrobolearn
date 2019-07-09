@@ -1,0 +1,3 @@
+
+- The license for the tennis table and net is the `LICENSE.TXT` file.
+- The license for the paddle is the `BLENDSWAP_LICENSE.txt` file.

@@ -1,0 +1,3 @@
+
+- The license for the basketball net and board is the `LICENSE.TXT` file.
+- The license for the ball is the `BLENDSWAP_LICENSE.txt` file.

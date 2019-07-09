@@ -1,0 +1,3 @@
+
+- The license for the football/soccer goal is the `LICENSE.TXT` file.
+- The license for the ball is the `BLENDSWAP_LICENSE.txt` file.
