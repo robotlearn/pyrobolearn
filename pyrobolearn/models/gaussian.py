@@ -29,6 +29,9 @@ __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
+# TODO: optimize space by considering diagonal covariances (given as a vector), or spherical/isotropic covariance
+#  (given as a scalar)
+
 
 class Gaussian(object):
     r"""Multivariate Gaussian distribution
@@ -99,13 +102,13 @@ class Gaussian(object):
     # - https://stackoverflow.com/questions/38229953/array-and-rmul-operator-in-python-numpy
     __array_priority__ = 11
 
-    def __init__(self, mean=None, covariance=None, seed=None, manifold=None, N=None): # coefficient=1.
+    def __init__(self, mean=None, covariance=None, seed=None, manifold=None, N=None):  # coefficient=1.
         """
         Initialize the multivariate normal distribution on the given manifold.
 
         Args:
-            mean (np.array): mean vector.
-            covariance (np.array): covariance matrix.
+            mean (np.array[D]): mean vector.
+            covariance (np.array[D,D]): covariance matrix.
             seed (int): random seed. Useful when sampling.
             manifold (None): By default, it is the Euclidean space.
             N (int, N): the number of data points
@@ -129,7 +132,7 @@ class Gaussian(object):
         # TODO: formulas are different depending on the space we are in
         # TODO: the manifold should be an object (see the `geomstats` module)
         # For now, it will just be a string and we will focus on the Euclidean space
-        self.manifold = 'euclidean' #manifold
+        self.manifold = 'euclidean'  # manifold
 
         # number of data points
         self.N = N

@@ -467,8 +467,8 @@ class ProMP(object):  # Model
                     covs.append(cov)
                     means.append(mean)
 
-                cov = np.linalg.inv( np.sum(covs, axis=0) )
-                mean = cov.dot( np.sum(means, axis=0) )
+                cov = np.linalg.inv(np.sum(covs, axis=0))
+                mean = cov.dot(np.sum(means, axis=0))
 
                 return Gaussian(mean=mean, covariance=cov)
 
@@ -971,7 +971,7 @@ class ProMP(object):  # Model
         Returns:
             float: log marginal likelihood
         """
-        return np.log(self.marginal_likelihood(y,s))
+        return np.log(self.marginal_likelihood(y, s))
 
     def joint_distribution(self, y, Phi_or_s, y_cov=None):
         r"""
