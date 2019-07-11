@@ -95,6 +95,9 @@ class World(object):
         # self.interfaces = set([])
         # self.bridges = []
 
+        # keep in memory all the constraints that are created using `attach` and `detach` methods
+        self.constraints = {}
+
     ##############
     # Properties #
     ##############
@@ -122,7 +125,7 @@ class World(object):
         """Set the gravity vector in the world.
 
         Args:
-            gravity (np.float[3]): 3d gravity vector.
+            gravity (np.array[3]): 3d gravity vector.
         """
         self.simulator.gravity = gravity
 
@@ -615,12 +618,12 @@ class World(object):
         """Create a body in the simulator.
 
         Args:
-            position (np.float[3]): Cartesian world position of the base
+            position (np.array[3]): Cartesian world position of the base
             visual_shape_id (int): unique id from createVisualShape or -1. You can reuse the visual shape (instancing)
             collision_shape_id (int): unique id from createCollisionShape or -1. You can re-use the collision shape
                 for multiple multibodies (instancing)
             mass (float): mass of the base, in kg (if using SI units)
-            orientation (np.float[4]): Orientation of base as quaternion [x,y,z,w]
+            orientation (np.array[4]): Orientation of base as quaternion [x,y,z,w]
             return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
                 unique id.
 
@@ -928,57 +931,156 @@ class World(object):
                 int: body unique id of body B
                 int: link index of body A, -1 for base
                 int: link index of body B, -1 for base
-                np.float[3]: contact position on A, in Cartesian world coordinates
-                np.float[3]: contact position on B, in Cartesian world coordinates
-                np.float[3]: contact normal on B, pointing towards A
+                np.array[3]: contact position on A, in Cartesian world coordinates
+                np.array[3]: contact position on B, in Cartesian world coordinates
+                np.array[3]: contact normal on B, pointing towards A
                 float: contact distance, positive for separation, negative for penetration
                 float: normal force applied during the last `step`. Always equal to 0.
                 float: lateral friction force in the first lateral friction direction (see next returned value)
-                np.float[3]: first lateral friction direction
+                np.array[3]: first lateral friction direction
                 float: lateral friction force in the second lateral friction direction (see next returned value)
-                np.float[3]: second lateral friction direction
+                np.array[3]: second lateral friction direction
         """
+        if isinstance(body, Body):
+            body = body.id
+        if isinstance(body2, Body):
+            body2 = body2.id
+
         if body2 is not None:
-            return self.sim.get_closest_points(body1=body.id, body2=body2, distance=radius,
+            return self.sim.get_closest_points(body1=body, body2=body2, distance=radius,
                                                link1_id=link_id, link2_id=link2_id)
+
+        raise NotImplementedError("Currently, the second body has to be provided...")
 
     def get_contact_bodies(self):
         pass
 
-    def attach(self, body1, body2, link1=-1, link2=-1, contact_point=None):
+    def create_constraint(self, parent_body, parent_link_id=-1, child_body=-1, child_link_id=-1,
+                          joint_type=Simulator.JOINT_FIXED, joint_axis=(0., 0., 0.), parent_frame_position=(0., 0., 0.),
+                          child_frame_position=(0., 0., 0.), parent_frame_orientation=(0., 0., 0., 1.),
+                          child_frame_orientation=(0., 0., 0., 1.)):
         """
-        Attach two bodies (links) together at the specified contact points.
+        Create a constraint between two links belonging to the same body or two different bodies. You can also create
+        a constraint between a body/link and a world frame.
+
+        Args:
+            parent_body (int, Body): parent body (or its unique id)
+            parent_link_id (int): parent link index (or -1 for the base)
+            child_body (int, Body): child body (or its unique id), or -1 for no body (specify a non-dynamic child
+                frame in world coordinates)
+            child_link_id (int): child link index, or -1 for the base
+            joint_type (int): joint type: JOINT_PRISMATIC (=1), JOINT_FIXED (=4), JOINT_POINT2POINT (=5),
+                JOINT_GEAR (=6). If the JOINT_FIXED is set, the child body's link will not move with respect to the
+                parent body's link. If the JOINT_PRISMATIC is set, the child body's link will only be able to move
+                along the given joint axis with respect to the parent body's link. If the JOINT_POINT2POINT is set
+                (which should really be called spherical), the child body's link will be able to rotate along the 3
+                axis while maintaining the given position relative to the parent body's link.
+            joint_axis (np.array[3]): joint axis, in child link frame
+            parent_frame_position (np.array[3]): position of the joint frame relative to parent CoM frame.
+            child_frame_position (np.array[3]): position of the joint frame relative to a given child CoM frame (or
+                world origin if no child specified)
+            parent_frame_orientation (np.array[4]): the orientation of the joint frame relative to parent CoM
+                coordinate frame (expressed as a quaternion [x,y,z,w])
+            child_frame_orientation (np.array[4]): the orientation of the joint frame relative to the child CoM
+                coordinate frame, or world origin frame if no child specified (expressed as a quaternion [x,y,z,w])
+
+        Returns:
+            int: constraint unique id.
+        """
+        if isinstance(parent_body, Body):
+            parent_body = parent_body.id
+        if isinstance(child_body, Body):
+            child_body = child_body.id
+        return self.sim.create_constraint(parent_body_id=parent_body, parent_link_id=parent_link_id,
+                                          child_body_id=child_body, child_link_id=child_link_id,
+                                          joint_type=joint_type, joint_axis=joint_axis,
+                                          parent_frame_position=parent_frame_position,
+                                          child_frame_position=child_frame_position,
+                                          parent_frame_orientation=parent_frame_orientation,
+                                          child_frame_orientation=child_frame_orientation)
+
+    def remove_constraint(self, constraint_id):
+        """
+        Remove the specified constraint.
+
+        Args:
+            constraint_id (int): constraint unique id.
+        """
+        self.sim.remove_constraint(constraint_id)
+
+    def attach(self, body1, body2, link1=-1, link2=-1, joint_axis=(0., 0., 0.),
+               parent_frame_position=(0., 0., 0.), child_frame_position=(0., 0., 0.),
+               parent_frame_orientation=(0., 0., 0., 1.), child_frame_orientation=(0., 0., 0., 1.)):
+        """
+        Attach two bodies (links) together at the specified contact point.
 
         To detach them, call ``world.detach(body1, body2, link1, link2)``.
+
+        Note that this method is syntactic sugar for the ``create_constraint`` method with the joint type set to a
+        fixed joint.
 
         Args:
             body1 (int, Body): body unique id, or a Body instance.
             body2 (int, Body): body unique id, or a Body instance.
             link1 (int, None): link id. By default, it will be the base (=-1).
             link2 (int, None): link id. By default, it will be the base (=-1).
-            contact_point (np.array[3], None): the contact point. If None, it will compute it. If there are multiple
-                contact points, it will attach the links to each one of them.
+            joint_axis (np.array[3]): joint axis, in child link frame
+            parent_frame_position (np.array[3]): position of the joint frame relative to parent CoM frame.
+            child_frame_position (np.array[3]): position of the joint frame relative to a given child CoM frame (or
+                world origin if no child specified)
+            parent_frame_orientation (np.array[4]): the orientation of the joint frame relative to parent CoM
+                coordinate frame (expressed as a quaternion [x,y,z,w])
+            child_frame_orientation (np.array[4]): the orientation of the joint frame relative to the child CoM
+                coordinate frame, or world origin frame if no child specified (expressed as a quaternion [x,y,z,w])
 
         Returns:
             bool: True if it was successful.
         """
-        pass
+        constraint_id = self.create_constraint(parent_body=body1, parent_link_id=link1, child_body=body2,
+                                               child_link_id=link2, joint_axis=joint_axis,
+                                               parent_frame_position=parent_frame_position,
+                                               child_frame_position=child_frame_position,
+                                               parent_frame_orientation=parent_frame_orientation,
+                                               child_frame_orientation=child_frame_orientation)
+        self.constraints[(body1, body2)] = {(link1, link2): constraint_id}
+        return constraint_id > 0
 
-    def detach(self, body1, body2, link1=-1, link2=-1, contact_point=None):
+    def detach(self, body1, body2, link1=None, link2=None):
         """
         Detach two bodies that were previously attached.
 
         Args:
-            body1:
-            body2:
-            link1:
-            link2:
-            contact_point:
+            body1 (int, Body): body unique id, or a Body instance.
+            body2 (int, Body): body unique id, or a Body instance.
+            link1 (int, None): link id. By default, it will be the base (=-1). If None, all the links of the first
+                body that were attached to the second body will be detached.
+            link2 (int, None): link id. By default, it will be the base (=-1). If None, all the links of the second
+                body that were attached to the first body will be detached.
 
         Returns:
             bool: True if it was successful.
         """
-        pass
+        if (body1, body2) in self.constraints:
+            if link1 is None or link2 is None:
+                for constraint in self.constraints[(body1, body2)]:
+                    link_id1, link_id2, constraint_id = constraint[-1]
+                    if link1 is None:
+                        if link2 is None:  # link1 and link2 are both None
+                            self.sim.remove_constraint(constraint_id)
+                        else:  # link1 is None and link2 is not
+                            if link2 == link_id2:
+                                self.sim.remove_constraint(constraint_id)
+                    else:
+                        if link2 is None:  # link1 is not None and link2 is None
+                            if link1 == link_id1:
+                                self.sim.remove_constraint(constraint_id)
+                        else:  # link1 and link2 are not None
+                            if link1 == link_id1 and link2 == link_id2:
+                                self.sim.remove_constraint(constraint_id)
+            else:
+                self.sim.remove_constraint(self.constraints[(body1, body2, link1, link2)])
+            return True
+        return False
 
     def load_floor(self, scaling=1.):
         """
