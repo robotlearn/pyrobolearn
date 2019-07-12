@@ -18,6 +18,8 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
+# TODO: finish to implement the world, create corresponding environment (in `envs` folder) with state and reward.
+
 class PingPongWorld(BasicWorld):
     r"""Ping Pong world
 
@@ -113,10 +115,40 @@ if __name__ == '__main__':
     from itertools import count
     import pyrobolearn as prl
 
+    # create simulator
     sim = prl.simulators.Bullet()
 
+    # load world
     world = PingPongWorld(sim)
-    # world = BallOnPaddleWorld(sim)
 
+    # Tests before creating environment
+    # load 2 robots
+    robot1 = world.load_robot('kuka_iiwa', position=[1.8, 0., 0.2], fixed_base=True)
+    robot2 = world.load_robot('kuka_iiwa', position=[-1.8, 0., 0.2], fixed_base=True)
+
+    # attach each paddle to the robot's end-effector
+    world.attach(body1=robot1, body2=world.paddle1, link1=robot1.end_effectors[0], link2=-1, joint_axis=[0., 0., 0.],
+                 parent_frame_position=[0., 0., 0.02], child_frame_position=[0., 0., 0.],
+                 parent_frame_orientation=[0, -0.707, 0, 0.707])
+    world.attach(body1=robot2, body2=world.paddle2, link1=robot2.end_effectors[0], link2=-1, joint_axis=[0., 0., 0.],
+                 parent_frame_position=[0., 0., 0.02], child_frame_position=[0., 0., 0.],
+                 parent_frame_orientation=[0, 0.707, 0, 0.707])
+
+    # run the simulation
+    direction = 1
+    dy = np.array([0., 0.005, 0.])
+    y_lim = 0.8
     for t in count():
+        # move the robot base (only valid in the simulator)
+        x, y, z = robot1.position
+        if y > y_lim:
+            robot1.position -= dy
+            direction = -1
+        elif y < -y_lim and direction == -1:
+            robot1.position += dy
+            direction = 1
+        else:
+            robot1.position += direction * dy
+
+        # step in the simulation
         world.step(sim.dt)

@@ -18,6 +18,8 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
+# TODO: finish to implement the world, create corresponding environment (in `envs` folder) with state and reward.
+
 class DartsWorld(BasicWorld):
     r"""Darts world
 
@@ -68,9 +70,20 @@ if __name__ == '__main__':
     from itertools import count
     import pyrobolearn as prl
 
+    # create simulator
     sim = prl.simulators.Bullet()
 
+    # create world
     world = DartsWorld(sim)
 
+    # create manipulator
+    robot = world.load_robot('kuka_iiwa')
+
+    # attach first dart to robot end effector
+    world.attach(body1=robot, body2=world.darts[0], link1=robot.end_effectors[0], link2=-1, joint_axis=[0., 0., 0.],
+                 parent_frame_position=[0., 0., 0.02], child_frame_position=[0., 0., 0.],
+                 parent_frame_orientation=[0, 0., 0., 1.])
+
+    # run simulation
     for t in count():
-       world.step(sim.dt)
+        world.step(sim.dt)

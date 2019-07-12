@@ -18,6 +18,8 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
+# TODO: finish to implement the world, create corresponding environment (in `envs` folder) with state and reward.
+
 class BilliardWorld(BasicWorld):
     r"""Billiard world
 
@@ -46,7 +48,7 @@ class BilliardWorld(BasicWorld):
 
         # load cue
         self.cue1 = self.load_mesh(mesh_path + 'cue.obj', position=position + np.array([-0.5, 0.4, 0.4]), mass=0.595,
-                                   scale=(1.5, 1., 1.), flags=0, return_body=True)
+                                   scale=(1., 1., 1.), flags=0, return_body=True)
 
         # load balls
         # the order is based on: https://www.wikihow.com/Rack-a-Pool-Table
@@ -94,9 +96,21 @@ if __name__ == '__main__':
     from itertools import count
     import pyrobolearn as prl
 
+    # create simulator
     sim = prl.simulators.Bullet()
 
+    # create world
     world = BilliardWorld(sim)
 
+    # create manipulator
+    robot = world.load_robot('kuka_iiwa', position=[-2., 0.2, 0.])
+
+    # attach cue to robot end effector
+    # Note that you can detach the cue from the robot end effector using `world.detach`
+    world.attach(body1=robot, body2=world.cue1, link1=robot.end_effectors[0], link2=-1, joint_axis=[0., 0., 0.],
+                 parent_frame_position=[-0., 0., 0.02], child_frame_position=[0., 0., 0.],
+                 parent_frame_orientation=[0, 0., 0., 1.])
+
+    # run simulation
     for t in count():
         world.step(sim.dt)

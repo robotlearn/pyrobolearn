@@ -2039,6 +2039,8 @@ class World(object):
         """
         if body_id is None:
             body_id = self.floor_id
+        elif isinstance(body_id, Body):
+            body_id = body_id.id
         self.sim.change_dynamics(body_id=body_id, link_id=-1, lateral_friction=lateral_friction,
                                  spinning_friction=spinning_friction, rolling_friction=rolling_friction,
                                  restitution=restitution, linear_damping=linear_damping,

@@ -18,6 +18,8 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
+# TODO: finish to implement the world, create corresponding environment (in `envs` folder) with state and reward.
+
 class BasketBallWorld(BasicWorld):
     r"""Basketball world
 
@@ -43,7 +45,9 @@ class BasketBallWorld(BasicWorld):
         # load ball
         # self.ball = self.load_sphere(position=[0., 0., 1.], radius=0.1193, mass=0.625)
         # self.apply_texture(texture=mesh_path + 'Basketball-ColorMap.jpg', body_id=self.ball)
-        self.ball = self.load_mesh(mesh_path + 'ball.obj', position=[0., 0., 1.], scale=scale, mass=0.625, flags=0)
+        self.ball = self.load_mesh(mesh_path + 'ball.obj', position=[0., 0., 2.], scale=(1., 1., 1.), mass=0.625,
+                                   flags=0)
+        self.ball_radius = 0.1193
 
         # set the restitution coefficient for the ball
         # Ref: "Measure the coefficient of restitution for sports balls", Persson, 2012
@@ -62,9 +66,20 @@ if __name__ == '__main__':
     from itertools import count
     import pyrobolearn as prl
 
+    # create simulator
     sim = prl.simulators.Bullet()
 
+    # create world
     world = BasketBallWorld(sim)
 
+    # create manipulator
+    robot = world.load_robot('kuka_iiwa')
+
+    # attach ball to robot end effector
+    world.attach(body1=robot, body2=world.ball, link1=robot.end_effectors[0], link2=-1, joint_axis=[0., 0., 0.],
+                 parent_frame_position=[0., 0., world.ball_radius], child_frame_position=[0., 0., 0.],
+                 parent_frame_orientation=[0, 0., 0., 1.])
+
+    # run simulation
     for t in count():
        world.step(sim.dt)
