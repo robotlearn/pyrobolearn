@@ -78,11 +78,11 @@ class PCA(object):
     ##############
 
     @property
-    def eigenvalues(self): # alias to evals
+    def eigenvalues(self):  # alias to evals
         return self.evals
 
     @property
-    def eigenvectors(self): # alias to evecs
+    def eigenvectors(self):  # alias to evecs
         return self.evecs
 
     ##################

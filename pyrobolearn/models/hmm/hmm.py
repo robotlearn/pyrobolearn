@@ -1,5 +1,7 @@
 # This file describes the Hidden Markov Model
 
+# TODO: implement this model
+
 from gaussian import Gaussian
 from model import Model
 from hmmlearn.hmm import GaussianHMM
