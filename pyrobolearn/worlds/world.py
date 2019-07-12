@@ -1082,6 +1082,31 @@ class World(object):
             return True
         return False
 
+    def are_attached(self, body1, body2, link1=None, link2=None):
+        """
+        Return True if the given links/bodies are attached.
+
+        Args:
+            body1 (int, Body): body unique id, or a Body instance.
+            body2 (int, Body): body unique id, or a Body instance.
+            link1 (int, None): link id. By default, it will be the base (=-1). If None, all the links of the first
+                body that were attached to the second body will be detached.
+            link2 (int, None): link id. By default, it will be the base (=-1). If None, all the links of the second
+                body that were attached to the first body will be detached.
+
+        Returns:
+            bool: True if the bodies/links are attached.
+        """
+        if (body1, body2) in self.constraints:
+            if link1 is None and link2 is None:
+                return True
+            else:
+                for constraint in self.constraints[(body1, body2)]:
+                    link_1, link_2, constraint_id = constraint[-1]
+                    if link1 == link_1 and link2 == link_2:
+                        return True
+        return False
+
     def load_floor(self, scaling=1.):
         """
         Load a basic floor in the world.

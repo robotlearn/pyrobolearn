@@ -235,6 +235,16 @@ class Bullet(Simulator):
     @staticmethod
     def simulate_soft_bodies():
         """Return True if the simulator can simulate soft bodies."""
+        # For the moment, this feature is not well supported in PyBullet
+        # You can check Jan Matas's work for soft bodies:
+        # - https://github.com/JanMatas/bullet3
+        # - https://www.imperial.ac.uk/media/imperial-college/faculty-of-engineering/computing/public/1718-ug-projects\
+        #   /Jan-Matas-Learning-end-to-end-robotic-manipulation-of-deformable-objects.pdf
+        return False
+
+    @staticmethod
+    def supports_dynamic_loading():
+        """Return True if the simulator supports the dynamic loading of models."""
         return True
 
     ###########
@@ -946,8 +956,8 @@ class Bullet(Simulator):
             collision_shape_id (int): unique id from createCollisionShape or -1. You can re-use the collision shape
                 for multiple multibodies (instancing)
             mass (float): mass of the base, in kg (if using SI units)
-            position (np.float[3]): Cartesian world position of the base
-            orientation (np.float[4]): Orientation of base as quaternion [x,y,z,w]
+            position (np.array[3]): Cartesian world position of the base
+            orientation (np.array[4]): Orientation of base as quaternion [x,y,z,w]
 
         Returns:
             int: non-negative unique id or -1 for failure.
@@ -1028,14 +1038,19 @@ class Bullet(Simulator):
                 coordinates)
             child_link_id (int): child link index, or -1 for the base
             joint_type (int): joint type: JOINT_PRISMATIC (=1), JOINT_FIXED (=4), JOINT_POINT2POINT (=5),
-                JOINT_GEAR (=6)
-            joint_axis (np.float[3]): joint axis, in child link frame
-            parent_frame_position (np.float[3]): position of the joint frame relative to parent CoM frame.
-            child_frame_position (np.float[3]): position of the joint frame relative to a given child CoM frame (or
+                JOINT_GEAR (=6). If the JOINT_FIXED is set, the child body's link will not move with respect to the
+                parent body's link. If the JOINT_PRISMATIC is set, the child body's link will only be able to move
+                along the given joint axis with respect to the parent body's link. If the JOINT_POINT2POINT is set
+                (which should really be called spherical), the child body's link will be able to rotate along the 3
+                axis while maintaining the given position relative to the parent body's link. If the JOINT_GEAR can be
+                set between two links of the same body.
+            joint_axis (np.array[3]): joint axis, in child link frame
+            parent_frame_position (np.array[3]): position of the joint frame relative to parent CoM frame.
+            child_frame_position (np.array[3]): position of the joint frame relative to a given child CoM frame (or
                 world origin if no child specified)
-            parent_frame_orientation (np.float[4]): the orientation of the joint frame relative to parent CoM
+            parent_frame_orientation (np.array[4]): the orientation of the joint frame relative to parent CoM
                 coordinate frame
-            child_frame_orientation (np.float[4]): the orientation of the joint frame relative to the child CoM
+            child_frame_orientation (np.array[4]): the orientation of the joint frame relative to the child CoM
                 coordinate frame (or world origin frame if no child specified)
 
         Examples:
@@ -1066,9 +1081,9 @@ class Bullet(Simulator):
 
         Args:
             constraint_id (int): constraint unique id.
-            child_joint_pivot (np.float[3]): updated position of the joint frame relative to a given child CoM frame
+            child_joint_pivot (np.array[3]): updated position of the joint frame relative to a given child CoM frame
                 (or world origin if no child specified)
-            child_frame_orientation (np.float[4]): updated child frame orientation as quaternion [x,y,z,w]
+            child_frame_orientation (np.array[4]): updated child frame orientation as quaternion [x,y,z,w]
             max_force (float): maximum force that constraint can apply
             gear_ratio (float): the ratio between the rates at which the two gears rotate
             gear_auxiliary_link (int): In some cases, such as a differential drive, a third (auxilary) link is used as
@@ -1128,11 +1143,11 @@ class Bullet(Simulator):
             int: child_body_id    (if -1, no body; specify a non-dynamic child frame in world coordinates)
             int: child_link_id    (if -1, it is the base)
             int: constraint/joint type
-            np.float[3]: joint axis
-            np.float[3]: joint pivot (position) in parent CoM frame
-            np.float[3]: joint pivot (position) in specified child CoM frame (or world frame if no specified child)
-            np.float[4]: joint frame orientation relative to parent CoM coordinate frame
-            np.float[4]: joint frame orientation relative to child CoM frame (or world frame if no specified child)
+            np.array[3]: joint axis
+            np.array[3]: joint pivot (position) in parent CoM frame
+            np.array[3]: joint pivot (position) in specified child CoM frame (or world frame if no specified child)
+            np.array[4]: joint frame orientation relative to parent CoM coordinate frame
+            np.array[4]: joint frame orientation relative to child CoM frame (or world frame if no specified child)
             float: maximum force that constraint can apply
         """
         return self.sim.getConstraintInfo(constraint_id)
@@ -1145,7 +1160,7 @@ class Bullet(Simulator):
             constraint_id (int): constraint unique id.
 
         Returns:
-            np.float[D]: applied constraint forces. Its dimension is the degrees of freedom that are affected by
+            np.array[D]: applied constraint forces. Its dimension is the degrees of freedom that are affected by
                 the constraint (a fixed constraint affects 6 DoF for example)
         """
         return self.sim.getConstraintState(constraint_id)
@@ -1198,7 +1213,7 @@ class Bullet(Simulator):
                 of the specified body.
 
         Returns:
-            np.float[3]: center of mass position in the Cartesian world coordinates
+            np.array[3]: center of mass position in the Cartesian world coordinates
         """
         if link_ids is None:
             link_ids = list(range(self.num_links(body_id)))
@@ -1219,7 +1234,7 @@ class Bullet(Simulator):
                 of the specified body.
 
         Returns:
-            np.float[3]: center of mass linear velocity.
+            np.array[3]: center of mass linear velocity.
         """
         if link_ids is None:
             link_ids = list(range(self.num_links(body_id)))
@@ -1235,7 +1250,7 @@ class Bullet(Simulator):
         Return the total linear momentum in the world space.
 
         Returns:
-            np.float[3]: linear momentum
+            np.array[3]: linear momentum
         """
         if link_ids is None:
             link_ids = list(range(self.num_links(body_id)))
@@ -1251,8 +1266,8 @@ class Bullet(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: base position
-            np.float[4]: base orientation (quaternion [x,y,z,w])
+            np.array[3]: base position
+            np.array[4]: base orientation (quaternion [x,y,z,w])
         """
         pos, orientation = self.sim.getBasePositionAndOrientation(body_id)
         return np.asarray(pos), np.asarray(orientation)
@@ -1265,7 +1280,7 @@ class Bullet(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: base position.
+            np.array[3]: base position.
         """
         return self.get_base_pose(body_id)[0]
 
@@ -1277,7 +1292,7 @@ class Bullet(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[4]: base orientation in the form of a quaternion (x,y,z,w)
+            np.array[4]: base orientation in the form of a quaternion (x,y,z,w)
         """
         return self.get_base_pose(body_id)[1]
 
@@ -1291,8 +1306,8 @@ class Bullet(Simulator):
 
         Args:
             body_id (int): unique object id.
-            position (np.float[3]): new base position.
-            orientation (np.float[4]): new base orientation (expressed as a quaternion [x,y,z,w])
+            position (np.array[3]): new base position.
+            orientation (np.array[4]): new base orientation (expressed as a quaternion [x,y,z,w])
         """
         self.sim.resetBasePositionAndOrientation(body_id, position, orientation)
 
@@ -1302,7 +1317,7 @@ class Bullet(Simulator):
 
         Args:
             body_id (int): unique object id.
-            position (np.float[3]): new base position.
+            position (np.array[3]): new base position.
         """
         orientation = self.get_base_orientation(body_id)
         self.reset_base_pose(body_id, position, orientation)
@@ -1313,7 +1328,7 @@ class Bullet(Simulator):
 
         Args:
             body_id (int): unique object id.
-            orientation (np.float[4]): new base orientation (expressed as a quaternion [x,y,z,w])
+            orientation (np.array[4]): new base orientation (expressed as a quaternion [x,y,z,w])
         """
         position = self.get_base_position(body_id)
         self.reset_base_pose(body_id, position, orientation)
@@ -1326,8 +1341,8 @@ class Bullet(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: linear velocity of the base in Cartesian world space coordinates
-            np.float[3]: angular velocity of the base in Cartesian world space coordinates
+            np.array[3]: linear velocity of the base in Cartesian world space coordinates
+            np.array[3]: angular velocity of the base in Cartesian world space coordinates
         """
         lin_vel, ang_vel = self.sim.getBaseVelocity(body_id)
         return np.asarray(lin_vel), np.asarray(ang_vel)
@@ -1340,7 +1355,7 @@ class Bullet(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: linear velocity of the base in Cartesian world space coordinates
+            np.array[3]: linear velocity of the base in Cartesian world space coordinates
         """
         return self.get_base_velocity(body_id)[0]
 
@@ -1352,7 +1367,7 @@ class Bullet(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: angular velocity of the base in Cartesian world space coordinates
+            np.array[3]: angular velocity of the base in Cartesian world space coordinates
         """
         return self.get_base_velocity(body_id)[1]
 
@@ -1362,8 +1377,8 @@ class Bullet(Simulator):
 
         Args:
             body_id (int): unique object id.
-            linear_velocity (np.float[3]): new linear velocity of the base.
-            angular_velocity (np.float[3]): new angular velocity of the base.
+            linear_velocity (np.array[3]): new linear velocity of the base.
+            angular_velocity (np.array[3]): new angular velocity of the base.
         """
         if linear_velocity is not None and angular_velocity is not None:
             self.sim.resetBaseVelocity(body_id, linearVelocity=linear_velocity, angularVelocity=angular_velocity)
@@ -1378,7 +1393,7 @@ class Bullet(Simulator):
 
         Args:
             body_id (int): unique object id.
-            linear_velocity (np.float[3]): new linear velocity of the base
+            linear_velocity (np.array[3]): new linear velocity of the base
         """
         self.sim.resetBaseVelocity(body_id, linearVelocity=linear_velocity)
 
@@ -1388,7 +1403,7 @@ class Bullet(Simulator):
 
         Args:
             body_id (int): unique object id.
-            angular_velocity (np.float[3]): new angular velocity of the base
+            angular_velocity (np.array[3]): new angular velocity of the base
         """
         self.sim.resetBaseVelocity(body_id, angularVelocity=angular_velocity)
 
@@ -1404,8 +1419,8 @@ class Bullet(Simulator):
         Args:
             body_id (int): unique body id.
             link_id (int): unique link id. If -1, it will be the base.
-            force (np.float[3]): external force to be applied.
-            position (np.float[3], None): position on the link where the force is applied. See `flags` for coordinate
+            force (np.array[3]): external force to be applied.
+            position (np.array[3], None): position on the link where the force is applied. See `flags` for coordinate
                 systems. If None, it is the center of mass of the body (or the link if specified).
             frame (int): Specify the coordinate system of force/position: either `pybullet.WORLD_FRAME` (=2) for
                 Cartesian world coordinates or `pybullet.LINK_FRAME` (=1) for local link coordinates.
@@ -1513,9 +1528,9 @@ class Bullet(Simulator):
             [11] float:     maximum velocity specified in URDF. Note that this value is not used in actual
                             motor control commands at the moment.
             [12] str:       name of the link (as specified in the URDF/SDF/etc file)
-            [13] np.float[3]:  joint axis in local frame (ignored for JOINT_FIXED)
-            [14] np.float[3]:  joint position in parent frame
-            [15] np.float[4]:  joint orientation in parent frame
+            [13] np.array[3]:  joint axis in local frame (ignored for JOINT_FIXED)
+            [14] np.array[3]:  joint position in parent frame
+            [15] np.array[4]:  joint orientation in parent frame
             [16] int:       parent link index, -1 for base
         """
         info = list(self.sim.getJointInfo(body_id, joint_id))
@@ -1537,7 +1552,7 @@ class Bullet(Simulator):
         Returns:
             float: The position value of this joint.
             float: The velocity value of this joint.
-            np.float[6]: These are the joint reaction forces, if a torque sensor is enabled for this joint it is
+            np.array[6]: These are the joint reaction forces, if a torque sensor is enabled for this joint it is
                 [Fx, Fy, Fz, Mx, My, Mz]. Without torque sensor, it is [0, 0, 0, 0, 0, 0].
             float: This is the motor torque applied during the last stepSimulation. Note that this only applies in
                 VELOCITY_CONTROL and POSITION_CONTROL. If you use TORQUE_CONTROL then the applied joint motor torque
@@ -1558,7 +1573,7 @@ class Bullet(Simulator):
             list:
                 float: The position value of this joint.
                 float: The velocity value of this joint.
-                np.float[6]: These are the joint reaction forces, if a torque sensor is enabled for this joint it is
+                np.array[6]: These are the joint reaction forces, if a torque sensor is enabled for this joint it is
                     [Fx, Fy, Fz, Mx, My, Mz]. Without torque sensor, it is [0, 0, 0, 0, 0, 0].
                 float: This is the motor torque applied during the last `step`. Note that this only applies in
                     VELOCITY_CONTROL and POSITION_CONTROL. If you use TORQUE_CONTROL then the applied joint motor
@@ -1629,8 +1644,8 @@ class Bullet(Simulator):
             joint_ids ((list of) int): joint/link id, or list of joint ids.
             control_mode (int): POSITION_CONTROL (=2) (which is in fact CONTROL_MODE_POSITION_VELOCITY_PD),
                 VELOCITY_CONTROL (=0), TORQUE_CONTROL (=1) and PD_CONTROL (=3).
-            positions (float, np.float[N]): target joint position(s) (used in POSITION_CONTROL).
-            velocities (float, np.float[N]): target joint velocity(ies). In VELOCITY_CONTROL and POSITION_CONTROL,
+            positions (float, np.array[N]): target joint position(s) (used in POSITION_CONTROL).
+            velocities (float, np.array[N]): target joint velocity(ies). In VELOCITY_CONTROL and POSITION_CONTROL,
                 the target velocity(ies) is(are) the desired velocity of the joint. Note that the target velocity(ies)
                 is(are) not the maximum joint velocity(ies). In PD_CONTROL and
                 POSITION_CONTROL/CONTROL_MODE_POSITION_VELOCITY_PD, the final target velocities are computed using:
@@ -1688,15 +1703,15 @@ class Bullet(Simulator):
                 using forward kinematics.
 
         Returns:
-            np.float[3]: Cartesian position of CoM
-            np.float[4]: Cartesian orientation of CoM, in quaternion [x,y,z,w]
-            np.float[3]: local position offset of inertial frame (center of mass) expressed in the URDF link frame
-            np.float[4]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed in URDF link
+            np.array[3]: Cartesian position of CoM
+            np.array[4]: Cartesian orientation of CoM, in quaternion [x,y,z,w]
+            np.array[3]: local position offset of inertial frame (center of mass) expressed in the URDF link frame
+            np.array[4]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed in URDF link
                 frame
-            np.float[3]: world position of the URDF link frame
-            np.float[4]: world orientation of the URDF link frame
-            np.float[3]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
-            np.float[3]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
+            np.array[3]: world position of the URDF link frame
+            np.array[4]: world orientation of the URDF link frame
+            np.array[3]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
+            np.array[3]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
         """
         results = self.sim.getLinkState(body_id, link_id, computeLinkVelocity=int(compute_velocity),
                                         computeForwardKinematics=int(compute_forward_kinematics))
@@ -1715,15 +1730,15 @@ class Bullet(Simulator):
 
         Returns:
             list:
-                np.float[3]: Cartesian position of CoM
-                np.float[4]: Cartesian orientation of CoM, in quaternion [x,y,z,w]
-                np.float[3]: local position offset of inertial frame (center of mass) expressed in the URDF link frame
-                np.float[4]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed in URDF
+                np.array[3]: Cartesian position of CoM
+                np.array[4]: Cartesian orientation of CoM, in quaternion [x,y,z,w]
+                np.array[3]: local position offset of inertial frame (center of mass) expressed in the URDF link frame
+                np.array[4]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed in URDF
                     link frame
-                np.float[3]: world position of the URDF link frame
-                np.float[4]: world orientation of the URDF link frame
-                np.float[3]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
-                np.float[3]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
+                np.array[3]: world position of the URDF link frame
+                np.array[4]: world orientation of the URDF link frame
+                np.array[3]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
+                np.array[3]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
         """
         return [self.get_link_state(body_id, link_id, compute_velocity, compute_forward_kinematics)
                 for link_id in link_ids]
@@ -1790,9 +1805,9 @@ class Bullet(Simulator):
 
         Returns:
             if 1 link:
-                np.float[3]: the link CoM position in the world space
+                np.array[3]: the link CoM position in the world space
             if multiple links:
-                np.float[N,3]: CoM position of each link in world space
+                np.array[N,3]: CoM position of each link in world space
         """
         if isinstance(link_ids, int):
             if link_ids == -1:
@@ -1819,9 +1834,9 @@ class Bullet(Simulator):
 
         Returns:
             if 1 link:
-                np.float[4]: Cartesian orientation of the link CoM (x,y,z,w)
+                np.array[4]: Cartesian orientation of the link CoM (x,y,z,w)
             if multiple links:
-                np.float[N,4]: CoM orientation of each link (x,y,z,w)
+                np.array[N,4]: CoM orientation of each link (x,y,z,w)
         """
         if isinstance(link_ids, int):
             if link_ids == -1:
@@ -1848,9 +1863,9 @@ class Bullet(Simulator):
 
         Returns:
             if 1 link:
-                np.float[3]: linear velocity of the link in the Cartesian world space
+                np.array[3]: linear velocity of the link in the Cartesian world space
             if multiple links:
-                np.float[N,3]: linear velocity of each link
+                np.array[N,3]: linear velocity of each link
         """
         if isinstance(link_ids, int):
             if link_ids == -1:
@@ -1874,9 +1889,9 @@ class Bullet(Simulator):
 
         Returns:
             if 1 link:
-                np.float[3]: angular velocity of the link in the Cartesian world space
+                np.array[3]: angular velocity of the link in the Cartesian world space
             if multiple links:
-                np.float[N,3]: angular velocity of each link
+                np.array[N,3]: angular velocity of each link
         """
         if isinstance(link_ids, int):
             if link_ids == -1:
@@ -1901,9 +1916,9 @@ class Bullet(Simulator):
 
         Returns:
             if 1 link:
-                np.float[6]: linear and angular velocity of the link in the Cartesian world space
+                np.array[6]: linear and angular velocity of the link in the Cartesian world space
             if multiple links:
-                np.float[N,6]: linear and angular velocity of each link
+                np.array[N,6]: linear and angular velocity of each link
         """
         if isinstance(link_ids, int):
             if link_ids == -1:
@@ -2035,7 +2050,7 @@ class Bullet(Simulator):
             if 1 joint:
                 float: damping coefficient of the given joint
             if multiple joints:
-                np.float[N]: damping coefficient for each specified joint
+                np.array[N]: damping coefficient for each specified joint
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointInfo(body_id, joint_ids)[6]
@@ -2053,7 +2068,7 @@ class Bullet(Simulator):
             if 1 joint:
                 float: friction coefficient of the given joint
             if multiple joints:
-                np.float[N]: friction coefficient for each specified joint
+                np.array[N]: friction coefficient for each specified joint
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointInfo(body_id, joint_ids)[7]
@@ -2069,9 +2084,9 @@ class Bullet(Simulator):
 
         Returns:
             if 1 joint:
-                np.float[2]: lower and upper limit
+                np.array[2]: lower and upper limit
             if multiple joints:
-                np.float[N,2]: lower and upper limit for each specified joint
+                np.array[N,2]: lower and upper limit for each specified joint
         """
         if isinstance(joint_ids, int):
             return np.asarray(self.sim.getJointInfo(body_id, joint_ids)[8:10])
@@ -2091,7 +2106,7 @@ class Bullet(Simulator):
             if 1 joint:
                 float: maximum force [N]
             if multiple joints:
-                np.float[N]: maximum force for each specified joint [N]
+                np.array[N]: maximum force for each specified joint [N]
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointInfo(body_id, joint_ids)[10]
@@ -2111,7 +2126,7 @@ class Bullet(Simulator):
             if 1 joint:
                 float: maximum velocity [rad/s]
             if multiple joints:
-                np.float[N]: maximum velocities for each specified joint [rad/s]
+                np.array[N]: maximum velocities for each specified joint [rad/s]
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointInfo(body_id, joint_ids)[11]
@@ -2127,9 +2142,9 @@ class Bullet(Simulator):
 
         Returns:
             if 1 joint:
-                np.float[3]: joint axis
+                np.array[3]: joint axis
             if multiple joint:
-                np.float[N,3]: list of joint axis
+                np.array[N,3]: list of joint axis
         """
         if isinstance(joint_ids, int):
             return np.asarray(self.sim.getJointInfo(body_id, joint_ids)[-4])
@@ -2142,11 +2157,11 @@ class Bullet(Simulator):
         Args:
             body_id (int): unique body id.
             joint_ids (int, list of int): joint id, or list of joint ids.
-            positions (float, np.float[N]): desired position, or list of desired positions [rad]
-            velocities (None, float, np.float[N]): desired velocity, or list of desired velocities [rad/s]
-            kps (None, float, np.float[N]): position gain(s)
-            kds (None, float, np.float[N]): velocity gain(s)
-            forces (None, float, np.float[N]): maximum motor force(s)/torque(s) used to reach the target values.
+            positions (float, np.array[N]): desired position, or list of desired positions [rad]
+            velocities (None, float, np.array[N]): desired velocity, or list of desired velocities [rad/s]
+            kps (None, float, np.array[N]): position gain(s)
+            kds (None, float, np.array[N]): velocity gain(s)
+            forces (None, float, np.array[N]): maximum motor force(s)/torque(s) used to reach the target values.
         """
         self.set_joint_motor_control(body_id, joint_ids, control_mode=pybullet.POSITION_CONTROL, positions=positions,
                                      velocities=velocities, forces=forces, kp=kps, kd=kds)
@@ -2163,7 +2178,7 @@ class Bullet(Simulator):
             if 1 joint:
                 float: joint position [rad]
             if multiple joints:
-                np.float[N]: joint positions [rad]
+                np.array[N]: joint positions [rad]
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointState(body_id, joint_ids)[0]
@@ -2176,8 +2191,8 @@ class Bullet(Simulator):
         Args:
             body_id (int): unique body id.
             joint_ids (int, list of int): joint id, or list of joint ids.
-            velocities (float, np.float[N]): desired velocity, or list of desired velocities [rad/s]
-            max_force (None, float, np.float[N]): maximum motor forces/torques
+            velocities (float, np.array[N]): desired velocity, or list of desired velocities [rad/s]
+            max_force (None, float, np.array[N]): maximum motor forces/torques
         """
         if isinstance(joint_ids, int):
             if max_force is None:
@@ -2202,7 +2217,7 @@ class Bullet(Simulator):
             if 1 joint:
                 float: joint velocity [rad/s]
             if multiple joints:
-                np.float[N]: joint velocities [rad/s]
+                np.array[N]: joint velocities [rad/s]
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointState(body_id, joint_ids)[1]
@@ -2216,7 +2231,7 @@ class Bullet(Simulator):
         Args:
             body_id (int): unique body id.
             joint_ids (int, list of int): joint id, or list of joint ids.
-            accelerations (float, np.float[N]): desired joint acceleration, or list of desired joint accelerations
+            accelerations (float, np.array[N]): desired joint acceleration, or list of desired joint accelerations
                 [rad/s^2]
             q (None, list of float, float): current joint positions.
             dq (None, list of float, float): current joint velocities.
@@ -2273,7 +2288,7 @@ class Bullet(Simulator):
             if 1 joint:
                 float: joint acceleration [rad/s^2]
             if multiple joints:
-                np.float[N]: joint accelerations [rad/s^2]
+                np.array[N]: joint accelerations [rad/s^2]
         """
         # get the torques
         torques = self.get_joint_torques(body_id, joint_ids)
@@ -2320,7 +2335,7 @@ class Bullet(Simulator):
             if 1 joint:
                 float: torque [Nm]
             if multiple joints:
-                np.float[N]: torques associated to the given joints [Nm]
+                np.array[N]: torques associated to the given joints [Nm]
         """
         if isinstance(joint_ids, int):
             return self.sim.getJointState(body_id, joint_ids)[3]
@@ -2337,9 +2352,9 @@ class Bullet(Simulator):
 
         Returns:
             if 1 joint:
-                np.float[6]: joint reaction force (fx,fy,fz,mx,my,mz) [N,Nm]
+                np.array[6]: joint reaction force (fx,fy,fz,mx,my,mz) [N,Nm]
             if multiple joints:
-                np.float[N,6]: joint reaction forces [N, Nm]
+                np.array[N,6]: joint reaction forces [N, Nm]
         """
         if isinstance(joint_ids, int):
             return np.asarray(self.sim.getJointState(body_id, joint_ids)[2])
@@ -2357,7 +2372,7 @@ class Bullet(Simulator):
             if 1 joint:
                 float: joint power [W]
             if multiple joints:
-                np.float[N]: power at each joint [W]
+                np.array[N]: power at each joint [W]
         """
         torque = self.get_joint_torques(body_id, joint_ids)
         velocity = self.get_joint_velocities(body_id, joint_ids)
@@ -2378,24 +2393,24 @@ class Bullet(Simulator):
             shape_type (int): type of shape; GEOM_SPHERE (=2), GEOM_BOX (=3), GEOM_CAPSULE (=7), GEOM_CYLINDER (=4),
                 GEOM_PLANE (=6), GEOM_MESH (=5)
             radius (float): only for GEOM_SPHERE, GEOM_CAPSULE, GEOM_CYLINDER
-            half_extents (np.float[3], list/tuple of 3 floats): only for GEOM_BOX.
+            half_extents (np.array[3], list/tuple of 3 floats): only for GEOM_BOX.
             length (float): only for GEOM_CAPSULE, GEOM_CYLINDER (length = height).
             filename (str): Filename for GEOM_MESH, currently only Wavefront .obj. Will create convex hulls for each
                 object (marked as 'o') in the .obj file.
-            mesh_scale (np.float[3], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
-            plane_normal (np.float[3], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
+            mesh_scale (np.array[3], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
+            plane_normal (np.array[3], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
             flags (int): unused / to be decided
             rgba_color (list/tuple of 4 floats): color components for red, green, blue and alpha, each in range [0..1].
             specular_color (list/tuple of 3 floats): specular reflection color, red, green, blue components in range
                 [0..1]
-            visual_frame_position (np.float[3]): translational offset of the visual shape with respect to the link frame
-            vertices (list of np.float[3]): Instead of creating a mesh from obj file, you can provide vertices, indices,
+            visual_frame_position (np.array[3]): translational offset of the visual shape with respect to the link frame
+            vertices (list of np.array[3]): Instead of creating a mesh from obj file, you can provide vertices, indices,
                 uvs and normals
             indices (list of int): triangle indices, should be a multiple of 3.
-            uvs (list of np.float[2]): uv texture coordinates for vertices. Use changeVisualShape to choose the
+            uvs (list of np.array[2]): uv texture coordinates for vertices. Use changeVisualShape to choose the
                 texture image. The number of uvs should be equal to number of vertices
-            normals (list of np.float[3]): vertex normals, number should be equal to number of vertices.
-            visual_frame_orientation (np.float[4]): rotational offset (quaternion x,y,z,w) of the visual shape with
+            normals (list of np.array[3]): vertex normals, number should be equal to number of vertices.
+            visual_frame_orientation (np.array[4]): rotational offset (quaternion x,y,z,w) of the visual shape with
                 respect to the link frame
 
         Returns:
@@ -2449,11 +2464,11 @@ class Bullet(Simulator):
                 int: object unique id.
                 int: link index or -1 for the base
                 int: visual geometry type (TBD)
-                np.float[3]: dimensions (size, local scale) of the geometry
+                np.array[3]: dimensions (size, local scale) of the geometry
                 str: path to the triangle mesh, if any. Typically relative to the URDF, SDF or MJCF file location, but
                     could be absolute
-                np.float[3]: position of local visual frame, relative to link/joint frame
-                np.float[4]: orientation of local visual frame relative to link/joint frame
+                np.array[3]: position of local visual frame, relative to link/joint frame
+                np.array[4]: orientation of local visual frame relative to link/joint frame
                 list of 4 floats: URDF color (if any specified) in Red / Green / Blue / Alpha
                 int: texture unique id of the shape or -1 if None. This field only exists if using
                     VISUAL_SHAPE_DATA_TEXTURE_UNIQUE_IDS (=1) flag.
@@ -2513,12 +2528,12 @@ class Bullet(Simulator):
         of turning the camera to capture what we want in the world, we keep the camera fixed and turn the world.
 
         Args:
-            eye_position (np.float[3]): eye position in Cartesian world coordinates
-            target_position (np.float[3]): position of the target (focus) point in Cartesian world coordinates
-            up_vector (np.float[3]): up vector of the camera in Cartesian world coordinates
+            eye_position (np.array[3]): eye position in Cartesian world coordinates
+            target_position (np.array[3]): position of the target (focus) point in Cartesian world coordinates
+            up_vector (np.array[3]): up vector of the camera in Cartesian world coordinates
 
         Returns:
-            np.float[4,4]: the view matrix
+            np.array[4,4]: the view matrix
 
         More info:
             [1] http://www.codinglabs.net/article_world_view_projection_matrix.aspx
@@ -2536,7 +2551,7 @@ class Bullet(Simulator):
         of turning the camera to capture what we want in the world, we keep the camera fixed and turn the world.
 
         Args:
-            target_position (np.float[3]): target focus point in Cartesian world coordinates
+            target_position (np.array[3]): target focus point in Cartesian world coordinates
             distance (float): distance from eye to focus point
             yaw (float): yaw angle in radians left/right around up-axis
             pitch (float): pitch in radians up/down.
@@ -2544,7 +2559,7 @@ class Bullet(Simulator):
             up_axis_index (int): either 1 for Y or 2 for Z axis up.
 
         Returns:
-            np.float[4,4]: the view matrix
+            np.array[4,4]: the view matrix
 
         More info:
             [1] http://www.codinglabs.net/article_world_view_projection_matrix.aspx
@@ -2576,7 +2591,7 @@ class Bullet(Simulator):
             far (float): far plane distance
 
         Returns:
-            np.float[4,4]: the perspective projection matrix
+            np.array[4,4]: the perspective projection matrix
 
         More info:
             [1] http://www.codinglabs.net/article_world_view_projection_matrix.aspx
@@ -2595,7 +2610,7 @@ class Bullet(Simulator):
             far (float): far plane distance
 
         Returns:
-            np.float[4,4]: the perspective projection matrix
+            np.array[4,4]: the perspective projection matrix
 
         More info:
             [1] http://www.codinglabs.net/article_world_view_projection_matrix.aspx
@@ -2619,11 +2634,11 @@ class Bullet(Simulator):
         Args:
             width (int): horizontal image resolution in pixels
             height (int): vertical image resolution in pixels
-            view_matrix (np.float[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.float[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.float[3]): `light_direction` specifies the world position of the light source,
+            view_matrix (np.array[4,4]): 4x4 view matrix, see `compute_view_matrix`
+            projection_matrix (np.array[4,4]): 4x4 projection matrix, see `compute_projection`
+            light_direction (np.array[3]): `light_direction` specifies the world position of the light source,
                 the direction is from the light source position to the origin of the world frame.
-            light_color (np.float[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
+            light_color (np.array[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
             light_distance (float): distance of the light along the normalized `light_direction`
             shadow (bool): True for shadows, False for no shadows
             light_ambient_coeff (float): light ambient coefficient
@@ -2639,7 +2654,7 @@ class Bullet(Simulator):
             int: width image resolution in pixels (horizontal)
             int: height image resolution in pixels (vertical)
             np.int[width, height, 4]: RBGA pixels (each pixel is in the range [0..255] for each channel R, G, B, A)
-            np.float[width, heigth]: Depth buffer. Bullet uses OpenGL to render, and the convention is non-linear
+            np.array[width, height]: Depth buffer. Bullet uses OpenGL to render, and the convention is non-linear
                 z-buffer. See https://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
                 Using the projection matrix, the depth is computed as:
                 `depth = far * near / (far - (far - near) * depthImg)`, where `depthImg` is the depth from Bullet
@@ -2707,11 +2722,11 @@ class Bullet(Simulator):
         Args:
             width (int): horizontal image resolution in pixels
             height (int): vertical image resolution in pixels
-            view_matrix (np.float[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.float[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.float[3]): `light_direction` specifies the world position of the light source,
+            view_matrix (np.array[4,4]): 4x4 view matrix, see `compute_view_matrix`
+            projection_matrix (np.array[4,4]): 4x4 projection matrix, see `compute_projection`
+            light_direction (np.array[3]): `light_direction` specifies the world position of the light source,
                 the direction is from the light source position to the origin of the world frame.
-            light_color (np.float[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
+            light_color (np.array[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
             light_distance (float): distance of the light along the normalized `light_direction`
             shadow (bool): True for shadows, False for no shadows
             light_ambient_coeff (float): light ambient coefficient
@@ -2780,11 +2795,11 @@ class Bullet(Simulator):
         Args:
             width (int): horizontal image resolution in pixels
             height (int): vertical image resolution in pixels
-            view_matrix (np.float[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.float[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.float[3]): `light_direction` specifies the world position of the light source,
+            view_matrix (np.array[4,4]): 4x4 view matrix, see `compute_view_matrix`
+            projection_matrix (np.array[4,4]): 4x4 projection matrix, see `compute_projection`
+            light_direction (np.array[3]): `light_direction` specifies the world position of the light source,
                 the direction is from the light source position to the origin of the world frame.
-            light_color (np.float[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
+            light_color (np.array[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
             light_distance (float): distance of the light along the normalized `light_direction`
             shadow (bool): True for shadows, False for no shadows
             light_ambient_coeff (float): light ambient coefficient
@@ -2797,7 +2812,7 @@ class Bullet(Simulator):
                 segmentation mask.
 
         Returns:
-            np.float[width, heigth]: Depth buffer. Bullet uses OpenGL to render, and the convention is non-linear
+            np.array[width, height]: Depth buffer. Bullet uses OpenGL to render, and the convention is non-linear
                 z-buffer. See https://stackoverflow.com/questions/6652253/getting-the-true-z-value-from-the-depth-buffer
                 Using the projection matrix, the depth is computed as:
                 `depth = far * near / (far - (far - near) * depthImg)`, where `depthImg` is the depth from Bullet
@@ -2858,11 +2873,11 @@ class Bullet(Simulator):
         Args:
             width (int): horizontal image resolution in pixels
             height (int): vertical image resolution in pixels
-            view_matrix (np.float[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.float[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.float[3]): `light_direction` specifies the world position of the light source,
+            view_matrix (np.array[4,4]): 4x4 view matrix, see `compute_view_matrix`
+            projection_matrix (np.array[4,4]): 4x4 projection matrix, see `compute_projection`
+            light_direction (np.array[3]): `light_direction` specifies the world position of the light source,
                 the direction is from the light source position to the origin of the world frame.
-            light_color (np.float[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
+            light_color (np.array[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
             light_distance (float): distance of the light along the normalized `light_direction`
             shadow (bool): True for shadows, False for no shadows
             light_ambient_coeff (float): light ambient coefficient
@@ -2935,16 +2950,16 @@ class Bullet(Simulator):
             shape_type (int): type of shape; GEOM_SPHERE (=2), GEOM_BOX (=3), GEOM_CAPSULE (=7), GEOM_CYLINDER (=4),
                 GEOM_PLANE (=6), GEOM_MESH (=5)
             radius (float): only for GEOM_SPHERE, GEOM_CAPSULE, GEOM_CYLINDER
-            half_extents (np.float[3], list/tuple of 3 floats): only for GEOM_BOX.
+            half_extents (np.array[3], list/tuple of 3 floats): only for GEOM_BOX.
             height (float): only for GEOM_CAPSULE, GEOM_CYLINDER (length = height).
             filename (str): Filename for GEOM_MESH, currently only Wavefront .obj. Will create convex hulls for each
                 object (marked as 'o') in the .obj file.
-            mesh_scale (np.float[3], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
-            plane_normal (np.float[3], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
+            mesh_scale (np.array[3], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
+            plane_normal (np.array[3], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
             flags (int): unused / to be decided
-            collision_frame_position (np.float[3]): translational offset of the collision shape with respect to the
+            collision_frame_position (np.array[3]): translational offset of the collision shape with respect to the
                 link frame
-            collision_frame_orientation (np.float[4]): rotational offset (quaternion x,y,z,w) of the collision shape
+            collision_frame_orientation (np.array[4]): rotational offset (quaternion x,y,z,w) of the collision shape
                 with respect to the link frame
 
         Returns:
@@ -2986,14 +3001,14 @@ class Bullet(Simulator):
                 int: object unique id.
                 int: link id.
                 int: geometry type; GEOM_BOX (=3), GEOM_SPHERE (=2), GEOM_CAPSULE (=7), GEOM_MESH (=5), GEOM_PLANE (=6)
-                np.float[3]: depends on geometry type:
+                np.array[3]: depends on geometry type:
                     for GEOM_BOX: extents,
                     for GEOM_SPHERE: dimensions[0] = radius,
                     for GEOM_CAPSULE and GEOM_CYLINDER: dimensions[0] = height (length), dimensions[1] = radius.
                     For GEOM_MESH: dimensions is the scaling factor.
                 str: Only for GEOM_MESH: file name (and path) of the collision mesh asset.
-                np.float[3]: Local position of the collision frame with respect to the center of mass/inertial frame
-                np.float[4]: Local orientation of the collision frame with respect to the inertial frame
+                np.array[3]: Local position of the collision frame with respect to the center of mass/inertial frame
+                np.array[4]: Local orientation of the collision frame with respect to the inertial frame
         """
         collision = self.sim.getCollisionShapeData(object_id, link_id)
         if len(collision) == 0:
@@ -3010,8 +3025,8 @@ class Bullet(Simulator):
         enlarges the AABBs a bit (extra margin and extruded along the velocity vector).
 
         Args:
-            aabb_min (np.float[3]): minimum coordinates of the aabb
-            aabb_max (np.float[3]): maximum coordinates of the aabb
+            aabb_min (np.array[3]): minimum coordinates of the aabb
+            aabb_max (np.array[3]): maximum coordinates of the aabb
 
         Returns:
             list of int: list of object unique ids.
@@ -3028,8 +3043,8 @@ class Bullet(Simulator):
             link_id (int): link index in range [0..`getNumJoints(..)]
 
         Returns:
-            np.float[3]: minimum coordinates of the axis aligned bounding box
-            np.float[3]: maximum coordinates of the axis aligned bounding box
+            np.array[3]: minimum coordinates of the axis aligned bounding box
+            np.array[3]: maximum coordinates of the axis aligned bounding box
         """
         aabb_min, aabb_max = self.sim.getAABB(body_id, link_id)
         return np.asarray(aabb_min), np.asarray(aabb_max)
@@ -3052,15 +3067,15 @@ class Bullet(Simulator):
                 int: body unique id of body B
                 int: link index of body A, -1 for base
                 int: link index of body B, -1 for base
-                np.float[3]: contact position on A, in Cartesian world coordinates
-                np.float[3]: contact position on B, in Cartesian world coordinates
-                np.float[3]: contact normal on B, pointing towards A
+                np.array[3]: contact position on A, in Cartesian world coordinates
+                np.array[3]: contact position on B, in Cartesian world coordinates
+                np.array[3]: contact normal on B, pointing towards A
                 float: contact distance, positive for separation, negative for penetration
                 float: normal force applied during the last `step`
                 float: lateral friction force in the first lateral friction direction (see next returned value)
-                np.float[3]: first lateral friction direction
+                np.array[3]: first lateral friction direction
                 float: lateral friction force in the second lateral friction direction (see next returned value)
-                np.float[3]: second lateral friction direction
+                np.array[3]: second lateral friction direction
         """
         kwargs = {}
         if body1 is not None:
@@ -3098,15 +3113,15 @@ class Bullet(Simulator):
                 int: body unique id of body B
                 int: link index of body A, -1 for base
                 int: link index of body B, -1 for base
-                np.float[3]: contact position on A, in Cartesian world coordinates
-                np.float[3]: contact position on B, in Cartesian world coordinates
-                np.float[3]: contact normal on B, pointing towards A
+                np.array[3]: contact position on A, in Cartesian world coordinates
+                np.array[3]: contact position on B, in Cartesian world coordinates
+                np.array[3]: contact normal on B, pointing towards A
                 float: contact distance, positive for separation, negative for penetration
                 float: normal force applied during the last `step`. Always equal to 0.
                 float: lateral friction force in the first lateral friction direction (see next returned value)
-                np.float[3]: first lateral friction direction
+                np.array[3]: first lateral friction direction
                 float: lateral friction force in the second lateral friction direction (see next returned value)
-                np.float[3]: second lateral friction direction
+                np.array[3]: second lateral friction direction
         """
         kwargs = {}
         if link1_id is not None:
@@ -3125,16 +3140,16 @@ class Bullet(Simulator):
         Performs a single raycast to find the intersection information of the first object hit.
 
         Args:
-            from_position (np.float[3]): start of the ray in world coordinates
-            to_position (np.float[3]): end of the ray in world coordinates
+            from_position (np.array[3]): start of the ray in world coordinates
+            to_position (np.array[3]): end of the ray in world coordinates
 
         Returns:
             list:
                 int: object unique id of the hit object
                 int: link index of the hit object, or -1 if none/parent
                 float: hit fraction along the ray in range [0,1] along the ray.
-                np.float[3]: hit position in Cartesian world coordinates
-                np.float[3]: hit normal in Cartesian world coordinates
+                np.array[3]: hit position in Cartesian world coordinates
+                np.array[3]: hit normal in Cartesian world coordinates
         """
         if isinstance(from_position, np.ndarray):
             from_position = from_position.ravel().tolist()
@@ -3163,8 +3178,8 @@ class Bullet(Simulator):
                 int: object unique id of the hit object
                 int: link index of the hit object, or -1 if none/parent
                 float: hit fraction along the ray in range [0,1] along the ray.
-                np.float[3]: hit position in Cartesian world coordinates
-                np.float[3]: hit normal in Cartesian world coordinates
+                np.array[3]: hit position in Cartesian world coordinates
+                np.array[3]: hit normal in Cartesian world coordinates
         """
         if isinstance(from_positions, np.ndarray):
             from_positions = from_positions.tolist()
@@ -3224,10 +3239,10 @@ class Bullet(Simulator):
         Returns:
             float: mass in kg
             float: lateral friction coefficient
-            np.float[3]: local inertia diagonal. Note that links and base are centered around the center of mass and
+            np.array[3]: local inertia diagonal. Note that links and base are centered around the center of mass and
                 aligned with the principal axes of inertia.
-            np.float[3]: position of inertial frame in local coordinates of the joint frame
-            np.float[4]: orientation of inertial frame in local coordinates of joint frame
+            np.array[3]: position of inertial frame in local coordinates of the joint frame
+            np.array[4]: orientation of inertial frame in local coordinates of joint frame
             float: coefficient of restitution
             float: rolling friction coefficient orthogonal to contact normal
             float: spinning friction coefficient around contact normal
@@ -3262,7 +3277,7 @@ class Bullet(Simulator):
                 section.
             friction_anchor (int): enable or disable a friction anchor: positional friction correction (disabled by
                 default, unless set in the URDF contact section)
-            local_inertia_diagonal (np.float[3]): diagonal elements of the inertia tensor. Note that the base and
+            local_inertia_diagonal (np.array[3]): diagonal elements of the inertia tensor. Note that the base and
                 links are centered around the center of mass and aligned with the principal axes of inertia so there
                 are no off-diagonal elements in the inertia tensor.
             joint_damping (float): joint damping coefficient applied at each joint. This coefficient is read from URDF
@@ -3311,14 +3326,14 @@ class Bullet(Simulator):
         Args:
             body_id (int): unique body id.
             link_id (int): link id.
-            local_position (np.float[3]): the point on the specified link to compute the Jacobian (in link local
+            local_position (np.array[3]): the point on the specified link to compute the Jacobian (in link local
                 coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
-            q (np.float[N]): joint positions of size N, where N is the number of DoFs.
-            dq (np.float[N]): joint velocities of size N, where N is the number of DoFs.
-            des_ddq (np.float[N]): desired joint accelerations of size N.
+            q (np.array[N]): joint positions of size N, where N is the number of DoFs.
+            dq (np.array[N]): joint velocities of size N, where N is the number of DoFs.
+            des_ddq (np.array[N]): desired joint accelerations of size N.
 
         Returns:
-            np.float[6,N], np.float[6,(6+N)]: full geometric (linear and angular) Jacobian matrix. The number of
+            np.array[6,N], np.array[6,(6+N)]: full geometric (linear and angular) Jacobian matrix. The number of
                 columns depends if the base is fixed or floating.
         """
         # Note that q, dq, ddq have to be lists in PyBullet (it doesn't work with numpy arrays)
@@ -3353,10 +3368,10 @@ class Bullet(Simulator):
 
         Args:
             body_id (int): body unique id.
-            q (np.float[N]): joint positions of size N, where N is the total number of DoFs.
+            q (np.array[N]): joint positions of size N, where N is the total number of DoFs.
 
         Returns:
-            np.float[N,N], np.float[6+N,6+N]: inertia matrix
+            np.array[N,N], np.array[6+N,6+N]: inertia matrix
         """
         if isinstance(q, np.ndarray):
             q = q.ravel().tolist()    # Note that pybullet doesn't accept numpy arrays here
@@ -3378,20 +3393,20 @@ class Bullet(Simulator):
         Args:
             body_id (int): body unique id, as returned by `load_urdf`, etc.
             link_id (int): end effector link index.
-            position (np.float[3]): target position of the end effector (its link coordinate, not center of mass
+            position (np.array[3]): target position of the end effector (its link coordinate, not center of mass
                 coordinate!). By default this is in Cartesian world space, unless you provide `q_curr` joint angles.
-            orientation (np.float[4]): target orientation in Cartesian world space, quaternion [x,y,w,z]. If not
+            orientation (np.array[4]): target orientation in Cartesian world space, quaternion [x,y,w,z]. If not
                 specified, pure position IK will be used.
-            lower_limits (np.float[N], list of N floats): lower joint limits. Optional null-space IK.
-            upper_limits (np.float[N], list of N floats): upper joint limits. Optional null-space IK.
-            joint_ranges (np.float[N], list of N floats): range of value of each joint.
-            rest_poses (np.float[N], list of N floats): joint rest poses. Favor an IK solution closer to a given rest
+            lower_limits (np.array[N], list of N floats): lower joint limits. Optional null-space IK.
+            upper_limits (np.array[N], list of N floats): upper joint limits. Optional null-space IK.
+            joint_ranges (np.array[N], list of N floats): range of value of each joint.
+            rest_poses (np.array[N], list of N floats): joint rest poses. Favor an IK solution closer to a given rest
                 pose.
-            joint_dampings (np.float[N], list of N floats): joint damping factors. Allow to tune the IK solution using
+            joint_dampings (np.array[N], list of N floats): joint damping factors. Allow to tune the IK solution using
                 joint damping factors.
             solver (int): p.IK_DLS (=0) or p.IK_SDLS (=1), Damped Least Squares or Selective Damped Least Squares, as
                 described in the paper by Samuel Buss "Selectively Damped Least Squares for Inverse Kinematics".
-            q_curr (np.float[N]): list of joint positions. By default PyBullet uses the joint positions of the body.
+            q_curr (np.array[N]): list of joint positions. By default PyBullet uses the joint positions of the body.
                 If provided, the target_position and targetOrientation is in local space!
             max_iters (int): maximum number of iterations. Refine the IK solution until the distance between target
                 and actual end effector position is below this threshold, or the `max_iters` is reached.
@@ -3399,7 +3414,7 @@ class Bullet(Simulator):
                 end effector position is below this threshold, or the `max_iters` is reached.
 
         Returns:
-            np.float[N]: joint positions (for each actuated joint).
+            np.array[N]: joint positions (for each actuated joint).
         """
         kwargs = {}
         if orientation is not None:
@@ -3461,12 +3476,12 @@ class Bullet(Simulator):
 
         Args:
             body_id (int): body unique id.
-            q (np.float[N]): joint positions
-            dq (np.float[N]): joint velocities
-            des_ddq (np.float[N]): desired joint accelerations
+            q (np.array[N]): joint positions
+            dq (np.array[N]): joint velocities
+            des_ddq (np.array[N]): desired joint accelerations
 
         Returns:
-            np.float[N]: joint torques computed using the rigid-body equation of motion
+            np.array[N]: joint torques computed using the rigid-body equation of motion
 
         References:
             [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
@@ -3518,12 +3533,12 @@ class Bullet(Simulator):
 
         Args:
             body_id (int): unique body id.
-            q (np.float[N]): joint positions
-            dq (np.float[N]): joint velocities
-            torques (np.float[N]): desired joint torques
+            q (np.array[N]): joint positions
+            dq (np.array[N]): joint velocities
+            torques (np.array[N]): desired joint torques
 
         Returns:
-            np.float[N]: joint accelerations computed using the rigid-body equation of motion
+            np.array[N]: joint accelerations computed using the rigid-body equation of motion
 
         References:
             [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
@@ -3555,9 +3570,9 @@ class Bullet(Simulator):
         a line width and a duration in seconds.
 
         Args:
-            from_pos (np.float[3]): starting point of the line in Cartesian world coordinates
-            to_pos (np.float[3]): end point of the line in Cartesian world coordinates
-            rgb_color (np.float[3]): RGB color (each channel in range [0,1])
+            from_pos (np.array[3]): starting point of the line in Cartesian world coordinates
+            to_pos (np.array[3]): end point of the line in Cartesian world coordinates
+            rgb_color (np.array[3]): RGB color (each channel in range [0,1])
             width (float): line width (limited by OpenGL implementation).
             lifetime (float): use 0 for permanent line, or positive time in seconds (afterwards the line with be
                 removed automatically)
@@ -3591,12 +3606,12 @@ class Bullet(Simulator):
 
         Args:
             text (str): text.
-            position (np.float[3]): 3d position of the text in Cartesian world coordinates.
+            position (np.array[3]): 3d position of the text in Cartesian world coordinates.
             rgb_color (list/tuple of 3 floats): RGB color; each component in range [0..1]
             size (float): text size
             lifetime (float): use 0 for permanent text, or positive time in seconds (afterwards the text with be
                 removed automatically)
-            orientation (np.float[4]): By default, debug text will always face the camera, automatically rotation.
+            orientation (np.array[4]): By default, debug text will always face the camera, automatically rotation.
                 By specifying a text orientation (quaternion), the orientation will be fixed in world space or local
                 space (when parent is specified). Note that a different implementation/shader is used for camera
                 facing text, with different appearance: camera facing text uses bitmap fonts, text with specified
@@ -3796,18 +3811,18 @@ class Bullet(Simulator):
         Returns:
             int: width of the visualizer camera
             int: height of the visualizer camera
-            np.float[4,4]: view matrix [4,4]
-            np.float[4,4]: perspective projection matrix [4,4]
-            np.float[3]: camera up vector expressed in the Cartesian world space
-            np.float[3]: forward axis of the camera expressed in the Cartesian world space
-            np.float[3]: This is a horizontal vector that can be used to generate rays (for mouse picking or creating
+            np.array[4,4]: view matrix [4,4]
+            np.array[4,4]: perspective projection matrix [4,4]
+            np.array[3]: camera up vector expressed in the Cartesian world space
+            np.array[3]: forward axis of the camera expressed in the Cartesian world space
+            np.array[3]: This is a horizontal vector that can be used to generate rays (for mouse picking or creating
                 a simple ray tracer for example)
-            np.float[3]: This is a vertical vector that can be used to generate rays (for mouse picking or creating a
+            np.array[3]: This is a vertical vector that can be used to generate rays (for mouse picking or creating a
                 simple ray tracer for example)
             float: yaw angle (in radians) of the camera, in Cartesian local space coordinates
             float: pitch angle (in radians) of the camera, in Cartesian local space coordinates
             float: distance between the camera and the camera target
-            np.float[3]: target of the camera, in Cartesian world space coordinates
+            np.array[3]: target of the camera, in Cartesian world space coordinates
         """
         width, height, view, proj, up_vec, forward_vec,\
             horizontal, vertical, yaw, pitch, dist, target = self.sim.getDebugVisualizerCamera()
@@ -3836,7 +3851,7 @@ class Bullet(Simulator):
             distance (float): distance from eye to camera target position
             yaw (float): camera yaw angle (in radians) left/right
             pitch (float): camera pitch angle (in radians) up/down
-            target_position (np.float[3]): target focus point of the camera
+            target_position (np.array[3]): target focus point of the camera
         """
         self.sim.resetDebugVisualizerCamera(cameraDistance=distance, cameraYaw=np.rad2deg(yaw),
                                             cameraPitch=np.rad2deg(pitch), cameraTargetPosition=target_position)
