@@ -1,0 +1,13 @@
+# Blender MTL File: 'None'
+# Material Count: 1
+
+newmtl Conveyor
+Ns 90.196078
+Ka 1.000000 1.000000 1.000000
+Kd 0.589840 0.589840 0.589840
+Ks 0.175000 0.175000 0.175000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd Conveyor_diffuse.png

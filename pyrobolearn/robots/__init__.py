@@ -136,9 +136,6 @@ implemented_robots = list(implemented_robots)
 # TODO: fix problem with icub
 implemented_robots.remove('icub')
 
-print(len(implemented_robots), implemented_robots)
-
-
 # create dictionary that maps robot names to robot classes
 robot_names_to_classes = {}
 for robot_name in implemented_robots:
@@ -162,5 +159,3 @@ for robot_name in implemented_robots:
                 robot_names_to_classes[name] = cls
 
 implemented_robots = set(list(robot_names_to_classes.keys()))
-
-print(len(implemented_robots), implemented_robots)
