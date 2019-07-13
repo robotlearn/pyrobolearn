@@ -1579,8 +1579,9 @@ class Bullet(Simulator):
                     VELOCITY_CONTROL and POSITION_CONTROL. If you use TORQUE_CONTROL then the applied joint motor
                     torque is exactly what you provide, so there is no need to report it separately.
         """
-        states = self.sim.getJointStates(body_id, joint_ids)
+        states = list(self.sim.getJointStates(body_id, joint_ids))
         for idx, state in enumerate(states):
+            states[idx] = list(state)
             states[idx][2] = np.asarray(state[2])
         return states
 

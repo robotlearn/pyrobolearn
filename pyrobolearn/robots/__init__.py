@@ -14,13 +14,14 @@ from . import sensors
 from .robot import Robot
 
 # Categories/types of robots
-from .legged_robot import *
-from .manipulator import *
-from .wheeled_robot import *
-from .uav import *
-from .usv import *
-from .uuv import *
-from .hand import *
+from .legged_robot import LeggedRobot, BipedRobot, QuadrupedRobot, HexapodRobot
+from .manipulator import Manipulator, BiManipulator
+from .wheeled_robot import WheeledRobot, DifferentialWheeledRobot, AckermannWheeledRobot
+from .uav import UAVRobot, FixedWingUAV, RotaryWingUAV, FlappingWingUAV
+from .usv import USVRobot
+from .uuv import UUVRobot
+from .hand import Hand, TwoHand
+from .gripper import Gripper, ParallelGripper, AngularGripper, VacuumGripper
 
 # Mujoco models
 from .ant import Ant
@@ -138,6 +139,7 @@ implemented_robots.remove('icub')
 
 # create dictionary that maps robot names to robot classes
 robot_names_to_classes = {}
+implemented_grippers = []
 for robot_name in implemented_robots:
     module = importlib.import_module('pyrobolearn.robots.' + robot_name)  # 'robots.'+robot)
     # robot_class = getattr(module, robot.capitalize())
@@ -146,6 +148,7 @@ for robot_name in implemented_robots:
         if inspect.isclass(cls) and issubclass(cls, Robot):
             if name.lower() == ''.join(robot_name.split('_')):
                 robot_names_to_classes[robot_name] = cls
+                name = robot_name
             else:
                 name_list = re.findall('[0-9]*[A-Z]+[0-9]*[a-z]*', name)
                 name = '_'.join([n.lower() for n in name_list])
@@ -158,4 +161,9 @@ for robot_name in implemented_robots:
                     name = 'usv_robot'
                 robot_names_to_classes[name] = cls
 
+            # add grippers and hands
+            if issubclass(cls, Gripper) or issubclass(cls, Hand):
+                implemented_grippers.append(name)
+
 implemented_robots = set(list(robot_names_to_classes.keys()))
+implemented_grippers = set(implemented_grippers)

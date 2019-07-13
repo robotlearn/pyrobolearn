@@ -683,6 +683,8 @@ class World(object):
             position (float[3]): new position of the object. If None, it will keep the old position.
             orientation (float[4]): new orientation of the object. If None, it will keep the old orientation.
         """
+        if isinstance(body_id, Body):
+            body_id = body_id.id
         if position is None:
             position = self.sim.get_base_pose(body_id)[0]
         if orientation is None:
@@ -706,6 +708,8 @@ class World(object):
             frame (int): allows to specify the coordinate system of force/position. sim.LINK_FRAME (=1) for local
                 link frame, and sim.WORLD_FRAME (=2) for world frame. By default, it is the world frame.
         """
+        if isinstance(body_id, Body):
+            body_id = body_id.id
         self.sim.apply_external_force(body_id, link_id, force, position, frame)
 
     def get_body_color(self, body_id):
@@ -1010,14 +1014,16 @@ class World(object):
 
     def attach(self, body1, body2, link1=-1, link2=-1, joint_axis=(0., 0., 0.),
                parent_frame_position=(0., 0., 0.), child_frame_position=(0., 0., 0.),
-               parent_frame_orientation=(0., 0., 0., 1.), child_frame_orientation=(0., 0., 0., 1.)):
+               parent_frame_orientation=None, child_frame_orientation=(0., 0., 0., 1.)):
         """
         Attach two bodies (links) together at the specified contact point.
 
         To detach them, call ``world.detach(body1, body2, link1, link2)``.
 
-        Note that this method is syntactic sugar for the ``create_constraint`` method with the joint type set to a
-        fixed joint.
+        Note that this method, in addition to call ``create_constraint`` (with a fixed joint), it checks for collisions
+        between body1 and body2, and if there are, check how much body2 penetrates body1 and recomputes the parent
+        frame position such that there are no more collisions. Additionally, attaching an object can change the state
+        of body1, as such we reset the state as it was before calling this method.
 
         Args:
             body1 (int, Body): body unique id, or a Body instance.
@@ -1036,13 +1042,75 @@ class World(object):
         Returns:
             bool: True if it was successful.
         """
+        # check arguments
+        if isinstance(body1, Body):
+            body1 = body1.id
+        if isinstance(body2, Body):
+            body2 = body2.id
+
+        if parent_frame_orientation is None:
+            parent_frame_orientation = self.sim.get_base_orientation(body2)
+
+        # save the state of body1
+        pose = self.sim.get_base_pose(body1)
+        velocity = self.sim.get_base_velocity(body1)
+        joint_ids = [joint_id for joint_id in range(self.sim.num_joints(body1))
+                     if self.sim.get_joint_info(body1, joint_id)[2] != self.sim.JOINT_FIXED]
+        joint_states = self.sim.get_joint_states(body1, joint_ids=joint_ids)
+
+        # create constraint
         constraint_id = self.create_constraint(parent_body=body1, parent_link_id=link1, child_body=body2,
                                                child_link_id=link2, joint_axis=joint_axis,
                                                parent_frame_position=parent_frame_position,
                                                child_frame_position=child_frame_position,
                                                parent_frame_orientation=parent_frame_orientation,
                                                child_frame_orientation=child_frame_orientation)
+
+        # advance for few steps (in simulation)
+        for i in range(10):
+            self.step()
+
+        # check collisions
+        collisions = self.sim.get_contact_points(body1, body2, link1_id=link1, link2_id=link2)
+
+        # if collisions, remove the constraint and recompute the parent frame position such that there are no more
+        # collisions. This is achieved by checking the penetrating distance and moving along the contact normal
+        # direction (pointing from body1 to body2) by minus that amount.
+        if len(collisions) > 0:
+            # TODO: it seems that with PyBullet this does nothing, they check for collisions when creating the
+            #  constraint
+            # get worst penetrating distance and associated contact normal direction (from body2 to body1)
+            worst_distance, worst_normal_direction = 0, None
+            for collision in collisions:
+                distance, normal_direction = collision[7:9]
+                if distance < worst_distance:
+                    worst_distance, worst_normal_direction = distance, normal_direction
+
+            # compute new parent frame position (the 0.002 is a safety margin)
+            parent_frame_position = np.asarray(parent_frame_position)
+            parent_frame_position += (-worst_distance + 0.002) * -worst_normal_direction
+
+            # remove the previous constraint
+            self.remove_constraint(constraint_id)
+
+            # recreate the constraint with the correct parent frame position
+            constraint_id = self.create_constraint(parent_body=body1, parent_link_id=link1, child_body=body2,
+                                                   child_link_id=link2, joint_axis=joint_axis,
+                                                   parent_frame_position=parent_frame_position,
+                                                   child_frame_position=child_frame_position,
+                                                   parent_frame_orientation=parent_frame_orientation,
+                                                   child_frame_orientation=child_frame_orientation)
+
+        # remember the constraint such that we can call later ``detach`` without providing too much information.
         self.constraints[(body1, body2)] = {(link1, link2): constraint_id}
+
+        # restore state
+        self.sim.reset_base_pose(body1, position=pose[0], orientation=pose[1])
+        self.sim.reset_base_velocity(body1, linear_velocity=velocity[0], angular_velocity=velocity[1])
+        for joint_id, joint_state in zip(joint_ids, joint_states):
+            self.sim.reset_joint_state(body1, joint_id, position=joint_state[0], velocity=joint_state[1])
+
+        # return constraint id
         return constraint_id > 0
 
     def detach(self, body1, body2, link1=None, link2=None):
@@ -1062,8 +1130,7 @@ class World(object):
         """
         if (body1, body2) in self.constraints:
             if link1 is None or link2 is None:
-                for constraint in self.constraints[(body1, body2)]:
-                    link_id1, link_id2, constraint_id = constraint[-1]
+                for (link_id1, link_id2), constraint_id in self.constraints[(body1, body2)].items():
                     if link1 is None:
                         if link2 is None:  # link1 and link2 are both None
                             self.sim.remove_constraint(constraint_id)
@@ -1101,8 +1168,7 @@ class World(object):
             if link1 is None and link2 is None:
                 return True
             else:
-                for constraint in self.constraints[(body1, body2)]:
-                    link_1, link_2, constraint_id = constraint[-1]
+                for link_1, link_2 in self.constraints[(body1, body2)].keys():
                     if link1 == link_1 and link2 == link_2:
                         return True
         return False
@@ -2081,6 +2147,8 @@ class World(object):
             body_id (int): unique body id.
             link_id (int): link id. If -1, it will be the base.
         """
+        if isinstance(body_id, Body):
+            body_id = body_id.id
         texture = self.sim.load_texture(texture)
         self.sim.change_visual_shape(object_id=body_id, link_id=link_id, texture_id=texture)
 
