@@ -24,18 +24,24 @@ class Rhex(HexapodRobot):
     It was created by researchers at the University of Michigan and McGill University.
 
     References:
-        [1] https://robots.ieee.org/robots/rhex/
-        [2] https://www.rhex.web.tr/
-        [3] https://github.com/grafoteka/rhex
+        - [1] https://robots.ieee.org/robots/rhex/
+        - [2] https://www.rhex.web.tr/
+        - [3] https://github.com/grafoteka/rhex
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0.12),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0.12), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/rhex/rhex.urdf'):
+        """
+        Initialize the Rhex robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.12)

@@ -20,16 +20,22 @@ class Manipulator2D(Manipulator):
     r"""2D manipulator robot
 
     References:
-        [1] https://github.com/domingoesteban/robolearn_robots_ros
+        - [1] https://github.com/domingoesteban/robolearn_robots_ros
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/manipulator2d/manipulator2d.urdf'):
+        """
+        Initialize the 2D manipulator.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.)

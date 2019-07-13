@@ -3,6 +3,7 @@
 import os
 import importlib
 import inspect
+import re
 
 # General robot class
 from .base import Body, MovableBody, ControllableBody
@@ -62,23 +63,24 @@ from .rhex import Rhex
 
 # Manipulators
 from .rrbot import RRBot
-from .wam import WAM
+from .wam import WAM, BarrettHand
 from .kuka_lwr import KukaLWR
 from .kuka_iiwa import KukaIIWA
-from .jaco import Jaco
-from .franka import Franka
+from .jaco import Jaco, JacoGripper
+from .franka import Franka, FrankaGripper
 from .sawyer import Sawyer
 from .edo import Edo
 from .kr5 import KR5
 from .manipulator2d import Manipulator2D
 
 # Bi-Manipulators
-from .baxter import Baxter
+from .baxter import Baxter, BaxterGripper
 
 # Hands
 from .allegrohand import AllegroHand
 from .softhand import SoftHand
 from .shadowhand import ShadowHand
+from .schunk_hand import SchunkHand
 
 # Wheeled
 from .epuck import Epuck
@@ -87,11 +89,11 @@ from .mkz import MKZ
 from .husky import Husky
 
 # Wheeled + (single) manipulator
-from .fetch import Fetch
+from .fetch import Fetch, FetchGripper
 
 # Wheeled + Bi-manipulators
 from .pepper import Pepper
-from .pr2 import PR2
+from .pr2 import PR2, PR2Gripper
 
 # Wheeled + Quadruped + Bi-manipulators
 from .centauro import Centauro
@@ -114,7 +116,7 @@ from .cartpole import CartPole
 from .cubli import Cubli
 from .sea_snake import SEASnake
 from .bb8 import BB8
-from .youbot import Youbot, YoubotBase, KukaYoubotArm, YoubotDualArm
+from .youbot import Youbot, YoubotBase, KukaYoubotArm, YoubotDualArm, YoubotGripper
 from .ballbot import Ballbot
 
 # Robots #
@@ -125,7 +127,7 @@ implemented_robots = set([f[:-3] for f in os.listdir(path) if os.path.isfile(os.
                           and f.endswith('.py')])
 # remove few items from the set
 for s in ['__init__', 'actuators', 'sensors', 'legged_robot', 'manipulator', 'wheeled_robot', 'uav', 'usv',
-          'uuv', 'hand']:
+          'uuv', 'hand', 'gripper']:
     if s in implemented_robots:
         implemented_robots.remove(s)
 
@@ -134,14 +136,31 @@ implemented_robots = list(implemented_robots)
 # TODO: fix problem with icub
 implemented_robots.remove('icub')
 
+print(len(implemented_robots), implemented_robots)
+
 
 # create dictionary that maps robot names to robot classes
 robot_names_to_classes = {}
 for robot_name in implemented_robots:
     module = importlib.import_module('pyrobolearn.robots.' + robot_name)  # 'robots.'+robot)
     # robot_class = getattr(module, robot.capitalize())
-    for name, obj in inspect.getmembers(module):
+    for name, cls in inspect.getmembers(module):
         # check if it is a class, and the names match
-        if inspect.isclass(obj) and name.lower() == ''.join(robot_name.split('_')):
-            robot_names_to_classes[robot_name] = obj
-            break
+        if inspect.isclass(cls) and issubclass(cls, Robot):
+            if name.lower() == ''.join(robot_name.split('_')):
+                robot_names_to_classes[robot_name] = cls
+            else:
+                name_list = re.findall('[0-9]*[A-Z]+[0-9]*[a-z]*', name)
+                name = '_'.join([n.lower() for n in name_list])
+                # TODO: improve regex
+                if name == 'wamgripper':
+                    name = 'wam_gripper'
+                elif name == 'uuvrobot':
+                    name = 'uuv_robot'
+                elif name == 'usvrobot':
+                    name = 'usv_robot'
+                robot_names_to_classes[name] = cls
+
+implemented_robots = set(list(robot_names_to_classes.keys()))
+
+print(len(implemented_robots), implemented_robots)

@@ -5,6 +5,7 @@ name = "pyrobolearn"
 
 import sys
 import signal
+from itertools import count
 
 # logging
 import logging
@@ -81,6 +82,9 @@ from . import optimizers
 from . import algos
 
 # import experiments
+
+# import priority tasks
+from . import priorities
 
 
 # Meta-information about the package

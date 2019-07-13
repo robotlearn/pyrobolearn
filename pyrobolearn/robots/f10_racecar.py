@@ -20,16 +20,22 @@ class F10Racecar(AckermannWheeledRobot):
     r"""F10Racecar robot
 
     References:
-        [1] https://github.com/erwincoumans/pybullet_robots/tree/master/data/f10_racecar
+        - [1] https://github.com/erwincoumans/pybullet_robots/tree/master/data/f10_racecar
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, .1),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, .1), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/f10_racecar/racecar.urdf'):  # racecar_differential.urdf
+        """
+        Initialize the F10 racecar.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the car base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the car.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.1)

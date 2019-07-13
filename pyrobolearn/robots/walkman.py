@@ -25,18 +25,25 @@ class Walkman(BipedRobot, BiManipulator):
     each ankle).
 
     References:
-        [1] "WALK-MAN: A High-Performance Humanoid Platform for Realistic Environments", Tsagarakis et al., 2017
-        [2] https://github.com/ADVRHumanoids/iit-walkman-ros-pkg
+        - [1] "WALK-MAN: A High-Performance Humanoid Platform for Realistic Environments", Tsagarakis et al., 2017
+        - [2] https://github.com/ADVRHumanoids/iit-walkman-ros-pkg
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 1.14),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
-                 urdf=os.path.dirname(__file__) + '/urdfs/walkman/walkman.urdf',
-                 lower_body=False):  # 'walkman_lower_body.urdf'
+    def __init__(self, simulator, position=(0, 0, 1.14), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
+                 lower_body=False, urdf=os.path.dirname(__file__) + '/urdfs/walkman/walkman.urdf'):
+        # 'walkman_lower_body.urdf'
+        """
+        Initialize the Walkman robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            lower_body (bool): if True, it will instantiate only the lower part of the robot (i.e. the legs).
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 1.14)

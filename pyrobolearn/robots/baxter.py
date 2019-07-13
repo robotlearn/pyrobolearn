@@ -5,6 +5,8 @@
 import os
 
 from pyrobolearn.robots.manipulator import BiManipulator
+from pyrobolearn.robots.gripper import ParallelGripper
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -21,17 +23,23 @@ class Baxter(BiManipulator):
     Baxter robot built by Rethink Robotics.
 
     References:
-        [1] Rethink Robotics: https://www.rethinkrobotics.com/
-        [2] https://github.com/RethinkRobotics/baxter_common
+        - [1] Rethink Robotics: https://www.rethinkrobotics.com/
+        - [2] https://github.com/RethinkRobotics/baxter_common
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0.95),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0.95), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/baxter/baxter.urdf'):
+        """
+        Initialize the Baxter robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.95)
@@ -56,6 +64,43 @@ class Baxter(BiManipulator):
                                     'right_wrist', 'r_gripper_l_finger', 'r_gripper_r_finger']]]
 
         self.hands = [self.get_link_ids(link) for link in ['left_gripper', 'right_gripper'] if link in self.link_names]
+
+
+class BaxterGripper(ParallelGripper):
+    r"""Baxter Gripper
+
+    Baxter robot built by Rethink Robotics.
+
+    References:
+        - [1] Rethink Robotics: https://www.rethinkrobotics.com/
+        - [2] https://github.com/RethinkRobotics/baxter_common
+    """
+
+    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
+                 urdf=os.path.dirname(__file__) + '/urdfs/baxter/baxter_gripper.urdf'):
+        """
+        Initialize the Baxter gripper.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the gripper will be fixed in the world.
+            scale (float): scaling factor that is used to scale the gripper.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
+        # check parameters
+        if position is None:
+            position = (0., 0., 0.)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = True
+
+        super(BaxterGripper, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
+        self.name = 'baxter_gripper'
 
 
 if __name__ == "__main__":

@@ -22,20 +22,26 @@ class HyQ2Max(QuadrupedRobot):
     HyQ2Max robot created by IIT.
 
     References:
-        [1] "Design of the Hydraulically-Actuated,Torque-Controlled Quadruped Robot HyQ2Max", Semini et al., 2016
-        [2] https://dls.iit.it/robots/hyq2max
-        [3] https://github.com/iit-DLSLab/hyq2max-description
+        - [1] "Design of the Hydraulically-Actuated,Torque-Controlled Quadruped Robot HyQ2Max", Semini et al., 2016
+        - [2] https://dls.iit.it/robots/hyq2max
+        - [3] https://github.com/iit-DLSLab/hyq2max-description
     """
 
     default_height = 0.8
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0.8),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0.8), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/hyq2max/hyq2max.urdf'):
+        """
+        Initialize the HyQ2Max robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.8)

@@ -22,19 +22,25 @@ class Centauro(WheeledRobot, QuadrupedRobot, BiManipulator):
     r"""Centauro robot
 
     References:
-        [1] https://github.com/ADVRHumanoids/centauro-simulator
+        - [1] https://github.com/ADVRHumanoids/centauro-simulator
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 1.),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 1.), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/centauro/centauro_stick.urdf'
                  # centauro_stick.urdf, centauro_soft_hand.urdf, centauro_heri.urdf,
                  # centauro_schunk_handL.urdf, centauro_schunk_hand.urdf
                  ):
+        """
+        Initialize the Centauro robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 1.)

@@ -30,6 +30,18 @@ class LeggedRobot(Robot):
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.,
                  foot_frictions=None):
+        """
+        Initialize the Legged robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            foot_frictions (float, list of float): foot friction value(s).
+        """
         super(LeggedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale=scale)
 
         # leg and feet ids
@@ -174,7 +186,7 @@ class LeggedRobot(Robot):
         References:
             - [1] "Postural Stability of Biped Robots and Foot-Rotation Index (FRI) Point", Goswami, 1999
             - [2] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
-            Implications", Popovic et al., 2005
+              Implications", Popovic et al., 2005
         """
         if floor_id is not None:
             # get contact points between the robot's links and the floor
@@ -255,7 +267,7 @@ class LeggedRobot(Robot):
 
         References:
             - [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
-            Implications", Popovic et al., 2005
+              Implications", Popovic et al., 2005
             - [2] "Biped Walking Pattern Generation by using Preview Control of ZMP", Kajita et al., 2003
             - [3] "Exploiting Angular Momentum to Enhance Bipedal Center-of-Mass Control", Hofmann et al., 2009
         """
@@ -329,7 +341,7 @@ class LeggedRobot(Robot):
         References:
             - [1] "Postural Stability of Biped Robots and the Foot-Rotation Indicator (FRI) Point", Goswami, 1999
             - [2] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
-            Implications", Popovic et al., 2005
+              Implications", Popovic et al., 2005
         """
         raise NotImplementedError
 
@@ -363,7 +375,7 @@ class LeggedRobot(Robot):
 
         References:
             - [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
-            Implications", Popovic et al., 2005
+              Implications", Popovic et al., 2005
         """
         # update the CoM
         if update_com:
@@ -730,6 +742,17 @@ class BipedRobot(LeggedRobot):
     """
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        """
+        Initialize the Biped robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(BipedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_leg_id = 0
@@ -767,6 +790,17 @@ class QuadrupedRobot(LeggedRobot):
     """
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        """
+        Initialize the Quadruped robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(QuadrupedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_front_leg_id = 0
@@ -826,6 +860,17 @@ class HexapodRobot(LeggedRobot):
     """
 
     def __init__(self, simulator, urdf, position, orientation=None, fixed_base=False, scale=1.):
+        """
+        Initialize the hexapod robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(HexapodRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_front_leg_id = 0

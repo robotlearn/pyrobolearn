@@ -18,13 +18,18 @@ class Hand(Robot):
     r"""Hand end-effector
     """
 
-    def __init__(self,
-                 simulator,
-                 urdf,
-                 position=(0, 0, 1.),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.):
+    def __init__(self, simulator, urdf, position=(0, 0, 1.), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.):
+        """
+        Initialize the hand robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(Hand, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.fingers = []  # list of fingers where each finger is a list of links/joints
@@ -46,13 +51,18 @@ class TwoHand(Hand):
 
     """
 
-    def __init__(self,
-                 simulator,
-                 urdf,
-                 position=(0, 0, 1.),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.):
+    def __init__(self, simulator, urdf, position=(0, 0, 1.), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.):
+        """
+        Initialize the two hands robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(TwoHand, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_fingers = []  # list of ids in self.fingers

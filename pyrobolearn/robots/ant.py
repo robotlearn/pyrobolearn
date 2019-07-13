@@ -19,15 +19,10 @@ class Ant(QuadrupedRobot):
     r"""Ant Mujoco Model
 
     References:
-        [1] description: https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_data/mjcf
+        - [1] description: https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_data/mjcf
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0.2),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0.2), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/mjcfs/ant.xml'):
         # check parameters
         if position is None:

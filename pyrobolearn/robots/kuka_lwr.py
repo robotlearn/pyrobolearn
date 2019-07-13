@@ -22,18 +22,24 @@ class KukaLWR(Manipulator):
     Payload of 7kg and a range of 790mm.
 
     References:
-        [1] Kuka robotics: https://www.kuka.com/en-de
-        [2] https://github.com/CentroEPiaggio/kuka-lwr
-        [3] https://github.com/bulletphysics/bullet3/tree/master/data/kuka_lwr
+        - [1] Kuka robotics: https://www.kuka.com/en-de
+        - [2] https://github.com/CentroEPiaggio/kuka-lwr
+        - [3] https://github.com/bulletphysics/bullet3/tree/master/data/kuka_lwr
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=True,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), fixed_base=True, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/kuka/kuka_lwr/kuka.urdf'):
+        """
+        Initialize the Kuka LWR robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.)

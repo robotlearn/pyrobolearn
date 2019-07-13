@@ -20,17 +20,22 @@ class AllegroHand(Hand):
     r"""Allegro Hand
 
     References:
-        [1] http://www.simlab.co.kr/Allegro-Hand.htm
-        [2] https://github.com/simlabrobotics/allegro_hand_ros
+        - [1] http://www.simlab.co.kr/Allegro-Hand.htm
+        - [2] https://github.com/simlabrobotics/allegro_hand_ros
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0),
-                 orientation=(0, 0, 0, 1),
-                 scale=1.,
-                 left=False,
-                 fixed_base=True):
+    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), scale=1., fixed_base=True):
+        # left=False
+        """
+        Initialize the Allegro hand.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the hand base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the hand.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.)

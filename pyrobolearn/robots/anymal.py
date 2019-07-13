@@ -24,19 +24,25 @@ class ANYmal(QuadrupedRobot):
     ANYmal is equipped with 12 SEAs'
 
     References:
-        [1] "ANYmal - a Highly Mobile and Dynamic Quadrupedal Robot", Hutter et al., 2016
-        [2] "Learning agile and dynamic motor skills for legged robots", Hwangbo et al., 2019
-        [3] www.rsl.ethz.ch/robots-media/anymal.html
-        [4] www.anybotics.com/anymal
+        - [1] "ANYmal - a Highly Mobile and Dynamic Quadrupedal Robot", Hutter et al., 2016
+        - [2] "Learning agile and dynamic motor skills for legged robots", Hwangbo et al., 2019
+        - [3] www.rsl.ethz.ch/robots-media/anymal.html
+        - [4] www.anybotics.com/anymal
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, .6),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, .6), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/anymal/anymal.urdf'):
+        """
+        Initialize the ANYmal robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.6)

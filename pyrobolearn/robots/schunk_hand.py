@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-"""Provide the Kuka KR5 robotic industrial platform.
+"""Provide the Schunk hand robotic platform.
 """
 
 import os
 
-from pyrobolearn.robots.manipulator import Manipulator
+from pyrobolearn.robots.hand import Hand
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -15,29 +16,25 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class KR5(Manipulator):
-    r"""Kuka KR5 sixx R650 robot
-
-    Payload of 5.00kg and a reach of 650mm or 850mm.
+class SchunkHand(Hand):
+    r"""Schunk Hand
 
     References:
-        - [1] Kuka robotics: https://www.kuka.com/en-de
-        - [2] https://github.com/a-price/KR5sixxR650WP_description
-        - [3] https://github.com/ros-industrial/kuka_experimental
+        - [1] https://github.com/fzi-forschungszentrum-informatik/schunk_svh_driver
+        - [2] https://github.com/ADVRHumanoids/centauro-simulator
     """
 
-    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), fixed_base=True, scale=1.,
-                 urdf=os.path.dirname(__file__) + '/urdfs/kuka/kr5/kr5.urdf'):
+    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), fixed_base=True, scale=1.):
+        # left=False
         """
-        Initialize the KR5 manipulator.
+        Initialize the Schunk hand.
 
         Args:
             simulator (Simulator): simulator instance.
             position (np.array[3]): Cartesian world position.
             orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
-            fixed_base (bool): if True, the robot base will be fixed in the world.
-            scale (float): scaling factor that is used to scale the robot.
-            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            fixed_base (bool): if True, the hand base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the hand.
         """
         # check parameters
         if position is None:
@@ -49,8 +46,13 @@ class KR5(Manipulator):
         if fixed_base is None:
             fixed_base = True
 
-        super(KR5, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
-        self.name = 'kr5'
+        # if left:
+        #     urdf_path = '../robots/urdfs/centauro/schunk_left_hand.urdf'
+        # else:
+        urdf_path = os.path.dirname(__file__) + '/urdfs/centauro/schunk_hand.urdf'
+
+        super(SchunkHand, self).__init__(simulator, urdf_path, position, orientation, fixed_base, scale)
+        self.name = 'schunk_hand'
 
 
 # Test
@@ -66,13 +68,19 @@ if __name__ == "__main__":
     world = BasicWorld(sim)
 
     # create robot
-    robot = KR5(sim)
+    right_hand = SchunkHand(sim)
 
     # print information about the robot
-    robot.print_info()
-    # H = robot.get_mass_matrix()
+    right_hand.print_info()
+    # H = right_hand.get_mass_matrix()
     # print("Inertia matrix: H(q) = {}".format(H))
 
+    # Position control using sliders
+    right_hand.add_joint_slider()
+
     for i in count():
+        right_hand.update_joint_slider()
+        # right_hand.set_joint_positions([0.] * right_hand.num_dofs)
+
         # step in simulation
         world.step(sleep_dt=1./240)

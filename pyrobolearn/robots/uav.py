@@ -21,6 +21,17 @@ class UAVRobot(Robot):
     """
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        """
+        Initialize the UAV.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(UAVRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.propellers = []  # list of propellers id
@@ -43,6 +54,17 @@ class FixedWingUAV(UAVRobot):
     """
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        """
+        Initialize the Fixed wing UAV.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(FixedWingUAV, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
 
@@ -52,6 +74,17 @@ class RotaryWingUAV(UAVRobot):
     """
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        """
+        Initialize the rotary UAV.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(RotaryWingUAV, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
     def hover(self):
@@ -94,4 +127,15 @@ class FlappingWingUAV(UAVRobot):
     """
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        """
+        Initialize the flapping UAV.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(FlappingWingUAV, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)

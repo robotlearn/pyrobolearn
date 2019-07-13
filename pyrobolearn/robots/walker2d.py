@@ -19,15 +19,10 @@ class Walker2D(Robot):
     r"""Walker 2D Mujoco Model
 
     References:
-        [1] description: https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_data/mjcf
+        - [1] description: https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_data/mjcf
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(-0.5, 0, 0.1),
-                 orientation=(0, 0.707, 0, 0.707),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(-0.5, 0, 0.1), orientation=(0, 0.707, 0, 0.707), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/mjcfs/walker2d.xml'):
         # check parameters
         if position is None:

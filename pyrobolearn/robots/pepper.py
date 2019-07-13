@@ -26,16 +26,25 @@ class Pepper(WheeledRobot, BiManipulator):
     for these joints are probably not correct.
 
     For more information:
-        [1] http://doc.aldebaran.com/2-0/home_juliette.html
+        - [1] http://doc.aldebaran.com/2-0/home_juliette.html
+
+    References:
+        - [2] https://github.com/ros-naoqi/pepper_robot
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0.9),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0.9), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/pepper/pepper.urdf'):
+        """
+        Initialize the Pepper robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.9)

@@ -1505,6 +1505,48 @@ class Robot(ControllableBody):
         pass
 
     def get_link_accelerations(self, link_ids=None):
+        r"""
+
+        Args:
+            link_ids:
+
+        Returns:
+
+        """
+        pass
+
+    def get_link_world_accelerations(self, link_ids=None, flatten=True):
+        r"""
+        Return the linear and angular accelerations (expressed in the Cartesian world space coordinates) for the given
+        link(s).
+
+        The acceleration of a link can be computed in a recursive form:
+
+        .. math:: a_i = a_{i-1} + s
+
+        or from the base to the link:
+
+        .. math::
+
+        or based on the Jacobian:
+
+        .. math:: a = \frac{d}{dt} v = \frac{d}{dt} J(q) \dot{q} = J(q) \ddot{q} + \dot{J}(q) \dot{q},
+
+        where :math:`J(q)` is the link Jacobian at the current configuration (i.e. joint positions) :math:`q`,
+        :math:`\dot{q}` and :math:`\ddot{q}` are the current joint velocities and accelerations respectively, and
+        :math:`\dot{J}(q)` is the time derivative of the link Jacobian.
+
+        Args:
+            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the linear and angular
+                velocities of all links associated to actuated joints.
+            flatten (bool): if True, it will return a 1D array instead of a 2D array
+
+        Returns:
+            if 1 link:
+                np.array[6]: linear and angular velocity of the link in the Cartesian world space
+            if multiple links:
+                np.array[Nx6], np.array[N,6]: linear and angular velocity of each link
+        """
         pass
 
     def get_link_contacts(self, link_ids):

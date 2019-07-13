@@ -22,22 +22,28 @@ class Cassie(BipedRobot):
     This class describes the cassie robot developed by Agility Robotics.
 
     References:
-        [1] http://www.agilityrobotics.com/sims/
-        [2] "Feedback Control For Cassie With Deep Reinforcement Learning", Xie et al., 2018
-            https://arxiv.org/abs/1803.05580
-        [3] https://github.com/agilityrobotics/cassie-gazebo-sim
-        [4] https://github.com/UMich-BipedLab/Cassie_Model
-        [5] https://github.com/UMich-BipedLab/cassie_description
-        [6] https://github.com/erwincoumans/pybullet_robots/tree/master/data/cassie
+        - [1] http://www.agilityrobotics.com/sims/
+        - [2] "Feedback Control For Cassie With Deep Reinforcement Learning", Xie et al., 2018
+              https://arxiv.org/abs/1803.05580
+        - [3] https://github.com/agilityrobotics/cassie-gazebo-sim
+        - [4] https://github.com/UMich-BipedLab/Cassie_Model
+        - [5] https://github.com/UMich-BipedLab/cassie_description
+        - [6] https://github.com/erwincoumans/pybullet_robots/tree/master/data/cassie
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, .8),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, .8), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/cassie/cassie.urdf'):
+        """
+        Initialize the Cassie robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.8)

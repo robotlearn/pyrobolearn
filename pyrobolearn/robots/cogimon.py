@@ -20,18 +20,24 @@ class Cogimon(BipedRobot, BiManipulator):
     r"""Cogimon humanoid robot.
 
     References:
-        [1] https://github.com/ADVRHumanoids/iit-cogimon-ros-pkg
+        - [1] https://github.com/ADVRHumanoids/iit-cogimon-ros-pkg
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 1.),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
-                 urdf=os.path.dirname(__file__) + '/urdfs/cogimon/cogimon.urdf',
-                 lower_body=False):  # cogimon_lower_body.urdf
+    def __init__(self, simulator, position=(0, 0, 1.), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
+                 lower_body=False, urdf=os.path.dirname(__file__) + '/urdfs/cogimon/cogimon.urdf'):
+        # cogimon_lower_body.urdf
+        """
+        Initialize the Cogimon robot.
 
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            lower_body (bool): if we should only use the lower body of the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 1.)

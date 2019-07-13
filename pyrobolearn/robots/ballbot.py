@@ -17,15 +17,26 @@ __status__ = "Development"
 
 # TODO inertia are not corrects
 class Ballbot(Robot):
-    r"""BB8 robot
+    r"""Ballbot robot
 
     References:
-        [1] https://github.com/eborghi10/BB-8-ROS
-        [2] http://www.theconstructsim.com/bb-8-gazebo-model/
+        - [1] https://github.com/eborghi10/BB-8-ROS
+        - [2] http://www.theconstructsim.com/bb-8-gazebo-model/
     """
 
     def __init__(self, simulator, position=(0, 0, 0.), orientation=(0, 0, 0, 1), fixed_base=False,
                  scale=1., urdf=os.path.dirname(__file__) + '/urdfs/ballbot/ballbot.urdf'):
+        """
+        Initialize the Ballbot robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.)

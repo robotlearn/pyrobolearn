@@ -23,7 +23,8 @@ __status__ = "Development"
 class Quadcopter(RotaryWingUAV):
     r"""Quadcopter
 
-    WARNING: Currently, in pybullet there is no air, so we simulate the thrust force.
+    WARNING: If the given simulator can not simulate air dynamics, then we compute and simulate the thrust force.
+    For instance, in pybullet there is no air, so we simulate the thrust force with that simulator.
 
     Based on momentum theory, we can calculate the thrust [5,6,7] to be:
 
@@ -53,27 +54,33 @@ class Quadcopter(RotaryWingUAV):
     * the air density :math:`\rho` is :math:`1.225kg/m^3` at sea level and at :math:`15C`.
 
     References:
-        [1] https://www.wilselby.com/research/ros-integration/
-        [2] https://github.com/wilselby/ROS_quadrotor_simulator
-        [3] https://github.com/prfraanje/quadcopter_sim
-        [4] https://github.com/ethz-asl/rotors_simulator
+        - [1] https://www.wilselby.com/research/ros-integration/
+        - [2] https://github.com/wilselby/ROS_quadrotor_simulator
+        - [3] https://github.com/prfraanje/quadcopter_sim
+        - [4] https://github.com/ethz-asl/rotors_simulator
 
-        [5] "Propeller Thrust" (NASA): https://www.grc.nasa.gov/WWW/K-12/airplane/propth.html
-        [6] "Static thrust calculation": https://quadcopterproject.wordpress.com/static-thrust-calculation/
-        [7] "Propeller Static & Dynamic Thrust Calculation":
+        - [5] "Propeller Thrust" (NASA): https://www.grc.nasa.gov/WWW/K-12/airplane/propth.html
+        - [6] "Static thrust calculation": https://quadcopterproject.wordpress.com/static-thrust-calculation/
+        - [7] "Propeller Static & Dynamic Thrust Calculation":
             https://www.electricrcaircraftguy.com/2013/09/propeller-static-dynamic-thrust-equation.html
             https://www.electricrcaircraftguy.com/2014/04/propeller-static-dynamic-thrust-equation-background.html
-        [8] "Flying Principle of a Quadrotor" (from the course "Autonomous Navigation for Flying Robots" on EdX),
+        - [8] "Flying Principle of a Quadrotor" (from the course "Autonomous Navigation for Flying Robots" on EdX),
             Jurgen, https://jsturm.de/publications/data/lecture_1_part_3.pdf
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0.2),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0.2), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/quadcopter/quadcopter.urdf'):
+        """
+        Initialize the quadcopter robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.2)
@@ -167,25 +174,26 @@ class Quadcopter(RotaryWingUAV):
         # call parent method
         super(Quadcopter, self).set_joint_velocities(velocities, joint_ids, forces, max_velocity)
 
-        # calculate thrust force of the given joints, and apply it on the link
-        for jnt, d, v in zip(joint_ids, self.propeller_directions, velocities):
-            if max_velocity and v > self.max_velocity:
-                v = self.max_velocity
+        # if the simulator can not simulate air, calculate thrust force of the given joints, and apply it on the link
+        if not self.simulator.simulate_gas_dynamics():
+            for jnt, d, v in zip(joint_ids, self.propeller_directions, velocities):
+                if max_velocity and v > self.max_velocity:
+                    v = self.max_velocity
 
-            # compute propeller speed v0
-            state = self.sim.get_link_state(self.id, jnt, compute_velocity=True)  # , compute_forward_kinematics=True)
-            R = get_matrix_from_quaternion(state[1])
-            linear_velocity = np.array(state[-2])
-            propeller_up_vec = R.dot(np.array([0., 0., 1.]))
-            v0 = linear_velocity.dot(propeller_up_vec)
-            # v0 = 0    # static thrust
+                # compute propeller speed v0
+                state = self.sim.get_link_state(self.id, jnt, compute_velocity=True)  # , compute_forward_kinematics=True)
+                R = get_matrix_from_quaternion(state[1])
+                linear_velocity = np.array(state[-2])
+                propeller_up_vec = R.dot(np.array([0., 0., 1.]))
+                v0 = linear_velocity.dot(propeller_up_vec)
+                # v0 = 0    # static thrust
 
-            # compute thrust
-            f = self.calculate_thrust_force(v * d, self.area, self.propeller_pitch, v0)
-            # f = self.mass * self.gravity / 4.
+                # compute thrust
+                f = self.calculate_thrust_force(v * d, self.area, self.propeller_pitch, v0)
+                # f = self.mass * self.gravity / 4.
 
-            # apply force in the simulation
-            self.apply_external_force(force=[0, 0, f], link_id=jnt, position=(0., 0., 0.))
+                # apply force in the simulation
+                self.apply_external_force(force=[0, 0, f], link_id=jnt, position=(0., 0., 0.))
 
     def get_stationary_joint_velocity(self):
         fg = self.mass * self.gravity / 4.

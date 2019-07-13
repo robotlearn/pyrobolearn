@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-"""Provide the WAM robotic platform.
+"""Provide the WAM robotic platform and the Barrett hand gripper.
 """
 
 import os
 
 from pyrobolearn.robots.manipulator import Manipulator
+from pyrobolearn.robots.gripper import AngularGripper
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -19,17 +20,23 @@ class WAM(Manipulator):
     r"""Wam robot
 
     References:
-        [1] https://advanced.barrett.com/wam-arm-1
-        [2] https://github.com/jhu-lcsr/barrett_model
+        - [1] https://advanced.barrett.com/wam-arm-1
+        - [2] https://github.com/jhu-lcsr/barrett_model
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=True,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), fixed_base=True, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/wam/wam.urdf'):
+        """
+        Initialize the WAM robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the gripper.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.)
@@ -44,6 +51,45 @@ class WAM(Manipulator):
         self.name = 'wam'
 
         # self.disable_motor()
+
+
+class BarrettHand(AngularGripper):
+    r"""BarretHand (Gripper)
+
+    References:
+        - [1] https://advanced.barrett.com/wam-arm-1
+        - [2] https://github.com/jhu-lcsr/barrett_model
+    """
+
+    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
+                 urdf=os.path.dirname(__file__) + '/urdfs/wam/wam_gripper.urdf'):
+        """
+        Initialize the Barrett hand/gripper.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the gripper will be fixed in the world.
+            scale (float): scaling factor that is used to scale the gripper.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
+        # check parameters
+        if position is None:
+            position = (0., 0., 0.)
+        if len(position) == 2:  # assume x, y are given
+            position = tuple(position) + (0.,)
+        if orientation is None:
+            orientation = (0, 0, 0, 1)
+        if fixed_base is None:
+            fixed_base = True
+
+        super(BarrettHand, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
+        self.name = 'barrett_hand'
+
+
+# alias
+WAMGripper = BarrettHand
 
 
 # Test

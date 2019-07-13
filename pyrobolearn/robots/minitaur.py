@@ -23,20 +23,26 @@ class Minitaur(QuadrupedRobot):
     Minitaur robot from Ghost Robotics (https://www.ghostrobotics.io/)
 
     References:
-        [1] "Design Principles for a Family of Direct-Drive Legged Robots", Kenneally et al., 2016
-        [2] pybullet/gym/pybullet_envs/bullet/minitaur.py
-        [3] https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/gym/pybullet_envs/bullet/minitaur.py
+        - [1] "Design Principles for a Family of Direct-Drive Legged Robots", Kenneally et al., 2016
+        - [2] pybullet/gym/pybullet_envs/bullet/minitaur.py
+        - [3] https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/gym/pybullet_envs/bullet/minitaur.py
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, .3),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
-                 couple_legs=True,
-                 foot_friction=1.,
-                 urdf=os.path.dirname(__file__) + '/urdfs/minitaur/minitaur.urdf'):
+    def __init__(self, simulator, position=(0, 0, .3), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
+                 couple_legs=True, foot_friction=1., urdf=os.path.dirname(__file__) + '/urdfs/minitaur/minitaur.urdf'):
+        """
+        Initialize the Minitaur robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            couple_legs (bool): if True, it will couple the legs by setting a constraint between two legs.
+            foot_friction (float): foot friction value.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.3)

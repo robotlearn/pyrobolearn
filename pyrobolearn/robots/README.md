@@ -40,7 +40,7 @@ The folder contains different kind of robots including manipulators, legged robo
 - [E-puck](https://github.com/gctronic/epuck_driver_cpp)
 - [F10 racecar](https://github.com/erwincoumans/pybullet_robots/tree/master/data/f10_racecar)
 - [Fetch](https://github.com/fetchrobotics/fetch_ros)
-- [Franka Emika](https://github.com/frankaemika/franka_ros)
+- [Franka Emika Panda](https://github.com/frankaemika/franka_ros)
 - [Half Cheetah](https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_data/mjcf)
 - [Hopper](https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_data/mjcf)
 - [Hubo](https://github.com/robEllenberg/hubo-urdf)

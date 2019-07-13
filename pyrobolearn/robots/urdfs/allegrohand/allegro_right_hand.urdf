@@ -22,7 +22,7 @@ and one fixed link will be added for the tip. -->
   <!-- ============================================================================= -->
   <!-- ============================================================================= -->
   <!-- BASE -->
-  <link name="box_link">
+  <!-- <link name="box_link">
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
@@ -47,7 +47,7 @@ and one fixed link will be added for the tip. -->
     <parent link="box_link"/>
     <child link="base_link"/>
     <origin xyz="0 0 0.145"/>
-  </joint>
+  </joint> -->
 
   <link name="base_link">
     <visual>

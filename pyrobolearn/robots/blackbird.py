@@ -23,17 +23,23 @@ class Blackbird(BipedRobot):
     roughly 15 kg" [1].
 
     References:
-        [1] https://hackaday.io/project/160882-blackbird-bipedal-robot
-        [2] https://github.com/G-Levine
+        - [1] https://hackaday.io/project/160882-blackbird-bipedal-robot
+        - [2] https://github.com/G-Levine
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 1.2),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 1.2), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/blackbird/blackbird_biped.urdf'):
+        """
+        Initialize the Blackbird robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
 
         self.height = 1.2
         self.base_height = self.height

@@ -31,22 +31,28 @@ class Kilobot(Robot):
     - linear resonant actuator (LRA) [5.2]
 
     References:
-        [1] "Kilobot: a Low Cost Scalable Robot System for Collective Behaviors", Rubenstein et al., 2012
-        [2] "Programmable self-assembly in a thousand-robot swarm", Rubenstein et al., 2014
-        [3] Harvard's Self-Organizing Systems Research Group: https://ssr.seas.harvard.edu/kilobots
-        [4] K-Team Corporation: https://www.k-team.com/mobile-robotics-products/kilobot
-        [5] Precision Micro drives: https://www.precisionmicrodrives.com/
+        - [1] "Kilobot: a Low Cost Scalable Robot System for Collective Behaviors", Rubenstein et al., 2012
+        - [2] "Programmable self-assembly in a thousand-robot swarm", Rubenstein et al., 2014
+        - [3] Harvard's Self-Organizing Systems Research Group: https://ssr.seas.harvard.edu/kilobots
+        - [4] K-Team Corporation: https://www.k-team.com/mobile-robotics-products/kilobot
+        - [5] Precision Micro drives: https://www.precisionmicrodrives.com/
             - ERM: https://www.precisionmicrodrives.com/vibration-motors/
             - LRA: https://www.precisionmicrodrives.com/vibration-motors/linear-resonant-actuators-lras/
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/kilobot/kilobot.urdf'):  # TODO: finish URDF
+        """
+        Initialize the Kilobot robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0)

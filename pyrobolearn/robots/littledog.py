@@ -20,18 +20,24 @@ class LittleDog(QuadrupedRobot):
     r"""Little Dog
 
     References:
-        [1] "The LittleDog Robot", Murphy et al., 2010
+        - [1] "The LittleDog Robot", Murphy et al., 2010
             https://journals.sagepub.com/doi/abs/10.1177/0278364910387457?journalCode=ijra
-        [2] https://github.com/RobotLocomotion/LittleDog
+        - [2] https://github.com/RobotLocomotion/LittleDog
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0.2),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0.2), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/littledog/littleDog.urdf'):
+        """
+        Initialize the LittleDog robots.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.2)

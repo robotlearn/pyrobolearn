@@ -29,18 +29,24 @@ class Techpod(FixedWingUAV):
     is carried out by pybullet.
 
     References:
-        [1] https://github.com/ethz-asl/rotors_simulator
-        [2] "Theory of flight": web.mit.edu/16.00/www/aec/flight.html
-        [3] "NASA: Guided Tours of the BGA": www.grc.nasa.gov/WWW/k-12/airplane/guided.html
+        - [1] https://github.com/ethz-asl/rotors_simulator
+        - [2] "Theory of flight": web.mit.edu/16.00/www/aec/flight.html
+        - [3] "NASA: Guided Tours of the BGA": www.grc.nasa.gov/WWW/k-12/airplane/guided.html
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0.5),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scaling=1.,
+    def __init__(self, simulator, position=(0, 0, 0.5), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/techpod/techpod.urdf'):
+        """
+        Initialize the Techpod robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[3]): Cartesian world position.
+            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.5)
@@ -51,7 +57,7 @@ class Techpod(FixedWingUAV):
         if fixed_base is None:
             fixed_base = False
 
-        super(Techpod, self).__init__(simulator, urdf, position, orientation, fixed_base, scaling)
+        super(Techpod, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'techpod'
 
         # info
