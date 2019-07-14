@@ -45,6 +45,24 @@ class Gripper(Robot):
             return self.fingers[finger_id]
         return self.fingers
 
+    def open(self, factor):
+        """
+        Open the gripper.
+
+        Args:
+            factor (float): float representing how much the gripper is open (1=completely open, 0=completely close).
+        """
+        self.close(factor=1.-factor)
+
+    def close(self, factor):
+        """
+        Close the gripper. This has to be implemented in the child class.
+
+        Args:
+            factor (float): float representing how much the gripper is closed (1=completely close, 0=clompletely open).
+        """
+        pass
+
 
 class ParallelGripper(Gripper):
     r"""Parallel Gripper

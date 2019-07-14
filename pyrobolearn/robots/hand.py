@@ -2,7 +2,8 @@
 """Provide the Hand abstract classes.
 """
 
-from pyrobolearn.robots.robot import Robot
+from pyrobolearn.robots.gripper import AngularGripper
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -14,7 +15,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Hand(Robot):
+class Hand(AngularGripper):
     r"""Hand end-effector
     """
 
@@ -31,19 +32,6 @@ class Hand(Robot):
             scale (float): scaling factor that is used to scale the robot.
         """
         super(Hand, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
-
-        self.fingers = []  # list of fingers where each finger is a list of links/joints
-
-    @property
-    def num_fingers(self):
-        """Return the number of fingers on the hand"""
-        return len(self.fingers)
-
-    def get_finger(self, finger_id=None):
-        """Return the list of joint/link ids for the specified finger"""
-        if finger_id:
-            return self.fingers[finger_id]
-        return self.fingers
 
 
 class TwoHand(Hand):

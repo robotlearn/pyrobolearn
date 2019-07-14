@@ -224,10 +224,24 @@ class Robot(ControllableBody):
 
     def step(self):
         """Perform a step."""
+        # update previous and current states
         self._prev_state = self._state
         self._prev_jacobian = self._jacobian
         self._state = {}
         self._jacobian = {}
+
+        # sense
+        self.sense()
+
+    def sense(self):
+        """Run all the sensors."""
+        for sensor in self.sensors:
+            sensor()
+
+    def act(self):
+        """Run all the actuators."""
+        for actuator in self.actuators:
+            actuator()
 
     ########
     # Base #
@@ -493,7 +507,7 @@ class Robot(ControllableBody):
     ########################
 
     def get_joint_ids(self, joint=None):
-        """
+        r"""
         Return the joint id(s) from the name(s) or q index(ices).
 
         Note that the joint id is unique and goes from 0 to the total number of joints (including fixed joints),
@@ -529,7 +543,7 @@ class Robot(ControllableBody):
         return get_index(joint)
 
     def get_joint_info(self, joint_ids=None):
-        """
+        r"""
         Get information about the given joint(s).
 
         Note that this method returns a lot of information, so specific methods have been implemented that return
@@ -572,7 +586,7 @@ class Robot(ControllableBody):
         return [self.sim.get_joint_info(self.id, joint_id) for joint_id in joint_ids]
 
     def get_joint_axes(self, joint_ids=None):
-        """
+        r"""
         Get information about the given joint(s).
 
         Note that this method returns a lot of information, so specific methods have been implemented that return
@@ -593,7 +607,7 @@ class Robot(ControllableBody):
         return self.sim.get_joint_axes(self.id, joint_ids)
 
     def get_q_indices(self, joint_ids=None):
-        """
+        r"""
         Get the corresponding q index of the given joint(s).
 
         Args:
@@ -611,7 +625,7 @@ class Robot(ControllableBody):
         return self.sim.get_q_indices(self.id, joint_ids)
 
     def get_joint_types(self, joint_ids=None, to_string=True):
-        """
+        r"""
         Get the joint type as a string or integer.
 
         Args:
@@ -631,7 +645,7 @@ class Robot(ControllableBody):
         return self.sim.get_joint_type_ids(self.id, joint_ids)
 
     def get_joint_limits(self, joint_ids=None):
-        """
+        r"""
         Get the joint limits of the given joint(s).
 
         Args:
@@ -649,7 +663,7 @@ class Robot(ControllableBody):
         return self.sim.get_joint_limits(self.id, joint_ids)
 
     def get_joint_dampings(self, joint_ids=None):
-        """
+        r"""
         Get the damping coefficient of the given joint(s).
 
         Args:
@@ -667,7 +681,7 @@ class Robot(ControllableBody):
         return self.sim.get_joint_dampings(self.id, joint_ids)
 
     def get_joint_frictions(self, joint_ids=None):
-        """
+        r"""
         Get the friction coefficient of the given joint(s).
 
         Args:
@@ -685,7 +699,7 @@ class Robot(ControllableBody):
         return self.sim.get_joint_frictions(self.id, joint_ids)
 
     def get_joint_max_forces(self, joint_ids=None):
-        """
+        r"""
         Get the maximum force that can be applied on the given joint(s).
 
         Warning: Note that this is not automatically used in position, velocity, or torque control.
@@ -705,7 +719,7 @@ class Robot(ControllableBody):
         return self.sim.get_joint_max_forces(self.id, joint_ids)
 
     def get_joint_max_velocities(self, joint_ids=None):
-        """
+        r"""
         Get the maximum velocity that can be applied on the given joint(s).
 
         Warning: Note that this is not automatically used in position, velocity, or torque control.
@@ -725,7 +739,7 @@ class Robot(ControllableBody):
         return self.sim.get_joint_max_velocities(self.id, joint_ids)
 
     def get_joint_names(self, joint_ids=None):
-        """
+        r"""
         Return the name of the given joint(s).
 
         Args:
@@ -742,7 +756,7 @@ class Robot(ControllableBody):
         return self.sim.get_joint_names(self.id, joint_ids)
 
     def get_joint_states(self, joint_ids=None):
-        """
+        r"""
         Get the state of the given joint(s).
 
         Args:
@@ -764,7 +778,7 @@ class Robot(ControllableBody):
         return self.sim.get_joint_states(self.id, joint_ids)
 
     def get_joint_positions(self, joint_ids=None):
-        """
+        r"""
         Get the position of the given joint(s).
 
         See Also: :func:`~Robot.get_augmented_joint_positions`.
@@ -794,7 +808,7 @@ class Robot(ControllableBody):
         return q[self.get_q_indices(joint_ids)]
 
     def get_augmented_joint_positions(self, joint_ids=None):
-        """
+        r"""
         Get the augmented joint position vector of the specified joint(s). If the robot has a floating base, the first
         6 joints are the 3D world position and orientation (expressed as roll-pitch-yaw angles) of the robot base.
         If the robot has a fixed base, this is the same as calling :func:`~Robot.get_joint_positions`.
@@ -817,7 +831,7 @@ class Robot(ControllableBody):
         return np.concatenate((np.concatenate((pos, rpy)), np.asarray(q).reshape(-1)))
 
     def get_joint_velocities(self, joint_ids=None):
-        """
+        r"""
         Get the velocity of the given joint(s).
 
         See Also: :func:`~Robot.get_augmented_joint_velocities`.
@@ -847,7 +861,7 @@ class Robot(ControllableBody):
         return dq[self.get_q_indices(joint_ids)]
 
     def get_augmented_joint_velocities(self, joint_ids=None):
-        """
+        r"""
         Get the augmented joint velocity vector of the specified joint(s). If the robot has a floating base, the first
         6 joints are the 3D world linear and angular velocities of the robot base. If the robot has a fixed base, this
         is the same as calling :func:`~Robot.get_joint_velocities`.
@@ -904,7 +918,7 @@ class Robot(ControllableBody):
     #     return accelerations[q_idx]
 
     def get_joint_accelerations(self, joint_ids=None):  # TODO: fix this!!
-        """
+        r"""
         Get the acceleration of the specified joint(s). If the simulator doesn't provide the joint accelerations, this
         is computed using finite difference :math:`\ddot{q}(t) = \frac{\dot{q}(t) - \dot{q}(t-dt)}{dt}`.
 
@@ -974,7 +988,7 @@ class Robot(ControllableBody):
         return ddq[q_idx]
 
     def get_augmented_joint_accelerations(self, joint_ids=None):
-        """
+        r"""
         Get the augmented joint acceleration vector of the specified joint(s). If the robot has a floating base, the
         first 6 joints are the 3D world linear and angular accelerations of the robot base. If the robot has a fixed
         base, this is the same as calling :func:`~Robot.get_joint_accelerations`.
@@ -996,7 +1010,7 @@ class Robot(ControllableBody):
         return np.concatenate((acceleration, np.asarray(ddq).reshape(-1)))
 
     def get_joint_reaction_forces(self, joint_ids=None):
-        """
+        r"""
         Return the joint reaction forces at the given joint. Note that the torque sensor must be enabled, otherwise
         it will always return [0,0,0,0,0,0].
 
@@ -1015,7 +1029,7 @@ class Robot(ControllableBody):
         return self.sim.get_joint_reaction_forces(self.id, joint_ids)
 
     def get_joint_torques(self, joint_ids=None):
-        """
+        r"""
         Get the applied torque on the given joint(s).
 
         Args:
@@ -1033,7 +1047,7 @@ class Robot(ControllableBody):
         return self.sim.get_joint_torques(self.id, joint_ids)
 
     def get_joint_powers(self, joint_ids=None):
-        """
+        r"""
         Return the applied power at the given joint(s). Power = torque * velocity.
 
         Args:
@@ -1052,7 +1066,7 @@ class Robot(ControllableBody):
 
     # TODO: max_velocities and forces
     def set_joint_positions(self, positions, joint_ids=None, kp=None, kd=None, velocities=None, forces=None):
-        """
+        r"""
         Set the position of the given joint(s) (using position control).
 
         Args:
@@ -1071,7 +1085,7 @@ class Robot(ControllableBody):
 
     # TODO: max_velocities and forces
     def set_joint_velocities(self, velocities, joint_ids=None, forces=None, max_velocity=None):
-        """
+        r"""
         Set the velocity of the given joint(s) (using velocity control).
 
         Args:
@@ -1089,7 +1103,7 @@ class Robot(ControllableBody):
 
     # TODO: max_acceleration
     def set_joint_accelerations(self, accelerations, joint_ids=None, max_acceleration=True):
-        """
+        r"""
         Set the acceleration of the given joint(s) (using force control). This is achieved by performing inverse
         dynamic which given the joint accelerations compute the joint torques to be applied.
 
@@ -1133,7 +1147,7 @@ class Robot(ControllableBody):
         self.set_joint_torques(torques, joint_ids)
 
     def set_joint_torques(self, torques=None, joint_ids=None):
-        """
+        r"""
         Set the torque to the given joint(s) (using force/torque control).
 
         Args:
@@ -1186,7 +1200,7 @@ class Robot(ControllableBody):
         self.sim.set_joint_motor_control(self.id, joint_ids, control_mode, **kwargs)
 
     def disable_motor(self, joint_ids=None):
-        """
+        r"""
         Disable the motor associated with the given joint(s).
 
         Args:
@@ -1198,7 +1212,7 @@ class Robot(ControllableBody):
         self.sim.set_joint_motor_control(self.id, joint_ids, self.sim.VELOCITY_CONTROL, forces=[0] * len(joint_ids))
 
     def reset_joint_states(self, q=None, dq=None, joint_ids=None):
-        """
+        r"""
         Reset the state of the robot.
 
         Warnings: This is only valid in the simulator, and note that calling this method overrides all physics
@@ -1233,22 +1247,22 @@ class Robot(ControllableBody):
             self.sim.reset_joint_state(self.id, joint_id, position, velocity)
 
     def get_home_joint_positions(self):
-        """
+        r"""
         Return the joint positions for the home position defined by the user. This method has to be overwritten in
         the child class.
         """
         return np.zeros(self.num_actuated_joints)
 
-    def set_joint_home_positions(self):
-        """
+    def set_home_joint_positions(self):
+        r"""
         Set the joints to their home position defined by the user.
         """
         joint_positions = self.get_home_joint_positions()
         if joint_positions is not None:
             self.reset_joint_states(joint_positions)
 
-    def move_joint_home_positions(self):
-        """
+    def move_home_joint_positions(self):
+        r"""
         Move the joints to their home position defined by the user. This method can be overwritten in the child
         class.
 
@@ -1261,6 +1275,26 @@ class Robot(ControllableBody):
 
     def set_joint_init_positions(self):
         self.set_joint_positions(self.init_joint_positions)
+
+    def get_joint_configurations(self, name=None):
+        """
+        If no name is specified, return the list of possible joint configurations. If a name is specified, it returns
+        the corresponding joint ids and positions to move the robot to.
+
+        This method has to be implemented in the child class.
+
+        Args:
+            name (str, None): name of the joint configuration to move the robot to.
+
+        Returns:
+            if name is None:
+                list:
+                    str: name of each joint configuration.
+            else:
+                np.array[M]: joint ids to move.
+                np.array[M]: joint positions.
+        """
+        pass
 
     ##################################
     # Links (task/operational space) #

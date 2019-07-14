@@ -111,7 +111,7 @@ class Minitaur(QuadrupedRobot):
         self.set_foot_friction(frictions=foot_friction, feet_ids=self.feet)
 
         # set joint angles to home position
-        self.set_joint_home_positions()
+        self.set_home_joint_positions()
 
     ##############
     # Properties #

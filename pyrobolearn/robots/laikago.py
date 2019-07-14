@@ -88,5 +88,5 @@ if __name__ == "__main__":
     # run simulator
     for _ in count():
         # robot.update_joint_slider()
-        robot.move_joint_home_positions()
+        robot.move_home_joint_positions()
         world.step(sleep_dt=1./240)

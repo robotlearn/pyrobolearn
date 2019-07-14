@@ -70,7 +70,7 @@ class Cassie(BipedRobot):
         self.feet = [self.get_link_ids(link) for link in ['left_toe', 'right_toe'] if link in self.link_names]
 
         # set joint angles to home position
-        self.set_joint_home_positions()
+        self.set_home_joint_positions()
 
     def get_home_joint_positions(self):
         """Return the joint positions for the home position"""
@@ -100,5 +100,5 @@ if __name__ == "__main__":
     # run simulator
     for _ in count():
         # robot.update_joint_slider()
-        robot.move_joint_home_positions()
+        robot.move_home_joint_positions()
         world.step(sleep_dt=1./240)
