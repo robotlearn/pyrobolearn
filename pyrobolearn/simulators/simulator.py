@@ -387,7 +387,11 @@ class Simulator(object):
         Args:
             enable (bool): If True, it will enable the real-time simulation. If False, it will disable it.
         """
-        pass
+        self.real_time = True
+
+    def use_real_time(self):
+        """Return True if the simulator is in real-time mode."""
+        return self.real_time
 
     def pause(self):
         """Pause the simulator if in real-time."""
@@ -929,6 +933,19 @@ class Simulator(object):
         """
         pass
 
+    def get_base_acceleration(self, body_id):
+        """
+        Get the base acceleration. This is only valid if the simulator `supports_acceleration`.
+
+        Args:
+            body_id (int): unique object id.
+
+        Returns:
+            np.array[3]: linear acceleration [m/s^2]
+            np.array[3]: angular acceleration [rad/s^2]
+        """
+        pass
+
     def apply_external_force(self, body_id, link_id=-1, force=(0., 0., 0.), position=(0., 0., 0.), frame=1):
         """
         Apply the specified external force on the specified position on the body / link.
@@ -1282,6 +1299,23 @@ class Simulator(object):
     def get_link_velocities(self, body_id, link_ids):
         pass
 
+    def get_link_world_accelerations(self, body_id, link_ids):
+        """
+        Return the linear and angular accelerations (expressed in the Cartesian world space coordinates) for the given
+        link(s). This is only valid if the simulator `supports_acceleration`.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (list of int): list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[6]: linear and angular acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[N,6]: linear and angular acceleration of each link
+        """
+        pass
+
     def get_q_indices(self, body_id, joint_ids):
         """
         Get the corresponding q index of the given joint(s).
@@ -1528,16 +1562,13 @@ class Simulator(object):
         """
         pass
 
-    def get_joint_accelerations(self, body_id, joint_ids, q=None, dq=None):
+    def get_joint_accelerations(self, body_id, joint_ids):  # , q=None, dq=None):
         """
-        Get the acceleration at the given joint(s). This is carried out by first getting the joint torques, then
-        performing forward dynamics to get the joint accelerations from the joint torques.
+        Get the acceleration of the specified joint(s). This is only valid if the simulator `supports_acceleration`.
 
         Args:
             body_id (int): unique body id.
             joint_ids (int, list of int): joint id, or list of joint ids.
-            q (list of int, None): all the joint positions. If None, it will compute it.
-            dq (list of int, None): all the joint velocities. If None, it will compute it.
 
         Returns:
             if 1 joint:

@@ -457,6 +457,7 @@ class Bullet(Simulator):
         Args:
             enable (bool): If True, it will enable the real-time simulation. If False, it will disable it.
         """
+        super(Bullet, self).set_real_time(enable=enable)
         self.sim.setRealTimeSimulation(enableRealTimeSimulation=int(enable))
 
     def pause(self):
@@ -2274,40 +2275,40 @@ class Bullet(Simulator):
         # set the joint torques
         self.set_joint_torques(body_id, joint_ids, torques)
 
-    def get_joint_accelerations(self, body_id, joint_ids, q=None, dq=None):
-        """
-        Get the acceleration at the given joint(s). This is carried out by first getting the joint torques, then
-        performing forward dynamics to get the joint accelerations from the joint torques.
-
-        Args:
-            body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
-            q (list of int, None): all the joint positions. If None, it will compute it.
-            dq (list of int, None): all the joint velocities. If None, it will compute it.
-
-        Returns:
-            if 1 joint:
-                float: joint acceleration [rad/s^2]
-            if multiple joints:
-                np.array[N]: joint accelerations [rad/s^2]
-        """
-        # get the torques
-        torques = self.get_joint_torques(body_id, joint_ids)
-
-        # get position and velocities
-        if q is None or dq is None:
-            joints = self.get_actuated_joint_ids(body_id)
-            if q is None:
-                q = self.get_joint_positions(body_id, joints)
-            if dq is None:
-                dq = self.get_joint_velocities(body_id, joints)
-
-        # compute the accelerations
-        accelerations = self.calculate_forward_dynamics(body_id, q, dq, torques=torques)
-
-        # return the specified accelerations
-        q_idx = self.get_q_indices(body_id, joint_ids)
-        return accelerations[q_idx]
+    # def get_joint_accelerations(self, body_id, joint_ids):  # , q=None, dq=None):
+    #     """
+    #     Get the acceleration at the given joint(s). This is carried out by first getting the joint torques, then
+    #     performing forward dynamics to get the joint accelerations from the joint torques.
+    #
+    #     Args:
+    #         body_id (int): unique body id.
+    #         joint_ids (int, list of int): joint id, or list of joint ids.
+    #         q (list of int, None): all the joint positions. If None, it will compute it.
+    #         dq (list of int, None): all the joint velocities. If None, it will compute it.
+    #
+    #     Returns:
+    #         if 1 joint:
+    #             float: joint acceleration [rad/s^2]
+    #         if multiple joints:
+    #             np.array[N]: joint accelerations [rad/s^2]
+    #     """
+    #     # get the torques
+    #     torques = self.get_joint_torques(body_id, joint_ids)
+    #
+    #     # get position and velocities
+    #     if q is None or dq is None:
+    #         joints = self.get_actuated_joint_ids(body_id)
+    #         if q is None:
+    #             q = self.get_joint_positions(body_id, joints)
+    #         if dq is None:
+    #             dq = self.get_joint_velocities(body_id, joints)
+    #
+    #     # compute the accelerations
+    #     accelerations = self.calculate_forward_dynamics(body_id, q, dq, torques=torques)
+    #
+    #     # return the specified accelerations
+    #     q_idx = self.get_q_indices(body_id, joint_ids)
+    #     return accelerations[q_idx]
 
     def set_joint_torques(self, body_id, joint_ids, torques):
         """

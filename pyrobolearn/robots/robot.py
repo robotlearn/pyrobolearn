@@ -11,6 +11,7 @@ Dependencies:
 """
 
 import os
+import time
 import copy
 import collections
 # import rbdl
@@ -39,6 +40,20 @@ class Robot(ControllableBody):
 
     This is the class that all robots should inherit from. It contains all the useful methods to operate the robot,
     and has been implemented such that it is very generic.
+
+    References:
+        - [1] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+        - [2] "Springer Handbook of Robotics", Siciliano et al., 2008
+        - [3] "Rigid Body Dynamics Algorithms", Featherstone, 2008
+        - [4] "Symbolic differentiation of the velocity mapping for a serial kinematic chain", Bruyninck et al.,
+              Mechanism and Machine Theory. 1996
+        - [5] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+              http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
+        - [6] "Whole-body cooperative balancing of humanoid robot using COG Jacobian", Sugihara et al., IROS, 2002
+        - [7] "Geometry-aware Tracking of Manipulability Ellipsoids", Jaquier et al., R:SS, 2018
+        - [8] "Improved computation of the humanoid centroidal dynamics and application for whole-body control",
+              Wensing and Orin, 2016
+        - [9] "Motion Planning and Control of Dynamic Humanoid Locomotion" (PhD thesis), Xin, 2018
     """
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1., *args, **kwargs):
@@ -106,8 +121,6 @@ class Robot(ControllableBody):
         self.link_names = {}  # link name to id in the simulator
         self.end_effectors = []  # end effector indices
         self.end_effector_names = {}  # end effector name to id in the simulator
-        self.actuators = []  # list of actuators
-        self.sensors = []  # list of sensors
 
         # get actuated joints
         for joint_id in range(self.num_joints):
@@ -146,6 +159,16 @@ class Robot(ControllableBody):
 
         # Gains
         self.kp, self.kd = None, None
+
+        # State of the robot
+        self._prev_state = {}
+        self._state = {}
+        self._prev_jacobian = {}
+        self._jacobian = {}
+
+        # sensors and actuators
+        self.sensors = []  # list of sensors
+        self.actuators = []  # list of actuators
 
     #############
     # Operators #
@@ -188,26 +211,47 @@ class Robot(ControllableBody):
         """
         if self.fixed_base:
             return len(self.joints)
-        return len(self.joints) + 6
+        return 6 + len(self.joints)
 
     @property
     def num_free_joints(self):
         """Return the number of joints that are not fixed."""
         return len(self.joints)
 
+    ###########
+    # Methods #
+    ###########
+
+    def step(self):
+        """Perform a step."""
+        self._prev_state = self._state
+        self._prev_jacobian = self._jacobian
+        self._state = {}
+        self._jacobian = {}
+
     ########
     # Base #
     ########
 
-    def get_base_pose(self):
+    def get_base_pose(self, concatenate=False):
         """
-        Get base position and orientation with respect to the world frame.
+        Get base position and orientation (expressed as a quaternion [x,y,z,w]) with respect to the world frame.
+
+        Args:
+            concatenate (bool): if we should concatenate or not the position and orientation. By default, it doesn't
+                concatenate because some users might wish to change the orientation representation.
 
         Returns:
-            np.array[3]: position
-            np.array[4]: orientation (x, y, z, w)
+            if concatenate:
+                np.array[7]: concatenated position and orientation
+            else:
+                np.array[3]: position
+                np.array[4]: orientation (x, y, z, w)
         """
-        return self.sim.get_base_pose(self.id)
+        pose = self.sim.get_base_pose(self.id)
+        if concatenate:
+            return np.concatenate((pose[0], pose[1]))
+        return pose
 
     def get_base_position(self):
         """
@@ -231,10 +275,23 @@ class Robot(ControllableBody):
         """
         Return the base linear and angular velocities.
 
+        Args:
+            concatenate (bool): if we should concatenate or not the linear and angular velocities.
+
         Returns:
-            np.array[6]: linear and angular velocities of the base
+            if concatenate:
+                np.array[6]: linear and angular velocities of the base
+            else:
+                np.array[3]: linear velocity of the base
+                np.array[3]: angular velocity of the base
         """
-        lin_vel, ang_vel = self.sim.get_base_velocity(self.id)
+        # check if cached
+        if 'vel' in self._state:
+            lin_vel, ang_vel = self._state['vel'][:2]
+        else:
+            lin_vel, ang_vel = self.sim.get_base_velocity(self.id)
+            self._state['vel'] = lin_vel, ang_vel, time.time()
+
         if concatenate:
             return np.concatenate((lin_vel, ang_vel))
         return lin_vel, ang_vel
@@ -256,6 +313,81 @@ class Robot(ControllableBody):
             np.array[3]: angular velocity of the base
         """
         return self.sim.get_base_angular_velocity(self.id)
+
+    def get_base_spatial_velocity(self):
+        """
+        Return the base spatial velocity (which is the concatenation of the angular and linear velocity).
+
+        Returns:
+            np.array[6]: spatial velocity
+        """
+        lin_vel, ang_vel = self.get_base_velocity(concatenate=False)
+        return np.concatenate((ang_vel, lin_vel))
+
+    def get_base_acceleration(self, concatenate=True):
+        """
+        Return the linear and angular acceleration of the base. Some simulators does not provide the accelerations.
+        If that is the case, then we use finite difference to compute it (calling this the first time will return a
+        zero vector for the linear and angular acceleration).
+
+        Returns:
+            if concatenate:
+                np.array[6]: concatenation of the linear and angular acceleration
+            else:
+                np.array[3]: linear acceleration
+                np.array[3]: angular acceleration
+        """
+        # check if cached
+        if 'acc' in self._state:
+            acc = self._state['acc'][:2]
+        else:
+            # if the simulator keep in memory the accelerations, return it
+            if self.sim.supports_acceleration():
+                acc = self.sim.get_base_acceleration(self.id)
+            else:  # else, use finite difference
+
+                # get current base velocity and time
+                if 'vel' not in self._state:
+                    self.get_base_velocity(concatenate=False)
+                lin_vel, ang_vel, t = self._state['vel']
+
+                # if we did not cache the previous base velocity
+                if 'vel' not in self._prev_state:
+                    acc = np.zeros(3), np.zeros(3)
+                else:
+                    # retrieve previous base velocity and time
+                    lin_vel_prev, ang_vel_prev, t_prev = self._prev_state['vel']
+
+                    # compute time difference
+                    if self.sim.use_real_time():  # if the simulator is in real-time mode
+                        dt = (t - t_prev)
+                    else:  # if we are stepping in the simulator
+                        dt = self.sim.timestep
+
+                    pos = self.get_base_position()
+
+                    # compute base acceleration
+                    ang_acc = (ang_vel - ang_vel_prev) / dt
+                    lin_acc = (lin_vel - lin_vel_prev) / dt
+                    lin_acc += np.cross(ang_acc, pos) + np.cross(ang_vel, np.cross(ang_vel, pos))
+                    acc = (lin_acc, ang_acc)
+
+            self._state['acc'] = [acc[0], acc[1], time.time()]
+
+        # if we need to concatenate the accelerations
+        if concatenate:
+            return np.concatenate((acc[0], acc[1]))
+        return acc
+
+    def get_base_spatial_acceleration(self):
+        """
+        Return the base spatial acceleration (which is the concatenation of the angular and linear acceleration).
+
+        Returns:
+            np.array[6]: spatial acceleration
+        """
+        lin_acc, ang_acc = self.get_base_acceleration(concatenate=False)
+        return np.concatenate((ang_acc, lin_acc))
 
     def _check_floating_base(self):
         """
@@ -635,6 +767,8 @@ class Robot(ControllableBody):
         """
         Get the position of the given joint(s).
 
+        See Also: :func:`~Robot.get_augmented_joint_positions`.
+
         Args:
             joint_ids (int, int[N], None): joint id, or list of joint ids. If None, get the position of all (actuated)
                 joints.
@@ -645,13 +779,48 @@ class Robot(ControllableBody):
             if multiple joints:
                 np.array[N]: joint positions [rad]
         """
+        # check if cached
+        if 'q' in self._state:
+            # get cached joint positions
+            q = self._state['q'][0]
+        else:
+            # get joint positions and cache it
+            q = self.sim.get_joint_positions(self.id, self.joints)
+            self._state['q'] = [q, time.time()]
+
+        # return joint positions
         if joint_ids is None:
-            joint_ids = self.joints
-        return self.sim.get_joint_positions(self.id, joint_ids)
+            return q
+        return q[self.get_q_indices(joint_ids)]
+
+    def get_augmented_joint_positions(self, joint_ids=None):
+        """
+        Get the augmented joint position vector of the specified joint(s). If the robot has a floating base, the first
+        6 joints are the 3D world position and orientation (expressed as roll-pitch-yaw angles) of the robot base.
+        If the robot has a fixed base, this is the same as calling :func:`~Robot.get_joint_positions`.
+
+        Args:
+            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, get the position of all (actuated)
+                joints.
+
+        Returns:
+            if 1 joint:
+                float, np.array[6+1]: joint position(s) [rad]
+            if multiple joints:
+                np.array[N], np.array[6+N]: joint positions [rad]
+        """
+        q = self.get_joint_positions(joint_ids=joint_ids)
+        if self.has_fixed_base():
+            return q
+        pose = self.get_base_pose(concatenate=False)
+        pos, rpy = pose[0], get_rpy_from_quaternion(pose[1])
+        return np.concatenate((np.concatenate((pos, rpy)), np.asarray(q).reshape(-1)))
 
     def get_joint_velocities(self, joint_ids=None):
         """
         Get the velocity of the given joint(s).
+
+        See Also: :func:`~Robot.get_augmented_joint_velocities`.
 
         Args:
             joint_ids (int, int[N], None): joint id, or list of joint ids. If None, get the velocity of all (actuated)
@@ -663,14 +832,84 @@ class Robot(ControllableBody):
             if multiple joints:
                 np.array[N]: joint velocities [rad/s]
         """
-        if joint_ids is None:
-            joint_ids = self.joints
-        return self.sim.get_joint_velocities(self.id, joint_ids)
+        # check if cached
+        if 'dq' in self._state:
+            # get cached joint velocities
+            dq = self._state['dq'][0]
+        else:
+            # get joint velocities and cache it
+            dq = self.sim.get_joint_velocities(self.id, self.joints)
+            self._state['dq'] = [dq, time.time()]
 
-    def get_joint_accelerations(self, joint_ids=None):
+        # return joint velocities
+        if joint_ids is None:
+            return dq
+        return dq[self.get_q_indices(joint_ids)]
+
+    def get_augmented_joint_velocities(self, joint_ids=None):
         """
-        Get the acceleration at the given joint(s). This is carried out by first getting the joint torques, then
-        performing forward dynamics to get the joint accelerations from the joint torques.
+        Get the augmented joint velocity vector of the specified joint(s). If the robot has a floating base, the first
+        6 joints are the 3D world linear and angular velocities of the robot base. If the robot has a fixed base, this
+        is the same as calling :func:`~Robot.get_joint_velocities`.
+
+        Args:
+            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, get the velocity of all (actuated)
+                joints.
+
+        Returns:
+            if 1 joint:
+                float, np.array[6+1]: joint velocity [rad/s]
+            if multiple joints:
+                np.array[N], np.array[6+N]: joint velocities [rad/s]
+        """
+        dq = self.get_joint_velocities(joint_ids=joint_ids)
+        if self.has_fixed_base():
+            return dq
+        velocity = self.get_base_velocity(concatenate=True)
+        return np.concatenate((velocity, np.asarray(dq).reshape(-1)))
+
+    # def get_joint_accelerations(self, body_id, joint_ids, q=None, dq=None):
+    #     """
+    #     Get the acceleration of the specified joint(s). This is carried out by first getting the joint torques, then
+    #     performing forward dynamics to get the joint accelerations from the joint torques.
+    #
+    #     Args:
+    #         body_id (int): unique body id.
+    #         joint_ids (int, list of int): joint id, or list of joint ids.
+    #         q (list of int, None): all the joint positions. If None, it will compute it.
+    #         dq (list of int, None): all the joint velocities. If None, it will compute it.
+    #
+    #     Returns:
+    #         if 1 joint:
+    #             float: joint acceleration [rad/s^2]
+    #         if multiple joints:
+    #             np.array[N]: joint accelerations [rad/s^2]
+    #     """
+    #     # check joint id
+    #     if joint_ids is None:
+    #         joint_ids = self.joints
+    #
+    #     # if simulator supports accelerations
+    #     if self.sim.supports_acceleration():
+    #         return self.sim.get_joint_accelerations()
+    #
+    #     # get the torques
+    #     torques = self.get_joint_torques(joint_ids)
+    #
+    #     # compute the accelerations
+    #     accelerations = self.calculate_forward_dynamics(torques)
+    #
+    #     # return the specified accelerations
+    #     q_idx = self.get_q_indices(joint_ids)
+    #     return accelerations[q_idx]
+
+    def get_joint_accelerations(self, joint_ids=None):  # TODO: fix this!!
+        """
+        Get the acceleration of the specified joint(s). If the simulator doesn't provide the joint accelerations, this
+        is computed using finite difference :math:`\ddot{q}(t) = \frac{\dot{q}(t) - \dot{q}(t-dt)}{dt}`.
+
+        Warnings: if we use finite difference, note that the first time this method is called, it will return a zero
+            vector because we do not have previous joint velocities (i.e. :math:`\dot{q}(t-dt)`) yet.
 
         Args:
             joint_ids (int, int[N], None): joint id, or list of joint ids. If None, get the acceleration of all
@@ -682,19 +921,79 @@ class Robot(ControllableBody):
             if multiple joints:
                 np.array[N]: joint accelerations [rad/s^2]
         """
+        # check if cached
+        if 'ddq' in self._state:
+            ddq = self._state[0]
+            if joint_ids is None:
+                return ddq
+            return ddq[self.get_q_indices(joint_ids)]
+
         # check joint id
+        was_none = False
         if joint_ids is None:
+            was_none = True
             joint_ids = self.joints
 
-        # get the torques
-        torques = self.get_joint_torques(joint_ids)
+        # if simulator supports accelerations
+        if self.sim.supports_acceleration():
+            return self.sim.get_joint_accelerations(self.id, joint_ids)
 
-        # compute the accelerations
-        accelerations = self.calculate_forward_dynamics(torques)
+        # else, use finite difference
 
-        # return the specified accelerations
+        # get current joint velocities and time
+        if 'dq' in self._state:
+            dq, t = self._state['dq']
+        else:
+            dq, t = self.get_joint_velocities(), time.time()
+            self._state['dq'] = [dq, t]
+
+        # if we did not cache the previous joint velocities
+        if 'dq' not in self._prev_state:
+            self._state['ddq'] = [np.zeros(len(self.joints)), t]
+            if isinstance(joint_ids, int):
+                return 0
+            return np.zeros(len(joint_ids))
+
+        # retrieve previous joint velocities and time
+        dq_prev, t_prev = self._prev_state['dq']
+
+        # compute time difference
+        if self.sim.use_real_time():  # if the simulator is in real-time mode
+            dt = (t - t_prev)
+        else:  # if we are stepping in the simulator
+            dt = self.sim.timestep
+
+        # compute joint accelerations using finite difference, and cache it
+        ddq = (dq - dq_prev) / dt
+        self._state['ddq'] = [ddq, t]
+
+        # return joint accelerations
+        if was_none:
+            return ddq
         q_idx = self.get_q_indices(joint_ids)
-        return accelerations[q_idx]
+        return ddq[q_idx]
+
+    def get_augmented_joint_accelerations(self, joint_ids=None):
+        """
+        Get the augmented joint acceleration vector of the specified joint(s). If the robot has a floating base, the
+        first 6 joints are the 3D world linear and angular accelerations of the robot base. If the robot has a fixed
+        base, this is the same as calling :func:`~Robot.get_joint_accelerations`.
+
+        Args:
+            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, get the acceleration of all
+                (actuated) joints.
+
+        Returns:
+            if 1 joint:
+                float, np.array[6+1]: joint acceleration [rad/s^2]
+            if multiple joints:
+                np.array[N], np.array[6+N]: joint accelerations [rad/s^2]
+        """
+        ddq = self.get_joint_accelerations(joint_ids=joint_ids)
+        if self.has_fixed_base():
+            return ddq
+        acceleration = self.get_base_acceleration(concatenate=True)
+        return np.concatenate((acceleration, np.asarray(ddq).reshape(-1)))
 
     def get_joint_reaction_forces(self, joint_ids=None):
         """
@@ -1179,8 +1478,8 @@ class Robot(ControllableBody):
                 np.array[3]: the link frame position in the world space
                 np.array[4]: Cartesian orientation of the link frame [x,y,z,w]
             if multiple links:
-                np.array[Nx3], np.array[N,3]: link frame position of each link in world space
-                np.array[Nx4], np.array[N,4]: orientation of each link frame [x,y,z,w]
+                np.array[N*3], np.array[N,3]: link frame position of each link in world space
+                np.array[N*4], np.array[N,4]: orientation of each link frame [x,y,z,w]
 
         """
         return self.get_link_world_frame_positions(link_ids, flatten), self.get_link_world_frame_orientations(link_ids,
@@ -1199,7 +1498,7 @@ class Robot(ControllableBody):
             if 1 link:
                 np.array[3]: the link frame position in the world space
             if multiple links:
-                np.array[Nx3], np.array[N,3]: link frame position of each link in world space
+                np.array[N*3], np.array[N,3]: link frame position of each link in world space
         """
         if isinstance(link_ids, int):
             return np.array(self.sim.get_link_state(self.id, link_ids)[4])
@@ -1223,7 +1522,7 @@ class Robot(ControllableBody):
             if 1 link:
                 np.array[4]: Cartesian orientation of the link frame [x,y,z,w]
             if multiple links:
-                np.array[Nx4], np.array[N,4]: orientation of each link frame [x,y,z,w]
+                np.array[N*4], np.array[N,4]: orientation of each link frame [x,y,z,w]
         """
         if isinstance(link_ids, int):
             return self.sim.get_link_state(self.id, link_ids)[5]
@@ -1247,15 +1546,28 @@ class Robot(ControllableBody):
             if 1 link:
                 np.array[3]: the link CoM position in the world space
             if multiple links:
-                np.array[Nx3], np.array[N,3]: CoM position of each link in world space
+                np.array[N*3], np.array[N,3]: CoM position of each link in world space
         """
+        # check if cached
+        if 'link_pos' in self._state:
+            pos = self._state['link_pos'][0]  # (N,6)
+        else:
+            links = list(range(self.num_links))
+            pos = self.sim.get_link_world_positions(body_id=self.id, link_ids=links)  # (N,6)
+            self._state['link_pos'] = [pos, time.time()]
+
+        # if one link
         if isinstance(link_ids, int):
             if link_ids == -1:
                 return self.get_base_position()
-            return np.array(self.sim.get_link_state(self.id, link_ids)[0])
+            return pos[link_ids]
+
+        # if multiple links
         if link_ids is None:
             link_ids = self.joints
-        pos = np.array([self.sim.get_link_state(self.id, link)[0] for link in link_ids])
+        pos = pos[link_ids]
+
+        # if we need to flatten
         if flatten:
             return pos.reshape(-1)  # 1D array
         return pos  # 2D array
@@ -1274,7 +1586,7 @@ class Robot(ControllableBody):
             if 1 link:
                 np.array[3]: the link CoM position
             if multiple links:
-                np.array[Nx3], np.array[N,3]: CoM position of each link
+                np.array[N*3], np.array[N,3]: CoM position of each link
         """
         p1 = self.get_link_world_positions(link_ids, flatten=False)
         p0 = self.get_base_position() if wrt_link_id is None or wrt_link_id == -1 \
@@ -1297,7 +1609,7 @@ class Robot(ControllableBody):
             if 1 link:
                 np.array[4]: Cartesian orientation of the link CoM [x,y,z,w]
             if multiple links:
-                np.array[Nx4], np.array[N,4]: CoM orientation of each link [x,y,z,w]
+                np.array[N*4], np.array[N,4]: CoM orientation of each link [x,y,z,w]
         """
         if isinstance(link_ids, int):
             return self.sim.get_link_state(self.id, link_ids)[1]
@@ -1322,7 +1634,7 @@ class Robot(ControllableBody):
             if 1 link:
                 np.array[4]: Cartesian orientation of the link CoM [x,y,z,w]
             if multiple links:
-                np.array[Nx4], np.array[N,4]: CoM orientation of each link [x,y,z,w]
+                np.array[N*4], np.array[N,4]: CoM orientation of each link [x,y,z,w]
         """
         q1 = self.get_link_world_orientations(link_ids)
         if wrt_link_id is None or wrt_link_id == -1:
@@ -1351,7 +1663,7 @@ class Robot(ControllableBody):
             if 1 link:
                 np.array[3]: linear velocity of the link in the Cartesian world space
             if multiple links:
-                np.array[Nx3], np.array[N,3]: linear velocity of each link
+                np.array[N*3], np.array[N,3]: linear velocity of each link
         """
         if isinstance(link_ids, int):
             return np.array(self.sim.get_link_state(self.id, link_ids, compute_velocity=True)[6])
@@ -1375,7 +1687,7 @@ class Robot(ControllableBody):
             if 1 link:
                 np.array[3]: angular velocity of the link in the Cartesian world space
             if multiple links:
-                np.array[Nx3], np.array[N,3]: angular velocity of each link
+                np.array[N*3], np.array[N,3]: angular velocity of each link
         """
         if isinstance(link_ids, int):
             return np.array(self.sim.get_link_state(self.id, link_ids, compute_velocity=True)[7])
@@ -1400,29 +1712,65 @@ class Robot(ControllableBody):
             if 1 link:
                 np.array[6]: linear and angular velocity of the link in the Cartesian world space
             if multiple links:
-                np.array[Nx6], np.array[N,6]: linear and angular velocity of each link
+                np.array[N*6], np.array[N,6]: linear and angular velocity of each link
         """
+        # check if cached
+        if 'link_vel' in self._state:
+            velocities = self._state['link_vel'][0]
+        else:
+            links = list(range(self.num_links))
+            velocities = self.sim.get_link_world_velocities(body_id=self.id, link_ids=links)
+            self._state['link_vel'] = [velocities, time.time()]
+
         # if one link, compute the linear and angular velocity of that link
         if isinstance(link_ids, int):
             if link_ids == -1:
                 return self.get_base_velocity(concatenate=True)
-            lin_vel, ang_vel = self.sim.get_link_state(self.id, link_ids, compute_velocity=True)[6:8]
-            return np.concatenate((lin_vel, ang_vel))
+            return velocities[link_ids]
 
         # if multiple links, compute the linear and angular velocity of each link
         if link_ids is None:
             link_ids = self.joints
-        velocities = []
-        for link in link_ids:
-            lin_vel, ang_vel = self.sim.get_link_state(self.id, link, compute_velocity=True)[6:8]
-            velocities.append(np.concatenate((lin_vel, ang_vel)))
-        velocities = np.asarray(velocities)
+        velocities = velocities[link_ids]
+
+        # if we need to flatten the velocities (N, 6) --> (N*6,)
+        if flatten:
+            return velocities.reshape(-1)  # 1d array
+        return velocities  # 2D array
+
+    def get_spatial_link_world_velocities(self, link_ids=None, flatten=False):
+        r"""
+        Return the spatial link world velocities which is the concatenation of the angular and linear velocities.
+        The difference with :func:`~get_link_world_velocities` is that this one returns the concatenation of the
+        linear and angular velocities, instead of first the angular and then the linear velocities. So, it is just
+        the order of concatenation that is different. See :func:`~get_link_world_velocities` for more information.
+
+        Args:
+            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the angular and linear
+                velocities of all links associated to actuated joints.
+            flatten (bool): if True, it will return a 1D array instead of a 2D array
+
+        Returns:
+            if 1 link:
+                np.array[6]: angular and linear velocity of the link in the Cartesian world space
+            if multiple links:
+                np.array[N*6], np.array[N,6]: angular and linear velocity of each link
+        """
+        velocities = self.get_link_world_velocities(link_ids=link_ids, flatten=False)
+
+        if len(velocities.shape) == 1:
+            velocities = np.concatenate((velocities[3:], velocities[:3]))
+        else:
+            velocities = np.concatenate((velocities[:, 3:], velocities[:, :3]))
 
         # if we need to flatten the velocities (N, 6) --> (N*6,)
         if flatten:
             return velocities.reshape(-1)  # 1d array
 
         return velocities  # 2D array
+
+    # alias
+    get_link_twist = get_spatial_link_world_velocities
 
     def get_link_linear_velocities(self, link_ids=None, wrt_link_id=None, flatten=True):
         r"""
@@ -1438,7 +1786,7 @@ class Robot(ControllableBody):
             if 1 link:
                 np.array[3]: the linear velocity of the given link wrt to the other link
             if multiple links:
-                np.array[Nx3], np.array[N,3]: linear velocity of each link wrt to the other link(s)
+                np.array[N*3], np.array[N,3]: linear velocity of each link wrt to the other link(s)
         """
         v1 = self.get_link_world_linear_velocities(link_ids, flatten=False)
         v0 = self.get_base_linear_velocity() if wrt_link_id is None or wrt_link_id == -1 \
@@ -1463,7 +1811,7 @@ class Robot(ControllableBody):
             if 1 link:
                 np.array[3]: the angular velocity of the given link wrt to the other link
             if multiple links:
-                np.array[Nx3], np.array[N,3]: angular velocity of each link wrt to the other link(s)
+                np.array[N*3], np.array[N,3]: angular velocity of each link wrt to the other link(s)
         """
         w1 = self.get_link_world_angular_velocities(link_ids, flatten=False)
         w0 = self.get_base_angular_velocity() if wrt_link_id is None or wrt_link_id == -1 \
@@ -1488,7 +1836,7 @@ class Robot(ControllableBody):
             if 1 link:
                 np.array[6]: the linear and angular velocity of the given link wrt to the other link
             if multiple links:
-                np.array[Nx6], np.array[N,6]: linear and angular velocity of each link wrt to the other link(s)
+                np.array[N*6], np.array[N,6]: linear and angular velocity of each link wrt to the other link(s)
         """
         v1 = self.get_link_world_velocities(link_ids, flatten=False)
         v0 = self.get_base_velocity() if wrt_link_id is None or wrt_link_id == -1 \
@@ -1498,56 +1846,201 @@ class Robot(ControllableBody):
             return v.reshape(-1)
         return v
 
-    def get_link_linear_accelerations(self, link_ids=None):
-        pass
-
-    def get_link_angular_accelerations(self, link_ids=None):
-        pass
-
-    def get_link_accelerations(self, link_ids=None):
-        r"""
-
-        Args:
-            link_ids:
-
-        Returns:
-
-        """
-        pass
+    # def get_link_linear_accelerations(self, link_ids=None):
+    #     pass
+    #
+    # def get_link_angular_accelerations(self, link_ids=None):
+    #     pass
+    #
+    # def get_link_accelerations(self, link_ids=None):
+    #     r"""
+    #
+    #     Args:
+    #         link_ids:
+    #
+    #     Returns:
+    #
+    #     """
+    #     pass
 
     def get_link_world_accelerations(self, link_ids=None, flatten=True):
         r"""
         Return the linear and angular accelerations (expressed in the Cartesian world space coordinates) for the given
         link(s).
 
-        The acceleration of a link can be computed in a recursive form:
+        From [1], the acceleration of a link can be computed from the previous link acceleration in a recursive form:
 
-        .. math:: a_i = a_{i-1} + s
+        .. math:: \pmb{a}_i = \pmb{a}_{i-1} + \pmb{s}_i \ddot{q}_i + \pmb{v}_i \cross \pmb{s}_i \dot{q}_i,
 
-        or from the base to the link:
+        where :math:`\pmb{a}_i = [\dot{\pmb{\omega}}_i^\top, \dot{\pmb{v}}_{O,i}^\top]^\top \in \mathbb{R}^6` is the
+        spatial acceleration of the link, :math:`i`, :math:`\pmb{s}_i \in \mathbb{R}^6` represents the joint motion
+        axis fixed in link :math:`i`, :math:`\ddot{q}_i \in \mathbb{R}` is the joint acceleration associated with link
+        :math:`i`, :math:`\pmb{v_i} = [\pmb{\omega}_i^\top, \pmb{v}_{O,i}^\top] \in \mathbb{R}^6` is the spatial
+        velocity of the link :math:`i`, and :math:`\cross` is the spatial cross product.
+
+        It can also be computed from the base to the link:
 
         .. math::
 
-        or based on the Jacobian:
+            \pmb{a}_i &= \sum_{j=1}^i \pmb{s}_j \ddot{q}_j + \pmb{v}_j \cross \pmb{s}_j \dot{q}_j \\
+                &= \sum_{j=1}^i \pmb{s}_j \ddot{q}_j + \sum_{k=1}^{j-1} \pmb{s}_k \cross \pmb{s}_j \dot{q}_j \dot{q}_k.
 
-        .. math:: a = \frac{d}{dt} v = \frac{d}{dt} J(q) \dot{q} = J(q) \ddot{q} + \dot{J}(q) \dot{q},
+        As well as using the Jacobian (and its derivative):
 
-        where :math:`J(q)` is the link Jacobian at the current configuration (i.e. joint positions) :math:`q`,
-        :math:`\dot{q}` and :math:`\ddot{q}` are the current joint velocities and accelerations respectively, and
-        :math:`\dot{J}(q)` is the time derivative of the link Jacobian.
+        .. math::
+
+            \pmb{a}_i &= \frac{d}{dt} \pmb{v}_i \\
+                      &= \frac{d}{dt} \pmb{J}_i(q) \dot{\pmb{q}}
+                      &= \pmb{J}_i(q) \ddot{\pmb{q}} + \dot{\pmb{J}}_i(q) \dot{\pmb{q}},
+
+        where :math:`\pmb{J}_i(q) \in \mathbb{R}^{6 \cross N}` is the Jacobian for body/link :math:`i` at the current
+        configuration (i.e. joint positions) :math:`\pmb{q}` (the Jacobian is the concatenation of the angular and
+        linear Jacobian), :math:`\dot{\pmb{q}}` and :math:`\ddot{\pmb{q}}` are the current joint velocity and
+        acceleration vectors respectively, and :math:`\dot{\pmb{J}}_i(q)` is the time derivative of the Jacobian for
+        body/link :math:`i`.
+
+        Warnings: if the simulator provides accelerations, we return this one. If not, we compute the link world
+            accelerations using finite difference.
 
         Args:
             link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the linear and angular
-                velocities of all links associated to actuated joints.
+                accelerations of all links associated to actuated joints.
             flatten (bool): if True, it will return a 1D array instead of a 2D array
 
         Returns:
             if 1 link:
-                np.array[6]: linear and angular velocity of the link in the Cartesian world space
+                np.array[6]: linear and angular acceleration of the link in the Cartesian world space
             if multiple links:
-                np.array[Nx6], np.array[N,6]: linear and angular velocity of each link
+                np.array[N*6], np.array[N,6]: linear and angular acceleration of each link
+
+        References:
+            - [1] "Rigid Body Dynamics Algorithms" (chap 2.11), Featherstone, 2008
         """
-        pass
+        # check if cached
+        if 'link_acc' in self._state:
+            acc = self._state['link_acc'][0]
+        else:
+            # all link indices
+            links = list(range(self.num_links))
+
+            # if the simulator keep in memory the accelerations, return it
+            if self.sim.supports_acceleration():
+                acc = self.sim.get_link_world_accelerations(self.id, link_ids=links)  # (N,6)
+            else:  # else, use finite difference
+
+                # get current link world velocities and time
+                if 'link_vel' not in self._state:
+                    self.get_link_world_velocities(flatten=False)
+                vel, t = self._state['link_vel']  # (N,6)
+
+                # if we did not cache the previous base velocity
+                if 'link_vel' not in self._prev_state:
+                    acc = np.zeros(len(self.joints), 6)  # (N,6)
+                else:
+                    # retrieve previous link world velocities and time
+                    vel_prev, t_prev = self._prev_state['link_vel']  # (N,6)
+
+                    # compute time difference
+                    if self.sim.use_real_time():  # if the simulator is in real-time mode
+                        dt = (t - t_prev)
+                    else:  # if we are stepping in the simulator
+                        dt = self.sim.timestep
+
+                    # get current link positions
+                    pos = self.get_link_world_positions(link_ids=links, flatten=False)  # (N,3)
+
+                    # separate linear and angular velocities
+                    lin_vel, ang_vel = vel[:3], vel[3:]  # (N,3)
+                    lin_vel_prev, ang_vel_prev = vel_prev[:3], vel_prev[3:]  # (N,3)
+
+                    # compute base acceleration
+                    ang_acc = (ang_vel - ang_vel_prev) / dt
+                    lin_acc = (lin_vel - lin_vel_prev) / dt
+                    lin_acc += np.cross(ang_acc, pos) + np.cross(ang_vel, np.cross(ang_vel, pos))
+                    acc = np.hstack((lin_acc, ang_acc))  # (N,6)
+
+            self._state['link_acc'] = [acc, time.time()]
+
+        # if one link
+        if isinstance(link_ids, int):
+            if link_ids == -1:
+                return self.get_base_acceleration(concatenate=True)
+            return acc[link_ids]
+        # if multiple links
+        if link_ids is None:
+            link_ids = self.joints
+        acc = acc[link_ids]
+
+        # if we need to concatenate the accelerations
+        if flatten:
+            return acc.reshape(-1)  # (N*6,)
+        return acc
+
+    def get_spatial_link_world_acceleration(self, link_ids=None, flatten=True):
+        r"""
+        Return the spatial link world accelerations which is the concatenation of the angular and linear accelerations.
+        The difference with :func:`~get_link_world_accelerations` is that this one returns the concatenation of the
+        linear and angular accelerations, instead of first the angular and then the linear accelerations. So, it is
+        just the order of concatenation that is different. See :func:`~get_link_world_accelerations` for more
+        information.
+
+        From [1], the acceleration of a link can be computed from the previous link acceleration in a recursive form:
+
+        .. math:: \pmb{a}_i = \pmb{a}_{i-1} + \pmb{s}_i \ddot{q}_i + \pmb{v}_i \cross \pmb{s}_i \dot{q}_i,
+
+        where :math:`\pmb{a}_i = [\dot{\pmb{\omega}}_i^\top, \dot{\pmb{v}}_{O,i}^\top]^\top \in \mathbb{R}^6` is the
+        spatial acceleration of the link, :math:`i`, :math:`\pmb{s}_i \in \mathbb{R}^6` represents the joint motion
+        axis fixed in link :math:`i`, :math:`\ddot{q}_i \in \mathbb{R}` is the joint acceleration associated with link
+        :math:`i`, :math:`\pmb{v_i} = [\pmb{\omega}_i^\top, \pmb{v}_{O,i}^\top] \in \mathbb{R}^6` is the spatial
+        velocity of the link :math:`i`, and :math:`\cross` is the spatial cross product.
+
+        It can also be computed from the base to the link:
+
+        .. math::
+
+            \pmb{a}_i &= \sum_{j=1}^i \pmb{s}_j \ddot{q}_j + \pmb{v}_j \cross \pmb{s}_j \dot{q}_j \\
+                &= \sum_{j=1}^i \pmb{s}_j \ddot{q}_j + \sum_{k=1}^{j-1} \pmb{s}_k \cross \pmb{s}_j \dot{q}_j \dot{q}_k.
+
+        As well as using the Jacobian (and its derivative):
+
+        .. math::
+
+            \pmb{a}_i &= \frac{d}{dt} \pmb{v}_i \\
+                      &= \frac{d}{dt} \pmb{J}_i(q) \dot{\pmb{q}}
+                      &= \pmb{J}_i(q) \ddot{\pmb{q}} + \dot{\pmb{J}}_i(q) \dot{\pmb{q}},
+
+        where :math:`\pmb{J}_i(q) \in \mathbb{R}^{6 \cross N}` is the Jacobian for body/link :math:`i` at the current
+        configuration (i.e. joint positions) :math:`\pmb{q}` (the Jacobian is the concatenation of the angular and
+        linear Jacobian), :math:`\dot{\pmb{q}}` and :math:`\ddot{\pmb{q}}` are the current joint velocity and
+        acceleration vectors respectively, and :math:`\dot{\pmb{J}}_i(q)` is the time derivative of the Jacobian for
+        body/link :math:`i`.
+
+        Warnings: if the simulator provides accelerations, we return this one. If not, we compute the link world
+            accelerations using finite difference.
+
+        Args:
+            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the angular and linear
+                accelerations of all links associated to actuated joints.
+            flatten (bool): if True, it will return a 1D array instead of a 2D array
+
+        Returns:
+            if 1 link:
+                np.array[6]: angular and linear acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[N*6], np.array[N,6]: angular and linear acceleration of each link
+        """
+        accelerations = self.get_link_world_accelerations(link_ids=link_ids, flatten=False)
+
+        if len(accelerations.shape) == 1:
+            accelerations = np.concatenate((accelerations[3:], accelerations[:3]))
+        else:
+            accelerations = np.concatenate((accelerations[:, 3:], accelerations[:, :3]))
+
+        # if we need to flatten the accelerations (N, 6) --> (N*6,)
+        if flatten:
+            return accelerations.reshape(-1)  # 1d array
+
+        return accelerations  # 2D array
 
     def get_link_contacts(self, link_ids):
         """
@@ -1809,6 +2302,27 @@ class Robot(ControllableBody):
         """
         return self.get_jacobian(link_id, q, local_position)[3:]
 
+    def get_spatial_jacobian(self, link_id, q=None, local_position=None):
+        r"""
+        Return the spatial Jacobian which is the vertical concatenation of the angular and linear Jacobian matrices.
+        The difference with :func:`~get_jacobian` is that this one returns the concatenation of the linear and
+        angular Jacobian matrices, instead of first the angular and then the linear Jacobian matrices. So, it is just
+        the order of concatenation that is different. See :func:`~get_jacobian` for more information.
+
+        Args:
+            link_id (int): link id.
+            q (np.array[N], None): joint positions of size N, where N is the number of DoFs. If None, it will compute q
+                based on the current joint positions.
+            local_position (None, np.array[3]): the point on the specified link to compute the Jacobian (in link local
+                coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+
+        Returns:
+            np.array[6,N], np.array[6,(6+N)]: spatial Jacobian matrix. The number of columns depends if the base is
+                fixed or floating.
+        """
+        jacobian = self.get_jacobian(link_id=link_id, q=q, local_position=local_position)
+        return np.vstack((jacobian[3:], jacobian[:3]))
+
     @staticmethod
     def get_jacobian_derivative_rpy_to_angular_velocity(rpy_angle):
         r"""
@@ -1890,8 +2404,10 @@ class Robot(ControllableBody):
     @staticmethod
     def compute_jacobian_joint_derivative(jacobian):
         r"""
-        Compute the derivative of the Jacobian wrt joint values (hybrid Jacobian representation). The computation is
-        based on [1].
+        Compute the derivative of the Jacobian wrt joint values (hybrid Jacobian representation; i.e. the base frame
+        is the reference frame and the origin of the end-effector frame is located at the velocity reference point on
+        the end-effector. Other representations include the body-fixed and inertial representations, see [1] (sec 3.1)
+        for more information). The computation is based on [1].
 
         .. math:: \frac{d}{dq} J(q)
 
@@ -1902,8 +2418,8 @@ class Robot(ControllableBody):
             np.array[6,N,N]: derivative of the Jacobian wrt joint values (dJ/dq)
 
         References:
-            [1] "Symbolic differentiation of the velocity mapping for a serial kinematic chain", Bruyninck et al.,
-            Mechanism and Machine Theory. 1996
+            - [1] "Symbolic differentiation of the velocity mapping for a serial kinematic chain", Bruyninck et al.,
+              Mechanism and Machine Theory. 1996
         """
         nb_rows = jacobian.shape[0]  # task space dim.
         nb_cols = jacobian.shape[1]  # joint space dim.
@@ -1935,6 +2451,108 @@ class Robot(ControllableBody):
 
         return J_grad
 
+    @staticmethod
+    def compute_jacobian_time_derivative(prev_jacobian, curr_jacobian, dt):
+        r"""
+        Compute the Jacobian time derivative :math:`\dot{J}(q)` using finite difference:
+
+        .. math:: \dot{J}(q) \sim \frac{ J(q(t)) - J(q(t-dt)) }{dt}
+
+        Args:
+            prev_jacobian (np.array[6,N], np.array[6,(6+N)]): previous Jacobian.
+            curr_jacobian (np.array[6,N], np.array[6,(6+N)]): current Jacobian.
+            dt (float): time difference (should be bigger than 0).
+
+        Returns:
+            np.array[6,N], np.array[6,(6+N)]: time derivative of the Jacobian matrix. The number of columns depends
+                if the base is fixed or floating.
+        """
+        return (curr_jacobian - prev_jacobian) / dt
+
+    def get_jacobian_time_derivative(self, link_id, local_position=None):
+        r"""
+        Get the Jacobian time derivative :math:`\dot{J}_i(q)` of the specified link :math:`i` using finite difference:
+
+        .. math:: \dot{J}(q) \sim \frac{ J(q(t)) - J(q(t-dt)) }{dt}
+
+        Warnings: Note that we keep in memory the previous jacobian matrix (associated to the given parameters), so
+        calling this method the first time will just return a zero matrix.
+
+        Args:
+            link_id (int): link id.
+            local_position (None, np.array[3]): the point on the specified link to compute the Jacobian (in link local
+                coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+
+        Returns:
+            np.array[6,N], np.array[6,(6+N)]: time derivative of the Jacobian matrix (which is the concatenation of
+                the linear and angular parts). The number of columns depends if the base is fixed or floating.
+        """
+        # convert type if necessary
+        local_position = None if local_position is None else tuple(local_position)
+
+        # compute key for jacobian dict
+        key = (link_id, local_position)
+
+        # check if cached
+        if 'dJ' in self._jacobian and key in self._jacobian['dJ']:
+            return self._jacobian['dJ'][key][0]
+
+        # get current jacobian and time
+        if key in self._jacobian:
+            jacobian, t = self._jacobian[key]
+        else:
+            jacobian, t = self.get_jacobian(link_id=link_id, local_position=local_position)
+            self._jacobian[key] = [jacobian, t]
+
+        # check if we cached the previous jacobian
+        if key not in self._prev_jacobian:
+            dJ = np.zeros((6, self.num_dofs))
+            self._jacobian.setdefault('dJ', {})[key] = dJ
+            return dJ
+
+        # retrieve previous jacobian and time
+        jacobian_prev, t_prev = self._prev_jacobian[key]
+
+        # compute time difference
+        if self.sim.use_real_time():  # if the simulator is in real-time mode
+            dt = (t - t_prev)
+        else:  # if we are stepping in the simulator
+            dt = self.sim.timestep
+
+        # compute the Jacobian time derivative using finite difference, and cache it
+        dJ = (jacobian - jacobian_prev) / dt
+        self._jacobian.setdefault('dJ', {})[key] = dJ
+
+        return dJ
+
+    # alias
+    get_Jdot = get_jacobian_time_derivative
+
+    def get_spatial_jacobian_time_derivative(self, link_id, local_position=None):
+        r"""
+        Get the spatial Jacobian time derivative :math:`\dot{J}_i(q)` of the specified link :math:`i` using finite
+        difference:
+
+        .. math:: \dot{J}(q) \sim \frac{ J(q(t)) - J(q(t-dt)) }{dt}
+
+        Warnings: Note that we keep in memory the previous jacobian matrix (associated to the given parameters), so
+        calling this method the first time will just return a zero matrix.
+
+        Compared to :func:`~get_jacobian_time_derivative`, the Jacobian matrix is here the concatenation of the angular
+        part followed by the linear part, instead of the opposite.
+
+        Args:
+            link_id (int): link id.
+            local_position (None, np.array[3]): the point on the specified link to compute the Jacobian (in link local
+                coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+
+        Returns:
+            np.array[6,N], np.array[6,(6+N)]: time derivative of the spatial Jacobian matrix. The number of columns
+                depends if the base is fixed or floating.
+        """
+        jacobian = self.get_jacobian_time_derivative(link_id=link_id, local_position=local_position)
+        return np.vstack((jacobian[3:], jacobian[:3]))
+
     def get_center_of_mass_jacobian(self, q=None):
         r"""
         Compute the Jacobian for the center of mass of the robot. This method was coded based on the C++ code
@@ -1951,6 +2569,10 @@ class Robot(ControllableBody):
         References:
             - [1] "Whole-body cooperative balancing of humanoid robot using COG Jacobian", Sugihara et al., IROS, 2002
         """
+        # check if cached
+        if 'Jcom' in self._jacobian:
+            return self._jacobian['Jcom']
+
         # Get current joint position
         if q is None:
             q = self.get_joint_positions()
@@ -1976,6 +2598,9 @@ class Robot(ControllableBody):
             robot_mass += link_mass
 
         Jcom /= robot_mass
+
+        # cache it (for later)
+        self._jacobian['Jcom'] = Jcom
 
         return Jcom
 
@@ -2110,7 +2735,7 @@ class Robot(ControllableBody):
             float: manipulability measure :math:`w(q)`
 
         References:
-            [1] "Robotics: Modelling, Planning and Control" (chap 3.5 and 3.9), Siciliano et al., 2010
+            - [1] "Robotics: Modelling, Planning and Control" (chap 3.5 and 3.9), Siciliano et al., 2010
         """
         return np.sqrt(np.linalg.det(self.get_JJT(jacobian)))
 
@@ -2125,7 +2750,7 @@ class Robot(ControllableBody):
             np.array[D,D]: velocity manipulability
 
         References:
-            [1] "Robotics: Modelling, Planning and Control" (section 3.9), Siciliano et al., 2010
+            - [1] "Robotics: Modelling, Planning and Control" (section 3.9), Siciliano et al., 2010
         """
         return self.get_JJT(jacobian)
 
@@ -2140,7 +2765,7 @@ class Robot(ControllableBody):
             np.array[D,D]: force manipulability
 
         References:
-            [1] "Robotics: Modelling, Planning and Control" (section 3.9), Siciliano et al., 2010
+            - [1] "Robotics: Modelling, Planning and Control" (section 3.9), Siciliano et al., 2010
         """
         return np.linalg.inv(self.get_JJT(jacobian))
 
@@ -2161,7 +2786,7 @@ class Robot(ControllableBody):
             bool: True if in a singular configuration
 
         References:
-            [1] "Robotics: Modelling, Planning, and Control" (chap 3.3), Siciliano et al., 2010
+            - [1] "Robotics: Modelling, Planning, and Control" (chap 3.3), Siciliano et al., 2010
         """
         # TODO: define close to singular configuration using SVD
         J = jacobian
@@ -2260,7 +2885,7 @@ class Robot(ControllableBody):
             float: Distance between desired and current manip. ellipsoids
 
         References:
-            [1] "Geometry-aware Tracking of Manipulability Ellipsoids", Jaquier et al., R:SS, 2018
+            - [1] "Geometry-aware Tracking of Manipulability Ellipsoids", Jaquier et al., R:SS, 2018
         """
         num_task_vars = np.size(target_velocity_manipulability, 0)
 
@@ -2294,7 +2919,7 @@ class Robot(ControllableBody):
             np.array[(num_task_vars * num_task_vars + num_task_vars) / 2, N]: manipulability jacobian matrix
 
         References:
-            [1] "Geometry-aware Tracking of Manipulability Ellipsoids", Jaquier et al., R:SS, 2018
+            - [1] "Geometry-aware Tracking of Manipulability Ellipsoids", Jaquier et al., R:SS, 2018
         """
         num_dofs = jacobian.shape[1]
 
@@ -2324,19 +2949,19 @@ class Robot(ControllableBody):
 
         return Jm_red
 
-    def hard_priorities(self, jacobians, task_velocities, method='backtrack'):
-        r"""
-        Return dq.
-
-        Args:
-            jacobians:
-            task_velocities:
-            method: 'successive', 'augmented', 'backtrack'.
-
-        Returns:
-
-        """
-        pass
+    # def hard_priorities(self, jacobians, task_velocities, method='backtrack'):
+    #     r"""
+    #     Return dq.
+    #
+    #     Args:
+    #         jacobians:
+    #         task_velocities:
+    #         method: 'successive', 'augmented', 'backtrack'.
+    #
+    #     Returns:
+    #
+    #     """
+    #     pass
 
     ############
     # Dynamics #
@@ -2381,11 +3006,11 @@ class Robot(ControllableBody):
             np.array[M]: joint torques computed using the rigid-body equation of motion
 
         References:
-            [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
-            [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
-            [3] "Springer Handbook of Robotics", Siciliano et al., 2008
-            [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
-                http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
+            - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            - [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            - [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            - [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+                  http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
         # if the joint velocities and positions are not provided, read them
         if dq is None:
@@ -2435,11 +3060,11 @@ class Robot(ControllableBody):
             np.array[M]: joint accelerations computed using the rigid-body equation of motion
 
         References:
-            [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
-            [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
-            [3] "Springer Handbook of Robotics", Siciliano et al., 2008
-            [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
-                http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
+            - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            - [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            - [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            - [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+                  http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
         # if the joint velocities and positions are not provided, read them
         if dq is None:
@@ -2661,13 +3286,17 @@ class Robot(ControllableBody):
         where :math:`\tau` are the joint torques, :math:`f` is the wrench vector (i.e. it contains the forces/torques
         applied at the link), and :math:`J` is the geometric Jacobian.
 
+        Args:
+            jacobian (np.array[3,N], np.array[6,N]): jacobian matrix.
+            wrench (np.array[3], np.array[6]): wrench applied to the link (point) associated to the given jacobian.
+
         Returns:
             np.array[N]: joint torques [Nm]
         """
         return jacobian.T.dot(wrench)
 
     @staticmethod
-    def get_cartesian_wrench_from_joint_torques(jacobian, torque):
+    def get_cartesian_wrench_from_joint_torques(jacobian, torques):
         r"""
         Return the Cartesian wrench (=force and torque) from the given joint torques using the provided Jacobian.
 
@@ -2676,11 +3305,15 @@ class Robot(ControllableBody):
         where :math:`\tau` are the joint torques, :math:`f` is the wrench vector (i.e. it contains the forces/torques
         applied at the link), and :math:`J` is the geometric Jacobian.
 
+        Args:
+            jacobian (np.array[6,N]): jacobian matrix.
+            torques (np.array[N]): torques.
+
         Returns:
-            np.array[6]: forces and torques in the Cartesian world space [N,Nm]
+            np.array[6]: forces and torques (=wrench) in the Cartesian world space [N,Nm]
         """
         J = jacobian
-        return J.dot(np.linalg.inv(J.T.dot(J))).dot(torque)
+        return J.dot(np.linalg.inv(J.T.dot(J))).dot(torques)
 
     def enable_coriolis_and_gravity_compensation(self, enable=True):
         """
@@ -2882,23 +3515,23 @@ class Robot(ControllableBody):
         torques = self.get_active_compliant_torques(q, dq, q_idx)
         self.set_joint_torques(torques + external_torques, joint_id)
 
-    def get_impedance_torques(self, jacobian, xdes=0, x=0, dx=0, dxdes=0, ddx=0, ddxdes=0, Km=1, Dm=0.01):
-        r"""
-        Return the impedance torques.
-
-        .. math:: F_{a} = H_m (\ddot{x} - \ddot{x}_d) + D_m (\dot{x} - \dot{x}_d) + K_m (x - x_d)
-
-        Args:
-
-
-        Returns:
-            np.array[N]: impedance torques
-
-        References:
-            [1] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
-                http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
-        """
-        pass
+    # def get_impedance_torques(self, jacobian, xdes=0, x=0, dx=0, dxdes=0, ddx=0, ddxdes=0, Km=1, Dm=0.01):
+    #     r"""
+    #     Return the impedance torques.
+    #
+    #     .. math:: F_{a} = H_m (\ddot{x} - \ddot{x}_d) + D_m (\dot{x} - \dot{x}_d) + K_m (x - x_d)
+    #
+    #     Args:
+    #
+    #
+    #     Returns:
+    #         np.array[N]: impedance torques
+    #
+    #     References:
+    #         - [1] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+    #           http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
+    #     """
+    #     pass
 
     def get_attractor_torques(self, x_des, jacobian, link_id=None, q=None, dq=None, x=None, dx=None, K=5, D=0.1):
         r"""
@@ -2923,8 +3556,8 @@ class Robot(ControllableBody):
             np.array[N]: torques to apply
 
         References:
-            [1] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
-                http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
+            - [1] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+              http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
         # check arguments
         if q is None:
@@ -3090,10 +3723,10 @@ class Robot(ControllableBody):
             RuntimeError: if the robot has not a floating base (i.e. it has a fixed base).
 
         References:
-            [1] "Improved computation of the humanoid centroidal dynamics and application for whole-body control",
-                Wensing and Orin, 2016
-            [2] "Motion Planning and Control of Dynamic Humanoid Locomotion" (PhD thesis: sec 2.1.5 and 3.1.3), Xin,
-                2018
+            - [1] "Improved computation of the humanoid centroidal dynamics and application for whole-body control",
+              Wensing and Orin, 2016
+            - [2] "Motion Planning and Control of Dynamic Humanoid Locomotion" (PhD thesis: sec 2.1.5 and 3.1.3), Xin,
+              2018
         """
         # check if floating base
         if self.fixed_base:
@@ -3172,10 +3805,10 @@ class Robot(ControllableBody):
             RuntimeError: if the robot has not a floating base (i.e. it has a fixed base).
 
         References:
-            [1] "Improved computation of the humanoid centroidal dynamics and application for whole-body control",
-                Wensing and Orin, 2016
-            [2] "Motion Planning and Control of Dynamic Humanoid Locomotion" (PhD thesis: sec 2.1.5 and 3.1.3), Xin,
-                2018
+            - [1] "Improved computation of the humanoid centroidal dynamics and application for whole-body control",
+                  Wensing and Orin, 2016
+            - [2] "Motion Planning and Control of Dynamic Humanoid Locomotion" (PhD thesis: sec 2.1.5 and 3.1.3), Xin,
+                  2018
         """
         if dq is None:
             dq = self.get_joint_velocities()  # shape = (N,)
@@ -3216,45 +3849,45 @@ class Robot(ControllableBody):
     # Symbolic Equations #
     ######################
 
-    def get_symbolic_equations_of_motion(self):
-        r"""
-        This returns the symbolic equation of motions of the robot (using the URDF). Internally, this used the
-        `sympy.mechanics` module.
-
-        Returns:
-
-        References:
-            [1] `sympy.mechanics`: http://docs.sympy.org/latest/modules/physics/mechanics/index.html
-            [2] https://github.com/pydy/pydy-tutorial-human-standing
-            [3] https://github.com/pydy/pydy/tree/master/examples
-        """
-        pass
-
-    def linearize_equations_of_motion(self, point=None):
-        r"""
-        Linearize the equation of motions around the given point. That is, instead of having :math:`\dot{x} = f(x,u)`
-        where :math:`f` is in general a non-linear function, linearize it around a certain point.
-
-        .. math:: \dot{x} = A x + B u
-
-        where :math:`x` is the state vector, :math:`u` is the control input vector, and :math:`A` and :math:`B` are
-        the matrices.
-
-        Args:
-            point:
-
-        Returns:
-            np.array[M,M]: :math:`A` matrix, where M is the size of the state vector
-            np.array[M,N]: :math:`B` matrix, where N is the size of the input vector
-
-        References:
-            [1] "State-Space Representation of LTI Systems", Rowell, 2002 (handout):
-                http://web.mit.edu/2.14/www/Handouts/StateSpace.pdf
-            [2] "Time-Domain Solution of LTI State Equations", Rowell, 2002 (handout):
-                http://web.mit.edu/2.14/www/Handouts/StateSpaceResponse.pdf
-            [3] `sympy.mechanics`: http://docs.sympy.org/latest/modules/physics/mechanics/index.html
-        """
-        pass
+    # def get_symbolic_equations_of_motion(self):
+    #     r"""
+    #     This returns the symbolic equation of motions of the robot (using the URDF). Internally, this used the
+    #     `sympy.mechanics` module.
+    #
+    #     Returns:
+    #
+    #     References:
+    #         - [1] `sympy.mechanics`: http://docs.sympy.org/latest/modules/physics/mechanics/index.html
+    #         - [2] https://github.com/pydy/pydy-tutorial-human-standing
+    #         - [3] https://github.com/pydy/pydy/tree/master/examples
+    #     """
+    #     pass
+    #
+    # def linearize_equations_of_motion(self, point=None):
+    #     r"""
+    #     Linearize the equation of motions around the given point. That is, instead of having :math:`\dot{x} = f(x,u)`
+    #     where :math:`f` is in general a non-linear function, linearize it around a certain point.
+    #
+    #     .. math:: \dot{x} = A x + B u
+    #
+    #     where :math:`x` is the state vector, :math:`u` is the control input vector, and :math:`A` and :math:`B` are
+    #     the matrices.
+    #
+    #     Args:
+    #         point:
+    #
+    #     Returns:
+    #         np.array[M,M]: :math:`A` matrix, where M is the size of the state vector
+    #         np.array[M,N]: :math:`B` matrix, where N is the size of the input vector
+    #
+    #     References:
+    #         - [1] "State-Space Representation of LTI Systems", Rowell, 2002 (handout):
+    #               http://web.mit.edu/2.14/www/Handouts/StateSpace.pdf
+    #         - [2] "Time-Domain Solution of LTI State Equations", Rowell, 2002 (handout):
+    #               http://web.mit.edu/2.14/www/Handouts/StateSpaceResponse.pdf
+    #         - [3] `sympy.mechanics`: http://docs.sympy.org/latest/modules/physics/mechanics/index.html
+    #     """
+    #     pass
 
     ###########
     # Sensors #
@@ -3547,32 +4180,32 @@ class Robot(ControllableBody):
 
     # TODO: move these functions elsewhere
 
-    def plot_joint_positions(self, joint_ids=None):
-        pass
-
-    def plot_joint_velocities(self, joint_ids=None):
-        pass
-
-    def plot_joint_accelerations(self, joint_ids=None):
-        pass
-
-    def plot_com_position(self):
-        pass
-
-    def plot_com_velocity(self):
-        pass
-
-    def plot_com_acceleration(self):
-        pass
-
-    def plot_cartesian_positions(self, link_ids=None):
-        pass
-
-    def plot_cartesian_velocities(self, link_ids=None):
-        pass
-
-    def plot_cartesian_accelerations(self, link_ids=None):
-        pass
+    # def plot_joint_positions(self, joint_ids=None):
+    #     pass
+    #
+    # def plot_joint_velocities(self, joint_ids=None):
+    #     pass
+    #
+    # def plot_joint_accelerations(self, joint_ids=None):
+    #     pass
+    #
+    # def plot_com_position(self):
+    #     pass
+    #
+    # def plot_com_velocity(self):
+    #     pass
+    #
+    # def plot_com_acceleration(self):
+    #     pass
+    #
+    # def plot_cartesian_positions(self, link_ids=None):
+    #     pass
+    #
+    # def plot_cartesian_velocities(self, link_ids=None):
+    #     pass
+    #
+    # def plot_cartesian_accelerations(self, link_ids=None):
+    #     pass
 
     ########
     # draw # # WARNING: ALL THE FOLLOWING METHODS NEED A SIMULATOR IN WHICH TO RUN #
@@ -3972,7 +4605,7 @@ class Robot(ControllableBody):
             int: id of the visual ellipsoid
 
         References:
-            [1] "Robotics: Modelling, Planning and Control" (section 3.9), Siciliano et al., 2010
+            - [1] "Robotics: Modelling, Planning and Control" (section 3.9), Siciliano et al., 2010
         """
         if JJT is None:
             if linear_jacobian is None:

@@ -388,7 +388,15 @@ class World(object):
         #     interface.step()
         # for bridge in self.bridges:
         #     bridge.step()
+
+        # call the step method for each body
+        for body in self.bodies:
+            body.step()
+
+        # call simulation step
         self.sim.step()
+
+        # sleep
         if sleep_dt is not None:
             time.sleep(sleep_dt)
 

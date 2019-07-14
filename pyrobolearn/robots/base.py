@@ -323,6 +323,12 @@ class Body(object):
     # Methods #
     ###########
 
+    def step(self):
+        """
+        Perform a step. This can be implemented in the child classes.
+        """
+        pass
+
     def set_color(self, color, link_id=-1):
         """Set the given RGBA color to the specified link. This is only valid in the simulator.
 
