@@ -390,7 +390,7 @@ class World(object):
         #     bridge.step()
 
         # call the step method for each body
-        for body in self.bodies:
+        for body in self.bodies.values():
             body.step()
 
         # call simulation step
