@@ -391,7 +391,8 @@ class World(object):
 
         # call the step method for each body
         for body in self.bodies.values():
-            body.step()
+            if isinstance(body, Body):
+                body.step()
 
         # call simulation step
         self.sim.step()
