@@ -11,9 +11,10 @@ References
 
 from abc import ABCMeta
 import numpy as np
+import matplotlib.pyplot as plt
 # import scipy.interpolate
 
-from pyrobolearn.models.model import Model
+# from pyrobolearn.models.model import Model
 from pyrobolearn.models.gaussian import Gaussian
 from pyrobolearn.models.promp.canonical_systems import LinearCS
 from pyrobolearn.models.promp.basis_functions import BasisMatrix, GaussianBM, VonMisesBM, BlockDiagonalMatrix
@@ -1171,8 +1172,8 @@ class ProMP(object):  # Model
                 the number of iterations it took to converge, if it succeeded, etc.
 
         References:
-            [1] "The Matrix Cookbook", Petersen and Pedersen, 2012
-            [2] "Second Order Adjoint Matrix Equation", Crone, 1981
+            - [1] "The Matrix Cookbook", Petersen and Pedersen, 2012
+            - [2] "Second Order Adjoint Matrix Equation", Crone, 1981
         """
         results = {'losses': [], 'success': False, 'num_iters': 1}
         raise NotImplementedError
@@ -1548,44 +1549,98 @@ class RhythmicProMP(ProMP):
                                             for _ in range(num_dofs)])
 
 
-# TESTS
+############
+# Plotting #
+############
+
+def plot_state(Y, ax=None, title=None, linewidth=1.):
+    y, dy = Y.T
+
+    fig = None
+    if ax is None:
+        fig, ax = plt.subplots(1, 2)
+    if title is not None:
+        if fig is None:
+            fig = ax[0].figure
+        fig.suptitle(title)
+
+    # plot position y(t)
+    ax[0].set_title('y(t)')
+    ax[0].plot(y, linewidth=linewidth)  # TxN
+
+    # plot velocity dy(t)
+    ax[1].set_title('dy(t)')
+    ax[1].plot(dy, linewidth=linewidth)  # TxN
+
+    return ax
+
+
+def plot_proba_state(means, covariances, ax=None, title=None, linewidth=1.):
+    """
+    Plot the state with the standard deviation.
+
+    Args:
+        means (np.array[T, 2]): state means for each phase step.
+        covariances (np.array[T, 2, 2]): state covariance matrices for each phase step.
+        title (str): title of the plot.
+        linewidth (float): width of the plotted lines.
+    """
+    y, dy = means[:, 0], means[:, 1]
+    y_std, dy_std = np.sqrt(covariances[:, 0, 0]), np.sqrt(covariances[:, 1, 1])
+    t = list(range(len(y)))
+
+    print(y_std, dy_std)
+
+    fig = None
+    if ax is None:
+        fig, ax = plt.subplots(1, 2)
+    if title is not None:
+        if fig is None:
+            fig = ax[0].figure
+        fig.suptitle(title)
+
+    # plot position y(t)
+    ax[0].set_title('y(t)')
+    ax[0].fill_between(t, y - y_std, y + y_std, facecolor='green', alpha=0.4)
+    ax[0].plot(y, linewidth=linewidth)  # TxN
+
+    # plot velocity dy(t)
+    ax[1].set_title('dy(t)')
+    ax[1].fill_between(t, dy - dy_std, dy + dy_std, facecolor='green', alpha=0.4)
+    ax[1].plot(dy, linewidth=linewidth)  # TxN
+
+    return ax
+
+
+def plot_weighted_basis(t, promp, ax=None):
+    phi_track = promp.weighted_basis(t)  # shape: DM,T,2D
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 2)
+
+    ax[0].plot(phi_track[:, :, 0].T, linewidth=0.5)
+
+    ax[1].plot(phi_track[:, :, 1].T, linewidth=0.5)
+
+    return ax
+
+
+# Tests
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-
-
-    def plot_state(Y, title=None, linewidth=1.):
-        y, dy = Y.T
-        plt.figure()
-        if title is not None:
-            plt.suptitle(title)
-
-        # plot position y(t)
-        plt.subplot(1, 2, 1)
-        plt.title('y(t)')
-        plt.plot(y, linewidth=linewidth)  # TxN
-
-        # plot velocity dy(t)
-        plt.subplot(1, 2, 2)
-        plt.title('dy(t)')
-        plt.plot(dy, linewidth=linewidth)  # TxN
-
-
-    def plot_weighted_basis(promp):
-        phi_track = promp.weighted_basis(t)  # shape: DM,T,2D
-
-        plt.subplot(1, 2, 1)
-        plt.plot(phi_track[:, :, 0].T, linewidth=0.5)
-
-        plt.subplot(1, 2, 2)
-        plt.plot(phi_track[:, :, 1].T, linewidth=0.5)
-
 
     # create data and plot it
     N = 8
     t = np.linspace(0., 1., 100)
-    eps = 0.1
-    y = np.array([np.sin(2*np.pi*t) + eps * np.random.rand(len(t)) for _ in range(N)])      # shape: NxT
-    dy = np.array([2*np.pi*np.cos(2*np.pi*t) + eps * np.random.rand(len(t)) for _ in range(N)])     # shape: NxT
+    # eps = 0.1
+    # y = np.array([np.sin(2*np.pi*t) + eps * np.random.rand(len(t)) for _ in range(N)])      # shape: NxT
+    # dy = np.array([2*np.pi*np.cos(2*np.pi*t) + eps * np.random.rand(len(t)) for _ in range(N)])     # shape: NxT
+    phi = np.random.uniform(low=-1., high=1., size=N)
+    y = np.array([np.sin(2 * np.pi * t + phi[i]) for i in range(int(N/2))])  # shape: NxT
+    y1 = np.array([np.cos(2 * np.pi * t + phi[i]) for i in range(int(N/2))])
+    y = np.vstack((y, y1))
+    dy = np.array([2 * np.pi * np.cos(2 * np.pi * t + phi[i]) for i in range(int(N/2))])  # shape: NxT
+    dy1 = np.array([2 * np.pi * np.sin(2 * np.pi * t + phi[i]) for i in range(int(N/2))])
+    dy = np.vstack((dy, dy1))
     Y = np.dstack((y, dy))  # N,T,2D  --> why not N,2D,T
     plot_state(Y, title='Training data')
     plt.show()
@@ -1600,15 +1655,24 @@ if __name__ == "__main__":
 
     # plot ProMPs
     y_pred = promp.rollout()
-    plot_state(y_pred[None], title='ProMP prediction before learning', linewidth=2.)    # shape: N,T,2D
-    plot_weighted_basis(promp)
+    fig, ax = plt.subplots(1, 2)
+    plot_state(y_pred[None], ax=ax, title='ProMP prediction before learning', linewidth=2.)    # shape: N,T,2D
+    plot_weighted_basis(t, promp, ax=ax)
     plt.show()
 
     # learn from demonstrations
     promp.imitate(Y)
     y_pred = promp.rollout()
-    plot_state(y_pred[None], title='ProMP prediction after learning', linewidth=2.)   # N,T,2D
-    plot_weighted_basis(promp)
+    fig, ax = plt.subplots(1, 2)
+    plot_state(y_pred[None], ax=ax, title='ProMP prediction after learning', linewidth=3.)   # N,T,2D
+    plot_weighted_basis(t, promp, ax=ax)
+    plt.show()
+
+    method = 'marginal'
+    means, covariances = promp.rollout_proba(method=method, return_gaussian=False)
+    fig, ax = plt.subplots(1, 2)
+    plot_state(Y, ax=ax, title='Training data')
+    plot_proba_state(means, covariances, ax=ax, title='ProMP prediction after learning', linewidth=3.)
     plt.show()
 
     # modulation: final positions (goals)

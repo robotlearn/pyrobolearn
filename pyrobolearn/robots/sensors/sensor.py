@@ -61,6 +61,9 @@ class Sensor(object):  # sensor attached to a link or joint
         # data from last acquisition
         self.data = None
 
+        # variable to check if the sensor is enabled
+        self._enabled = True
+
     ##############
     # Properties #
     ##############
@@ -87,6 +90,18 @@ class Sensor(object):  # sensor attached to a link or joint
         orientation = self.sim.get_base_orientation(self.body_id)
         orientation = get_quaternion_product(self.local_orientation, orientation)
         return orientation
+
+    ###########
+    # Methods #
+    ###########
+
+    def enable(self):
+        """Enable the sensor."""
+        self._enabled = True
+
+    def disable(self):
+        """Disable the sensor."""
+        self._enabled = False
 
     @abstractmethod
     def _sense(self):

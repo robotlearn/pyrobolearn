@@ -15,9 +15,11 @@ from scipy import interpolate
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 
-# from pyrobolearn.models.model import Model
-from pyrobolearn.models.gaussian import Gaussian
+import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse
 
+# from pyrobolearn.models.model import Model
+from pyrobolearn.models.gaussian import Gaussian, plot_2d_ellipse
 from pyrobolearn.filters.utils import smooth
 
 
@@ -108,7 +110,7 @@ class GMM(object):
     respectively.
 
     This results in another GMM, which can be approximated by a simple Gaussian (see [4] for more info, or the
-    documentation of the corresponding method: `approximate_by_single_gaussian`):
+    documentation of the corresponding method: :func:`~approximate_by_single_gaussian`):
 
     .. math::
 
@@ -133,12 +135,13 @@ class GMM(object):
         - [5] "Programming by Demonstration on Riemannian Manifolds" (PhD thesis, chap 1 and 2), Zeerstraten, 2017
         - [6] "Learning Control", Calinon et al., 2018
 
-    The code was inspired by the following codes:
-    - `gaussian.py`: defines the Gaussian distribution
-    - `sklearn.mixture.gmm` and `sklearn.mixture.dpgmm`: http://scikit-learn.org/stable/modules/mixture.html
-    - `gmr`: https://github.com/AlexanderFabisch/gmr
-    - `pybdlib`: https://gitlab.idiap.ch/rli/pbdlib-python/tree/master/pbdlib
-    - `riepybdlib.statistics`: https://gitlab.martijnzeestraten.nl/martijn/riepybdlib
+    Other codes related to GMM (from which we were loosely inspired; we looked at the number and name of the methods
+    but were mainly inspired by [1, 3, 4] to implement several methods) can be found at:
+        - `gaussian.py`: defines our Gaussian distribution
+        - `sklearn.mixture.gmm` and `sklearn.mixture.dpgmm`: http://scikit-learn.org/stable/modules/mixture.html
+        - `gmr`: https://github.com/AlexanderFabisch/gmr
+        - `pybdlib`: https://gitlab.idiap.ch/rli/pbdlib-python/tree/master/pbdlib
+        - `riepybdlib.statistics`: https://gitlab.martijnzeestraten.nl/martijn/riepybdlib
     """
 
     def __init__(self, num_components=1, priors=None, means=None, covariances=None, gaussians=None, seed=None,
@@ -1362,7 +1365,7 @@ class GMM(object):
 
         Returns:
             int, np.int[N]: component index/indices
-            float, np.float[N]: associated probability
+            float, np.array[N]: associated probability
         """
         posteriors = self.responsibilities(x) # shape NxK if data matrix, or K if data vector
         if len(posteriors.shape) == 2:
@@ -1377,7 +1380,7 @@ class GMM(object):
         Note that the order in the sum is important here.
 
         Returns:
-            np.float[K]: cumulative distribution function on the prior
+            np.array[K]: cumulative distribution function on the prior
         """
         return np.cumsum(self.priors)
 
@@ -1466,27 +1469,27 @@ class GMM(object):
         """
         gaussian_pdfs = np.array([g.pdf(x) for g in self.gaussians]).T  # shape: K if 1 data point, or NxK if multiple
         joint = self.priors * gaussian_pdfs  # shape: K if 1 data point, or NxK if multiple
-        marginal = np.sum(joint, axis=1)  # shape: 1 if 1 data point, or N if multiple
+        marginal = np.sum(joint, axis=-1)  # shape: 1 if 1 data point, or N if multiple
 
         if k is None:
-            return (joint.T / marginal).T  # shape: K if 1 data point, or NxK if multiple
+            return (joint.T / marginal).T  # shape: (K,) if 1 data point, or (N,K) if multiple
         else:
             N = 1 if len(x.shape) == 1 else x.shape[0]
             if N == 1:  # one data point
-                return joint[k] / marginal  # shape: k
+                return joint[k] / marginal  # shape: (k,)
             else:  # multiple data points
                 K = self.num_components
                 if N == len(k):
                     if N <= K and axis == 1:
-                        return (joint[:, k].T / marginal).T  # shape: Nxk
-                    return joint[range(N), k] / marginal  # shape: N
-                return (joint[:,k].T / marginal).T  # shape: Nxk
+                        return (joint[:, k].T / marginal).T  # shape: (N,k)
+                    return joint[range(N), k] / marginal  # shape: (N,)
+                return (joint[:, k].T / marginal).T  # shape: (N,k)
 
     def condition(self, x_in, idx_out, idx_in=None):
         r"""
         Condition the GMM which results in GMR. Return the conditioned GMM. If the user wants to approximate it
-        by a single gaussian, he/she can call the property `gaussian` or the `approximate_by_single_gaussian()`
-        methods. These two's are equivalent.
+        by a single gaussian, he/she can call the property `gaussian` or the :func:`~approximate_by_single_gaussian`
+        method. These two's are equivalent.
 
         Gaussian Mixture Regression [1,2] consists to condition the GMM (that models the joint distribution over the
         input and output variables :math:`p(x^I, x^O)`) on a part of the variables (for instance, the input variables
@@ -1506,10 +1509,11 @@ class GMM(object):
         respectively.
 
         Args:
-            x_in (float[d2]): array of values :math:`x^I` such that we have :math:`p(x^O|x^I)`
-            idx_out (int[d1]): indices that we are interested in (indices of :math:`x^O` in :math:`x`) given
-                (i.e. conditioned on) the other ones
-            idx_in (int[d2]): indices that we conditioned on corresponding to the values. If None, it will be inferred.
+            x_in (np.array[d2]): array of values :math:`x^I` such that we have :math:`p(x^O|x^I)`
+            idx_out (list of int, np.int[d1]): indices that we are interested in (indices of :math:`x^O` in :math:`x`)
+                given (i.e. conditioned on) the other ones
+            idx_in (list of int, np.int[d2]): indices that we conditioned on corresponding to the values. If None, it
+                will be inferred.
 
         Returns:
             GMM: conditioned gaussian mixture model
@@ -1600,7 +1604,7 @@ class GMM(object):
         4. The product of a GMM by a float does nothing as we have to re-normalize it to be a proper distribution.
 
         Args:
-            other (Gaussian, GMM, np.float[D,D], float): Gaussian, GMM, square matrix (to rotate or scale), or float
+            other (Gaussian, GMM, np.array[D,D], float): Gaussian, GMM, square matrix (to rotate or scale), or float
 
         Returns:
             GMM: resulting GMM
@@ -1651,7 +1655,7 @@ class GMM(object):
         number of components.
 
         Args:
-            other (Gaussian, GMM, np.float[D,D], float): Gaussian, GMM, square matrix (to rotate or scale), or float
+            other (Gaussian, GMM, np.array[D,D], float): Gaussian, GMM, square matrix (to rotate or scale), or float
 
         Returns:
             GMM: resulting GMM
@@ -1914,7 +1918,7 @@ class GMM(object):
         data :math:`x`, it returns the joint probability :math:`p(x, z_k=1)`.
 
         Args:
-            x (np.float[N,D], np.float[D]): data matrix/vector
+            x (np.array[N,D], np.array[D]): data matrix/vector
             z (int, np.int[N], None): hidden variable (component index/indices)
             size (int, None): number of samples
 
@@ -1982,7 +1986,7 @@ class GMM(object):
             element-wise. For this one, have a look at `multiply_element_wise` method, or the `__and__` operator.
 
         Args:
-            other (GMM, Gaussian, np.float[D,D], float): GMM, Gaussian, or square matrix (to rotate or scale), or float
+            other (GMM, Gaussian, np.array[D,D], float): GMM, Gaussian, or square matrix (to rotate or scale), or float
 
         Returns:
             GMM: resulting GMM
@@ -1999,7 +2003,7 @@ class GMM(object):
         element-wise.
 
         Args:
-            other (GMM, Gaussian, np.float[D,D], float): GMM, Gaussian, or square matrix (to rotate or scale), or float
+            other (GMM, Gaussian, np.array[D,D], float): GMM, Gaussian, or square matrix (to rotate or scale), or float
 
         Returns:
             GMM: resulting GMM
@@ -2045,104 +2049,148 @@ class TPGMM(GMM):
 # Plotting functions #
 ######################
 
-def plotGMM(gmm, ax=None, title='GMM', color='b'):
+
+def plot_gmm(gmm, X=None, label=True, ax=None, title='GMM', xlim=[-6, 6], ylim=[-6, 6], option=1, color='b'):
     r"""Plot GMM"""
+    # create ax if not already created
     if ax is None:
         fig, ax = plt.subplots(1, 1)
-        ax.set(title=title, xlim=[-2, 2], ylim=[-2, 2], aspect='equal')
-    for g in gmm.gaussians:
-        plot2DEllipse(ax, g, color=color, plot_arrows=False)
+
+    # configure ax
+    ax.set(title=title, xlim=xlim, ylim=ylim, aspect='equal')
+
+    # draw the data if provided
+    if X is not None:
+        labels = gmm.predict(X)
+        if label:
+            ax.scatter(X[:, 0], X[:, 1], c=labels, s=40, cmap='viridis', zorder=2)
+        else:
+            ax.scatter(X[:, 0], X[:, 1], s=40, zorder=2)
+
+    # draw the ellipse for each gaussian
+    w_factor = 0.2 / gmm.priors.max()
+    priors = gmm.priors
+    for i, g in enumerate(gmm.gaussians):
+        if option == 1:
+            plot_2d_ellipse(ax, g, color=color, plot_arrows=False)
+        else:
+            draw_ellipse(g.mean, g.cov, ax=ax, alpha=priors[i] * w_factor)
+
+
+def draw_ellipse(position, covariance, ax=None, **kwargs):
+    """Draw an ellipse with a given position and covariance
+
+    Taken from: https://jakevdp.github.io/PythonDataScienceHandbook/05.12-gaussian-mixtures.html
+    """
+    ax = ax or plt.gca()
+
+    # Convert covariance to principal axes
+    if covariance.shape == (2, 2):
+        U, s, Vt = np.linalg.svd(covariance)
+        angle = np.degrees(np.arctan2(U[1, 0], U[0, 0]))
+        width, height = 2 * np.sqrt(s)
+    else:
+        angle = 0
+        width, height = 2 * np.sqrt(covariance)
+
+    # Draw the Ellipse
+    for nsig in range(1, 4):
+        ax.add_patch(Ellipse(position, nsig * width, nsig * height, angle, **kwargs))
+
+
+def plot_gmm_sklearn(gmm, X, label=True, ax=None, title='', xlim=None, ylim=None):
+    """Plot sklearn GMM
+
+    Taken from: https://jakevdp.github.io/PythonDataScienceHandbook/05.12-gaussian-mixtures.html
+    """
+    ax = ax or plt.gca()
+    labels = gmm.fit(X).predict(X)
+    if label:
+        ax.scatter(X[:, 0], X[:, 1], c=labels, s=40, cmap='viridis', zorder=2)
+    else:
+        ax.scatter(X[:, 0], X[:, 1], s=40, zorder=2)
+    if xlim is None and ylim is None:
+        ax.set(title=title, aspect='equal')
+    else:
+        ax.set(title=title, xlim=xlim, ylim=ylim, aspect='equal')
+
+    w_factor = 0.2 / gmm.weights_.max()
+    for pos, covar, w in zip(gmm.means_, gmm.covariances_, gmm.weights_):
+        draw_ellipse(pos, covar, alpha=w * w_factor)
 
 
 # TESTS
 if __name__ == "__main__":
-    from pyrobolearn.models.gaussian import plot2DEllipse
-    import matplotlib.pyplot as plt
 
     # create manually a GMM
-    dim, num_components = 2, 3
+    dim, num_components = 2, 5
     gmm = GMM(gaussians=[Gaussian(mean=np.random.uniform(-1., 1., size=dim),
                                   covariance=0.1*np.identity(dim)) for _ in range(num_components)])
-    gmm1 = GaussianMixture(n_components=num_components)
+    gmm_sklearn = GaussianMixture(n_components=num_components)
 
     # plot initial GMM
-    plotGMM(gmm, title='Initial GMM')
+    plot_gmm(gmm, title='Initial GMM')
     plt.show()
 
-    # create data
-    N, eps = 8, 0.1
-    t = np.linspace(0., 1., 100)
-    y = np.array([np.sin(2 * np.pi * t) + eps * np.random.rand(len(t)) for _ in range(N)])  # shape: NxT
+    # create data: Generate random sample following a sine curve
+    # Ref: https://scikit-learn.org/stable/auto_examples/mixture/plot_gmm_sin.html#sphx-glr-auto-examples-mixture-\
+    # plot-gmm-sin-py
+    n_samples = 100
+    np.random.seed(0)
+    X = np.zeros((n_samples, 2))
+    step = 4. * np.pi / n_samples
+
+    for i in range(X.shape[0]):
+        x = i * step - 6.
+        X[i, 0] = x + np.random.normal(0, 0.1)
+        X[i, 1] = 3. * (np.sin(x) + np.random.normal(0, .2))
+
+    xlim, ylim = [-8, 8], [-8, 8]
 
     # plot data
-    plt.plot(t, y.T)
     plt.title('Training data')
+    plt.scatter(X[:, 0], X[:, 1])
     plt.show()
 
-    # combine data (with shape: N'xD, where N' is the N'=N*T)
-    X = np.hstack((np.array([t] * N).reshape(-1, 1), y.reshape(-1, 1)))
-
     # init GMM
-    init_method = 'random'  # 'k-means'
+    init_method = 'k-means'  # 'random', 'k-means', 'uniform', 'sklearn', 'curvature'
     gmm.init(X, method=init_method)
-    plotGMM(gmm, title='GMM after ' + init_method.capitalize())
+    fig, ax = plt.subplots(1, 1)
+    plot_gmm(gmm, X=X, ax=ax, title='GMM after ' + init_method.capitalize(), xlim=xlim, ylim=ylim)
     plt.show()
 
     # fit a GMM using EM
     result = gmm.fit(X, init=None)
 
-    # plot losses
+    # plot EM optimization
     plt.plot(result['losses'])
+    plt.title('EM per iteration')
     plt.show()
 
     # plot trained GMM
-    fig, ax = plt.subplots(1, 1)
-    plotGMM(gmm, ax=ax, title='Trained GMM')
-    ax.plot(t, y.T)
-    plt.show()
-
-    # fit
-    from matplotlib.patches import Ellipse
-
-
-    def draw_ellipse(position, covariance, ax=None, **kwargs):
-        """Draw an ellipse with a given position and covariance"""
-        ax = ax or plt.gca()
-
-        # Convert covariance to principal axes
-        if covariance.shape == (2, 2):
-            U, s, Vt = np.linalg.svd(covariance)
-            angle = np.degrees(np.arctan2(U[1, 0], U[0, 0]))
-            width, height = 2 * np.sqrt(s)
-        else:
-            angle = 0
-            width, height = 2 * np.sqrt(covariance)
-
-        # Draw the Ellipse
-        for nsig in range(1, 4):
-            ax.add_patch(Ellipse(position, nsig * width, nsig * height,
-                                 angle, **kwargs))
-
-
-    def plot_gmm(gmm, X, label=True, ax=None):
-        ax = ax or plt.gca()
-        labels = gmm.fit(X).predict(X)
-        if label:
-            ax.scatter(X[:, 0], X[:, 1], c=labels, s=40, cmap='viridis', zorder=2)
-        else:
-            ax.scatter(X[:, 0], X[:, 1], s=40, zorder=2)
-        ax.axis('equal')
-
-        w_factor = 0.2 / gmm.weights_.max()
-        for pos, covar, w in zip(gmm.means_, gmm.covariances_, gmm.weights_):
-            draw_ellipse(pos, covar, alpha=w * w_factor)
-
-
-    plot_gmm(gmm1, X)
+    fig, ax = plt.subplots(1, 2)
+    plot_gmm(gmm, X=X, label=True, ax=ax[0], title='Our Trained GMM', option=1, xlim=xlim, ylim=ylim)
+    gmm_sklearn.fit(X)
+    plot_gmm_sklearn(gmm_sklearn, X, label=True, ax=ax[1], title="Sklearn's Trained GMM", xlim=xlim, ylim=ylim)
     plt.show()
 
     # samples from the GMM and plot
 
     # GMR: condition on the input variable and plot
+    means, std_devs = [], []
+    time_linspace = np.linspace(-6, 6, 100)
+    for t in time_linspace:
+        g = gmm.condition(np.array([t]), idx_out=1).approximate_by_single_gaussian()
+        means.append(g.mean[0])
+        std_devs.append(np.sqrt(g.covariance[0, 0]))
+
+    means, std_devs = np.asarray(means), np.asarray(std_devs)
+
+    plt.plot(time_linspace, means)
+    plt.fill_between(time_linspace, means - 2 * std_devs, means + 2 * std_devs, facecolor='green', alpha=0.3)
+    plt.fill_between(time_linspace, means - std_devs, means + std_devs, facecolor='green', alpha=0.5)
+    plt.title('GMR')
+    plt.scatter(X[:, 0], X[:, 1])
+    plt.show()
 
     # GMR: condition on the output variable and plot

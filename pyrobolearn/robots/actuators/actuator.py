@@ -25,7 +25,9 @@ class Actuator(object):
     """
 
     def __init__(self):
-        pass
+
+        # variable to check if the actuator is enabled
+        self._enabled = True
 
     #     self.sim = simulator
     #
@@ -40,6 +42,14 @@ class Actuator(object):
     ###########
     # Methods #
     ###########
+
+    def enable(self):
+        """Enable the sensor."""
+        self._enabled = True
+
+    def disable(self):
+        """Disable the sensor."""
+        self._enabled = False
 
     def compute(self, *args, **kwargs):  # TODO: call it actuate?
         pass
