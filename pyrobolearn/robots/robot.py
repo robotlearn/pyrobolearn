@@ -115,6 +115,12 @@ class Robot(ControllableBody):
         # print("FORWARD VECTOR: {}".format(self.base_forward_vector))
         self.com = None  # center of mass
 
+        # State of the robot
+        self._prev_state = {}
+        self._state = {}
+        self._prev_jacobian = {}
+        self._jacobian = {}
+
         # set useful variables
         self.joints = []  # non-fixed joint/link indices in the simulator
         self.joint_names = {}  # joint name to id in the simulator
@@ -159,12 +165,6 @@ class Robot(ControllableBody):
 
         # Gains
         self.kp, self.kd = None, None
-
-        # State of the robot
-        self._prev_state = {}
-        self._state = {}
-        self._prev_jacobian = {}
-        self._jacobian = {}
 
         # sensors and actuators
         self.sensors = []  # list of sensors
