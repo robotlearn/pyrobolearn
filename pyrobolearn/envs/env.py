@@ -27,7 +27,7 @@ from pyrobolearn.states.generators import StateGenerator
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "GNU GPLv3"
+__license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
@@ -299,7 +299,7 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
         states = [state.reset() for state in self.states]
         return self._convert_state_to_data(states)
 
-    def step(self, actions=None):
+    def step(self, actions=None, sleep_dt=None):
         """
         Run one timestep of the environment's dynamics. When end of episode is reached, you are responsible for
         calling `reset()` to reset this environment's state. Accepts an action and returns a tuple (observation,
@@ -312,6 +312,7 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
                 can appear by providing the actions in the environment instead of letting the policy executes them.
                 For instance, think about when there are multiple policies, when using multiprocessing, or when the
                 environment runs in real-time.
+            sleep_dt (float):
 
         Returns:
             observation (object): agent's observation of the current environment
@@ -335,7 +336,7 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
         #     actions()
 
         # perform a step forward in the simulation which computes all the dynamics
-        self.world.step()
+        self.world.step(sleep_dt=sleep_dt)
 
         # compute reward
         # rewards = [reward.compute() for reward in self.rewards]

@@ -62,6 +62,10 @@ from .phantomx import PhantomX
 from .morphex import Morphex
 from .rhex import Rhex
 
+# Control
+from .acrobot import Acrobot
+from .pendulum import Pendulum
+
 # Manipulators
 from .rrbot import RRBot
 from .wam import WAM, BarrettHand
@@ -73,6 +77,7 @@ from .sawyer import Sawyer
 from .edo import Edo
 from .kr5 import KR5
 from .manipulator2d import Manipulator2D
+from .ur import UR3, UR5, UR10
 
 # Bi-Manipulators
 from .baxter import Baxter, BaxterGripper

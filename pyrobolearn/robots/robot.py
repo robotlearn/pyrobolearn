@@ -1089,8 +1089,8 @@ class Robot(ControllableBody):
         Set the velocity of the given joint(s) (using velocity control).
 
         Args:
-            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, get all the actuated joints.
             velocities (float, np.array[N]): desired velocity, or list of desired velocities [rad/s]
+            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, get all the actuated joints.
             forces (float, np.array[N], None, bool): maximum motor torques / forces. If True, it will apply the
                 default maximum force values.
             max_velocity (float, bool, None): if True, it will make sure that the given velocity(ies) are below their
@@ -1683,6 +1683,34 @@ class Robot(ControllableBody):
         if flatten:
             q.reshape(-1)
         return q
+
+    def get_link_world_poses(self, link_ids=None, flatten=True):
+        r"""
+        Return the CoM pose (position and orientation (expressed as a quaternion [x,y,z,w] in the Cartesian world
+        space) of the given link(s).
+
+        Args:
+            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the pose of all links
+                associated to actuated joints.
+            flatten (bool): if True, it will return a 1D array of float numbers instead of a 2D array of shape [N,7].
+
+        Returns:
+            if 1 link:
+                np.array[7]: Cartesian pose of the link CoM
+            if multiple links:
+                np.array[N*7], np.array[N,7]: CoM pose of each link
+        """
+        # get positions and orientations
+        positions = self.get_link_world_positions(link_ids=link_ids, flatten=False)  # (N,3)
+        orientations = self.get_link_world_orientations(link_ids=link_ids, flatten=False)  # (N,4)
+
+        # concatenate to form the pose
+        poses = np.hstack((positions, orientations))  # (N,7)
+
+        # check if we need to flatten the 2D array
+        if flatten:
+            return poses.reshape(-1)  # (N*7,)
+        return poses  # (N,7)
 
     def get_link_world_linear_velocities(self, link_ids=None, flatten=True):
         r"""

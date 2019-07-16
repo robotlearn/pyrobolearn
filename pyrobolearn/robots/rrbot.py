@@ -5,7 +5,8 @@
 import os
 import numpy as np
 
-from pyrobolearn.robots.manipulator import Manipulator
+from pyrobolearn.robots.robot import Robot
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -16,7 +17,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class RRBot(Manipulator):
+class RRBot(Robot):
     r"""RRBot
 
     Note that in the URDF, the continuous joints were replace by revolute joints. Be careful, that the limit values

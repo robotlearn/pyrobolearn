@@ -33,6 +33,118 @@ class Hand(AngularGripper):
         """
         super(Hand, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
+    def get_fist_configuration(self):
+        """Return the joint configuration for the hand (and fingers) to form a fist."""
+        pass
+
+    def get_open_configuration(self):
+        """Return the joint configuration for the hand (and fingers) to form an open hand (where the fingers are
+        attached/close to each other)."""
+        pass
+
+    def get_fully_open_configuration(self):
+        """Return the joint configuration for the hand (and fingers) to form a fully open hand (where the distance
+        between the fingers is maximal)."""
+        pass
+
+    def get_thumb_up_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the thumb up.
+
+        Args:
+            factor (float): 1 = completely up, 0 = completely down
+        """
+        pass
+
+    def get_thumb_down_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the thumb up.
+
+        Args:
+            factor (float): 1 = completely down, 0 = completely up
+        """
+        return self.get_thumb_up_configuration(factor=1.-factor)
+
+    def get_index_up_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the index finger up.
+
+        Args:
+            factor (float): 1 = completely up, 0 = completely down
+        """
+        pass
+
+    def get_index_down_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the index finger up.
+
+        Args:
+            factor (float): 1 = completely down, 0 = completely up
+        """
+        return self.get_index_up_configuration(factor=1.-factor)
+
+    def get_middle_up_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the middle finger up.
+
+        Args:
+            factor (float): 1 = completely up, 0 = completely down
+        """
+        pass
+
+    def get_middle_down_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the middle finger up.
+
+        Args:
+            factor (float): 1 = completely down, 0 = completely up
+        """
+        return self.get_middle_up_configuration(factor=1.-factor)
+
+    def get_ring_up_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the ring finger up.
+
+        Args:
+            factor (float): 1 = completely up, 0 = completely down
+        """
+        pass
+
+    def get_ring_down_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the ring finger up.
+
+        Args:
+            factor (float): 1 = completely down, 0 = completely up
+        """
+        return self.get_ring_up_configuration(factor=1.-factor)
+
+    def get_pinky_up_configuration(self,  factor=1.):
+        """
+        Return the joint configuration for the fingers to have the pinky finger up.
+
+        Args:
+            factor (float): 1 = completely up, 0 = completely down
+        """
+        pass
+
+    def get_pinky_down_configuration(self,  factor=1.):
+        """
+        Return the joint configuration for the fingers to have the pinky finger up.
+
+        Args:
+            factor (float): 1 = completely down, 0 = completely up
+        """
+        return self.get_pinky_up_configuration(factor=1.-factor)
+
+    def get_ok_configuration(self):
+        """Return the joint configuration for the fingers to perform the OK or ring gesture.
+
+        References:
+            - https://en.wikipedia.org/wiki/OK_gesture
+        """
+        pass
+
 
 class TwoHand(Hand):
     r"""Two hand end-effectors

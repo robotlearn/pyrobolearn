@@ -38,6 +38,7 @@ Here is the list of repos where you can find the original URDF/meshes of each ro
     * Baxter: https://github.com/RethinkRobotics/baxter_common
     * Jaco: https://github.com/JenniferBuehler/jaco-arm-pkgs
     * e.DO: https://github.com/Comau/eDO_description
+    * UR: https://github.com/ros-industrial/universal_robot
 
 * Hexapod
     * phantomx: https://github.com/HumaRobotics/phantomx_description

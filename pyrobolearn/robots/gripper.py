@@ -2,7 +2,9 @@
 """Provide the Gripper abstract classes.
 """
 
+from pyrobolearn.simulators.simulator import Simulator
 from pyrobolearn.robots.robot import Robot
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2019, PyRoboLearn"
@@ -59,7 +61,26 @@ class Gripper(Robot):
         Close the gripper. This has to be implemented in the child class.
 
         Args:
-            factor (float): float representing how much the gripper is closed (1=completely close, 0=clompletely open).
+            factor (float): float representing how much the gripper is closed (1=completely close, 0=completely open).
+        """
+        pass
+
+    def grasp(self, strength, point=None, frame=Simulator.LINK_FRAME):
+        """
+        Grasp an object. Compared to :func:`~open` or :func:`~close` which uses position control, this uses force
+        (impedance) control using attractor points. The strength factor increases the stiffness of the grasping; i.e.
+        it increases the applied torques in the gripper joints.
+
+        Args:
+            strength (float): scalar describing how much to increases the stiffness (the torques that are applied on
+                the joint fingers). If positive, it closes the gripper fingers. If negative, it opens the gripper
+                fingers.
+            point (np.array[3], list of np.array[3], None): attractor point(s) described in the specified frame.
+                If multiple points are specified, they have to match the number of fingers and will be used in the
+                same order. If None, it will grasp in a "natural" way (which is let to the user that has implemented
+                this method).
+            frame (int): integer describing if the above given point is described in the world frame
+                (``Simulator.WORLD_FRAME``), or in the link frame of the gripper base (``Simulator.LINK_FRAME``).
         """
         pass
 

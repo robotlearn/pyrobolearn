@@ -6,9 +6,10 @@ This includes notably the link positions, velocities, and force/torque actions.
 
 import copy
 from abc import ABCMeta
+import numpy as np
 
 from pyrobolearn.actions.robot_actions.robot_actions import RobotAction
-
+from pyrobolearn.utils.transformation import get_rpy_from_quaternion, get_quaternion_from_rpy
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -60,46 +61,216 @@ class LinkAction(RobotAction):
 
 
 class LinkPositionAction(LinkAction):
-    r"""Link position action
+    r"""Link world position action
 
-    Set the position using IK for the specified robot link(s).
+    Set the world position using IK for the specified robot link(s).
     """
 
     def __init__(self, robot, link_ids=None):
         """
-        Initialize the link position action.
+        Initialize the link world position action.
 
         Args:
             robot (Robot): robot instance
             link_ids (int, int[N]): link id or list of link ids
         """
         super(LinkPositionAction, self).__init__(robot, link_ids)
+        self.data = self.robot.get_link_world_positions(link_ids=self.links, flatten=True)  # (N*3,)
 
     def _write(self, data):
         """apply the action data on the robot."""
-        self.robot.set_link_positions(self.links, data)
+        self.robot.set_link_positions(link_ids=self.links, positions=data.reshape(-1, 3))
 
 
-class LinkVelocityAction(LinkAction):
-    r"""Link velocity action
+class LinkPositionChangeAction(LinkPositionAction):
+    r"""Link world position change action
 
-    Set the cartesian velocity(ies) for the specified robot link(s).
+    Set the world position using IK for the specified robot link(s). Instead of specifying directly the desired
+    cartesian position(s), the amount of change in the current positions is provided.
     """
 
     def __init__(self, robot, link_ids=None):
         """
-        Initialize the link position action.
+        Initialize the link world position change action.
+
+        Args:
+            robot (Robot): robot instance
+            link_ids (int, int[N]): link id or list of link ids
+        """
+        super(LinkPositionChangeAction, self).__init__(robot, link_ids)
+        self.data = np.zeros(len(self.links) * 3)
+
+    def _write(self, data):
+        """apply the action data on the robot."""
+        data += self.robot.get_link_world_positions(link_ids=self.links)
+        super(LinkPositionChangeAction, self)._write(data)
+
+
+class LinkOrientationAction(LinkAction):
+    r"""Link world orientation action
+
+    Set the world orientation using IK for the specified robot link(s).
+    """
+
+    def __init__(self, robot, link_ids=None):
+        """
+        Initialize the link world orientation action.
+
+        Args:
+            robot (Robot): robot instance
+            link_ids (int, int[N]): link id or list of link ids
+        """
+        super(LinkOrientationAction, self).__init__(robot, link_ids)
+        self.data = self.robot.get_link_world_orientations(link_ids=self.links, flatten=True)  # (N*4,)
+
+    def _write(self, data):
+        """apply the action data on the robot."""
+        self.robot.set_link_positions(link_ids=self.links, orientations=data.reshape(-1, 4))
+
+
+class LinkOrientationChangeAction(LinkOrientationAction):
+    r"""Link world orientation change action
+
+    Set the world orientation using IK for the specified robot link(s). Instead of specifying directly the desired
+    cartesian orientation(s), the amount of change in the current orientations is provided.
+
+    Warnings: the difference in orientations should be provided as a change in roll-pitch-yaw angles (in radians), and
+    not as quaternions.
+    """
+
+    def __init__(self, robot, link_ids=None):
+        """
+        Initialize the link world orientation change action.
+
+        Args:
+            robot (Robot): robot instance
+            link_ids (int, int[N]): link id or list of link ids
+        """
+        super(LinkOrientationChangeAction, self).__init__(robot, link_ids)
+        self.data = np.zeros(len(self.links) * 4)
+
+    def _write(self, data):
+        """apply the action data on the robot."""
+        # get current orientations and convert them to RPY angles
+        orientations = self.robot.get_link_world_orientations(link_ids=self.links).reshape(-1, 4)  # (N,4)
+        orientations = get_rpy_from_quaternion(orientations)  # (N,3)
+
+        # add change in orientations
+        data = data.reshape(-1, 3)  # (N,3)
+        data += orientations
+
+        # convert them back to quaternions
+        data = get_quaternion_from_rpy(data)  # (N,4)
+        super(LinkOrientationChangeAction, self)._write(data)
+
+
+class LinkPoseAction(LinkAction):
+    r"""Link world pose action
+
+    Set the world pose using IK for the specified robot link(s).
+    """
+
+    def __init__(self, robot, link_ids=None):
+        """
+        Initialize the link world pose action.
+
+        Args:
+            robot (Robot): robot instance
+            link_ids (int, int[N]): link id or list of link ids
+        """
+        super(LinkPoseAction, self).__init__(robot, link_ids)
+        self.data = self.robot.get_link_world_poses(link_ids=self.links, flatten=True)
+
+    def _write(self, data):
+        """apply the action data on the robot."""
+        data = data.reshape(-1, 7)
+        self.robot.set_link_positions(link_ids=self.links, positions=data[:, :3], orientations=data[:, 3:])
+
+
+class LinkPoseChangeAction(LinkPoseAction):
+    r"""Link world change pose action
+
+    Set the world pose using IK for the specified robot link(s). Instead of specifying directly the desired
+    cartesian pose(s), the amount of change in the current poses is provided.
+
+    Warnings: the difference in orientations should be provided as a change in roll-pitch-yaw angles (in radians), and
+    not as quaternions.
+    """
+
+    def __init__(self, robot, link_ids=None):
+        """
+        Initialize the link world pose change action.
+
+        Args:
+            robot (Robot): robot instance
+            link_ids (int, int[N]): link id or list of link ids
+        """
+        super(LinkPoseChangeAction, self).__init__(robot, link_ids)
+        self.data = np.zeros(len(self.links) * 6)
+
+    def _write(self, data):
+        """apply the action data on the robot."""
+        # get current poses
+        positions = self.robot.get_link_world_poses(link_ids=self.links, flatten=False).reshape(-1, 3)  # (N,3)
+        orientations = self.robot.get_link_world_orientations(link_ids=self.links, flatten=False).reshape(-1, 4)  # (N,4)
+        orientations = get_rpy_from_quaternion(orientations)  # (N,3)
+
+        # add changes
+        data = data.reshape(-1, 6)  # (N,6)
+        data[:, :3] += positions
+        data[:, 3:] += orientations
+
+        # convert back orientations to quaternions
+        data = np.hstack((data[:, :3], get_quaternion_from_rpy(data[:, 3:])))
+
+        # write poses
+        super(LinkPoseChangeAction, self)._write(data)
+
+
+class LinkVelocityAction(LinkAction):
+    r"""Link world velocity action
+
+    Set the cartesian world velocity(ies) for the specified robot link(s).
+    """
+
+    def __init__(self, robot, link_ids=None):
+        """
+        Initialize the link world velocity action.
 
         Args:
             robot (Robot): robot instance
             link_ids (int, int[N]): link id or list of link ids
         """
         super(LinkVelocityAction, self).__init__(robot, link_ids)
+        self.data = self.robot.get_link_world_velocities(link_ids=self.links)
 
     def _write(self, data):
         """apply the action data on the robot."""
-        # self.robot
-        pass
+        self.robot.set_link_velocities(link_ids=self.links, positions=data.reshape(-1, 6))
+
+
+class LinkVelocityChangeAction(LinkVelocityAction):
+    r"""Link world velocity change action
+
+    Set the cartesian world velocity(ies) for the specified robot link(s). Instead of specifying directly the desired
+    cartesian velocity(ies), the amount of change in the current velocities is provided.
+    """
+
+    def __init__(self, robot, link_ids=None):
+        """
+        Initialize the link world velocity change action.
+
+        Args:
+            robot (Robot): robot instance
+            link_ids (int, int[N]): link id or list of link ids
+        """
+        super(LinkVelocityAction, self).__init__(robot, link_ids)
+        self.data = np.zeros(len(self.links) * 6)
+
+    def _write(self, data):
+        """apply the action data on the robot."""
+        data += self.robot.get_link_world_velocities(link_ids=self.links)
+        super(LinkVelocityChangeAction, self)._write(data)
 
 
 class LinkForceAction(LinkAction):
@@ -109,7 +280,7 @@ class LinkForceAction(LinkAction):
     """
     def __init__(self, robot, link_ids=None):
         """
-        Initialize the link position action.
+        Initialize the link force action.
 
         Args:
             robot (Robot): robot instance

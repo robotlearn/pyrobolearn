@@ -77,6 +77,17 @@ class JointPositionAction(JointAction):
     """
 
     def __init__(self, robot, joint_ids=None, kp=None, kd=None, max_force=None):
+        """
+        Initialize the joint position action.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, list of int, None): joint id(s). If None, it will take all the actuated joints.
+            kp (float, np.array[N], None): position gain(s)
+            kd (float, np.array[N], None): velocity gain(s)
+            max_force (float, np.array[N], None, bool): maximum motor torques / forces. If True, it will apply the
+                default maximum force values.
+        """
         self.kp, self.kd, self.max_force = kp, kd, max_force
         super(JointPositionAction, self).__init__(robot, joint_ids)
         self.data = robot.get_joint_positions(self.joints)
@@ -107,6 +118,36 @@ class JointPositionAction(JointAction):
         return action
 
 
+class JointPositionChangeAction(JointPositionAction):
+    r"""Joint Position Change Action
+
+    Set the joint positions using position control; this class expect to receive a change in the joint positions
+    (i.e. instantaneous joint velocities). That is, the current joint positions are added to the given joint position
+    changes. If none are provided, it will stay at the current configuration.
+    """
+
+    def __init__(self, robot, joint_ids=None, kp=None, kd=None, max_force=None):
+        """
+        Initialize the joint position change action.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, list of int, None): joint id(s). If None, it will take all the actuated joints.
+            kp (float, np.array[N], None): position gain(s)
+            kd (float, np.array[N], None): velocity gain(s)
+            max_force (float, np.array[N], None, bool): maximum motor torques / forces. If True, it will apply the
+                default maximum force values.
+        """
+        super(JointPositionChangeAction, self).__init__(robot, joint_ids, kp=kp, kd=kd, max_force=max_force)
+        self.data = np.zeros(len(self.joints))
+
+    def _write(self, data):
+        """apply the action data on the robot."""
+        # add the original joint positions
+        data += self.robot.get_joint_positions(self.joints)
+        super(JointPositionChangeAction, self)._write(data)
+
+
 class JointVelocityAction(JointAction):
     r"""Joint Velocity Action
 
@@ -114,6 +155,13 @@ class JointVelocityAction(JointAction):
     """
 
     def __init__(self, robot, joint_ids=None):
+        """
+        Initialize the joint velocity action.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, list of int, None): joint id, or list of joint ids. If None, get all the actuated joints.
+        """
         super(JointVelocityAction, self).__init__(robot, joint_ids)
         self.data = robot.get_joint_velocities(self.joints)
 
@@ -122,14 +170,50 @@ class JointVelocityAction(JointAction):
         self.robot.set_joint_velocities(data, self.joints)
 
 
+class JointVelocityChangeAction(JointAction):
+    r"""Joint Velocity Change Action
+
+    Set the joint velocities using velocity control;  this class expect to receive a change in the joint velocities
+    (i.e. instantaneous joint accelerations). That is, the current joint velocities are added to the given joint
+    velocity changes. If none are provided, it will keep the current joint velocities.
+    """
+
+    def __init__(self, robot, joint_ids=None):
+        """
+        Initialize the joint velocity change action.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, list of int, None): joint id, or list of joint ids. If None, get all the actuated joints.
+        """
+        super(JointVelocityChangeAction, self).__init__(robot, joint_ids)
+        self.data = np.zeros(len(self.joints))
+
+    def _write(self, data):
+        """apply the action data on the robot."""
+        data += self.robot.get_joint_velocities(self.joints)
+        super(JointVelocityChangeAction, self)._write(data)
+
+
 class JointPositionAndVelocityAction(JointAction):
     r"""Joint position and velocity action
 
-    Set the joint position using position control using PD control, where the contraint error to be minimized is
+    Set the joint position using position control using PD control, where the constraint error to be minimized is
     given by: :math:`error = kp * (q^* - q) - kd * (\dot{q}^* - \dot{q})`.
     """
 
     def __init__(self, robot, joint_ids=None, kp=None, kd=None, max_force=None):
+        """
+        Initialize the joint position and velocity action.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, list of int, None): joint id(s). If None, it will take all the actuated joints.
+            kp (float, np.array[N], None): position gain(s)
+            kd (float, np.array[N], None): velocity gain(s)
+            max_force (float, np.array[N], None, bool): maximum motor torques / forces. If True, it will apply the
+                default maximum force values.
+        """
         super(JointPositionAndVelocityAction, self).__init__(robot, joint_ids)
         self.kp, self.kd, self.max_force = kp, kd, max_force
         pos, vel = robot.get_joint_positions(self.joints), robot.get_joint_velocities(self.joints)
@@ -163,6 +247,35 @@ class JointPositionAndVelocityAction(JointAction):
         return action
 
 
+class JointPositionAndVelocityChangeAction(JointPositionAndVelocityAction):
+    r"""Joint position and velocity action
+
+    Set the joint position using position control using PD control, where the constraint error to be minimized is
+    given by: :math:`error = kp * (q^* - q) - kd * (\dot{q}^* - \dot{q})`.
+    """
+
+    def __init__(self, robot, joint_ids=None, kp=None, kd=None, max_force=None):
+        """
+        Initialize the joint position and velocity change action.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, list of int, None): joint id(s). If None, it will take all the actuated joints.
+            kp (float, np.array[N], None): position gain(s)
+            kd (float, np.array[N], None): velocity gain(s)
+            max_force (float, np.array[N], None, bool): maximum motor torques / forces. If True, it will apply the
+                default maximum force values.
+        """
+        super(JointPositionAndVelocityChangeAction, self).__init__(robot, joint_ids, kp=kp, kd=kd, max_force=max_force)
+        self.data = np.zeros(2*len(self.joints))
+
+    def _write(self, data):
+        """apply the action data on the robot."""
+        pos, vel = self.robot.get_joint_positions(self.joints), self.robot.get_joint_velocities(self.joints)
+        data += np.concatenate((pos, vel))
+        super(JointPositionAndVelocityChangeAction, self)._write(data)
+
+
 # class JointPositionVelocityAccelerationAction(JointAction):
 #     r"""Set the joint positions, velocities, and accelerations.
 #
@@ -172,14 +285,23 @@ class JointPositionAndVelocityAction(JointAction):
 #     pass
 
 
-class JointForceAction(JointAction):
-    r"""Joint Force Action
+class JointTorqueAction(JointAction):
+    r"""Joint Torque/Force Action
 
     Set the joint force/torque using force/torque control.
     """
 
     def __init__(self, robot, joint_ids=None, f_min=-np.infty, f_max=np.infty):
-        super(JointForceAction, self).__init__(robot, joint_ids)
+        """
+        Initialize the joint torque/force action.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, list of int, None): joint id, or list of joint ids. If None, get all the actuated joints.
+            f_min (float, np.array[N], None): minimum torques/forces.
+            f_max (float, np.array[N], None): maximum torques/forces.
+        """
+        super(JointTorqueAction, self).__init__(robot, joint_ids)
         self.data = robot.get_joint_torques(self.joints)
         self.f_min = f_min
         self.f_max = f_max
@@ -210,6 +332,42 @@ class JointForceAction(JointAction):
         return action
 
 
+# alias
+JointForceAction = JointTorqueAction
+
+
+class JointTorqueGravityCompensationAction(JointTorqueAction):
+    r"""Joint torque action with gravity compensation enabled.
+
+    This adds the given torques to the gravity compensation torques. That is, if a torque of 0 is provided, the robot
+    will be in a gravity compensation mode.
+    """
+    def __init__(self, robot, joint_ids=None, f_min=-np.infty, f_max=np.infty):
+        """
+        Initialize the joint torque/force action with gravity compensation.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, list of int, None): joint id, or list of joint ids. If None, get all the actuated joints.
+            f_min (float, np.array[N], None): minimum torques/forces.
+            f_max (float, np.array[N], None): maximum torques/forces.
+        """
+        super(JointTorqueGravityCompensationAction, self).__init__(robot, joint_ids, f_min=f_min, f_max=f_max)
+        self.q_indices = self.robot.get_q_indices(joint_ids=self.joints)
+        self.data = np.zeros(len(self.joints))
+
+    def _write(self, data):
+        """apply the action data on the robot."""
+        # add gravity compensation torques
+        data += self.robot.get_gravity_compensation_torques(q_idx=self.q_indices)
+        super(JointTorqueGravityCompensationAction, self)._write(data)
+
+
+# alias
+# JointForceGravityCompensationAction = JointTorqueGravityCompensationAction
+JointTorqueChangeAction = JointTorqueGravityCompensationAction
+
+
 class JointAccelerationAction(JointAction):
     r"""Joint Acceleration Action
 
@@ -219,6 +377,15 @@ class JointAccelerationAction(JointAction):
     """
 
     def __init__(self, robot, joint_ids=None, a_min=-np.infty, a_max=np.infty):
+        """
+        Initialize the joint acceleration action.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, list of int, None): joint id, or list of joint ids. If None, get all the actuated joints.
+            a_min (float, np.array[N], None): minimum accelerations.
+            a_max (float, np.array[N], None): maximum accelerations.
+        """
         super(JointAccelerationAction, self).__init__(robot, joint_ids)
         self.data = robot.get_joint_accelerations(self.joints)
         self.a_min = a_min

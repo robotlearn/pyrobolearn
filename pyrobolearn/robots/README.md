@@ -74,6 +74,7 @@ The folder contains different kind of robots including manipulators, legged robo
 - [Shadow hand](https://github.com/shadow-robot/sr_common)
 - [Soft hand](https://github.com/CentroEPiaggio/pisa-iit-soft-hand)
 - [Swimmer](https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_data/mjcf)
+- [UR](https://github.com/ros-industrial/universal_robot)
 - [Valkyrie](https://github.com/openhumanoids/val_description)
 - [Walker 2D](https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_data/mjcf)
 - [Walk-man](https://github.com/ADVRHumanoids/iit-walkman-ros-pkg)

@@ -259,7 +259,7 @@ class ProMP(object):  # Model
     @property
     def total_num_basis(self):
         """Return the total number of basis functions"""
-        return self.Phi.shape[0] / self.num_dofs
+        return int(self.Phi.shape[0] / self.num_dofs)
 
     @property
     def basis_matrix(self):
