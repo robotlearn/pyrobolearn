@@ -153,18 +153,18 @@ And use:
 Other Operating Systems
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Note that some interfaces might not be available on other OS, however the main robotic framework should work.
+Note that some interfaces (like game controllers, depth camera, etc) might not be available on other OS, however the 
+main robotic framework should work.
 
-1. Windows: You will have to install first PyBullet, Slycot and NLopt beforehand.
+1. Windows: You will have to install first PyBullet and NLopt beforehand.
 
-For slycot and nlopt, install first ``conda``, then type:
+For nlopt, install first ``conda``, then type:
 
 .. code-block:: bash
 
 	conda install -c conda-forge nlopt
-	conda install -c conda-forge slycot
 
-If Pybullet doesn't install on Windows, you might have to copy ``rc.exe`` and ``rc.dll`` from
+If Pybullet doesn't install on Windows (using visual studio), you might have to copy ``rc.exe`` and ``rc.dll`` from
 
 ``C:\Program Files (x86)\Windows Kits\10\bin\<xx.x.xxxx.x>\x64``
 
@@ -175,11 +175,11 @@ to
 And add the last folder to the Windows environment path (Go to ``System Properties`` > ``Advanced`` > ``Environment Variables`` > ``Path`` 
 > ``Edit``).
 
-Finally, remove the slycot and nlopt packages from the ``requirements.txt``. The rest of the installation should be
-straightforward.
+Finally, remove the nlopt package from the ``requirements.txt``. The rest of the installation should be straightforward.
 
 
-2. Mac OSX: To be tested
+2. Mac OSX: We managed to install the PyRoboLearn framework on MacOSX (Mojave) by following the procedures explained in the section 
+"Virtualenv & Pip". You can replace the ``sudo apt install`` by ``brew install`` (after installing `Homebrew <https://brew.sh/>`_).
 
 
 How to use it?
