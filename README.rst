@@ -10,75 +10,21 @@ This framework revolves mainly around 7 axes: simulators, worlds, robots, interf
 Requirements
 ------------
 
-The framework has been tested with Python 2.7 and Ubuntu 16.04 and 18.04. We also tested parts of it with Python 3.5 on Ubuntu 16.04 and so far so good, but there might be some errors that escaped my attention.
+The framework has been tested with Python 2.7, 3.5 and 3.6, on Ubuntu 16.04 and 18.04. The installation on other OS is
+experimental.
 
 
 Installation
 ------------
 
-Docker
-~~~~~~
+There are two ways to install the framework:
 
-At the moment the docker is a self contained Ubuntu image with all the libraries installed. When launched we have access to a Python3.6 interpreter and we can import pyrobolearn directly.
-In the future, ROS may be splitted in another container and linked to this one.
-
-1. Install Docker and nvidia-docker
-
-.. code-block:: bash
-
-	sudo apt-get update
-	sudo apt install apt-transport-https ca-certificates curl software-properties-common
-	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-	sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable # you should replace bionic by your version
-	sudo apt update
-	sudo apt install docker-ce
-	sudo systemctl status docker # check that docker is active
-
-2. Build the image
-
-.. code-block:: bash
-
-	docker build -t pyrobolearn .
+1. using a virtual environment and pip
+2. using a Docker
 
 
-3. Launch
-
-
-You can now start the python interpreter with every library already installed
-
-.. code-block:: bash
-
-	docker run -p 11311:11311 -v $PWD/dev:/pyrobolearn/dev/:rw -ti pyrobolearn python3
-
-
-To open an interactive terminal in the docker image use:
-
-.. code-block:: bash
-
-	docker run -p 11311:11311 -v $PWD/dev:/pyrobolearn/dev/:rw -ti pyrobolearn /bin/bash
-
-
-4. nvidia-docker
-if the GPU is not recognized in the interpreter, you can install nvidia-docker
-
-.. code-block:: bash
-	
-	curl -sL https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
-	distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-	curl -sL https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
-	sudo apt-get update
-	sudo apt-get install nvidia-docker2
-	sudo pkill -SIGHUP dockerd
-
-And use:
-
-.. code-block:: bash
-
-	nvidia-docker run -p 11311:11311 -v $PWD/dev:/pyrobolearn/dev/:rw -ti pyrobolearn
-
-
-Ubuntu
-~~~~~~
+Virtualenv & Pip
+~~~~~~~~~~~~~~~~
 
 1. First download the ``pip`` Python package manager and create a virtual environment for Python as described in the following link: https://packaging.python.org/guides/installing-using-pip-and-virtualenv/
 On Ubuntu, you can install ``pip`` and ``virtualenv`` by typing in the terminal: 
@@ -143,10 +89,109 @@ Depending on your computer configuration and the python version you use, you mig
 	sudo apt install python3-tk  # if python 3.5
 
 
+Docker
+~~~~~~
+
+At the moment the docker is a self contained Ubuntu image with all the libraries installed. When launched we have access to a Python3.6 interpreter and we can import pyrobolearn directly.
+In the future, ROS may be splitted in another container and linked to this one.
+
+1. Install Docker and nvidia-docker
+
+.. code-block:: bash
+
+	sudo apt-get update
+	sudo apt install apt-transport-https ca-certificates curl software-properties-common
+	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+	sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable # you should replace bionic by your version
+	sudo apt update
+	sudo apt install docker-ce
+	sudo systemctl status docker # check that docker is active
+
+2. Build the image
+
+.. code-block:: bash
+
+	docker build -t pyrobolearn .
+
+
+3. Launch
+
+
+You can now start the python interpreter with every library already installed
+
+.. code-block:: bash
+
+	docker run -p 11311:11311 -v $PWD/dev:/pyrobolearn/dev/:rw -ti pyrobolearn python3
+
+
+To open an interactive terminal in the docker image use:
+
+.. code-block:: bash
+
+	docker run -p 11311:11311 -v $PWD/dev:/pyrobolearn/dev/:rw -ti pyrobolearn /bin/bash
+
+
+4. nvidia-docker
+if the GPU is not recognized in the interpreter, you can install nvidia-docker
+
+.. code-block:: bash
+	
+	curl -sL https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+	distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+	curl -sL https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+	sudo apt-get update
+	sudo apt-get install nvidia-docker2
+	sudo pkill -SIGHUP dockerd
+
+And use:
+
+.. code-block:: bash
+
+	nvidia-docker run -p 11311:11311 -v $PWD/dev:/pyrobolearn/dev/:rw -ti pyrobolearn
+
+
+Other Operating Systems
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Note that some interfaces might not be available on other OS, however the main robotic framework should work.
+
+1. Windows: You will have to install first PyBullet, Slycot and NLopt beforehand.
+
+For slycot and nlopt, install first ``conda``, then type:
+
+.. code-block:: bash
+
+	conda install -c conda-forge nlopt
+	conda install -c conda-forge slycot
+
+If Pybullet doesn't install on Windows, you might have to copy ``rc.exe`` and ``rc.dll`` from
+
+``C:\Program Files (x86)\Windows Kits\10\bin\<xx.x.xxxx.x>\x64``
+
+to
+
+``C:\Program Files (x86)\Windows Kits\10\bin\x86``
+
+And add the last folder to the Windows environment path (Go to ``System Properties`` > ``Advanced`` > ``Environment Variables`` > ``Path`` 
+> ``Edit``).
+
+Finally, remove the slycot and nlopt packages from the ``requirements.txt``. The rest of the installation should be
+straightforward.
+
+
+2. Mac OSX: To be tested
+
+
 How to use it?
 --------------
 
 Check the ``README.rst`` file in the ``examples`` folder.
+
+
+License
+-------
+
+PyRoboLearn is currently released under the `GNU GPLv3 <https://choosealicense.com/licenses/gpl-3.0/>`_ license.
 
 
 Acknowledgements
@@ -154,6 +199,8 @@ Acknowledgements
 
 Currently, we mainly use the PyBullet simulator.
 
-- *PyBullet, a Python module for physics simulation for games, robotics and machine learning*, Erwin Coumans and Yunfei Bai, 2016-2019
-- references for each robot, model, and others can be found in the corresponding class documentation
-- Locomotion controllers were provided by Songyan Xin (see ``pyrobolearn/controllers/locomotion``)
+- *PyBullet, a Python module for physics simulation for games, robotics and machine learning*, Erwin Coumans and
+  Yunfei Bai, 2016-2019
+- References for each robot, model, and others can be found in the corresponding class documentation
+- Locomotion controllers were provided by Songyan Xin
+- We thanks Daniele Bonatto for providing the Docker file, and test the installation on Windows.
