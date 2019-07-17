@@ -27,6 +27,16 @@ import pyrobolearn.actions as actions
 from pyrobolearn.rewards.reward import Reward
 
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "GNU GPLv3"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
+
 # class Cost(Objective):
 class Cost(Reward):
     r"""Abstract `Cost` class which inherits from the `Objective` class, and is set to be minimized.
@@ -55,23 +65,6 @@ def logistic_kernel_function(error, alpha):
         return y
     else:
         return 1. / (np.exp(alpha * error) + 2. + np.exp(- alpha * error))
-
-
-def min_angle_difference(q1, q2):
-    r"""
-    Return the minimum angle difference between two angles.
-
-    Args:
-        q1 (float, np.array[N]): first angle(s)
-        q2 (float, np.array[N]): second angle(s)
-
-    Returns:
-        float, np.array[N]: minimum angle difference(s)
-    """
-    diff = np.maximum(q1, q2) - np.minimum(q1, q2)
-    if diff > np.pi:
-        diff = 2 * np.pi - diff
-    return diff
 
 
 class AngularVelocityErrorCost(Cost):
@@ -140,26 +133,6 @@ class HeightCost(Cost):
         return 0
 
 
-class JointPositionErrorCost(Cost):
-    r"""Joint Position Error Cost
-
-    Return the joint position error as defined in [1] as :math:`d(\hat{\phi}, \phi) \in [0, \pi]` where :math:`d(.,.)`
-    is the minimum angle difference between two angles, and :math:`\hat{\phi}` and :math:`\phi` are the target and
-    current angles.
-
-    References:
-        - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
-    """
-
-    def __init__(self, joint_state, target_joint_state):
-        super(JointPositionErrorCost, self).__init__()
-        self.state = joint_state
-        self.target_state = target_joint_state
-
-    def _compute(self):
-        return - min_angle_difference(self.state.data[0], self.target_state.data[0])
-
-
 class OrientationGravityCost(Cost):
     r"""Orientation Gravity Cost
 
@@ -174,81 +147,6 @@ class OrientationGravityCost(Cost):
 
     def _compute(self):
         return np.linalg.norm(self.gravity_state.data - self.gravity)
-
-
-class JointPositionCost(Cost):
-    r"""Joint Position Cost
-
-    Return the cost such that measures the L2 norm between the current joint positions and the target joint positions:
-    :math:`||d(q_{target},q)||^2` where :math:`d(\cdot, \cdot) \in [-\pi, \pi]` is the minimum distance between two
-    angles.
-    """
-
-    def __init__(self, joint_position_state, target_joint_position):
-        r"""
-        Initialize the joint position cost.
-
-        Args:
-            joint_position_state (JointPositionState): joint position state.
-            target_joint_position (np.array[N]): target joint positions.
-        """
-        super(JointPositionCost, self).__init__()
-        if not isinstance(joint_position_state, prl.states.JointPositionState):
-            raise TypeError("Expecting the given 'joint_position_state' to be an instance of `JointPositionState`, "
-                            "but instead got: {}".format(type(joint_position_state)))
-        self.q = joint_position_state
-        self.target_q = target_joint_position
-
-    def _compute(self):
-        """Compute and return the cost value."""
-        return - np.sum(min_angle_difference(self.q.data[0], self.target_q)**2)
-
-
-class JointVelocityCost(Cost):
-    r"""Joint Velocity Cost
-
-    Return the cost due to the joint velocities: :math:`|| \dot{q} ||^2`
-    """
-    def __init__(self, joint_velocity_state):
-        """
-        Initialize the joint velocity cost.
-
-        Args:
-            joint_velocity_state (JointVelocityState): joint velocity state.
-        """
-        super(JointVelocityCost, self).__init__()
-        if not isinstance(joint_velocity_state, prl.states.JointVelocityState):
-            raise TypeError("Expecting the given 'joint_velocity_state' to be an instance of `JointVelocityState`, "
-                            "but instead got: {}".format(type(joint_velocity_state)))
-        self.dq = joint_velocity_state
-
-    def _compute(self):
-        """Compute and return the cost value."""
-        return - np.sum(self.dq.data[0] ** 2)
-
-
-class JointTorqueCost(Cost):
-    r"""Torque Cost
-
-    Return the cost due to the joint torques; :math:`|| \tau ||^2`.
-    """
-
-    def __init__(self, joint_torque_state):
-        """
-        Initialize the joint torque cost.
-
-        Args:
-            joint_torque_state (JointForceTorqueState): joint torque state.
-        """
-        super(JointTorqueCost, self).__init__()
-        if not isinstance(joint_torque_state, prl.states.JointForceTorqueState):
-            raise TypeError("Expecting the given 'joint_torque_state' to be an instance of `JointForceTorqueState`, "
-                            "but instead got: {}".format(type(joint_torque_state)))
-        self.tau = joint_torque_state
-
-    def _compute(self):
-        """Compute and return the cost value."""
-        return - np.sum(self.tau.data[0]**2)
 
 
 class PowerCost(Cost):
@@ -266,85 +164,6 @@ class PowerCost(Cost):
 
     def compute(self):
         return - np.sum(np.maximum(self.tau.data[0] * self.vel.data[0], 0))
-
-
-class JointPowerConsumptionCost(Cost):
-    r"""Joint Power Consumption Cost
-
-    Return the joint power consumption cost, where the power is computed as the torque times the velocity.
-    """
-
-    def __init__(self, state, joint_ids=None, update_state=False):
-        """
-        Initialize the Joint Power Consumption cost.
-
-        Args:
-            torque (Robot, State): robot instance, or the state. The state must contains the `JointForceTorqueState`
-                and the `JointVelocityState`.
-            joint_ids (None, int, list of int): joint ids. This used if `torque` is a `Robot` instance.
-            update_state (bool): If True, it will update the state.
-        """
-        self.update_state = update_state
-        if isinstance(state, Robot):
-            torque = states.JointForceTorqueState(state, joint_ids=joint_ids)
-            velocity = states.JointVelocityState(state, joint_ids=joint_ids)
-            self.update_state = True
-            # state = torque + velocity
-        elif isinstance(state, states.State):
-            # check if they have the correct state
-            torque = state.lookfor(states.JointForceTorqueState)
-            if torque is None:
-                raise ValueError("Didn't find a `JointForceTorqueState` instance in the given states.")
-            velocity = state.lookfor(states.JointVelocityState)
-            if velocity is None:
-                raise ValueError("Didn't find a `JointVelocityState` instance in the given states.")
-        else:
-            raise TypeError("Expecting the state to be an instance of `State` or `Robot`.")
-        super(JointPowerConsumptionCost, self).__init__()  # state=state)
-        self.tau = torque
-        self.vel = velocity
-        self.update_state = update_state
-
-    def compute(self):
-        if self.update_state:
-            self.tau()
-            self.vel()
-        return - np.sum((self.tau.data[0] * self.vel.data[0])**2)
-
-
-class JointAccelerationCost(Cost):
-    r"""Joint Acceleration Cost
-
-    Return the joint acceleration cost defined notably in [1] as :math:`cost = ||\ddot{q}||^2`
-
-    References:
-        - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
-    """
-    def __init__(self, joint_acceleration_state):
-        super(JointAccelerationCost, self).__init__()
-        self.ddq = joint_acceleration_state
-
-    def compute(self):
-        return - np.sum(self.ddq.data**2)
-
-
-class JointSpeedCost(Cost):
-    r"""Joint Speed Cost
-
-    Return the joint speed cost as computed in [1].
-
-    References:
-        - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
-    """
-    def __init__(self, joint_velocity_state, max_joint_speed=None):
-        super(JointSpeedCost, self).__init__()
-        self.dq = joint_velocity_state
-        self.dq_max = max_joint_speed
-        if max_joint_speed is None:
-            self.dq_max = joint_velocity_state.max
-
-    def compute(self):
-        return - np.sum(np.maximum(self.dq_max - np.abs(self.dq.data), 0)**2)
 
 
 class BodyImpulseCost(Cost):
@@ -425,20 +244,6 @@ class SelfCollisionCost(Cost):
         pass
 
 
-class ActionDifferenceCost(Cost):
-    r"""Action Difference Cost
-
-    References:
-        - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
-    """
-    def __init__(self, action):
-        super(ActionDifferenceCost, self).__init__()
-        self.action = action
-
-    def compute(self):
-        return - (self.action.data - self.action.prev_data)**2
-
-
 class PhysicsViolationCost(Cost):
     """Physics Violation Cost.
 
@@ -470,81 +275,16 @@ class ContactInvariantCost(Cost):
         super(ContactInvariantCost, self).__init__()
 
 
-class DistanceCost(Cost):
-    """Distance Cost.
-
-    It penalizes the distance between 2 objects. One of the 2 objects must be movable in order for this
-    cost to change.
-
-    Mathematically, the cost is given by:
-
-    .. math:: c(l1, l2) = d(l1, l2) = - || l1 - l2 ||_2
-
-    where :math:`l1` represents a link attached to the first body, and :math:`l2` represents a link attached on the
-    second body. The distance function used is the Euclidean distance (=L2 norm).
-    """
-
-    def __init__(self, body1, body2, link_id1=-1, link_id2=-1, offset=None):
-        r"""
-        Initialize the distance cost.
-
-        Args:
-            body1 (BasePositionState, PositionState, LinkWorldPositionState, Body, Robot): first position state. If
-                Body, it will wrap it with a `PositionState`. If Robot, it will wrap it with a `PositionState` or
-                `LinkPositionState` depending on the value of :attr:`link_id1`.
-            body2 (BasePositionState, PositionState, LinkWorldPositionState, Body, Robot): second position state. If
-                Body, it will wrap it with a `PositionState`. If Robot, it will wrap it with a `PositionState` or
-                `LinkPositionState` depending on the value of :attr:`link_id1`.
-            link_id1 (int): link id associated with the first body that we are interested in. This is only used if
-                the given :attr:`body1` is not a state.
-            link_id2 (int): link id associated with the second body that we are interested in. This is only used if
-                the given :attr:`body2` is not a state.
-            offset (None, np.array[3]): 3d offset between body1 and body2.
-        """
-        super(DistanceCost, self).__init__()
-
-        def check_body_type(body, id_, link_id):
-            update_state = False
-            if isinstance(body, prl.robots.Body):
-                body = states.PositionState(body)
-                update_state = True
-            elif isinstance(body, Robot):
-                if link_id == -1:
-                    body = states.PositionState(body)
-                else:
-                    body = states.LinkWorldPositionState(body, link_ids=link_id)
-                update_state = True
-            elif not isinstance(body, (states.BasePositionState, states.PositionState, states.LinkWorldPositionState)):
-                raise TypeError("Expecting the given 'body"+str(id_)+"' to be an instance of `Body`, `Robot`, "
-                                "`BasePositionState`, `PositionState` or `LinkWorldPositionState`, instead got: "
-                                "{}".format(type(body), id_))
-            return body, update_state
-
-        self.body1, self.update_state1 = check_body_type(body1, id_=1, link_id=link_id1)
-        self.body2, self.update_state2 = check_body_type(body2, id_=2, link_id=link_id2)
-
-    def compute(self):
-        if self.update_state1:
-            self.body1()
-        if self.update_state2:
-            self.body2()
-        p1 = self.body1.data[0]
-        p2 = self.body2.data[0]
-        # print("P1: {}".format(p1))
-        # print("P2: {}".format(p2))
-        return - np.linalg.norm(p1 - p2)
-
-
 class ImpactCost(Cost):
     """Impact cost.
 
     Calculates the impact force using the kinetic energy.
     """
 
-    def __init__(self):
+    def __init__(self, body1, body2):
         super(ImpactCost, self).__init__()
 
-    def compute(self, object1, object2):
+    def _compute(self):
         pass
 
 
@@ -554,10 +294,10 @@ class DriftCost(Cost):
     Calculates the drift of a moving object wrt a direction.
     """
 
-    def __init__(self):
+    def __init__(self, body, direction):
         super(DriftCost, self).__init__()
 
-    def compute(self, object, direction):
+    def _compute(self):
         pass
 
 
@@ -566,10 +306,10 @@ class ShakeCost(Cost):
 
     Calculates the
     """
-    def __init__(self):
+    def __init__(self, body, direction):
         super(ShakeCost, self).__init__()
 
-    def compute(self, object, direction):
+    def _compute(self):
         pass
 
 

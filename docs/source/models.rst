@@ -13,7 +13,7 @@ Learning models can be divided into 2 categories:
 	- Polynomial models
 	- Deep Neural Networks (DNNs)
 	- Gaussian processes (GPs)
-- Trajectory based learning models:
+- Trajectory based learning models
 	- Dynamic Movement Primitives (DMPs)
 	- Central Pattern Generators (CPGs)
 	- Gaussian Mixture Models and Gaussian Mixture Regression (GMMs/GMRs)

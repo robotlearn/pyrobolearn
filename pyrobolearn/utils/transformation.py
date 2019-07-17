@@ -27,6 +27,24 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
+def min_angle_difference(q1, q2):
+    r"""
+    Return the minimum angle difference between two (set of) angles (expressed in radians). The differences are
+    always between [-pi, pi].
+
+    Args:
+        q1 (float, np.array[N]): first angle(s)
+        q2 (float, np.array[N]): second angle(s)
+
+    Returns:
+        float, np.array[N]: minimum angle difference(s)
+    """
+    diff = np.maximum(q1, q2) - np.minimum(q1, q2)
+    if diff > np.pi:
+        diff = 2 * np.pi - diff
+    return diff
+
+
 def get_homogeneous_transform(position, orientation):
     r"""
     Return the Homogeneous transform matrix given the position vector and the orientation.
@@ -457,31 +475,42 @@ def get_symbolic_matrix_from_quaternion(q, convention='xyzw'):
 
 def get_rpy_from_quaternion(q, convention='xyzw'):
     """
-    Get the Roll-Pitch-Yaw angle from the given quaternion.
+    Get the Roll-Pitch-Yaw angle(s) from the given quaternion(s).
 
     Args:
-        q (np.array[4], quaternion.quaternion): quaternion
+        q (np.array[4], np.array[N,4], (list of) quaternion.quaternion): quaternion(s)
         convention: convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        np.float[3]: roll-pitch-yaw angles.
+        np.float[3], np.float[N,3]: roll-pitch-yaw angles.
     """
-    if isinstance(q, quaternion.quaternion):
-        x, y, z, w = q.x, q.y, q.z, q.w
+    multiple_quaternions = True
+    if isinstance(q, quaternion.quaternion) or (isinstance(q, np.ndarray) and len(q.shape) == 1):
+        multiple_quaternions = False
+        q = np.array([q])  # (1,4)
+
+    if isinstance(q[0], quaternion.quaternion):
+        q = quaternion.as_float_array(q)
+        x, y, z, w = q[:, 1], q[:, 2], q[:, 3], q[:, 0]  # (N,)
     elif isinstance(q, Iterable):
         if convention == 'xyzw':
-            x, y, z, w = q
+            x, y, z, w = q[:, 0], q[:, 1], q[:, 2], q[:, 3]  # (N,)
         elif convention == 'wxyz':
-            w, x, y, z = q
+            w, x, y, z = q[:, 0], q[:, 1], q[:, 2], q[:, 3]  # (N,)
         else:
             raise NotImplementedError("Asking for a convention that has not been implemented")
     else:
         raise TypeError
-    roll = np.arctan2(2*(w*x + y*z), 1 - 2 * (x**2 + y**2))
-    pitch = np.arcsin(2 * (w*y - z*x))
-    yaw = np.arctan2(2 * (w*z + x*y), 1 - 2 * (y**2 + z**2))
-    return np.array([roll, pitch, yaw])
+
+    roll = np.arctan2(2 * (w*x + y*z), 1 - 2 * (x**2 + y**2))   # (N,)
+    pitch = np.arcsin(2 * (w*y - z*x))                          # (N,)
+    yaw = np.arctan2(2 * (w*z + x*y), 1 - 2 * (y**2 + z**2))    # (N,)
+    rpy = np.vstack((roll, pitch, yaw)).T  # (N,3)
+
+    if not multiple_quaternions:
+        return rpy[0]
+    return np.array(rpy)
 
 
 def get_symbolic_rpy_from_quaternion(q, convention='xyzw'):
@@ -520,7 +549,7 @@ def get_quaternion_from_rpy(rpy, convert_to_quat=False, convention='xyzw'):
     Get quaternion from Roll-Pitch-Yaw angle.
 
     Args:
-        rpy (np.float[3]): roll-pitch-yaw angles
+        rpy (np.float[3], np.float[N,3]): roll-pitch-yaw angles
         convert_to_quat (bool): If True, it will return an instance of `quaternion.quaternion`.
         convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
@@ -528,25 +557,35 @@ def get_quaternion_from_rpy(rpy, convert_to_quat=False, convention='xyzw'):
     Returns:
         np.array[4], quaternion.quaternion: quaternion
     """
-    r, p, y = rpy
+    rpy = np.asarray(rpy)
+    multiple_rpy = True
+    if len(rpy.shape) < 2:
+        multiple_rpy = False
+        rpy = np.array([rpy])  # (1,3)
+
+    r, p, y = rpy[:, 0], rpy[:, 1], rpy[:, 2]
     cr, sr = np.cos(r/2.), np.sin(r/2.)
     cp, sp = np.cos(p/2.), np.sin(p/2.)
     cy, sy = np.cos(y/2.), np.sin(y/2.)
 
-    w = cr * cp * cy + sr * sp * sy
-    x = sr * cp * cy - cr * sp * sy
-    y = cr * sp * cy + sr * cp * sy
-    z = cr * cp * sy - sr * sp * cy
+    w = cr * cp * cy + sr * sp * sy  # (N,)
+    x = sr * cp * cy - cr * sp * sy  # (N,)
+    y = cr * sp * cy + sr * cp * sy  # (N,)
+    z = cr * cp * sy - sr * sp * cy  # (N,)
 
     if convert_to_quat:
-        return quaternion.quaternion(w, x, y, z)
+        q = quaternion.from_float_array(np.vstack((w, x, y, z)).T)
     else:
         if convention == 'xyzw':
-            return np.array([x, y, z, w])
+            q = np.vstack([x, y, z, w]).T
         elif convention == 'wxyz':
-            return np.array([w, x, y, z])
+            q = np.vstack([w, x, y, z]).T
         else:
             raise NotImplementedError("Asking for a convention that has not been implemented")
+
+    if not multiple_rpy:
+        return q[0]
+    return q
 
 
 def get_symbolic_quaternion_from_rpy(rpy, convention='xyzw'):
@@ -956,10 +995,12 @@ def angular_velocity_from_quaternion(q1, q2):
 
 def quaternion_distance(q1, q2):
     r"""
-    Compute the distance metric (on :math:`\mathbb{S}^3`) betwen two quaternions :math:`q_1` and :math:`q_2`:
+    Compute the distance metric (on :math:`\mathbb{S}^3`) between two quaternions :math:`q_1` and :math:`q_2`:
 
     Assuming a quaternion :math:`q` is represented as :math:`s + \pmb{v}` where :math:`s \in \mathbb{R}` is the scalar
     part and :math:`\pmb{v} \in \mathbb{R}^3` is the vector part, the distance is given by:
+
+    .. math::
 
         d(q_1, q_2) = \left\{ \begin{array}{ll}
                 2\pi, & q1 * \bar{q}_2 = -1 + [0,0,0]^\top \\

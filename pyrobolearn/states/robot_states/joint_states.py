@@ -113,9 +113,23 @@ class JointPositionState(JointState):
         """
         super(JointPositionState, self).__init__(robot, joint_ids, window_size=window_size, axis=axis, ticks=ticks)
 
+        # define the space based on the joint type  # TODO
+
     def _read(self):
         """Read the next joint position state."""
         self.data = self.robot.get_joint_positions(self.joints)
+
+    def _reset(self):
+        """Reset the state."""
+        # reset counter
+        self.cnt = 0.
+
+        # reset the robot joint position based on the data
+        if len(self.data) > 0:
+            self.robot.reset_joint_states(q=self.data[0], joint_ids=self.joints)
+
+        # read the next data
+        self._read()
 
 
 class JointTrigonometricPositionState(JointState):

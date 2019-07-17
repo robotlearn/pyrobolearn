@@ -26,11 +26,14 @@ References:
         - paper: http://joss.theoj.org/papers/10.21105/joss.00500
         - webpage: https://dartsim.github.io/
         - github: https://github.com/dartsim/dart/
+        - dartpy: http://dartsim.github.io/install_dartpy_on_ubuntu.html
     [2] PyDART
         - source code: https://pydart2.readthedocs.io/en/latest/
         - documentation: https://pydart2.readthedocs.io/en/latest/
     [3] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
+
+# TODO: finish to implement this interface and use dartpy instead of pydart2
 
 # import pydart2
 try:
@@ -68,6 +71,7 @@ class Dart(Simulator):
         [1] Dart:
             - webpage: https://dartsim.github.io/
             - github: https://github.com/dartsim/dart/
+            - dartpy: http://dartsim.github.io/install_dartpy_on_ubuntu.html
         [2] PyDART:
             - source code: https://pydart2.readthedocs.io/en/latest/
             - documentation: https://pydart2.readthedocs.io/en/latest/

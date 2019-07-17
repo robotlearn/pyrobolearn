@@ -99,7 +99,7 @@ class Robot(ControllableBody):
             # we rescale manually the mass and inertia matrices of each link
             for link in range(self.num_links):
                 info = self.sim.get_dynamics_info(self.id, link)
-                mass, local_inertia_diagonal = info[0], np.array(info[2])
+                mass, local_inertia_diagonal = info[0], np.asarray(info[2])
                 mass *= scale ** 3      # because the density is unchanged when scaling
                 local_inertia_diagonal *= scale ** 5   # 5 = 3+2; 3 is for the mass, and 2 is for the distance: I~mr^2
                 self.sim.change_dynamics(self.id, link, mass=mass, local_inertia_diagonal=local_inertia_diagonal)
@@ -1423,7 +1423,7 @@ class Robot(ControllableBody):
         return self.sim.get_link_states(self.id, link_ids, compute_velocity=compute_link_velocity,
                                         compute_forward_kinematics=compute_forward_kinematics)
 
-    def get_link_local_position(self, link_ids=None):
+    def get_link_local_positions(self, link_ids=None):
         """
         Get the local position offset of the inertial frame (CoM) of the specified links expressed in the URDF link
         frame.
@@ -1496,7 +1496,7 @@ class Robot(ControllableBody):
             return self.sim.get_dynamics_info(self.id, link_ids)[0]
         if link_ids is None:
             link_ids = list(range(self.num_links))
-        return np.array([self.sim.get_dynamics_info(self.id, link)[0] for link in link_ids])
+        return np.asarray([self.sim.get_dynamics_info(self.id, link)[0] for link in link_ids])
 
     def get_link_frames(self, link_ids=None, flatten=False):
         r"""
@@ -1535,10 +1535,10 @@ class Robot(ControllableBody):
                 np.array[N*3], np.array[N,3]: link frame position of each link in world space
         """
         if isinstance(link_ids, int):
-            return np.array(self.sim.get_link_state(self.id, link_ids)[4])
+            return np.asarray(self.sim.get_link_state(self.id, link_ids)[4])
         if link_ids is None:
             link_ids = self.joints
-        pos = np.array([self.sim.get_link_state(self.id, link)[4] for link in link_ids])
+        pos = np.asarray([self.sim.get_link_state(self.id, link)[4] for link in link_ids])
         if flatten:
             return pos.reshape(-1)  # 1D array
         return pos  # 2D array
@@ -1562,7 +1562,7 @@ class Robot(ControllableBody):
             return self.sim.get_link_state(self.id, link_ids)[5]
         if link_ids is None:
             link_ids = self.joints
-        orientation = np.array([self.sim.get_link_state(self.id, link)[5] for link in link_ids])
+        orientation = np.asarray([self.sim.get_link_state(self.id, link)[5] for link in link_ids])
         if flatten:
             return orientation.reshape(-1)  # 1D array
         return orientation  # 2D array
@@ -1649,7 +1649,7 @@ class Robot(ControllableBody):
             return self.sim.get_link_state(self.id, link_ids)[1]
         if link_ids is None:
             link_ids = self.joints
-        orientation = np.array([self.sim.get_link_state(self.id, link)[1] for link in link_ids])
+        orientation = np.asarray([self.sim.get_link_state(self.id, link)[1] for link in link_ids])
         if flatten:
             return orientation.reshape(-1)
         return orientation  # 2D array
@@ -1677,7 +1677,8 @@ class Robot(ControllableBody):
             if isinstance(wrt_link_id, int):
                 q0 = get_quaternion_inverse(self.get_link_world_orientations(wrt_link_id))
             else:
-                q0 = np.array([get_quaternion_inverse(self.get_link_world_orientations(link)) for link in wrt_link_id])
+                q0 = np.asarray([get_quaternion_inverse(self.get_link_world_orientations(link))
+                                 for link in wrt_link_id])
 
         q = get_quaternion_product(q0, q1)
         if flatten:
@@ -1728,10 +1729,10 @@ class Robot(ControllableBody):
                 np.array[N*3], np.array[N,3]: linear velocity of each link
         """
         if isinstance(link_ids, int):
-            return np.array(self.sim.get_link_state(self.id, link_ids, compute_velocity=True)[6])
+            return np.asarray(self.sim.get_link_state(self.id, link_ids, compute_velocity=True)[6])
         if link_ids is None:
             link_ids = self.joints
-        vel = np.array([self.sim.get_link_state(self.id, link, compute_velocity=True)[6] for link in link_ids])
+        vel = np.asarray([self.sim.get_link_state(self.id, link, compute_velocity=True)[6] for link in link_ids])
         if flatten:
             return vel.reshape(-1)  # 1D array
         return vel  # 2D array
@@ -1752,10 +1753,10 @@ class Robot(ControllableBody):
                 np.array[N*3], np.array[N,3]: angular velocity of each link
         """
         if isinstance(link_ids, int):
-            return np.array(self.sim.get_link_state(self.id, link_ids, compute_velocity=True)[7])
+            return np.asarray(self.sim.get_link_state(self.id, link_ids, compute_velocity=True)[7])
         if link_ids is None:
             link_ids = self.joints
-        vel = np.array([self.sim.get_link_state(self.id, link, compute_velocity=True)[7] for link in link_ids])
+        vel = np.asarray([self.sim.get_link_state(self.id, link, compute_velocity=True)[7] for link in link_ids])
         if flatten:
             return vel.reshape(-1)  # 1d array
         return vel  # 2D array
@@ -2152,7 +2153,7 @@ class Robot(ControllableBody):
             return self.sim.get_dynamics_info(body_id=self.id, link_id=link_ids)[2]
         if link_ids is None:
             link_ids = list(range(self.num_links))
-        return np.array([self.sim.get_dynamics_info(self.id, link)[2] for link in link_ids])
+        return np.asarray([self.sim.get_dynamics_info(self.id, link)[2] for link in link_ids])
 
     def set_link_positions(self, link_ids, positions, orientations=None):
         """
@@ -3135,7 +3136,7 @@ class Robot(ControllableBody):
             q = self.get_joint_positions()
 
         # compute and return joint accelerations
-        torques = np.array(torques)
+        torques = np.asarray(torques)
         if not self.fixed_base:  # if floating base
             torques = np.concatenate((np.zeros(6), torques))
         Hinv = np.linalg.inv(self.get_mass_matrix(q))
@@ -3175,8 +3176,8 @@ class Robot(ControllableBody):
         q_aug[self.joints] = q
 
         if q_idx is None:
-            return np.array(self.sim.calculate_mass_matrix(self.id, q_aug))
-        return np.array(self.sim.calculate_mass_matrix(self.id, q_aug))[q_idx, q_idx]
+            return np.asarray(self.sim.calculate_mass_matrix(self.id, q_aug))
+        return np.asarray(self.sim.calculate_mass_matrix(self.id, q_aug))[q_idx, q_idx]
 
     # alias
     get_inertia_matrix = get_mass_matrix
@@ -3267,7 +3268,7 @@ class Robot(ControllableBody):
         H = self.get_mass_matrix(q, q_idx)
         return 1./2 * dq.dot(H.dot(dq))
 
-    def get_gravity_potential_energy(self, q=None, q_idx=None, g=np.array((0., 0., -9.81))):
+    def get_gravity_potential_energy(self, q=None, q_idx=None, g=(0., 0., -9.81)):
         r"""
         Return the potential energy due to gravity.
 
@@ -3281,11 +3282,12 @@ class Robot(ControllableBody):
                 NOT USED, as we can get the link positions from the simulator (instead of using forward kinematics).
             q_idx (int[M], None): if provided, it will slice the inertia matrix at the given q indices (0 < M <= N),
                 and the joint velocities vector.
-            g (np.array[3]): gravity vector.
+            g (np.array[3], tuple/list of 3 float): gravity vector.
 
         Returns:
             float: potential energy due to gravity
         """
+        g = np.asarray(g)
         link_ids = list(range(self.num_links))
         p = self.get_link_world_positions(link_ids=link_ids, flatten=False)
         m = self.get_link_masses(link_ids=link_ids)

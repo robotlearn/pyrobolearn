@@ -14,7 +14,7 @@ General idea.
 - lack of benchmarks
 - lack of flexibility and modularity
 - lack of generalization
-- high coupling
+- high coupling between different modules
 
 For instance:
 

@@ -6,11 +6,13 @@ Dependencies:
 - `pyrobolearn.robots`
 """
 
+from abc import ABCMeta
+
 from pyrobolearn.physics.physics_randomizer import PhysicsRandomizer
-# from pyrobolearn.robots.base import Object  # TODO: change to Body or MultiBody
+from pyrobolearn.robots.base import Body
 
 __author__ = "Brian Delhaisse"
-__copyright__ = "Copyright 2018, PyRoboLearn"
+__copyright__ = "Copyright 2019, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
@@ -25,6 +27,7 @@ class BodyPhysicsRandomizer(PhysicsRandomizer):
     The body physics randomizer can randomize the physical attributes of a body. It is an abstract class which is
     inherited notably by `LinkPhysicsRandomizer` and `JointPhysicsRandomizer`.
     """
+    __metaclass__ = ABCMeta
 
     def __init__(self, body):
         """
@@ -49,10 +52,8 @@ class BodyPhysicsRandomizer(PhysicsRandomizer):
     @body.setter
     def body(self, body):
         """Set the body / object instance."""
-        # TODO: uncomment the following lines
-        # if not isinstance(body, Object):
-        #     raise TypeError("Expecting the given body to be an instance of `Object`, instead got: "
-        #                     "{}".format(type(body)))
+        if not isinstance(body, Body):
+            raise TypeError("Expecting the given body to be an instance of `Body`, instead got: {}".format(type(body)))
         self._body = body
 
     @property

@@ -8,7 +8,7 @@ import copy
 import numpy as np
 from abc import ABCMeta
 
-from pyrobolearn.actions.robot_actions.robot_actions import RobotAction
+from pyrobolearn.actions.robot_actions.robot_actions import RobotAction, Robot
 
 
 __author__ = "Brian Delhaisse"
@@ -85,11 +85,18 @@ class JointPositionAction(JointAction):
             joint_ids (int, list of int, None): joint id(s). If None, it will take all the actuated joints.
             kp (float, np.array[N], None): position gain(s)
             kd (float, np.array[N], None): velocity gain(s)
-            max_force (float, np.array[N], None, bool): maximum motor torques / forces. If True, it will apply the
-                default maximum force values.
+            max_force (float, np.array[N], None, bool): maximum motor torques / forces. If None, it will apply the
+                default maximum force values (read from the URDF).
         """
-        self.kp, self.kd, self.max_force = kp, kd, max_force
         super(JointPositionAction, self).__init__(robot, joint_ids)
+        self.kp, self.kd, self.max_force = kp, kd, max_force
+
+        # # check max force and take the one by default
+        # if self.max_force is None:
+        #     self.max_force = self.robot.get_joint_max_forces(self.joints)
+        #     if np.allclose(self.max_force, 0):
+        #         self.max_force = None
+
         self.data = robot.get_joint_positions(self.joints)
 
     def _write(self, data):
@@ -303,6 +310,16 @@ class JointTorqueAction(JointAction):
         """
         super(JointTorqueAction, self).__init__(robot, joint_ids)
         self.data = robot.get_joint_torques(self.joints)
+
+        # check torque bounds
+        if f_min is None or f_max is None:
+            f = robot.get_joint_max_forces(joint_ids=self.joints)
+            f_min = -f if f_min is None else f_min
+            f_max = f if f_max is None else f_max
+            if np.allclose(f_min, 0):
+                f_min = -np.infty
+            if np.allclose(f_max, 0):
+                f_max = np.infty
         self.f_min = f_min
         self.f_max = f_max
 

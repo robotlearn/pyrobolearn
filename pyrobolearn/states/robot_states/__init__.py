@@ -8,8 +8,9 @@ from .joint_states import JointState, JointPositionState, JointTrigonometricPosi
     JointForceTorqueState, JointAccelerationState
 
 # import the link states
-from .link_states import LinkState, LinkPositionState, LinkWorldPositionState, LinkOrientationState, \
-    LinkVelocityState, LinkLinearVelocityState, LinkAngularVelocityState
+from .link_states import LinkState, LinkPositionState, LinkOrientationState, LinkVelocityState, \
+    LinkLinearVelocityState, LinkAngularVelocityState, LinkWorldPositionState, LinkWorldOrientationState, \
+    LinkWorldVelocityState, LinkWorldLinearVelocityState, LinkWorldAngularVelocityState
 
 # import the sensor states
 from .sensor_states import SensorState, CameraState, ContactState, FeetContactState
