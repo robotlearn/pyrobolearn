@@ -84,8 +84,7 @@ Examples
 
 Here are few examples that you can find in this folder that better demonstrate how to use the environment:
 
-1. ``basics.py``: show the flexibility of how to build an environment and use it.
-2. ``manipulator.py``: show how to define an environment where the goal is to reach a target object using a manipulator.
+1. ``inverted_pendulum.py``: create the inverted pendulum environment from scratch in PRL. This example combines the various concepts that we have seen until now (simulator, world, robot, state, action, reward, physics randomizer, initial state generator, etc). At the end, the environment is launched in a similar way as in OpenAI Gym.
 
 References:
 

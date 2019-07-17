@@ -15,7 +15,9 @@ You can check the following folders on:
 - ``kinematics``: how to use forward and inverse kinematics as well as position and velocity control.
 - ``dynamics``: how to use forward and inverse dynamics as well as force control.
 - ``manipulability``: how to use the velocity and dynamic manipulability ellipsoids.
-- ``states``: how to query the states / observations.
 - ``models``: the different learning models that you can use.
+- ``states``: how to query the states / observations.
+- ``rewards``: how to use the reward functions.
+- ``environments``: provide a full example on how to create an environment from scratch in PRL.
 - ``imitation``: how to use imitation learning with the framework.
 - ``gym/cartpole``: policies that are trained with different algorithms on the gym Cartpole environment.
