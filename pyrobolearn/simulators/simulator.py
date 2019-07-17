@@ -268,6 +268,11 @@ class Simulator(object):
     ##################
 
     @staticmethod
+    def in_simulation():
+        """Return True if we are running in simulation instead of the real-world."""
+        return True
+
+    @staticmethod
     def simulate_gas_dynamics():
         """Return True if the simulator can simulate gases."""
         return False

@@ -32,12 +32,12 @@ state = trig_position_state + velocity_state
 print("\nObservation: {}".format(state))
 
 
-# create action
-action = prl.actions.JointTorqueAction(robot, f_min=-2., f_max=2.)
+# create action: \tau_1
+action = prl.actions.JointTorqueAction(robot, bounds=(-2., 2.))
 print("\nAction: {}".format(action))
 
 
-# create reward/cost
+# create reward/cost: ||d(q,q_{target})||^2 + 0.1 * ||\dot{q}||^2 + 0.001 * ||\tau||^2
 position_cost = prl.rewards.JointPositionCost(prl.states.JointPositionState(robot),
                                               target_state=np.zeros(len(robot.joints)),
                                               update_state=True)

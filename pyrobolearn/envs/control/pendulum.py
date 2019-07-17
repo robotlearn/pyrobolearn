@@ -61,19 +61,19 @@ class InvertedPendulumSwingUpEnv(ControlEnv):
         if verbose:
             robot.print_info()
 
-        # create state
+        # create state: [cos(q_1), sin(q_1), \dot{q}_1]
         trig_position_state = prl.states.JointTrigonometricPositionState(robot=robot)
         velocity_state = prl.states.JointVelocityState(robot=robot)
         state = trig_position_state + velocity_state
         if verbose:
             print("\nObservation: {}".format(state))
 
-        # create action
-        action = prl.actions.JointTorqueAction(robot, f_min=-2., f_max=2.)
+        # create action: \tau_1
+        action = prl.actions.JointTorqueAction(robot, bounds=(-2., 2.))
         if verbose:
             print("\nAction: {}".format(action))
 
-        # create reward/cost
+        # create reward/cost: ||d(q,q_{target})||^2 + 0.1 * ||\dot{q}||^2 + 0.001 * ||\tau||^2
         position_cost = prl.rewards.JointPositionCost(prl.states.JointPositionState(robot),
                                                       target_state=np.zeros(len(robot.joints)),
                                                       update_state=True)

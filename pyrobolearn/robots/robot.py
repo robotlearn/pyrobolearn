@@ -917,7 +917,7 @@ class Robot(ControllableBody):
     #     q_idx = self.get_q_indices(joint_ids)
     #     return accelerations[q_idx]
 
-    def get_joint_accelerations(self, joint_ids=None):  # TODO: fix this!!
+    def get_joint_accelerations(self, joint_ids=None):
         r"""
         Get the acceleration of the specified joint(s). If the simulator doesn't provide the joint accelerations, this
         is computed using finite difference :math:`\ddot{q}(t) = \frac{\dot{q}(t) - \dot{q}(t-dt)}{dt}`.

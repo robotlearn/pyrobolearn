@@ -9,5 +9,6 @@ from .joint_actions import JointAction, JointPositionAction, JointPositionChange
     JointAccelerationAction
 
 # import the link / end-effector actions
-from .link_actions import LinkAction, LinkPositionAction, LinkPositionChangeAction, LinkVelocityAction, \
-    LinkVelocityChangeAction, LinkForceAction
+from .link_actions import LinkAction, LinkPositionAction, LinkPositionChangeAction, LinkOrientationAction, \
+    LinkOrientationChangeAction, LinkPoseAction, LinkPoseChangeAction, LinkVelocityAction, LinkVelocityChangeAction, \
+    LinkForceAction, LinkTorqueAction, LinkWrenchAction, ApplyForceAction, ApplyTorqueAction  # , ApplyWrenchAction

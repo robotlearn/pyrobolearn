@@ -49,13 +49,13 @@ class RobotAction(Action):
     def robot(self):
         return self._robot
 
-    def is_discrete(self):
-        """By default, robot actions are continuous."""
-        return False
-
-    def is_continuous(self):
-        """By default, robot actions are continuous."""
-        return True
+    # def is_discrete(self):
+    #     """By default, robot actions are continuous."""
+    #     return False
+    #
+    # def is_continuous(self):
+    #     """By default, robot actions are continuous."""
+    #     return True
 
     def __copy__(self):
         """Return a shallow copy of the action. This can be overridden in the child class."""

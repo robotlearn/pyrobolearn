@@ -303,7 +303,7 @@ class Action(object):
         Set the corresponding space. This can only be used one time!
         """
         if self.has_data() and not self.has_space() and \
-                isinstance(space, (gym.spaces.Box, gym.spaces.Discrete)):
+                isinstance(space, (gym.spaces.Box, gym.spaces.Discrete, gym.spaces.MultiDiscrete)):
             self._space = space
 
     @property
@@ -525,8 +525,9 @@ class Action(object):
         Does the action have discrete values?
         """
         if self._data is None:
-            return [isinstance(action._space, gym.spaces.Discrete) for action in self._actions]
-        if isinstance(self._space, gym.spaces.Discrete):
+            return [isinstance(action._space, (gym.spaces.Discrete, gym.spaces.MultiDiscrete))
+                    for action in self._actions]
+        if isinstance(self._space, (gym.spaces.Discrete, gym.spaces.MultiDiscrete)):
             return [True]
         return [False]
 
@@ -556,6 +557,7 @@ class Action(object):
         """
         If the action is continuous, it returns the lower and higher bounds of the action.
         If the action is discrete, it returns the maximum number of discrete values that the action can take.
+        If the action is multi-discrete, it returns the maximum number of discrete values that each subaction can take.
 
         Returns:
             list/tuple: list of bounds if multiple actions, or bounds of this action
@@ -566,6 +568,8 @@ class Action(object):
             return (self._space.low, self._space.high)
         elif isinstance(self._space, gym.spaces.Discrete):
             return (self._space.n,)
+        elif isinstance(self._space, gym.spaces.MultiDiscrete):
+            return (self._space.nvec,)
         raise NotImplementedError
 
     def apply(self, fct):
