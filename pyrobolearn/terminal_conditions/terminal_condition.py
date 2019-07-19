@@ -35,55 +35,128 @@ class TerminalCondition(object):
     """
     # TODO: we should be able to combine different conditions using 'OR' and 'AND'
 
+    def __init__(self, btype=None, name=None):
+        """
+        Initialize the terminal condition.
+
+        Args:
+            btype (bool, str, None): if the terminal condition represents a failure or success condition. If None, it
+                represents a neutral terminal condition (which is neither a failure or success condition, but just
+                means the episode is over). If string, it has to be among {"success", "failure", "neutral"}.
+            name (str): name of the final condition
+        """
+        self.btype = btype
+        self._over = False
+        self._achieved = False
+        self.name = name
+
+    ##############
+    # Properties #
+    ##############
+
+    @property
+    def btype(self):
+        """Return if the terminal condition is a neutral (None), a failure (False) or a success (True) condition."""
+        return self._btype
+
+    @btype.setter
+    def btype(self, value):
+        """Set the success variable."""
+        if value is not None and not isinstance(value, bool) and not isinstance(value, str):
+            raise TypeError("Expecting the given 'btype' variable to be a boolean, string, or None, but got instead: "
+                            "{}".format(type(value)))
+        if isinstance(value, str):
+            if value == 'neutral':
+                value = None
+            elif value == 'failure':
+                value = False
+            elif value == 'success':
+                value = True
+            else:
+                raise ValueError("Expecting the given string to be among ['success', 'failure', 'neutral'], but "
+                                 "instead got: {}".format(value))
+        self._btype = value
+
+    ###########
+    # Methods #
+    ###########
+
+    def is_over(self):
+        """Return if the condition is over or not."""
+        return self._over
+
+    def succeeded(self):
+        """Return if the condition succeeded or not."""
+        return self._achieved
+
+    def type(self):
+        """Return if it a success, failure, or neutral terminal condition."""
+        return self._btype
+
+    def type_str(self):
+        """Return the string representing the type of terminal condition."""
+        if self._btype is None:
+            return "neutral"
+        if self._btype:
+            return "success"
+        return "failure"
+
+    def reset(self):
+        """
+        Reset the terminal condition.
+        """
+        self._over = False
+
     def check(self):
         """
         Check if the terminating condition has been fulfilled, and return True or False accordingly
         """
-        return False
+        return self._over
+
+    #############
+    # Operators #
+    #############
 
     def __str__(self):
+        """Return a string describing the terminal condition."""
         return self.__class__.__name__
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self):
+        """Check the terminal condition."""
         return self.check()
 
     def __bool__(self):
+        """Return a bool based on the terminating condition."""
         return self.check()
 
     __nonzero__ = __bool__
 
 
-class FailedCondition(TerminalCondition):
-    r"""Failed Terminal Condition
-
-    This determines when a policy or multiple ones have failed to perform a certain task.
-    """
-    pass
-
-
-class SucceededCondition(TerminalCondition):
-    r"""Succeeded Terminal Condition
-
-    This determines when a policy or multiple ones have succeeded to perform a certain task.
-    """
-    pass
-
-
-class GymTerminalCondition(TerminalCondition):
-    r"""OpenAI Gym Terminal Condition
-
-    Returns if the OpenAI Gym environment has terminated. This does not provide any information if the environment
-    terminated because the policy succeeded or failed to perform the task.
-    """
-
-    def __init__(self, done=False):
-        self.done = done
-
-    def check(self):
-        return self.done
+# class FailedCondition(TerminalCondition):
+#     r"""Failed Terminal Condition
+#
+#     This determines when a policy or multiple ones have failed to perform a certain task.
+#     """
+#     pass
+#
+#
+# class NeutralCondition(TerminalCondition):
+#     r"""Neutral Terminal Condition
+#
+#     This determines when an environment has ended.
+#     """
+#     pass
+#
+#
+# class SucceededCondition(TerminalCondition):
+#     r"""Succeeded Terminal Condition
+#
+#     This determines when a policy or multiple ones have succeeded to perform a certain task.
+#     """
+#     pass
 
 
-class HasFallen(FailedCondition):
+class HasFallenCondition(TerminalCondition):
     r"""Has Fallen Condition
 
     Check if the given robot has fallen, by checking if its base is below a certain threshold.
@@ -103,6 +176,7 @@ class HasFallen(FailedCondition):
                 robot has fallen. Normally, the initial robot base up vector points upward. By default, it is 30
                 degrees (=pi/6 rad).
         """
+        super(HasFallenCondition, self).__init__(btype='failure')
         self.robot = robot
         self.height_threshold = height_threshold if height_threshold is not None else robot.base_height/3.
         self.angle_threshold = angle_threshold
@@ -125,6 +199,7 @@ class HasFallen(FailedCondition):
         return height_condition or angle_condition
 
     def __str__(self):
+        """Return a string describing the terminal condition."""
         description = '{} (\n\tbase_height={} ?<? height_threshold={}, \n\tangle_up_vector={} ?>? angle_threshold={}' \
                       '\n)'.format(self.__class__.__name__, self._compute_height(), self.height_threshold,
                                    self._compute_angle(), self.angle_threshold)
@@ -150,16 +225,18 @@ class HasFallen(FailedCondition):
         return terminal
 
 
-class HasReached(SucceededCondition):
+class HasReachedCondition(TerminalCondition):
     r"""Has Reached Condition
 
     Check if the robot or a part of it has reached a certain position, configuration, or state for a certain amount
     of time/steps.
     """
-    pass
+
+    def __init__(self):
+        super(HasReachedCondition, self).__init__(btype='success')
 
 
-class LinkInSpecifiedDirection(HasReached):
+class LinkInSpecifiedDirection(HasReachedCondition):
     r"""Check if the specified link is in certain direction for a certain amount of time steps.
 
     Specifically, it checks if the position of the link with respect to the world or another link is in a certain
@@ -168,6 +245,7 @@ class LinkInSpecifiedDirection(HasReached):
     """
 
     def __init__(self, state, direction, domain=(0.95, 1.), total_steps=0):
+        super(LinkInSpecifiedDirection, self).__init__()
         if not isinstance(state, LinkState):
             raise TypeError("Expecting the state to be an instance of LinkState, instead got: {}".format(type(state)))
         self.state = state
@@ -209,6 +287,7 @@ class LinkInSpecifiedDirection(HasReached):
         return False
 
     def __str__(self):
+        """Return a string describing the terminal condition."""
         return self.__class__.__name__ + '(direction=' + str(self.direction) + ')'
 
     def __copy__(self):

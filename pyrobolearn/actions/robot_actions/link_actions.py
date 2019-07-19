@@ -52,12 +52,12 @@ class LinkAction(RobotAction):  # TODO: multiple links
                 raise TypeError("Expecting the given 'discrete_values' to be a list/tuple/np.array of float/int, but "
                                 "instead got: {}".format(type(discrete_values)))
             discrete_values = np.asarray(discrete_values)
-            self._space = gym.spaces.Discrete(len(self.discrete_values))
+            self._space = gym.spaces.Discrete(len(discrete_values))
         self.discrete_values = discrete_values
 
         # set the data in the case it is discrete
         if self.discrete_values is not None:
-            self.data = 0  # set the data to be the first index
+            self.data = np.zeros(1, dtype=np.int)  # set the data to be the first index
 
     def _check_discrete_values(self, dim, last_dim):
         """Check that the discrete values have the correct dimensions / shape."""
@@ -542,12 +542,13 @@ class ApplyForceAction(LinkAction):  # TODO: multiple links
         super(ApplyForceAction, self).__init__(robot, link_id, discrete_values=discrete_values)
 
         # check local position
-        if not isinstance(local_position, (list, tuple, np.ndarray)):
-            raise TypeError("Expecting the given 'local_position' to be a list/tuple/np.array of 3 float, but instead "
-                            "got: {}".format(type(local_position)))
-        if len(local_position) != 3:
-            raise ValueError("Expecting the given 'local_position' to be a list/tuple/np.array of 3 float, but "
-                             "instead got a length of: {}".format(len(local_position)))
+        if local_position is not None:
+            if not isinstance(local_position, (list, tuple, np.ndarray)):
+                raise TypeError("Expecting the given 'local_position' to be a list/tuple/np.array of 3 float, or None, "
+                                "but instead got: {}".format(type(local_position)))
+            if len(local_position) != 3:
+                raise ValueError("Expecting the given 'local_position' to be a list/tuple/np.array of 3 float, but "
+                                 "instead got a length of: {}".format(len(local_position)))
         self.local_position = local_position
 
         # check axis
@@ -584,7 +585,7 @@ class ApplyForceAction(LinkAction):  # TODO: multiple links
         """apply the action data on the robot."""
         if self.axis is not None:
             data = data * self.axis
-        self.robot.apply_external_force(force=data, link_id=self.link[0], position=self.local_position)
+        self.robot.apply_external_force(force=data, link_id=self.link, position=self.local_position)
 
 
 class ApplyTorqueAction(LinkAction):  # TODO: multiple links
@@ -645,7 +646,7 @@ class ApplyTorqueAction(LinkAction):  # TODO: multiple links
         """apply the action data on the robot."""
         if self.axis is not None:
             data = data * self.axis
-        self.robot.apply_external_torque(torque=data, link_id=self.link[0])
+        self.robot.apply_external_torque(torque=data, link_id=self.link)
 
 
 # class ApplyWrenchAction(LinkAction):  # TODO: multiple links

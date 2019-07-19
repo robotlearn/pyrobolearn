@@ -36,6 +36,9 @@ from . import states
 # import actions
 from . import actions
 
+# import terminal conditions
+from . import terminal_conditions
+
 # import rewards
 from . import rewards
 
@@ -91,7 +94,7 @@ from . import algos
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "MIT"
+__license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"

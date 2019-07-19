@@ -7,6 +7,8 @@ other joint actuators. Additionally, this is important as more realistic motors 
 simulation to reality.
 """
 
+# TODO: add latency + noise
+
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
@@ -24,10 +26,17 @@ class Actuator(object):
     Other actuators such as speakers, leds, and others are attached to links.
     """
 
-    def __init__(self):
+    def __init__(self, latency=0):
+        """
+        Initialize the actuator.
+
+        Args:
+            latency (int, float): latency.
+        """
 
         # variable to check if the actuator is enabled
         self._enabled = True
+        self._latency = latency
 
     #     self.sim = simulator
     #

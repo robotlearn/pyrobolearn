@@ -50,6 +50,8 @@ class Acrobot(Robot):  # TODO: create the acrobot dynamically instead of loading
         super(Acrobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'acrobot'
 
+        self.height = 2. * scale
+
         # set initial joint positions
         self.reset_joint_states(q=[np.pi, 0.], joint_ids=self.joints)
 

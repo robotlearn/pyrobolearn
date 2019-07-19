@@ -50,6 +50,8 @@ class Pendulum(Robot):  # TODO: create the pendulum dynamically instead of loadi
         super(Pendulum, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'pendulum'
 
+        self.height = 2. * scale
+
         # set initial joint positions
         self.reset_joint_states(q=[np.pi / 4], joint_ids=self.joints)
 

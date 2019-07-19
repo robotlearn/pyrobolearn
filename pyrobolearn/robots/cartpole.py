@@ -106,8 +106,6 @@ class CartPole(Robot):
         dims = (15, 0.025, 0.025)
         color = (0, 0.8, 0.8, 1)
         mass = 0
-        position = (0, 0, 0)
-        orientation = (0, 0, 0, 1)
         collision_shape = self.sim.create_collision_shape(self.sim.GEOM_BOX, half_extents=dims)
         visual_shape = self.sim.create_visual_shape(self.sim.GEOM_BOX, half_extents=dims, rgba_color=color)
 

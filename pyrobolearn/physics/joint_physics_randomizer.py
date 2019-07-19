@@ -194,8 +194,8 @@ class JointPhysicsRandomizer(BodyPhysicsRandomizer):
 
         # sample each property
         properties = dict()
-        for joint in self.joints:
+        for i, joint in enumerate(self.joints):
             for name, bound in zip(self.names(), self.bounds()):
                 if bound is not None:
-                    properties.setdefault(joint, {})[name] = np.random.uniform(low=bound[0], high=bound[1])
+                    properties.setdefault(joint, {})[name] = np.random.uniform(low=bound[0][i], high=bound[1][i])
         return properties

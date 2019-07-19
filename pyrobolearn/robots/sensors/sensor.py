@@ -8,6 +8,8 @@ simulation to reality. Also, note that some simulators are deterministic and thu
 add some noise to the returned sense value. The type of noise can also be selected at runtime.
 """
 
+# TODO: add latency + noise
+
 import copy
 from abc import ABCMeta, abstractmethod
 import numpy as np
@@ -34,7 +36,7 @@ class Sensor(object):  # sensor attached to a link or joint
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, simulator, body_id, position=None, orientation=None, rate=1):
+    def __init__(self, simulator, body_id, position=None, orientation=None, rate=1, latency=0):
         """Initialize the sensor.
 
         Args:
@@ -43,6 +45,7 @@ class Sensor(object):  # sensor attached to a link or joint
             position (vec3): local position of the sensor with respect to the given link
             orientation (vec4): local orientation of the sensor with respect to the given link
             rate (int): number of steps to wait before acquisition of the next sensor value.
+            latency (int, float): latency.
         """
         self.sim = simulator
         self.body_id = body_id
@@ -63,6 +66,7 @@ class Sensor(object):  # sensor attached to a link or joint
 
         # variable to check if the sensor is enabled
         self._enabled = True
+        self._latency = latency
 
     ##############
     # Properties #

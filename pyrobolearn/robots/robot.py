@@ -174,6 +174,15 @@ class Robot(ControllableBody):
     # Operators #
     #############
 
+    # def __str__(self):
+    #     """Return a string describing the robot."""
+    #     return "\nRobot: {} \nNumber of DoFs: {} \nJoint ids: {} \nActuated joint ids: {} " \
+    #            "\nLink names (associated with actuated joints): {} \nEnd-effector names: {} \nFloating base? {} " \
+    #            "\nTotal mass = {} kg".format(self.__class__.__name__, self.num_dofs, list(range(self.num_joints)),
+    #                                          self.joints, self.get_link_names(self.joints),
+    #                                          self.get_link_names(self.end_effectors), self.has_floating_base(),
+    #                                          self.mass)
+
     def __copy__(self):
         """Return a shallow copy of the robot. This can be overridden in the child class."""
         return self.__class__(simulator=self.simulator, urdf=self.urdf, position=self.position,
@@ -1226,21 +1235,38 @@ class Robot(ControllableBody):
 
         # check q
         if q is None:
-            q = np.zeros(len(joint_ids))
+            if 'q_reset' in self._state:
+                q = self._state['q_reset']
+            else:
+                q = np.zeros(len(joint_ids))
         elif isinstance(q, (int, float)):
             q = [q]
+            self._state['q_reset'] = q
         else:
             if len(q) != len(joint_ids):
                 raise ValueError("The number of joint ids does not match up with the number of q's")
+            self._state['q_reset'] = q
 
         # check dq
         if dq is None:
-            dq = np.zeros(len(joint_ids))
+            if 'dq_reset' in self._state:
+                dq = self._state['dq_reset']
+            else:
+                dq = np.zeros(len(joint_ids))
         elif isinstance(dq, (int, float)):
             dq = [dq]
+            self._state['dq_reset'] = dq
         else:
             if len(dq) != len(joint_ids):
                 raise ValueError("The number of joint ids does not match with the number of dq's")
+            self._state['dq_reset'] = dq
+
+        # import inspect
+        # stack = inspect.stack()
+        # the_class = stack[1][0].f_locals["self"].__class__
+        # the_method = stack[1][0].f_code.co_name
+        # print("I was called by {}.{}()".format(str(the_class), the_method))
+        # print("resetting: {}, {}, {}".format(joint_ids, q, dq))
 
         # reset the joint state
         for joint_id, position, velocity in zip(joint_ids, q, dq):
@@ -4457,7 +4483,7 @@ class Robot(ControllableBody):
                 pos = self.get_link_world_positions(link)
                 dim = self.visual_shapes[link]['dimensions']
                 # radius = min(dim) * scaling * 0.2
-                radius = 0.01
+                radius = 0.01 * scaling
                 self._draw_sphere(pos, radius, color=(0, 0, 0, 1))
 
     def draw_link_frames(self, link_ids=None, scaling=1.):

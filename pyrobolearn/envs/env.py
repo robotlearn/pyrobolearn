@@ -205,7 +205,7 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
             conditions = [conditions]
         elif isinstance(conditions, (list, tuple)):
             for idx, condition in enumerate(conditions):
-                if not callable(conditions):
+                if not isinstance(condition, TerminalCondition):
                     raise TypeError("Expecting the {} item in the given terminal conditions to be an instance of "
                                     "`TerminalCondition`, instead got: {}".format(idx, type(condition)))
         else:
@@ -293,7 +293,7 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
 
         # generate initial states
         for generator in self.state_generators:
-            generator()
+            generator(reset_state=False)
 
         # reset states and return first states/observations
         states = [state.reset() for state in self.states]

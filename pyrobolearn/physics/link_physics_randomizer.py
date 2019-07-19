@@ -429,8 +429,8 @@ class LinkPhysicsRandomizer(BodyPhysicsRandomizer):
 
         # sample each property
         properties = dict()
-        for link in self.links:
+        for i, link in enumerate(self.links):
             for name, bound in zip(self.names(), self.bounds()):
                 if bound is not None:
-                    properties.setdefault(link, {})[name] = np.random.uniform(low=bound[0], high=bound[1])
+                    properties.setdefault(link, {})[name] = np.random.uniform(low=bound[0][i], high=bound[1][i])
         return properties

@@ -71,10 +71,11 @@ class JointAction(RobotAction):
                 if not isinstance(value, (list, tuple, np.ndarray)):
                     raise TypeError("Expecting each discrete value set to be a list/tuple/np.ndarray, instead got: "
                                     "{} at index {}".format(type(value), i))
-                discrete_values[i] = np.asarray(value)
-                if len(discrete_values.shape) != 1:
+                value = np.asarray(value)
+                discrete_values[i] = value
+                if value.ndim != 1:
                     raise ValueError("Expecting each discrete value set to be a 1D array, instead got a shape of: "
-                                     "{}".format(discrete_values.shape))
+                                     "{}".format(value.shape))
 
         # set the discrete values
         self.discrete_values = discrete_values
@@ -84,14 +85,15 @@ class JointAction(RobotAction):
             # set the space
             if len(self.discrete_values) == 1:
                 self._space = gym.spaces.Discrete(len(self.discrete_values))
+                self.discrete_values = self.discrete_values[0]
             else:
                 self._space = gym.spaces.MultiDiscrete([len(value) for value in self.discrete_values])
 
             # set the data
             if isinstance(self._space, gym.spaces.Discrete):
-                self.data = 0
+                self.data = np.zeros(1, dtype=np.int)  # the first index is the default values
             else:
-                self.data = np.zeros(len(self._space.nvec))
+                self.data = np.zeros(len(self._space.nvec), dtype=np.int)  # the first indices are the default values
 
     # @property
     # def size(self):
@@ -99,12 +101,17 @@ class JointAction(RobotAction):
 
     def _check_continuous_bounds(self, bounds):
         """Check the given continuous bounds."""
+        # check the type of the bounds
         if not isinstance(bounds, (tuple, list, np.ndarray)):
             raise TypeError("Expecting the given bounds to be a tuple/list/np.ndarray of float, instead got: "
                             "{}".format(type(bounds)))
+
+        # check that the bounds have a length of 2 (i.e. lower and upper bounds)
         if len(bounds) != 2:
             raise ValueError("Expecting the bounds to be of length 2 (i.e. lower and upper bounds), instead got a "
                              "length of {}".format(len(bounds)))
+
+        # if both bounds are not None, reshape if necessary
         if bounds[0] is not None and bounds[1] is not None:
             bounds = np.asarray(bounds).reshape(2, -1)
             if len(self.joints) != bounds.shape[1]:
@@ -117,28 +124,70 @@ class JointAction(RobotAction):
             bounds = tuple(bounds)
         return bounds
 
-    # def _write(self, data):
-    #     """
-    #     Write the data.
-    #
-    #     Args:
-    #         data (int, np.ndarray): the data can be discrete or continuous.
-    #     """
-    #     # if the action is discrete, then the data should be an index, or an array of values from which takes the max
-    #     if self.is_discrete():
-    #         if isinstance(data, np.ndarray):
-    #             data = np.argmax(data.reshape(-1))
-    #         data = self.discrete_values[data]
-    #     self._write_continuous(data)
-    #
-    # def _write_continuous(self, data):
-    #     """
-    #     Write the given continuous data. Child method that has to be implement in the child classes.
-    #
-    #     Args:
-    #         data (np.ndarray): continuous data to be written.
-    #     """
-    #     raise NotImplementedError
+    def _write(self, data):
+        """
+        Write the data.
+
+        Args:
+            data (int, np.ndarray): the data can be discrete or continuous.
+        """
+        # - if the action is discrete, then the data should be an index, or an array of values from which takes the max
+        # - if the action is multi-discrete, then the data should be an array of index, or a list of array values from
+        #   which to take the max for each array
+        if self.discrete_values is not None:
+            # if the action is discrete
+            if isinstance(self._space, gym.spaces.Discrete):
+                # if the data is an array of values, take the argmax
+                if isinstance(data, np.ndarray):
+                    if data.size > 1:
+                        data = np.argmax(data.reshape(-1))
+                    else:
+                        data = int(data.reshape(-1)[0])
+
+                # elif not an index, raise an error
+                elif not isinstance(data, int):
+                    raise TypeError("Expecting the given data to be an int (representing the index) for the discrete "
+                                    "values, instead got: {}".format(type(data)))
+
+                # take the corresponding "continuous" data
+                data = self.discrete_values[data]
+
+            # if action is multi-discrete
+            elif isinstance(self._space, gym.spaces.MultiDiscrete):
+
+                # check the type of the data
+                if isinstance(data, (list, np.ndarray)):
+                    raise TypeError("Expecting the data to be an list of int/np.array, or a np.array, instead got: "
+                                    "{}".format(type(data)))
+
+                # check that the number of rows match the number of discrete actions
+                if len(data) != self._space.shape[0]:
+                    raise ValueError("The given data does not have the same length (={}) as the number of discrete "
+                                     "action (={})".format(len(data), self._space.shape[0]))
+
+                # check each data row and convert it to index if necessary
+                data_tmp = []
+                for d in data:
+                    if isinstance(d, np.ndarray):
+                        d = np.argmax(d.reshape(-1))
+                    elif not isinstance(d, int):
+                        raise TypeError("Expecting the given data to be an int (representing the index) for the "
+                                        "discrete values, instead got: {}".format(type(d)))
+                    data_tmp.append(d)
+
+                # take the corresponding "continuous" data
+                data = np.array([self.discrete_values[d] for d in data])
+
+        self._write_continuous(data)
+
+    def _write_continuous(self, data):
+        """
+        Write the given continuous data. Child method that has to be implement in the child classes.
+
+        Args:
+            data (np.ndarray): continuous data to be written.
+        """
+        raise NotImplementedError
 
     def __copy__(self):
         """Return a shallow copy of the action. This can be overridden in the child class."""
@@ -205,9 +254,10 @@ class JointPositionAction(JointAction):
         """Return the joint limits."""
         return self.robot.get_joint_limits(self.joints)
 
-    def _write(self, data):
+    def _write_continuous(self, data):
         """apply the action data on the robot."""
-        self.robot.set_joint_positions(data, self.joints, kp=self.kp, kd=self.kd, forces=self.max_force)
+        self.robot.set_joint_positions(data, self.joints, bounds=self.bounds, kp=self.kp, kd=self.kd,
+                                       forces=self.max_force, discrete_values=self.discrete_values)
 
     def __copy__(self):
         """Return a shallow copy of the action. This can be overridden in the child class."""
@@ -223,10 +273,13 @@ class JointPositionAction(JointAction):
             return memo[self]
         robot = memo.get(self.robot, self.robot)  # copy.deepcopy(self.robot, memo)
         joints = copy.deepcopy(self.joints)
+        bounds = copy.deepcopy(self.bounds)
         kp = copy.deepcopy(self.kp)
         kd = copy.deepcopy(self.kd)
         max_force = copy.deepcopy(self.max_force)
-        action = self.__class__(robot=robot, joint_ids=joints, kp=kp, kd=kd, max_force=max_force)
+        discrete_values = copy.deepcopy(self.discrete_values)
+        action = self.__class__(robot=robot, joint_ids=joints, bounds=bounds, kp=kp, kd=kd, max_force=max_force,
+                                discrete_values=discrete_values)
         memo[self] = action
         return action
 
@@ -265,11 +318,11 @@ class JointPositionChangeAction(JointPositionAction):
         if self.discrete_values is None:
             self.data = np.zeros(len(self.joints))
 
-    def _write(self, data):
+    def _write_continuous(self, data):
         """apply the action data on the robot."""
         # add the original joint positions
         data += self.robot.get_joint_positions(self.joints)
-        super(JointPositionChangeAction, self)._write(data)
+        super(JointPositionChangeAction, self)._write_continuous(data)
 
 
 class JointVelocityAction(JointAction):
@@ -305,12 +358,12 @@ class JointVelocityAction(JointAction):
                                        np.infty * np.ones(len(self.joints))])
             self._space = gym.spaces.Box(low=bounds[:, 0], high=bounds[:, 1])
 
-    def _write(self, data):
+    def _write_continuous(self, data):
         """apply the action data on the robot."""
         self.robot.set_joint_velocities(data, self.joints)
 
 
-class JointVelocityChangeAction(JointAction):
+class JointVelocityChangeAction(JointVelocityAction):
     r"""Joint Velocity Change Action
 
     Set the joint velocities using velocity control;  this class expect to receive a change in the joint velocities
@@ -332,19 +385,20 @@ class JointVelocityChangeAction(JointAction):
                 the first value along the first axis / dimension are the values by default that are set if no data
                 is provided.
         """
-        super(JointVelocityChangeAction, self).__init__(robot, joint_ids, discrete_values=discrete_values)
+        super(JointVelocityChangeAction, self).__init__(robot, joint_ids, bounds=bounds,
+                                                        discrete_values=discrete_values)
 
         # set data if continuous
         if self.discrete_values is None:
             self.data = np.zeros(len(self.joints))
 
-    def _write(self, data):
+    def _write_continuous(self, data):
         """apply the action data on the robot."""
         data += self.robot.get_joint_velocities(self.joints)
-        super(JointVelocityChangeAction, self)._write(data)
+        super(JointVelocityChangeAction, self)._write_continuous(data)
 
 
-class JointPositionAndVelocityAction(JointAction):
+class JointPositionAndVelocityAction(JointAction):  # TODO: discrete values
     r"""Joint position and velocity action
 
     Set the joint position using position control using PD control, where the constraint error to be minimized is
@@ -377,7 +431,7 @@ class JointPositionAndVelocityAction(JointAction):
             self.data = np.concatenate((pos, vel))
         self.idx = len(self.joints)
 
-    def _write(self, data):
+    def _write_continuous(self, data):
         """apply the action data on the robot."""
         self.robot.set_joint_positions(data[:self.idx], self.joints, kp=self.kp, kd=self.kd,
                                        velocities=data[self.idx:], forces=self.max_force)
@@ -434,11 +488,11 @@ class JointPositionAndVelocityChangeAction(JointPositionAndVelocityAction):
         if self.discrete_values is None:
             self.data = np.zeros(2*len(self.joints))
 
-    def _write(self, data):
+    def _write_continuous(self, data):
         """apply the action data on the robot."""
         pos, vel = self.robot.get_joint_positions(self.joints), self.robot.get_joint_velocities(self.joints)
         data += np.concatenate((pos, vel))
-        super(JointPositionAndVelocityChangeAction, self)._write(data)
+        super(JointPositionAndVelocityChangeAction, self)._write_continuous(data)
 
 
 # class JointPositionVelocityAccelerationAction(JointAction):
@@ -491,14 +545,15 @@ class JointTorqueAction(JointAction):
             self.data = robot.get_joint_torques(self.joints)
             self._space = gym.spaces.Box(low=self.f_min, high=self.f_max)
 
-    def _write(self, data):
+    def _write_continuous(self, data):
         """apply the action data on the robot."""
         data = np.clip(data, self.f_min, self.f_max)
+        print(data)
         self.robot.set_joint_torques(data, self.joints)
 
     def __copy__(self):
         """Return a shallow copy of the action. This can be overridden in the child class."""
-        return self.__class__(robot=self.robot, joint_ids=self.joints, f_min=self.f_min, f_max=self.f_max)
+        return self.__class__(robot=self.robot, joint_ids=self.joints, bounds=(self.f_min, self.f_max))
 
     def __deepcopy__(self, memo={}):
         """Return a deep copy of the action. This can be overridden in the child class.
@@ -550,11 +605,11 @@ class JointTorqueGravityCompensationAction(JointTorqueAction):
         if self.discrete_values is None:
             self.data = np.zeros(len(self.joints))
 
-    def _write(self, data):
+    def _write_continuous(self, data):
         """apply the action data on the robot."""
         # add gravity compensation torques
         data += self.robot.get_gravity_compensation_torques(q_idx=self.q_indices)
-        super(JointTorqueGravityCompensationAction, self)._write(data)
+        super(JointTorqueGravityCompensationAction, self)._write_continuous(data)
 
 
 # alias
@@ -562,7 +617,7 @@ class JointTorqueGravityCompensationAction(JointTorqueAction):
 JointTorqueChangeAction = JointTorqueGravityCompensationAction
 
 
-class JointAccelerationAction(JointAction):
+class JointAccelerationAction(JointAction):  # TODO: discrete values
     r"""Joint Acceleration Action
 
     Set the joint accelerations using force/torque control. In order to produce the given joint accelerations,
@@ -595,14 +650,15 @@ class JointAccelerationAction(JointAction):
         if self.discrete_values is None:
             self.data = robot.get_joint_accelerations(self.joints)
 
-    def _write(self, data):
+    def _write_continuous(self, data):
         """apply the action data on the robot."""
         data = np.clip(data, self.a_min, self.a_max)
         self.robot.set_joint_accelerations(data, self.joints)
 
     def __copy__(self):
         """Return a shallow copy of the action. This can be overridden in the child class."""
-        return self.__class__(robot=self.robot, joint_ids=self.joints, a_min=self.a_min, a_max=self.a_max)
+        return self.__class__(robot=self.robot, joint_ids=self.joints, bounds=(self.a_min, self.a_max),
+                              discrete_values=self.discrete_values)
 
     def __deepcopy__(self, memo={}):
         """Return a deep copy of the action. This can be overridden in the child class.
@@ -616,6 +672,43 @@ class JointAccelerationAction(JointAction):
         joints = copy.deepcopy(self.joints)
         a_min = copy.deepcopy(self.a_min)
         a_max = copy.deepcopy(self.a_max)
-        action = self.__class__(robot=robot, joint_ids=joints, f_min=a_min, f_max=a_max)
+        discrete_values = copy.deepcopy(self.discrete_values)
+        action = self.__class__(robot=robot, joint_ids=joints, bounds=(a_min, a_max), discrete_values=discrete_values)
         memo[self] = action
         return action
+
+
+class JointAccelerationChangeAction(JointAccelerationAction):
+    r"""Joint Acceleration Change Action
+
+    Set the joint accelerations using force/torque control. In order to produce the given joint accelerations,
+    we use inverse dynamics which given the joint accelerations produce the corresponding joint forces/torques
+    to be applied.
+    """
+
+    def __init__(self, robot, joint_ids=None, bounds=(None, None), discrete_values=None):
+        """
+        Initialize the joint acceleration action.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, list of int, None): joint id, or list of joint ids. If None, get all the actuated joints.
+            bounds (tuple of 2 float / np.array[N] / None): minimum and maximum accelerations. If None, it will use
+                the default joint acceleration limits. If it still doesn't find them, it will set -np.infty and
+                np.infty.
+            discrete_values (np.array[M], np.array[N,M], list of np.array[M], None): discrete values for each joint.
+                Note that by specifying this, the joint action is no more continuous but becomes discrete. By default,
+                the first value along the first axis / dimension are the values by default that are set if no data
+                is provided.
+        """
+        super(JointAccelerationChangeAction, self).__init__(robot, joint_ids, bounds=bounds,
+                                                            discrete_values=discrete_values)
+
+        # set data if continuous
+        if self.discrete_values is None:
+            self.data = np.zeros(len(self.joints))
+
+    def _write_continuous(self, data):
+        """apply the action data on the robot."""
+        data += self.robot.get_joint_accelerations(self.joints)
+        super(JointAccelerationChangeAction, self)._write_continuous(data)

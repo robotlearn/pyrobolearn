@@ -6,7 +6,7 @@ from .robot_actions import RobotAction
 from .joint_actions import JointAction, JointPositionAction, JointPositionChangeAction, JointVelocityAction, \
     JointVelocityChangeAction, JointPositionAndVelocityAction, JointPositionAndVelocityChangeAction, \
     JointTorqueAction, JointForceAction, JointTorqueGravityCompensationAction, JointTorqueChangeAction, \
-    JointAccelerationAction
+    JointAccelerationAction, JointAccelerationChangeAction
 
 # import the link / end-effector actions
 from .link_actions import LinkAction, LinkPositionAction, LinkPositionChangeAction, LinkOrientationAction, \

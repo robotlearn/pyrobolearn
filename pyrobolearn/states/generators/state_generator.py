@@ -106,9 +106,9 @@ class StateGenerator(object):
         """Return a string describing the class."""
         return self.__class__.__name__
 
-    def __call__(self, set_data=True):
+    def __call__(self, set_data=True, reset_state=True):
         """Call the generator."""
-        return self.generate(set_data=set_data)
+        return self.generate(set_data=set_data, reset_state=reset_state)
 
 
 class FixedStateGenerator(StateGenerator):
@@ -474,10 +474,11 @@ class UniformStateGenerator(StateDistributionGenerator):
         # for idx, datum, low, high in enumerate(zip(data, self.low, self.high)):
         #     data[idx] = np.clip(datum, low, high)
 
-        data = [np.random.uniform(low=low, high=high, size=len(state))
+        data = [np.random.uniform(low=low, high=high, size=state.total_size())
                 for state, low, high in zip(self.state, self.low, self.high)]
         if set_data:
             self.state.data = data
+            # print("Generate: {}".format(self.state.data))
         if reset_state:
             self.state.reset()
         return data
