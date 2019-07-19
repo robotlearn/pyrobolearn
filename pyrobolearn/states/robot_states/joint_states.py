@@ -163,7 +163,7 @@ class JointTrigonometricPositionState(JointState):
         super(JointTrigonometricPositionState, self).__init__(robot, joint_ids, window_size=window_size, axis=axis,
                                                               ticks=ticks)
 
-        high = np.ones(len(self.joints))
+        high = np.ones(2 * len(self.joints))
         self._space = spaces.Box(low=-high, high=high, dtype=np.float32)
 
     def _read(self):
@@ -204,6 +204,18 @@ class JointVelocityState(JointState):
     def _read(self):
         """Read the next joint velocity state."""
         self.data = self.robot.get_joint_velocities(self.joints)
+
+    def _reset(self):
+        """Reset the state."""
+        # reset counter
+        self.cnt = 0.
+
+        # reset the robot joint position based on the data
+        if len(self.data) > 0:
+            self.robot.reset_joint_states(dq=self.data[0], joint_ids=self.joints)
+
+        # read the next data
+        self._read()
 
 
 class JointForceTorqueState(JointState):
