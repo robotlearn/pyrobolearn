@@ -1705,8 +1705,8 @@ class Bullet(Simulator):
                 using forward kinematics.
 
         Returns:
-            np.array[3]: Cartesian position of CoM
-            np.array[4]: Cartesian orientation of CoM, in quaternion [x,y,z,w]
+            np.array[3]: Cartesian world position of CoM
+            np.array[4]: Cartesian world orientation of CoM, in quaternion [x,y,z,w]
             np.array[3]: local position offset of inertial frame (center of mass) expressed in the URDF link frame
             np.array[4]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed in URDF link
                 frame

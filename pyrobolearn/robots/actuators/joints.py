@@ -4,6 +4,7 @@
 
 import copy
 import numpy as np
+from abc import ABCMeta
 
 from pyrobolearn.robots.actuators.actuator import Actuator
 
@@ -18,16 +19,24 @@ __status__ = "Development"
 
 
 class JointActuator(Actuator):
-    r"""Joint Actuators
+    r"""Joint Actuators (abstract)
 
     This defined the joint actuator class; this is an actuator which is attached to a joint and outputs the torque
     to be applied on it using a specific control scheme (e.g. PD control).
     For instance, given a target joint position value, the actuator computes the necessary torque to be applied on
     the joint using a simple PD control (with certain gains).
     """
+    __metaclass__ = ABCMeta
 
-    def __init__(self, joint_id):
-        super(JointActuator, self).__init__()
+    def __init__(self, joint_id, latency=None):
+        """
+        Initialize the joint actuator.
+
+        Args:
+            joint_id (int): joint unique id.
+            latency (int, float, None): latency time / step.
+        """
+        super(JointActuator, self).__init__(latency=latency)
         self.joint_id = joint_id
 
     def __copy__(self):
@@ -55,12 +64,22 @@ class PDJointActuator(JointActuator):
     """
 
     def __init__(self, joint_id, kp=0, kd=0, min_torque=-np.infty, max_torque=np.infty, latency=0):
-        super(PDJointActuator, self).__init__(joint_id)
+        """
+        Initialize the PD joint actuator.
+
+        Args:
+            joint_id (int): joint id.
+            kp (float): position gain
+            kd (float): velocity gain
+            min_torque (float): minimum torque
+            max_torque (float): maximum torque
+            latency (int, float, None): latency time / step.
+        """
+        super(PDJointActuator, self).__init__(joint_id, latency=latency)
         self.kp = kp
         self.kd = kd
         self.min_torque = min_torque
         self.max_torque = max_torque
-        self.latency = latency
 
     def compute(self, qd, q, dq):
         """

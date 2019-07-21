@@ -22,6 +22,8 @@ from pyrobolearn.utils.transformation import *
 from pyrobolearn.utils.manifold_utils import tensor_matrix_product, symmetric_matrix_to_vector, logarithm_map, \
     distance_spd
 from pyrobolearn.robots.base import ControllableBody
+from pyrobolearn.robots.sensors.sensor import Sensor
+from pyrobolearn.robots.actuators.actuator import Actuator
 
 
 __author__ = "Brian Delhaisse"
@@ -167,8 +169,8 @@ class Robot(ControllableBody):
         self.kp, self.kd = None, None
 
         # sensors and actuators
-        self.sensors = []  # list of sensors
-        self.actuators = []  # list of actuators
+        self.sensors = {}  # dict of sensors {SensorClass: [sensorInstance]}
+        self.actuators = {}  # dict of actuators {ActuatorClass: [actuatorInstance]}
 
     #############
     # Operators #
@@ -227,6 +229,60 @@ class Robot(ControllableBody):
         """Return the number of joints that are not fixed."""
         return len(self.joints)
 
+    @property
+    def sensors(self):
+        """Return the dict of Sensor instances."""
+        return self._sensors
+
+    @sensors.setter
+    def sensors(self, sensors):
+        """Set the dict of Sensor instances."""
+        if sensors is None:
+            sensors = {}
+        elif isinstance(sensors, Sensor):
+            sensors = {sensors.__class__: [sensors]}
+        elif isinstance(sensors, (list, tuple, dict)):
+            if isinstance(sensors, dict):
+                sensors = sensors.values()
+            sensor_dict = {}
+            for i, sensor in enumerate(sensors):
+                if not isinstance(sensor, Sensor):
+                    raise TypeError("Expecting the {}th sensor to be an instance of `Sensor`, instead got: "
+                                    "{}".format(i, type(sensor)))
+                sensor_dict.setdefault(sensor.__class__, []).append(sensor)
+            sensors = sensor_dict
+        else:
+            raise TypeError("Expecting the given 'sensors' to be a `Sensor` or a list of `Sensor`, instead got: "
+                            "{}".format(type(sensors)))
+        self._sensors = sensors
+
+    @property
+    def actuators(self):
+        """Return the dict of Actuator instances."""
+        return self._actuators
+
+    @actuators.setter
+    def actuators(self, actuators):
+        """Set the dict of Actuator instances."""
+        if actuators is None:
+            actuators = {}
+        elif isinstance(actuators, Actuator):
+            actuators = {actuators.__class__: [actuators]}
+        elif isinstance(actuators, (list, tuple, dict)):
+            if isinstance(actuators, dict):
+                actuators = actuators.values()
+            actuator_dict = {}
+            for i, actuator in enumerate(actuators):
+                if not isinstance(actuator, Actuator):
+                    raise TypeError("Expecting the {}th actuator to be an instance of `Actuator`, instead got: "
+                                    "{}".format(i, type(actuator)))
+                actuator_dict.setdefault(actuator.__class__, []).append(actuator)
+            actuators = actuator_dict
+        else:
+            raise TypeError("Expecting the given 'actuators' to be a `Actuator` or a list of `Actuator`, instead got: "
+                            "{}".format(type(actuators)))
+        self._actuators = actuators
+
     ###########
     # Methods #
     ###########
@@ -244,13 +300,16 @@ class Robot(ControllableBody):
 
     def sense(self):
         """Run all the sensors."""
-        for sensor in self.sensors:
-            sensor()
+        for sensors in self.sensors.itervalues():
+            for sensor in sensors:
+                sensor.clean()
+                sensor.sense()
 
     def act(self):
         """Run all the actuators."""
-        for actuator in self.actuators:
-            actuator()
+        for actuators in self.actuators.itervalues():
+            for actuator in actuators:
+                actuator()
 
     ########
     # Base #
@@ -401,6 +460,28 @@ class Robot(ControllableBody):
         if concatenate:
             return np.concatenate((acc[0], acc[1]))
         return acc
+
+    def get_base_linear_acceleration(self):
+        """
+        Return the linear acceleration of the base. Some simulators does not provide the accelerations.
+        If that is the case, then we use finite difference to compute it (calling this the first time will return a
+        zero vector for the linear acceleration).
+
+        Returns:
+            np.array[3]: linear acceleration
+        """
+        return self.get_base_acceleration(concatenate=False)[0]
+
+    def get_base_angular_acceleration(self):
+        """
+        Return the angular acceleration of the base. Some simulators does not provide the accelerations.
+        If that is the case, then we use finite difference to compute it (calling this the first time will return a
+        zero vector for the angular acceleration).
+
+        Returns:
+            np.array[3]: angular acceleration
+        """
+        return self.get_base_acceleration(concatenate=False)[1]
 
     def get_base_spatial_acceleration(self):
         """
@@ -1224,6 +1305,12 @@ class Robot(ControllableBody):
         r"""
         Reset the state of the robot.
 
+        Args:
+            q (int, float, np.array[N], None): joint position(s).
+            dq (int, float, np.array[N], None): joint velocity(ies).
+            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, it will disable the motors of
+                all actuated joints.
+
         Warnings: This is only valid in the simulator, and note that calling this method overrides all physics
         simulation.
         """
@@ -1610,10 +1697,10 @@ class Robot(ControllableBody):
         """
         # check if cached
         if 'link_pos' in self._state:
-            pos = self._state['link_pos'][0]  # (N,6)
+            pos = self._state['link_pos'][0]  # (N,3)
         else:
             links = list(range(self.num_links))
-            pos = self.sim.get_link_world_positions(body_id=self.id, link_ids=links)  # (N,6)
+            pos = self.sim.get_link_world_positions(body_id=self.id, link_ids=links)  # (N,3)
             self._state['link_pos'] = [pos, time.time()]
 
         # if one link
@@ -1651,6 +1738,10 @@ class Robot(ControllableBody):
         p1 = self.get_link_world_positions(link_ids, flatten=False)
         p0 = self.get_base_position() if wrt_link_id is None or wrt_link_id == -1 \
                 else self.get_link_world_positions(wrt_link_id, flatten=False)
+
+        # p^0 = o^0_1 + R^0_1 p^1
+        # Notation: ^i = expressed in frame i, _j = point j, o^i_j = origin position of point j in frame i
+        # TODO: should I express it in the world coordinate frame or in the wrt_link frame??
         p = (p1 - p0)
         if flatten:
             return p.reshape(-1)
@@ -1706,7 +1797,9 @@ class Robot(ControllableBody):
                 q0 = np.asarray([get_quaternion_inverse(self.get_link_world_orientations(link))
                                  for link in wrt_link_id])
 
+        # R^w_1 = R^w_0 R^0_1  <-->  R^0_1 = (R^w_0)^{-1} R^w_1 = R^0_w R^w_1 --> q = q_0^{-1} * q_1
         q = get_quaternion_product(q0, q1)
+
         if flatten:
             q.reshape(-1)
         return q
@@ -2065,7 +2158,57 @@ class Robot(ControllableBody):
             return acc.reshape(-1)  # (N*6,)
         return acc
 
-    def get_spatial_link_world_acceleration(self, link_ids=None, flatten=True):
+    def get_link_world_linear_accelerations(self, link_ids=None, flatten=True):
+        """
+        Return the linear accelerations (expressed in the Cartesian world space coordinates) for the given link(s).
+        See :func:`~get_link_world_accelerations` for more information.
+
+        Args:
+            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the linear
+                accelerations of all links associated to actuated joints.
+            flatten (bool): if True, it will return a 1D array instead of a 2D array
+
+        Returns:
+            if 1 link:
+                np.array[3]: linear acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[N*3], np.array[N,3]: linear acceleration of each link
+        """
+        accelerations = self.get_link_world_accelerations(link_ids=link_ids, flatten=False)
+        if isinstance(link_ids, int):
+            return accelerations[:3]
+        accelerations = accelerations[:, :3]
+
+        if flatten:
+            return accelerations.reshape(-1)
+        return accelerations
+
+    def get_link_world_angular_accelerations(self, link_ids=None, flatten=True):
+        """
+        Return the angular accelerations (expressed in the Cartesian world space coordinates) for the given link(s).
+        See :func:`~get_link_world_accelerations` for more information.
+
+        Args:
+            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the angular
+                accelerations of all links associated to actuated joints.
+            flatten (bool): if True, it will return a 1D array instead of a 2D array
+
+        Returns:
+            if 1 link:
+                np.array[3]: angular acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[N*3], np.array[N,3]: angular acceleration of each link
+        """
+        accelerations = self.get_link_world_accelerations(link_ids=link_ids, flatten=False)
+        if isinstance(link_ids, int):
+            return accelerations[3:]
+        accelerations = accelerations[:, 3:]
+
+        if flatten:
+            return accelerations.reshape(-1)
+        return accelerations
+
+    def get_spatial_link_world_accelerations(self, link_ids=None, flatten=True):
         r"""
         Return the spatial link world accelerations which is the concatenation of the angular and linear accelerations.
         The difference with :func:`~get_link_world_accelerations` is that this one returns the concatenation of the
@@ -4038,26 +4181,38 @@ class Robot(ControllableBody):
             return self.sensors
         return self.sensors[idx]
 
-    def get_imu(self, idx=0):
-        pass
+    def add_sensor(self, sensor):
+        """
+        Add a sensor to the list of sensors.
 
-    def get_force_torque_sensor(self, idx=0):
-        pass
+        Args:
+            sensor (Sensor): sensor instance.
+        """
+        if not isinstance(sensor, Sensor):
+            raise TypeError("Expecting the given 'sensor' to be an instance of `Sensor`, instead got: "
+                            "{}".format(sensor))
+        self.sensors.setdefault(sensor.__class__, []).append(sensor)
 
-    def has_camera(self):
-        return False
-
-    def get_camera(self, idx=0):
-        pass
-
-    def get_camera_image(self, idx=0):
-        pass
-
-    def get_main_camera(self):
-        pass
-
-    def get_main_camera_image(self):
-        pass
+    # def get_imu(self, idx=0):
+    #     pass
+    #
+    # def get_force_torque_sensor(self, idx=0):
+    #     pass
+    #
+    # def has_camera(self):
+    #     return False
+    #
+    # def get_camera(self, idx=0):
+    #     pass
+    #
+    # def get_camera_image(self, idx=0):
+    #     pass
+    #
+    # def get_main_camera(self):
+    #     pass
+    #
+    # def get_main_camera_image(self):
+    #     pass
 
     #############
     # Actuators #
@@ -4086,6 +4241,18 @@ class Robot(ControllableBody):
         if idx is None:
             return self.actuators
         return self.actuators[idx]
+
+    def add_actuator(self, actuator):
+        """
+        Add an actuator to the list of actuators.
+
+        Args:
+            actuator (Actuator): actuator instance.
+        """
+        if not isinstance(actuator, Actuator):
+            raise TypeError("Expecting the given 'actuator' to be an instance of `Actuator`, instead got: "
+                            "{}".format(actuator))
+        self.actuators.setdefault(actuator.__class__, []).append(actuator)
 
     #########
     # Debug #

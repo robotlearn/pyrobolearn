@@ -753,9 +753,38 @@ def get_spatial_transformation_matrix(rotation, position):
 quat_converter = QuaternionNumpyConverter(convention=1)
 
 
+def get_rotated_point_from_quaternion(q, p, convention='xyzw'):
+    """
+    Return the rotated point due to the provided quaternion.
+
+    .. math:: P_{\text{rotated}} = q * P * q^{-1} = q * P * q'
+
+    where :math:`q` is the unit quaternion (to represents a proper rotation and thus the inverse :math:`q^{-1}` is
+    equal to the conjugate :math:`q' = \bar{q}`), and :math:`P` is the quaternion where its vector part is equal to
+    the 3D position of the point :math:`p` and its scalar part is 0.
+
+    Args:
+        q (np.array[4], quaternion.quaternion): quaternion (it doesn't have to be a unit quaternion)
+        p (np.array[3]): 3d point in space.
+        convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
+            'wxyz'.
+
+    Returns:
+        np.array[3]: rotated 3 point.
+    """
+    # TODO: fix this!
+    p_quat = np.array([p[0], p[1], p[2], 0])
+    q_inv = get_quaternion_inverse(q, convention=convention)
+    p_rot = get_quaternion_product(q, get_quaternion_product(p_quat, q_inv, convention=convention),
+                                   convention=convention)
+    return p_rot[:3]
+
+
 def get_quaternion_conjugate(q, convention='xyzw'):
     r"""Return the conjugate of the given quaternion; i.e. if the quaternion is given by q = [x,y,z,w] where [x,y,z]
-    is the vector part and
+    is the vector part and w is the scalar part, the conjugate is q'=[-x,-y,-z,w].
+
+    If the quaternion is a unit quaternion, the conjugate is equal to the inverse of that quaternion.
 
     Args:
         q (np.array[4], quaternion.quaternion): quaternion (it doesn't have to be a unit quaternion)
@@ -813,6 +842,13 @@ def get_quaternion_inverse(q, convention='xyzw'):
     """Return the inverse of the given quaternion.
 
     Note: the inverse of a quaternion is the conjugate of the quaternion divided by the square norm of that quaternion.
+    Thus for a unit quaternion, the inverse of a quaternion is equal to its conjugate.
+
+    This is given by:
+
+    .. math:: q^{-1} = \frac{\bar{q}}{||q||}
+
+    where :math:`\bar{q}` is the conjugate of the quaternion :math:`q`.
 
     Args:
         q (np.array[4], quaternion.quaternion): quaternion.
@@ -824,13 +860,13 @@ def get_quaternion_inverse(q, convention='xyzw'):
     """
     if isinstance(q, quaternion.quaternion):
         return q.inverse()
-    elif isinstance(q, Iterable):
+    elif isinstance(q, (np.ndarray, tuple, list)):
         if convention == 'xyzw':
             x, y, z, w = q
-            return np.array([-x, -y, -z, w])
+            return np.array([-x, -y, -z, w]) / np.linalg.norm(q)
         elif convention == 'wxyz':
             w, x, y, z = q
-            return np.array([w, -x, -y, -z])
+            return np.array([w, -x, -y, -z]) / np.linalg.norm(q)
         else:
             raise NotImplementedError("Asking for a convention that has not been implemented")
     else:
@@ -839,6 +875,9 @@ def get_quaternion_inverse(q, convention='xyzw'):
 
 def get_quaternion_product(q1, q2, convention='xyzw'):
     """Return the quaternion product between two quaternions.
+
+    The quaternion corresponding to the product :math:`R_1 R_2` where :math:`R_i` are rotation matrices is given by
+    :math:`q_1 * q_2`.
 
     Args:
         q1 (np.array[4], quaternion.quaternion): first quaternion

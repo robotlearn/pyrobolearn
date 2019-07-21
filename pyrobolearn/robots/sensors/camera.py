@@ -19,7 +19,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class CameraSensor(LinkSensor):
+class CameraSensor(LinkSensor):  # TODO: double-check this class
     r"""Camera Sensor class.
 
     The following operations are carried out (in the given order) to display images seen by the camera:
@@ -44,7 +44,7 @@ class CameraSensor(LinkSensor):
 
     Examples:
         sim = BulletClient(connection_mode=p.GUI)
-        cam = Camera(sim, width=400, height=400, target_position=(0,0,0), eyePosition=(2,0,1))
+        cam = Camera(sim, width=400, height=400, target_position=(0,0,0), position=(2,0,1))
         img = cam.get_rgb_image()
         plt.imshow(img)
         plt.show()
@@ -56,7 +56,8 @@ class CameraSensor(LinkSensor):
         [4] http://learnwebgl.brown37.net/08_projections/projections_perspective.html
     """
 
-    def __init__(self, simulator, body_id, link_id, width, height, position=None, orientation=None, rate=50,
+    def __init__(self, simulator, body_id, link_id, width, height, noise=None, ticks=50, latency=None,
+                 position=None, orientation=None,
                  target_position=None, distance=10.,
                  fovy=60, aspect=None, near=0.01, far=100.,
                  left=None, right=None, bottom=None, top=None):
@@ -65,15 +66,22 @@ class CameraSensor(LinkSensor):
 
         Args:
             simulator: simulator to access to the sensor.
-            position (list/tuple/array of 3 floats): position of the sensor
-            orientation (quaternion): orientation of the sensor
+            body_id (int): unique id of the body.
+            link_id (int): unique id of the link.
             width (int): width of the returned pictures
             height (int): height of the returned pictures
+            noise (None, Noise): noise to be added.
+            ticks (int): number of steps to wait/sleep before acquisition of the next sensor value.
+            latency (int, float, None): latency time / step.
+            position (np.array[3], None): local position of the sensor with respect to the given link. If None, it will
+                be the zero vector.
+            orientation (np.array[4], None): local orientation of the sensor with respect to the given link (expressed
+                as a quaternion [x,y,z,w]). If None, it will be the unit quaternion [0,0,0,1].
 
             For a view matrix:
                 target_position (list/tuple of 3 floats): target focus point in cartesian world coordinates
-                eyePosition (list/tuple of 3 floats): eye position in cartesian world coordinates
-                UpVector (list/tuple of 3 floats): up vector of the camera in cartesian world coordinates
+                position (list/tuple of 3 floats): eye position in cartesian world coordinates
+                up_vector (list/tuple of 3 floats): up vector of the camera in cartesian world coordinates
 
             For a view matrix from RPY:
                 target_position (list/tuple of 3 floats): target focus point in cartesian world coordinates
@@ -81,7 +89,7 @@ class CameraSensor(LinkSensor):
                 yaw (float): yaw angle in degrees of the camera
                 pitch (float): pitch angle in degrees of the camera
                 roll (float): roll angle in degrees of the camera
-                upAxisIndex (int): either 1 for Y or 2 for Z axis up (default Z axis)
+                up_axis_index (int): either 1 for Y or 2 for Z axis up (default Z axis)
 
             For a perspective projection:
                 fovy (float): field of view in the y direction (height) in degrees
@@ -97,7 +105,8 @@ class CameraSensor(LinkSensor):
                 bottom (float): bottom screen (canvas) coordinate
                 top (float): top screen (canvas) coordinate
         """
-        super(CameraSensor, self).__init__(simulator, body_id, link_id, position, orientation, rate)
+        super(CameraSensor, self).__init__(simulator, body_id=body_id, link_id=link_id, noise=noise, ticks=ticks,
+                                           latency=latency, position=position, orientation=orientation)
 
         self.width = int(width)
         self.height = int(height)
@@ -168,20 +177,18 @@ class CameraSensor(LinkSensor):
         """
         Return the captured RGBA image. 'A' stands for alpha channel (for opacity/transparency)
         """
-        img = self.sim.get_camera_image(self.width, self.height, self.getV(), self._P,
-                                        shadow=1,  # lightDirection=[1,1,1],
-                                        # renderer=self.sim.ER_TINY_RENDERER)[2])
-                                        renderer=self.sim.ER_BULLET_HARDWARE_OPENGL)[2]
-        img = img.reshape(self.width, self.height, 4)  # RGBA
+        img = self.sim.get_rgba_image(self.width, self.height, view_matrix=self.getV(), projection_matrix=self._P,
+                                      shadow=1,  # lightDirection=[1,1,1],
+                                      # renderer=self.sim.ER_TINY_RENDERER)[2])
+                                      renderer=self.sim.ER_BULLET_HARDWARE_OPENGL)
         return img
 
     def get_depth_image(self):
         """
         Return the depth image.
         """
-        img = self.sim.get_camera_image(self.width, self.height, self.getV(), self._P,
-                                        renderer=self.sim.ER_BULLET_HARDWARE_OPENGL)[3]
-        img = img.reshape(self.width, self.height)
+        img = self.sim.get_depth_image(self.width, self.height, view_matrix=self.getV(), projection_matrix=self._P,
+                                       renderer=self.sim.ER_BULLET_HARDWARE_OPENGL)
         return img
 
     def get_rgbad_image(self, concatenate=True):
@@ -189,23 +196,82 @@ class CameraSensor(LinkSensor):
         Return the RGBA and depth images.
         """
         rgba, depth = self.sim.get_camera_image(self.width, self.height, self.getV(), self._P)[2:4]
-        rgba = rgba.reshape(self.width, self.height, 4)
-        depth = depth.reshape(self.width, self.height)
         if concatenate:
             return np.dstack((rgba, depth))
         return rgba, depth
 
-    _sense = get_rgbad_image
+    def _sense(self, apply_noise=True):
+        """
+        Sense using the camera sensor.
+
+        Args:
+            apply_noise (bool): if we should apply the noise or not. Note that the sensor might already have some noise.
+
+        Returns:
+            np.array[W,H,5]: RGBA and depth image concatenated together
+        """
+        data = self.get_rgbad_image()
+        if apply_noise:
+            self._noise(data, inplace=True)  # inplace otherwise can be expensive
+        return data
 
 
 class DepthCameraSensor(CameraSensor):
     r"""Depth Camera sensor.
     """
-    _sense = CameraSensor.get_depth_image
+
+    def _sense(self, apply_noise=True):
+        """
+        Sense using the depth camera sensor.
+
+        Args:
+            apply_noise (bool): if we should apply the noise or not. Note that the sensor might already have some noise.
+
+        Returns:
+            np.array[W,H]: depth image
+        """
+        data = self.get_depth_image()
+        if apply_noise:
+            self._noise(data, inplace=True)  # inplace otherwise can be expensive
+        return data
 
 
-class Camera2DSensor(CameraSensor):
-    r"""2D camera sensor
+class RGBCameraSensor(CameraSensor):
+    r"""RGB camera sensor
     """
-    _sense = CameraSensor.get_rgb_image
 
+    def _sense(self, apply_noise=True):
+        """
+        Sense using the camera RGB sensor.
+
+        Args:
+            apply_noise (bool): if we should apply the noise or not. Note that the sensor might already have some noise.
+
+        Returns:
+            np.array[W,H]: depth image
+        """
+        data = self.get_rgb_image()
+        if apply_noise:
+            self._noise(data, inplace=True)  # inplace otherwise can be expensive
+        return data
+
+
+# class SegmentationCameraSensor(CameraSensor):
+#     r"""Segmentation Camera sensor.
+#     """
+#
+#     def _sense(self, apply_noise=True):
+#         """
+#         Sense using the camera RGB sensor.
+#
+#         Args:
+#             apply_noise (bool): if we should apply the noise or not. Note that the sensor might already have some noise.
+#
+#         Returns:
+#             np.array[W,H]: depth image
+#         """
+#         data = self.get_rgb_image()
+#         if apply_noise:
+#             self._noise(data, inplace=True)  # inplace otherwise can be expensive
+#         return data
+#

@@ -7,7 +7,7 @@ other joint actuators. Additionally, this is important as more realistic motors 
 simulation to reality.
 """
 
-# TODO: add latency + noise
+from pyrobolearn.robots.noise.noise import Noise, NoNoise
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -26,20 +26,42 @@ class Actuator(object):
     Other actuators such as speakers, leds, and others are attached to links.
     """
 
-    def __init__(self, latency=0):
+    def __init__(self, noise=None, latency=0):
         """
         Initialize the actuator.
 
         Args:
-            latency (int, float): latency.
+            noise (None, Noise): noise to be added.
+            latency (int, float, None): latency time / step.
         """
 
         # variable to check if the actuator is enabled
         self._enabled = True
+
+        # set the latency
+        if not isinstance(latency, (int, float)):
+            raise TypeError("Expecting the given 'latency' to be an int or float, instead got: "
+                            "{}".format(type(latency)))
+        if latency < 0:
+            raise ValueError("Expecting the given 'latency' to be a positive number, but got instead: "
+                             "{}".format(latency))
         self._latency = latency
+        self._latent_cnt = -1
+
+        # set the noise
+        if noise is None:
+            noise = NoNoise()
+        if not isinstance(noise, Noise):
+            raise TypeError("Expecting the given 'noise' to be an instance of Noise, instead got: "
+                            "{}".format(type(noise)))
+        self._noise = noise
 
     #     self.sim = simulator
-    #
+
+    ##############
+    # Properties #
+    ##############
+
     # @property
     # def simulator(self):
     #     return self.sim
@@ -47,6 +69,16 @@ class Actuator(object):
     # @simulator.setter
     # def simulator(self, simulator):
     #     self.sim = simulator
+
+    @property
+    def enabled(self):
+        """Return if the sensor is enabled or not."""
+        return self._enabled
+
+    @property
+    def disabled(self):
+        """Return if the sensor is disabled or not."""
+        return not self._enabled
 
     ###########
     # Methods #

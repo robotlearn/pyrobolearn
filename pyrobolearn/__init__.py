@@ -3,6 +3,7 @@
 
 name = "pyrobolearn"
 
+import os
 import sys
 import signal
 from itertools import count
@@ -120,6 +121,11 @@ def module_imported(module_name):  # TODO: improve this method
         return True
     return False
 
+
+world_mesh_path = os.path.dirname(os.path.abspath(__file__)) + '/worlds/meshes/'
+
+__all__ = [simulators, robots, worlds, physics, states, actions, terminal_conditions, rewards, envs, models,
+           approximators, policies, values, actorcritics, dynamics, tools]
 
 # Define what submodules/classes/functions should be loaded when writing 'from pyrobolearn import *'
 # __all__ = [

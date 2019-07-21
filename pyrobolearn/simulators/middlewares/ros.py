@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-"""Define the ROS API.
+"""Define the ROS middleware API.
 
 Dependencies in PRL:
 * `pyrobolearn.simulators.simulator.Simulator`
 """
+
 
 # TODO
 import os

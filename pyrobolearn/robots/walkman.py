@@ -64,16 +64,16 @@ class Walkman(BipedRobot, BiManipulator):
         # fovx = 1.3962634rad = 80 degrees, Gaussian noise = N(0, 0.007)
         # "left_camera_frame",
         self.left_camera = CameraSensor(self.sim, self.id, 11, width=800, height=800, fovy=80, near=0.02, far=300,
-                                        rate=30)  # 11
+                                        ticks=30)  # 11
         self.right_camera = CameraSensor(self.sim, self.id, 13, width=800, height=800, fovy=80, near=0.02, far=300,
-                                         rate=30)  # 13
+                                         ticks=30)  # 13
 
         # Laser (depth) sensor: Hokuyo sensor
         # link: "head_hokuyo_frame"
         # freq=40, samples = 720, angle = [-1.570796, 1.570796] rad, range = [0.10, 30.0] m
         # Gaussian noise: N(0.0, 0.01)
         self.depth_camera = CameraSensor(self.sim, self.id, 10, width=200, height=200, fovy=80, near=0.1, far=30.0,
-                                         rate=40)
+                                         ticks=40)
 
         self.cameras = [self.left_camera, self.right_camera, self.depth_camera]
 
