@@ -114,7 +114,7 @@ class Sensor(object):  # sensor attached to a link or joint
         if latency < 0:
             raise ValueError("Expecting the given 'latency' to be a positive number, but got instead: "
                              "{}".format(latency))
-        self._latency = latency
+        self._latency = latency + 1
         self._latent_cnt = -1
 
         # data from last acquisition

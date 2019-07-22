@@ -29,10 +29,11 @@ class JointSensor(Sensor):
     __metaclass__ = ABCMeta
 
     def __init__(self, simulator, body_id, joint_ids=None, noise=None, ticks=1, latency=None):
-        """Initialize the sensor.
+        """
+        Initialize the joint sensor.
 
         Args:
-            simulator (Simulator): simulator
+            simulator (Simulator): simulator instance.
             body_id (int): unique body id.
             joint_ids (int, int[N], None): joint id, or list of joint ids. If None, it will get all the actuated joints.
             noise (None, Noise): noise to be added.
@@ -222,7 +223,7 @@ class JointEncoderSensor(JointSensor):
         Initialize the joint encoder sensor.
 
         Args:
-            simulator (Simulator): simulator
+            simulator (Simulator): simulator instance.
             body_id (int): unique body id.
             joint_ids (int, int[N], None): joint id, or list of joint ids. If None, it will get all the actuated joints.
             noise (None, Noise): noise to be added.

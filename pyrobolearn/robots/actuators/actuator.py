@@ -7,7 +7,9 @@ other joint actuators. Additionally, this is important as more realistic motors 
 simulation to reality.
 """
 
-from pyrobolearn.robots.noise.noise import Noise, NoNoise
+from abc import ABCMeta
+
+from pyrobolearn.utils.data_structures.queues import FIFOQueue
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -25,20 +27,27 @@ class Actuator(object):
     All actuator classes inherit from this class. Actuators such as motors are often attached to the robot joints.
     Other actuators such as speakers, leds, and others are attached to links.
     """
+    __metaclass__ = ABCMeta
 
-    def __init__(self, noise=None, latency=0):
+    def __init__(self, ticks=1, latency=0):
         """
         Initialize the actuator.
 
         Args:
-            noise (None, Noise): noise to be added.
+            ticks (int): number of steps to wait/sleep before acting in the world.
             latency (int, float, None): latency time / step.
         """
 
         # variable to check if the actuator is enabled
         self._enabled = True
 
+        # set the ticks
+        self._ticks = ticks
+        self._cnt = -1
+
         # set the latency
+        if latency is None:
+            latency = 0
         if not isinstance(latency, (int, float)):
             raise TypeError("Expecting the given 'latency' to be an int or float, instead got: "
                             "{}".format(type(latency)))
@@ -46,17 +55,10 @@ class Actuator(object):
             raise ValueError("Expecting the given 'latency' to be a positive number, but got instead: "
                              "{}".format(latency))
         self._latency = latency
-        self._latent_cnt = -1
+        self._data_queue = FIFOQueue(maxsize=self._latency + 1)  # latency is modeled using a queue
 
-        # set the noise
-        if noise is None:
-            noise = NoNoise()
-        if not isinstance(noise, Noise):
-            raise TypeError("Expecting the given 'noise' to be an instance of Noise, instead got: "
-                            "{}".format(type(noise)))
-        self._noise = noise
-
-    #     self.sim = simulator
+        # self.sim = simulator
+        self._data = None
 
     ##############
     # Properties #
@@ -72,35 +74,61 @@ class Actuator(object):
 
     @property
     def enabled(self):
-        """Return if the sensor is enabled or not."""
+        """Return if the actuator is enabled or not."""
         return self._enabled
 
     @property
     def disabled(self):
-        """Return if the sensor is disabled or not."""
+        """Return if the actuator is disabled or not."""
         return not self._enabled
+
+    @property
+    def data(self):
+        """Return the data."""
+        return self._data
+
+    @data.setter
+    def data(self, data):
+        """Set the data."""
+        while len(self._data_queue) != self._data_queue.maxsize:  # fill the data queue
+            self._data_queue.append(data)
 
     ###########
     # Methods #
     ###########
 
     def enable(self):
-        """Enable the sensor."""
+        """Enable the actuator."""
         self._enabled = True
 
     def disable(self):
-        """Disable the sensor."""
+        """Disable the actuator."""
         self._enabled = False
 
-    def compute(self, *args, **kwargs):  # TODO: call it actuate?
+    def compute(self, *args, **kwargs):
         pass
+
+    def act(self):
+        """Set the next actuator value."""
+        if self._enabled:
+            self._cnt += 1
+            if (self._cnt % self._ticks) == 0:
+                self._data = self._data_queue.get()
+                self._act()
+                self._cnt = 0
+
+    def _act(self):
+        """Act method to be implemented in the child class."""
+        raise NotImplementedError
 
     #############
     # Operators #
     #############
 
     def __call__(self, *args, **kwargs):
-        return self.compute(*args, **kwargs)
+        """Set the next actuator value."""
+        self.act()
+        # return self.compute(*args, **kwargs)
 
     # def __repr__(self):
     #     """Return a representation string about the class for debugging and development."""
