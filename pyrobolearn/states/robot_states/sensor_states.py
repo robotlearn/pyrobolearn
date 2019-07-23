@@ -26,17 +26,17 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class SensorState(State):  # RobotState # TODO: define refresh_rate & frequency
+class SensorState(State):
     r"""Sensor state (abstract class)
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, sensors, window_size=1, axis=None, ticks=1):
+    def __init__(self, sensor, window_size=1, axis=None, ticks=1, update=False):
         """
         Initialize the sensor state.
 
         Args:
-            sensors (Sensor, list of Sensor): sensor(s).
+            sensor (Sensor): sensor instance.
             window_size (int): window size of the state. This is the total number of states we should remember. That
                 is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
                 the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
@@ -50,19 +50,54 @@ class SensorState(State):  # RobotState # TODO: define refresh_rate & frequency
                 (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
                 state is not a combination of states, but is given some :attr:`data`.
             ticks (int): number of ticks to sleep before getting the next state data.
+            update (bool): if we should update the sensor, or not. Note that this is normally carried out by the
+                `robot.step` method (which is itself called by `world.step`), so normally you shouldn't set it to True.
         """
-        if not isinstance(sensors, collections.Iterable):
-            sensors = [sensors]
-        for sensor in sensors:
-            if not isinstance(sensor, Sensor):
-                raise TypeError("Expecting the given 'sensor' to be an instance of `Sensor`, instead got: "
-                                "{}".format(type(sensor)))
-        self.sensors = sensors
         super(SensorState, self).__init__(window_size=window_size, axis=axis, ticks=ticks)
+
+        # set the sensor instance
+        self.sensor = sensor
+
+        self._update = bool(update)
+
+    ##############
+    # Properties #
+    ##############
+
+    @property
+    def sensor(self):
+        """Return the sensor instance."""
+        return self._sensor
+
+    @sensor.setter
+    def sensor(self, sensor):
+        """Set the sensor instance."""
+        if not isinstance(sensor, Sensor):
+            raise TypeError("Expecting the given 'sensor' to be an instance of `Sensor`, instead got: "
+                            "{}".format(type(sensor)))
+        self._sensor = sensor
+
+    ###########
+    # Methods #
+    ###########
+
+    def _read(self):
+        """Read the sensor values."""
+        # update the sensor if specified (normally we don't need to do it as it is carried out by robot.step, or
+        # world.step)
+        if self._update:
+            self.sensor.sense(apply_noise=True)
+
+        # get the data from the sensor
+        self.data = self.sensor.data
+
+    #############
+    # Operators #
+    #############
 
     def __copy__(self):
         """Return a shallow copy of the state. This can be overridden in the child class."""
-        return self.__class__(sensors=self.sensors, window_size=self.window_size, axis=self.axis, ticks=self.ticks)
+        return self.__class__(sensor=self.sensor, window_size=self.window_size, axis=self.axis, ticks=self.ticks)
 
     def __deepcopy__(self, memo={}):
         """Return a deep copy of the state. This can be overridden in the child class.
@@ -73,8 +108,8 @@ class SensorState(State):  # RobotState # TODO: define refresh_rate & frequency
         if self in memo:
             return memo[self]
 
-        sensors = copy.deepcopy(self.sensors, memo)
-        state = self.__class__(sensors=sensors, window_size=self.window_size, axis=self.axis, ticks=self.ticks)
+        sensor = copy.deepcopy(self.sensor, memo)
+        state = self.__class__(sensor=sensor, window_size=self.window_size, axis=self.axis, ticks=self.ticks)
 
         memo[self] = state
         return state
@@ -105,7 +140,7 @@ class CameraState(SensorState):
             ticks (int): number of ticks to sleep before getting the next state data.
         """
         self.camera = camera
-        super(CameraState, self).__init__(sensors=camera, window_size=window_size, axis=axis, ticks=ticks)
+        super(CameraState, self).__init__(sensor=camera, window_size=window_size, axis=axis, ticks=ticks)
 
     def _read(self):
         pass
@@ -145,7 +180,7 @@ class ContactState(SensorState):
                 raise TypeError("Expecting the given 'contact' to be an instance of `ContactSensor`, instead got: "
                                 "{}".format(type(contact)))
         self.contacts = contacts
-        super(ContactState, self).__init__(sensors=contacts, window_size=window_size, axis=axis, ticks=ticks)
+        super(ContactState, self).__init__(sensor=contacts, window_size=window_size, axis=axis, ticks=ticks)
 
     def _read(self):
         contacts = np.array([int(contact.is_in_contact()) for contact in self.contacts])

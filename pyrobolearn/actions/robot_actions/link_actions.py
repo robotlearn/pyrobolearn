@@ -41,10 +41,10 @@ class LinkAction(RobotAction):  # TODO: multiple links
         """
         super(LinkAction, self).__init__(robot)
 
-        # get the joints of the robot
+        # get the link of the robot
         if link_id is None:
             link_id = -1
-        self.link = link_id
+        self.link = int(link_id)
 
         # if discrete values, check the type and create the space
         if discrete_values is not None:

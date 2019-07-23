@@ -28,6 +28,9 @@ from . import robots
 # import worlds
 from . import worlds
 
+# import utils
+from . import utils
+
 # import physics randomizer
 from . import physics
 
@@ -109,7 +112,6 @@ def signal_handler(sig, frame):
 
 
 signal.signal(signal.SIGINT, signal_handler)
-
 
 # https://stackoverflow.com/questions/30483246/how-to-check-if-a-python-module-has-been-imported
 # https://stackoverflow.com/questions/14050281/how-to-check-if-a-python-module-exists-without-importing-it/25045228

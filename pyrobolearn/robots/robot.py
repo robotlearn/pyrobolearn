@@ -22,8 +22,8 @@ from pyrobolearn.utils.transformation import *
 from pyrobolearn.utils.manifold_utils import tensor_matrix_product, symmetric_matrix_to_vector, logarithm_map, \
     distance_spd
 from pyrobolearn.robots.base import ControllableBody
-from pyrobolearn.robots.sensors.sensor import Sensor
-from pyrobolearn.robots.actuators.actuator import Actuator
+from pyrobolearn.robots.sensors import Sensor, sensor_names_to_classes
+from pyrobolearn.robots.actuators import Actuator, actuator_names_to_classes
 
 
 __author__ = "Brian Delhaisse"
@@ -1629,8 +1629,10 @@ class Robot(ControllableBody):
                 np.array[N*4], np.array[N,4]: orientation of each link frame [x,y,z,w]
 
         """
-        return self.get_link_world_frame_positions(link_ids, flatten), self.get_link_world_frame_orientations(link_ids,
-                                                                                                              flatten)
+        positions, orientations = self.sim.get_link_frames(body_id=self.id, link_ids=link_ids)
+        if flatten:
+            return positions.reshape(-1), orientations.reshape(-1)
+        return positions, orientations
 
     def get_link_world_frame_positions(self, link_ids=None, flatten=False):
         r"""
@@ -1647,14 +1649,7 @@ class Robot(ControllableBody):
             if multiple links:
                 np.array[N*3], np.array[N,3]: link frame position of each link in world space
         """
-        if isinstance(link_ids, int):
-            return np.asarray(self.sim.get_link_state(self.id, link_ids)[4])
-        if link_ids is None:
-            link_ids = self.joints
-        pos = np.asarray([self.sim.get_link_state(self.id, link)[4] for link in link_ids])
-        if flatten:
-            return pos.reshape(-1)  # 1D array
-        return pos  # 2D array
+        return self.get_link_frames(link_ids=link_ids, flatten=flatten)[0]
 
     def get_link_world_frame_orientations(self, link_ids=None, flatten=False):
         r"""
@@ -1671,14 +1666,7 @@ class Robot(ControllableBody):
             if multiple links:
                 np.array[N*4], np.array[N,4]: orientation of each link frame [x,y,z,w]
         """
-        if isinstance(link_ids, int):
-            return self.sim.get_link_state(self.id, link_ids)[5]
-        if link_ids is None:
-            link_ids = self.joints
-        orientation = np.asarray([self.sim.get_link_state(self.id, link)[5] for link in link_ids])
-        if flatten:
-            return orientation.reshape(-1)  # 1D array
-        return orientation  # 2D array
+        return self.get_link_frames(link_ids=link_ids, flatten=flatten)[1]
 
     def get_link_world_positions(self, link_ids=None, flatten=True):
         r"""
@@ -4167,19 +4155,27 @@ class Robot(ControllableBody):
             joint_ids = self.joints
         self.sim.enable_joint_force_torque_sensor(self.id, joint_ids, enable=False)
 
-    def get_sensors(self, idx=None):
+    def get_sensors(self, name=None):
         """
         Return the specified sensor.
 
         Args:
-            idx (int): index of the sensor
+            name (str, class, None): name or class type of the sensor. If None, it will return all the sensors.
 
         Returns:
-            Sensor, Sensor[M]: return the specified sensor, or all the sensors
+            if name is None:
+                dict: all the sensors {SensorClass: [sensorInstance]}
+            else:
+                list of Sensor: return the specified sensors
         """
-        if idx is None:
+        if name is None:
             return self.sensors
-        return self.sensors[idx]
+        if isinstance(name, type):
+            return self.sensors[name]
+        elif isinstance(name, str):
+            if name in sensor_names_to_classes:
+                name = sensor_names_to_classes[name]
+                return self.sensors[name]
 
     def add_sensor(self, sensor):
         """
@@ -4228,19 +4224,27 @@ class Robot(ControllableBody):
         """
         return len(self.actuators)
 
-    def get_actuators(self, idx=None):
+    def get_actuators(self, name=None):
         """
         Return the specified actuator.
 
         Args:
-            idx (int): index of the actuator.
+            name (str, class, None): name or class type of the actuator. If None, it will return all the actuators.
 
         Returns:
-            Actuator, Actuator[M]: return the specified actuator, or all the actuators
+            if name is None:
+                dict: all the actuators {ActuatorClass: [actuatorInstance]}
+            else:
+                list of Actuator: return the specified actuators.
         """
-        if idx is None:
+        if name is None:
             return self.actuators
-        return self.actuators[idx]
+        if isinstance(name, type):
+            return self.actuators[name]
+        elif isinstance(name, str):
+            if name in actuator_names_to_classes:
+                name = actuator_names_to_classes[name]
+                return self.actuators[name]
 
     def add_actuator(self, actuator):
         """

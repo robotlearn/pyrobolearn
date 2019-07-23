@@ -1212,6 +1212,21 @@ class Simulator(object):
         pass
 
     def get_link_frames(self, body_id, link_ids):
+        r"""
+        Return the link world frame position(s) and orientation(s).
+
+        Args:
+            body_id (int): body id.
+            link_ids (int, int[N]): link id, or list of desired link ids.
+
+        Returns:
+            if 1 link:
+                np.array[3]: the link frame position in the world space
+                np.array[4]: Cartesian orientation of the link frame [x,y,z,w]
+            if multiple links:
+                np.array[N,3]: link frame position of each link in world space
+                np.array[N,4]: orientation of each link frame [x,y,z,w]
+        """
         pass
 
     def get_link_world_positions(self, body_id, link_ids):

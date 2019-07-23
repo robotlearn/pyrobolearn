@@ -154,6 +154,16 @@ class Sensor(object):  # sensor attached to a link or joint
         """Return if the sensor is disabled or not."""
         return not self._enabled
 
+    @property
+    def data(self):
+        """Return the data."""
+        return self._data
+
+    @property
+    def latent_data(self):
+        """Return the latent data."""
+        return self._latent_data
+
     ###########
     # Methods #
     ###########
@@ -201,7 +211,7 @@ class Sensor(object):  # sensor attached to a link or joint
                     self._latent_data = self._data
                 else:  # if latency
                     self._latent_cnt += 1
-                    if (self._latent_cnt % self._latency) == 0:
+                    if (self._latent_cnt % self._latency) == 0:  # TODO: use FIFO queue instead (see actuator.py)?
                         self._data = self._latent_data
                         self._latent_data = self._sense(apply_noise=apply_noise)
                         self._latent_cnt = 0

@@ -40,6 +40,8 @@ class RobotAction(Action):
             robot (Robot): a robot instance.
         """
         super(RobotAction, self).__init__()
+
+        # check robot instance
         if not isinstance(robot, Robot):
             raise TypeError("The 'robot' parameter has to be an instance of Robot, but instead got: "
                             "{}".format(type(robot)))
@@ -47,6 +49,7 @@ class RobotAction(Action):
 
     @property
     def robot(self):
+        """Return the robot instance."""
         return self._robot
 
     # def is_discrete(self):

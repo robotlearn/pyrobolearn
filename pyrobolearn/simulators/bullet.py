@@ -1711,7 +1711,7 @@ class Bullet(Simulator):
             np.array[4]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed in URDF link
                 frame
             np.array[3]: world position of the URDF link frame
-            np.array[4]: world orientation of the URDF link frame
+            np.array[4]: world orientation of the URDF link frame (expressed as a quaternion [x,y,z,w])
             np.array[3]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
             np.array[3]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
         """
@@ -1795,7 +1795,34 @@ class Bullet(Simulator):
         return np.asarray([self.sim.getDynamicsInfo(body_id, link_id)[0] for link_id in link_ids])
 
     def get_link_frames(self, body_id, link_ids):
-        pass
+        r"""
+        Return the link world frame position(s) and orientation(s).
+
+        Args:
+            body_id (int): body id.
+            link_ids (int, int[N]): link id, or list of desired link ids.
+
+        Returns:
+            if 1 link:
+                np.array[3]: the link frame position in the world space
+                np.array[4]: Cartesian orientation of the link frame [x,y,z,w]
+            if multiple links:
+                np.array[N, 3]: link frame position of each link in world space
+                np.array[N, 4]: orientation of each link frame [x,y,z,w]
+        """
+        if isinstance(link_ids, int):
+            if link_ids == -1:
+                return self.get_base_pose(body_id=body_id)
+            return self.get_link_state(body_id=body_id, link_id=link_ids)[4:6]
+        positions, orientations = [], []
+        for link_id in link_ids:
+            if link_id == -1:
+                position, orientation = self.get_base_pose(body_id)
+            else:
+                position, orientation = self.get_link_state(body_id, link_id)[4:6]
+            positions.append(position)
+            orientations.append(orientation)
+        return np.asarray(positions), np.asarray(orientations)
 
     def get_link_world_positions(self, body_id, link_ids):
         """

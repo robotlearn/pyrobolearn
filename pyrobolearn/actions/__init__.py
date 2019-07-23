@@ -10,3 +10,6 @@ from .robot_actions import *
 
 # import gym actions
 from .gym_actions import GymAction
+
+# impot world actions
+from .world_actions import AttachAction
