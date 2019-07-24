@@ -208,6 +208,13 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
         # return self.position
         return self.capacity
 
+    @property
+    def filled_size(self):
+        """Return the filled sized of the experience replay storage."""
+        if self.full:
+            return self.capacity
+        return self.position
+
     ###########
     # Methods #
     ###########
@@ -364,7 +371,7 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
         """Return a batch of the experience replay storage in the form of a `DictStorage`.
 
         Args:
-            indices (list of int): indices. Each index must be between 0 and `self.size`.
+            indices (list of int): indices. Each index must be between 0 and `self.filled_size`.
 
         Returns:
             DictStorage / Batch: batch containing a part of the storage. Variables such as `states`, `actions`,

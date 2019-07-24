@@ -32,19 +32,24 @@ __status__ = "Development"
 class Storage(object):
     """Main abstract storage class."""
 
-    def save(self, filename):
-        """Save the storage on the disk."""
-        pickle.dump(self, open(filename, 'wb'))
+    @property
+    def size(self):
+        """Return the size of the storage. Need to be implemented in the child class."""
+        return 0
+
+    @property
+    def filled_size(self):
+        """Return the filled size of the storage."""
+        return self.size
 
     @staticmethod
     def load(filename):
         """Load the storage from the disk."""
         return pickle.load(open(filename, 'r'))
 
-    @property
-    def size(self):
-        """Return the size of the storage. Need to be implemented in the child class."""
-        return 0
+    def save(self, filename):
+        """Save the storage on the disk."""
+        pickle.dump(self, open(filename, 'wb'))
 
     def get_batch(self, indices):
         """Return a batch of the storage as a `Storage` type.
@@ -624,7 +629,7 @@ class Batch(DictStorage):
     are filled by the exploration phase in RL algorithms (see `pyrobolearn/algos/explorer`).
     """
 
-    def __init__(self, kwargs=None, device=None, dtype=None):
+    def __init__(self, kwargs=None, device=None, dtype=None, size=None):
         """
         Initialize the Batch storage.
 
@@ -635,12 +640,19 @@ class Batch(DictStorage):
                to which the tensor is allocated.
             dtype (torch.dtype, None): convert the `torch.Tensor` to the specified data type. If None, it will keep
                 the original dtype
+            size (int, None): size of the batch.
         """
         super(Batch, self).__init__(kwargs=kwargs, device=device, dtype=dtype, update=False)
         # contains the current values evaluated during the update phase of RL algorithms.
         self.current = DictStorage(kwargs={}, device=device, dtype=dtype, update=False)
         # indices where the masks is different from 0 in the current batch
         self.indices = None
+        self._size = size if size is not None else len(kwargs['masks'])   # TODO: need to generalize this
+
+    @property
+    def size(self):
+        """Return the size of the batch."""
+        return self._size
 
     def get_current(self, key, default=None):
         """Try first to get the key from :attr:`current`, if not present, try to get it from the batch storage.
@@ -729,6 +741,14 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
         return self._num_steps * self._num_trajectories
 
     @property
+    def filled_size(self):
+        """Return the filled size by looking at the entries where the mask = 1."""
+        # print("Mask: {}".format(self.masks[:, :, 0]))
+        # print("Mask shape: {}".format(self.masks.shape))
+        # print("Steps: {}".format(self._step))
+        return np.minimum(len(self.masks[self.masks == 1]), self.size)
+
+    @property
     def capacity(self):
         """Return the capacity of the rollout storage (=number of steps * number of processes)."""
         return self._num_steps * self._num_trajectories
@@ -760,7 +780,7 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
                 `self.num_trajectories`.
         """
         # if end of storage, go at the beginning
-        self._step[rollout_idx] = (self._step[rollout_idx] + 1) % self.num_steps
+        self._step[rollout_idx] = (self._step[rollout_idx] + 1) % (self.num_steps + 1)  # self.num_steps
 
     def create_new_entry(self, key, shapes, num_steps=None, dtype=torch.dtype):
         """Create a new entry (=tensor) in the rollout storage dictionary. The tensor will have the dimension
@@ -881,7 +901,8 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
         self._step[rollout_idx] = 0
 
         # reset masks
-        self.masks[:, rollout_idx].copy_(torch.ones_like(self.masks[:, rollout_idx]))
+        # self.masks[:, rollout_idx].copy_(torch.ones_like(self.masks[:, rollout_idx]))  # fill with ones
+        self.masks[:, rollout_idx].copy_(torch.zeros_like(self.masks[:, rollout_idx]))  # fill with zeros
 
         # insert initial states
         if init_states is None:
@@ -972,6 +993,13 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
         """
         t = self._step[rollout_idx]
 
+        print("\nStorage: rollout = {}, step = {}".format(rollout_idx, t))
+        print("Storage: insert state: {}".format(states))
+        print("Storage: insert action: {}".format(actions))
+        print("Storage: insert next state: {}".format(next_states))
+        print("Storage: insert reward: {}".format(reward))
+        print("Storage: insert mask: {}".format(mask))
+
         # check given observations/states and actions
         if not isinstance(next_states, list):
             next_states = [next_states]
@@ -1005,7 +1033,7 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
 
         # update the step if specified
         if update_step:
-            self.step()
+            self.step(rollout_idx=rollout_idx)
 
     def add_trajectory(self, trajectory, rollout_idx=0):
         r"""
@@ -1030,28 +1058,54 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
         """Return a batch of the Rollout storage in the form of a `DictStorage`.
 
         Args:
-            indices (list of int): indices. Each index must be between 0 and `num_steps * num_trajectories`.
+            indices (list of int): indices. Each index must be between 0 and `self.filled_size`-1.
 
         Returns:
             DictStorage / Batch: batch containing a part of the storage. Variables such as `states`, `actions`,
                 `rewards`, `masks`, and others can be accessed from the object.
         """
-        # In the next comments, T = number of time steps, P = number of processes, and I = number of indices
+        # In the next comments, T = number of time steps, P = number of processes, and I = number of indices, F =
+        # number of filled entries (where the mask == 1)
         batch = {}
+        size = len(indices)
+
+        # # The following sampling method was not optimal as it would sample entries where the mask == 0 (i.e. when
+        # # the episode is over)
+        # def sample(item, indices):
+        #     if isinstance(item, torch.Tensor):
+        #         if len(item) == self.num_steps + 1:  # = T+1
+        #             item = item[:-1]  # take only the T steps
+        #         return item.view(-1, *item.size()[2:])[indices]  # reshape to (T*P, *shape) and from T*P takes I
+        #
+        #     elif isinstance(item, np.ndarray):
+        #         if len(item) == self.num_steps + 1:  # = T+1
+        #             item = item[:-1]  # take only the T steps
+        #         return item.reshape(-1, *item.shape[2:])[indices]  # reshape to (T*P, *shape) and from T*P takes I
+
+        print("Indices: {} - length: {}".format(indices, len(indices)))
 
         def sample(item, indices):
-            if isinstance(item, torch.Tensor):
-                if len(item) == self.num_steps + 1:  # = T+1
-                    item = item[:-1]  # take only the T steps
-                return item.view(-1, *item.size()[2:])[indices]  # reshape to (T*P, *shape) and from T*P takes I
-
-            elif isinstance(item, np.ndarray):
-                if len(item) == self.num_steps + 1:  # = T+1
-                    item = item[:-1]  # take only the T steps
-                return item.reshape(-1, *item.shape[2:])[indices]  # reshape to (T*P, *shape) and from T*P takes I
+            """Given indices where each index is between 0 and `self.filled_size` (=number of masks that are equal
+            to 1), it returns the corresponding entries in the item.
+            """
+            if isinstance(item, torch.Tensor):  # TODO: improve performance of this
+                masks = (self.masks[:, :, 0] == 1).nonzero()  # [F, 2] --> indices for (steps, trajs)
+                masks[:, 0] -= 1  # remove 1 because indices for masks are in [1, t+1] --> [0, t]
+                indices = masks[indices]  # [I,2] --> allowed indices for (steps, trajs)
+                print("Torch mask length: {}".format(len(masks)))
+                print("Indices: {}".format(indices))
+                return item[indices[:, 0], indices[:, 1]]  # [I, *shape]
+            elif isinstance(item, np.ndarray):  # TODO: improve performance of this
+                masks = np.vstack(((self.masks[:, :, 0] == 1).nonzero()))  # [F,2] --> indices for (steps, trajs)
+                masks[:, 0] -= 1  # remove 1 because indices for masks are in [1, t+1] --> [0, t]
+                indices = masks[indices]  # [I,2] --> allowed indices for (steps, trajs)
+                print("Numpy Mask length: {}".format(len(masks)))
+                print("Indices: {}".format(indices))
+                return item[indices[:, 0], indices[:, 1]]  # [I, *shape]
 
         # go through each attribute and sample from the tensors
         for key, value in self.iteritems():
+            print("batch - add key: {}".format(key))
             if isinstance(value, list):  # value = list of tensors
                 batch[key] = [sample(val, indices) for val in value]
             else:  # value = tensor
@@ -1074,7 +1128,7 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
             distributions[i] = dist.__class__.from_list(distribution)
 
         # create Batch object
-        batch = Batch(batch, device=self.device, dtype=self.dtype)
+        batch = Batch(batch, device=self.device, dtype=self.dtype, size=size)
         batch.indices = torch.tensor(range(len(indices)))[batch['masks'][:, 0] != 0].tolist()
 
         # return batch (which is given to the updater (and loss))

@@ -20,7 +20,7 @@ from pyrobolearn.values import Value, QValue
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "GNU GPLv3"
+__license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
@@ -166,9 +166,9 @@ class Estimator(object):
     # Operators #
     #############
 
-    def __repr__(self):
-        """Return a representation string of the object."""
-        return self.__class__.__name__
+    # def __repr__(self):
+    #     """Return a representation string of the object."""
+    #     return self.__class__.__name__
 
     def __str__(self):
         """Return a string describing the object."""

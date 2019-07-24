@@ -528,12 +528,15 @@ class Explorer(object):
         Returns:
             DictStorage: updated memory storage
         """
+        if verbose:
+            print("\n#### 1. Starting the Exploration phase ####")
+
         for rollout in range(num_rollouts):
             # reset environment
             observation = self.env.reset()
 
             if verbose:
-                print("Start rollout: {}/{}".format(rollout + 1, num_rollouts))
+                print("\nStart rollout: {}/{}".format(rollout + 1, num_rollouts))
                 # print("Explorer - initial state: {}".format(observation))
 
             # reset storage
@@ -543,6 +546,7 @@ class Explorer(object):
             self.explorer.reset()
 
             # run RL task for T steps
+            step = 0
             for step in range(num_steps):
                 # if we need to render
                 if render:
@@ -578,7 +582,8 @@ class Explorer(object):
             self.storage.end(rollout)
 
             if verbose:
-                print("End rollout: {}/{}".format(rollout + 1, num_rollouts))
+                print("End rollout: {}/{} with performed step: {}/{}".format(rollout + 1, num_rollouts,
+                                                                             step + 1, num_steps))
                 # print("states: {}".format(self.storage['states']))
                 # print("actions: {}".format(self.storage['actions']))
                 # print("rewards: {}".format(self.storage['rewards']))
@@ -587,6 +592,9 @@ class Explorer(object):
 
             # # clear explorer
             # self.explorer.clear()
+
+        if verbose:
+            print("\n#### End of the Exploration phase ####")
 
         # return storage unit
         return self.storage

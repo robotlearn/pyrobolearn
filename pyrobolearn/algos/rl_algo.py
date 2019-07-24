@@ -323,8 +323,15 @@ class RLAlgo(object):  # Algo):
         # set the policy in training mode
         self.policy.train()
 
+        # compute metrics  # TODO
+
         # for each episode
         for episode in range(num_episodes):
+
+            if verbose:
+                print("\n#####################")
+                print("#### Episode {}/{} ####".format(episode+1, num_episodes))
+                print("#####################")
 
             # # for each rollout
             # for rollout in range(num_rollouts):
@@ -349,6 +356,8 @@ class RLAlgo(object):  # Algo):
 
         # set the policy in test mode
         self.policy.eval()
+
+        # compute metrics  # TODO
 
         if verbose:
             print("\n#### End of the RL algo ####")

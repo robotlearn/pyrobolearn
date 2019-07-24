@@ -2,11 +2,13 @@
 """Defines the metrics used in reinforcement learning (RL).
 """
 
+import numpy as np
 import matplotlib.pyplot as plt
 
 from pyrobolearn.tasks import RLTask
 from pyrobolearn.algos import RLAlgo
 from pyrobolearn.metrics import Metric
+from pyrobolearn.losses import BatchLoss
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -44,7 +46,7 @@ class AverageReturnMetric(RLMetric):
     where :math:`R(\tau) = \sum_{t=0}^T \gamma^t r_t` is the discounted return.
     """
 
-    def __init__(self, task, gamma=1.):
+    def __init__(self, task, gamma=1., num_episodes=10, num_steps=100):
         """
         Initialize the average return metric.
 
@@ -55,6 +57,8 @@ class AverageReturnMetric(RLMetric):
         self.gamma = gamma
         self.task = task
         self.returns = []
+        self._num_steps = num_steps
+        self._num_episodes = num_episodes
 
     ##############
     # Properties #
@@ -92,26 +96,24 @@ class AverageReturnMetric(RLMetric):
     # Methods #
     ###########
 
-    def update(self):
-        pass
+    def _episode_update(self, episode_idx=None):
+        """Update the metric."""
+        rewards = []
+        for ep in range(self._num_episodes):
+            reward = self.task.run(num_steps=self._num_steps)
+            rewards.append(reward)
 
-    def _plot(self, ax=None, filename=None):
+        rewards = np.asarray(rewards).mean()
+        self.returns.append(rewards)
+
+    def _plot(self, ax):
         """
-        Plot the average return metric.
-
-        Args:
-            ax (plt.Axes): axis to plot the figure.
-            filename (str, None): if a string is given, it will save the plot in the given filename.
+        Plot the average return metric in the given axis.
         """
-        if ax is None:
-            fig, ax = plt.subplots()
-
         ax.set_title('Average Return per iteration')  # per epoch, per iteration=epoch*batch
         ax.set_xlabel('iterations')
         ax.set_ylabel('Average return')
         ax.plot(self.returns)
-
-        return ax
 
 
 class LossMetric(RLMetric):
@@ -119,8 +121,44 @@ class LossMetric(RLMetric):
     """
 
     def __init__(self, loss):
+        """
+        Initialize the loss metric.
+
+        Args:
+            loss (BatchLoss): batch loss.
+        """
         super(LossMetric, self).__init__()
         self.loss = loss
+        self.losses = []
+
+    ##############
+    # Properties #
+    ##############
+
+    @property
+    def loss(self):
+        """Return the loss instance."""
+        return self._loss
+
+    @loss.setter
+    def loss(self, loss):
+        """Set the loss instance."""
+        if not isinstance(loss, BatchLoss):
+            raise TypeError("Expecting the given 'loss' to be an instance of `BatchLoss`, but got instead: "
+                            "{}".format(type(loss)))
+        self._loss = loss
+
+    ###########
+    # Methods #
+    ###########
 
     def update(self):
         pass
+
+    def _plot(self, ax):
+        """
+        Plot the loss in the given axis.
+        """
+        ax.set_title(self.loss.__class__.__name__ + ' per iteration')
+        ax.set_xlabel('iterations')
+        ax.set_ylabel('Loss')

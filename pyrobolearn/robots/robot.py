@@ -58,7 +58,8 @@ class Robot(ControllableBody):
         - [9] "Motion Planning and Control of Dynamic Humanoid Locomotion" (PhD thesis), Xin, 2018
     """
 
-    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1., *args, **kwargs):
+    def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1., visual_ticks=12,
+                 *args, **kwargs):
         """
         Initialize the robot.
 
@@ -69,6 +70,7 @@ class Robot(ControllableBody):
             orientation (np.array[4]): initial orientation represented as a quaternion (x,y,z,w).
             fixed_base (bool, None): if True, the base of the robot will be fixed.
             scale (float): scaling factor.
+            visual_ticks (int): the number of ticks to sleep before updating the visuals.
         """
         # check parameters
         if position is None:
@@ -144,6 +146,8 @@ class Robot(ControllableBody):
         self._set_end_effectors()
 
         # visual debug: sliders and drawing
+        self.visual_ticks = visual_ticks
+        self._visual_cnt = 0
         self.joint_sliders = {}
         self.com_visual = None
         self.projected_com_visual = None
@@ -297,6 +301,18 @@ class Robot(ControllableBody):
 
         # sense
         self.sense()
+
+        # update visuals
+        if self._visual_cnt % self.visual_ticks == 0:
+            self._visual_cnt = 0
+
+            # update joint sliders
+            self.update_joint_slider()
+
+            # update all visuals
+            self.update_visuals()
+
+        self._visual_cnt += 1
 
     def sense(self):
         """Run all the sensors."""
@@ -545,9 +561,12 @@ class Robot(ControllableBody):
         Return the center of mass position.
 
         Returns:
-            np.array[3]: center of mass position
+            np.array[3]: center of mass position [m]
         """
+        if 'com' in self._state:
+            return self._state['com']
         self.com = self.sim.get_center_of_mass_position(self.id)
+        self._state['com'] = self.com
         return self.com
 
     # alias
@@ -558,12 +577,54 @@ class Robot(ControllableBody):
         Return the center of mass velocity.
 
         Returns:
-            np.array[3]: center of mass velocity
+            np.array[3]: center of mass velocity [m/s]
         """
-        return self.sim.get_center_of_mass_velocity(self.id)
+        if 'com_vel' in self._state:
+            return self._state['com_vel'][0]
+        com_vel = self.sim.get_center_of_mass_velocity(self.id)
+        self._state['com_vel'] = [com_vel, time.time()]
+        return com_vel
 
     # alias
     get_com_velocity = get_center_of_mass_velocity
+
+    def get_center_of_mass_acceleration(self):
+        """
+        Return the center of mass acceleration.
+
+        Returns:
+            np.array[3]: center of mass acceleration [m/s]
+        """
+        # if already cached, return it
+        if 'com_acc' in self._state:
+            return self._state['com_acc'][0]
+
+        # compute com velocity
+        self.get_center_of_mass_velocity()
+
+        # if didn't find previous com velocity
+        if 'com_vel' not in self._prev_state:
+            acc = np.zeros(3)
+            self._state['com_acc'] = [acc, time.time()]
+            return acc
+
+        # get current center of mass velocity and time
+        com_vel, t = self._state['com_vel']
+
+        # retrieve previous joint velocities and time
+        com_vel_prev, t_prev = self._prev_state['com_vel']
+
+        # compute time finite difference
+        if self.sim.use_real_time():  # if the simulator is in real-time mode
+            dt = (t - t_prev)
+        else:  # if we are stepping in the simulator
+            dt = self.sim.timestep
+
+        # compute com acceleration using finite difference, and cache it
+        acc = (com_vel - com_vel_prev) / dt
+        self._state['com_acc'] = [acc, t]
+
+        return acc
 
     # def get_linear_momentum(self):
     #     """
@@ -1061,7 +1122,7 @@ class Robot(ControllableBody):
         # retrieve previous joint velocities and time
         dq_prev, t_prev = self._prev_state['dq']
 
-        # compute time difference
+        # compute time finite difference
         if self.sim.use_real_time():  # if the simulator is in real-time mode
             dt = (t - t_prev)
         else:  # if we are stepping in the simulator
@@ -4531,11 +4592,27 @@ class Robot(ControllableBody):
             self.sim.change_visual_shape(self.id, shapeId, rgba_color=rgba)
             # print("Link {} - color: {}".format(link, rgba))
 
-    def update_visual(self):
+    def update_visuals(self):  # TODO: finish this
         """
         Update all visuals.
         """
-        pass
+        # update CoM
+        if self.com_visual is not None:
+            self.draw_com_position()
+
+        # update projected CoM
+        if self.projected_com_visual is not None:
+            self.compute_and_draw_projected_com_position()
+
+        # update each link's CoM
+
+        # update each link frame
+
+        # update each link bounding box
+
+        # update each joint axis
+
+        # update manipulability ellipsoids
 
     def compute_and_draw_com_position(self, radius=0.05, color=(1, 0, 0, 0.8)):
         """

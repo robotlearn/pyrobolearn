@@ -5,6 +5,7 @@ The evaluator assesses the quality of the actions/trajectories performed by the 
 It is the step performed after the exploration phase, and before the update step.
 """
 
+import torch
 from pyrobolearn.returns import Estimator
 
 __author__ = "Brian Delhaisse"
@@ -80,14 +81,35 @@ class Evaluator(object):
         """
         if self.estimator is not None:
             if verbose:
-                print("\n#### Starting the Evaluation phase ####")
+                print("\n#### 2. Starting the Evaluation phase ####")
+                print("Using estimator: {}".format(self.estimator))
 
             # compute the returns
             returns = self.estimator.evaluate(self.storage)
 
             if verbose:
                 # print("Returns: {}".format(returns))
-                print("#### End of the Evaluation phase ####")
+
+                print("\nFinal storage status: ")
+                states = self.storage['states'][0]
+                states = states.view(-1, *states.size()[2:])
+                print("states: {}".format(torch.cat((torch.arange(len(states), dtype=torch.float).view(-1, 1),
+                                                       states), dim=1)))
+                actions = self.storage['actions'][0]
+                actions = actions.view(-1, *actions.size()[2:])
+                print("actions: {}".format(torch.cat((torch.arange(len(actions), dtype=torch.float).view(-1, 1),
+                                                        actions), dim=1)))
+                rewards = self.storage['rewards'][:, :, 0]
+                print("rewards: {}".format(torch.cat((torch.arange(len(rewards), dtype=torch.float).view(-1, 1),
+                                                        rewards), dim=1)))
+                masks = self.storage['masks'][:, :, 0]
+                print("masks: {}".format(torch.cat((torch.arange(len(masks), dtype=torch.float).view(-1, 1),
+                                                        masks), dim=1)))
+                returns = self.storage[self.estimator][:, :, 0]
+                print("returns: {}".format(torch.cat((torch.arange(len(returns), dtype=torch.float).view(-1, 1),
+                                                        returns), dim=1)))
+
+                print("\n#### End of the Evaluation phase ####")
 
     #############
     # Operators #

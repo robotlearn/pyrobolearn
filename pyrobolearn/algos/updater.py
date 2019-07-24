@@ -283,7 +283,7 @@ class Updater(object):
         losses = {}
 
         if verbose:
-            print("\n#### Starting the Update phase ####")
+            print("\n#### 3. Starting the Update phase ####")
 
         # for each epoch
         for epoch in range(num_epochs):
@@ -292,7 +292,8 @@ class Updater(object):
             for batch_idx, batch in enumerate(self.sampler):
 
                 if verbose:
-                    print("Epoch: {}/{} - Batch: {}/{}".format(epoch + 1, num_epochs, batch_idx + 1, num_batches))
+                    print("Epoch: {}/{} - Batch: {}/{} with size {}".format(epoch + 1, num_epochs, batch_idx + 1,
+                                                                            num_batches, batch.size))
 
                 # evaluate the evaluators with the current parameters on the given batch and save the results in the
                 # batch's `current` attribute
@@ -315,9 +316,8 @@ class Updater(object):
 
                         # append the loss value in the history of losses
                         if loss not in losses:
-                            losses[loss] = [[]] * num_epochs
-                        else:
-                            losses[loss][epoch].append(loss_value)
+                            losses[loss] = [[] for epoch in range(num_epochs)]
+                        losses[loss][epoch].append(loss_value.detach())
 
                         # update parameters
                         if verbose:
@@ -336,6 +336,7 @@ class Updater(object):
                 self._cnt += 1
 
         if verbose:
+            print("Losses: {}".format(losses))
             print("#### End of the Update phase ####")
 
         return losses  # shape=(epochs, batches)

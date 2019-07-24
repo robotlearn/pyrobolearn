@@ -189,6 +189,13 @@ class LeggedRobot(Robot):
               Implications", Popovic et al., 2005
         """
         if floor_id is not None:
+
+            cop_key = 'cop_' + str(floor_id)
+
+            # checked if already cached
+            if cop_key in self._state:
+                return self._state[cop_key]
+
             # get contact points between the robot's links and the floor
             points = self.sim.get_contact_points(body1=self.id, body2=floor_id)
 
@@ -203,6 +210,9 @@ class LeggedRobot(Robot):
             # compute CoP and return it
             cop = forces * positions / np.sum(forces)
             cop = np.sum(cop, axis=0)
+
+            # cache it
+            self._state[cop_key] = cop
 
             return cop
 
@@ -277,6 +287,13 @@ class LeggedRobot(Robot):
 
         # if the floor id is given, use the simulator to compute the ZMP (using the contact points)
         if floor_id is not None:
+
+            zmp_key = 'zmp_' + str(floor_id)
+
+            # checked if already cached
+            if zmp_key in self._state:
+                return self._state[zmp_key]
+
             # get contact points between the robot's links and the floor
             points = self.sim.get_contact_points(body1=self.id, body2=floor_id)
 
@@ -310,6 +327,9 @@ class LeggedRobot(Robot):
 
             zmp[0] += -forces[0]/forces[2] * self.com[2] - moments[1]/forces[2]
             zmp[1] += -forces[1]/forces[2] * self.com[2] + moments[0]/forces[2]
+
+            # cache it
+            self._state[zmp_key] = zmp
 
             # return ZMP
             return zmp
@@ -382,6 +402,13 @@ class LeggedRobot(Robot):
             self.get_center_of_mass_position()
 
         if floor_id is not None:
+
+            cmp_key = 'cmp_' + str(floor_id)
+
+            # checked if already cached
+            if cmp_key in self._state:
+                return self._state[cmp_key]
+
             # get contact points between the robot's links and the floor
             points = self.sim.get_contact_points(body1=self.id, body2=floor_id)
 
@@ -408,6 +435,9 @@ class LeggedRobot(Robot):
             cmp[2] = np.mean(positions, axis=0)[2]
             cmp[0] -= forces[0] / forces[2] * self.com[2]
             cmp[1] -= forces[1] / forces[2] * self.com[2]
+
+            # cache it
+            self._state[cmp_key] = cmp
 
             # return CMP
             return cmp
@@ -733,6 +763,33 @@ class LeggedRobot(Robot):
         if self.fri_visual is not None:
             self.sim.remove_body(self.fri_visual)
             self.fri_visual = None
+
+    def update_visuals(self):  # TODO: finish this
+        """
+        Update all visuals.
+        """
+        # update robot visuals
+        super(LeggedRobot, self).update_visual()
+
+        # update support polygon
+
+        # update friction cones/pyramids
+
+        # update cop
+        if self.cop_visual is not None:
+            self.draw_cop()
+
+        # update zmp
+        if self.zmp_visual is not None:
+            self.draw_zmp()
+
+        # update cmp
+        if self.cmp_visual is not None:
+            self.draw_cmp()
+
+        # update fri
+        if self.fri_visual is not None:
+            self.draw_fri()
 
 
 class BipedRobot(LeggedRobot):
