@@ -36,6 +36,7 @@ Here we provide a brief overview of each submodule and its intended use:
   - ``data_structures``: this contains data structures such as ordered sets and the different type of queues.
   - ``plotting``: this contains real-time plotting tools than can plot the joint positions, velocities, accelerations,
     torques, or link frames in real-time. This is used in combination with the ``Simulator``.
+  - ``parsers``: this contains mainly parsers for some datasets.
 
 - ``tools``: this contains the *interfaces* and *bridges*. *Interfaces* allows to receive or send the data from/to
   various I/O interfaces (such as mouse, keyboard, 3D space mouse, game controllers, webcam, depth cameras, sensors
@@ -125,5 +126,4 @@ Here we provide a brief overview of each submodule and its intended use:
 
 Other folders include:
 
-- ``datasets``: this contains parsers to several datasets that can be found online.
 - ``filters``: this contains various filters (KF, EKF, UKF, HF, etc).
