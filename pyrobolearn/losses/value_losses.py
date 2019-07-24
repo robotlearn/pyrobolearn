@@ -137,8 +137,8 @@ class MSBELoss(BatchLoss):
     minimize them, we try to enforce the Bellman equations.
 
     References:
-        [1] https://spinningup.openai.com/en/latest/algorithms/ddpg.html
-        [2] "Reinforcement Learning: An Introduction", Sutton and Barto, 2018
+        - [1] https://spinningup.openai.com/en/latest/algorithms/ddpg.html
+        - [2] "Reinforcement Learning: An Introduction", Sutton and Barto, 2018
     """
 
     def __init__(self, td_return):

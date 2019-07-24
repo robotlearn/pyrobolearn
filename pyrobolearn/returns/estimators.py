@@ -44,7 +44,7 @@ class Estimator(object):
     than 1, then it will reduces the variance but at the cost of introducing a bias.
 
     Reference:
-        [1] "High-Dimensional Continuous Control using Generalized Advantage Estimation", Schulman et al., 2016
+        - [1] "High-Dimensional Continuous Control using Generalized Advantage Estimation", Schulman et al., 2016
     """
 
     def __init__(self, storage, gamma=1.):
@@ -159,6 +159,9 @@ class Estimator(object):
         # create returns in the storage
         if self not in self.storage:
             self.storage.create_new_entry(key=self, shapes=1, num_steps=self.num_steps+1)
+
+            # add alias reference (note that modifying storage['returns'] will modify storage[self])
+            self.storage['returns'] = self.storage[self]
 
         return self._evaluate()
 
@@ -575,7 +578,7 @@ class GAE(Estimator):
     Good values for GAE are obtained when :math:`\gamma` and :math:`\tau` are in :math:`[0.9,0.99]`.
 
     References:
-        [1] "High-Dimensional Continuous Control using Generalized Advantage Estimation", Schulman et al., 2016
+        - [1] "High-Dimensional Continuous Control using Generalized Advantage Estimation", Schulman et al., 2016
     """
 
     def __init__(self, storage, value, gamma=0.98, tau=0.99):

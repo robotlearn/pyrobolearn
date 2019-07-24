@@ -35,8 +35,8 @@ class PGLoss(BatchLoss):
     .. math:: g = \mathbb{E}[ \nabla_{\theta} \log \pi_{\theta}(a_t | s_t) \psi_t ]
 
     References:
-        [1] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
-        [2] "High-Dimensional Continuous Control using Generalized Advantage Estimation", Schulman et al., 2016
+        - [1] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
+        - [2] "High-Dimensional Continuous Control using Generalized Advantage Estimation", Schulman et al., 2016
     """
 
     def __init__(self, estimator):
@@ -89,8 +89,8 @@ class CPILoss(BatchLoss):
     :math:`r_t(\theta) = \frac{ \pi_{\theta}(a_t|s_t) }{ \pi_{\theta_{old}}(a_t|s_t) }`.
 
     References:
-        [1] "Approximately optimal approximate reinforcement learning", Kakade et al., 2002
-        [2] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
+        - [1] "Approximately optimal approximate reinforcement learning", Kakade et al., 2002
+        - [2] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
     """
 
     def __init__(self, estimator):
@@ -154,7 +154,7 @@ class CLIPLoss(BatchLoss):
     :math:`r_t(\theta) = \frac{ \pi_{\theta}(a_t|s_t) }{ \pi_{\theta_{old}}(a_t|s_t) }`.
 
     References:
-        [1] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
+        - [1] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
     """
 
     def __init__(self, estimator, clip=0.2):
@@ -256,9 +256,9 @@ class EntropyLoss(BatchLoss):
     where :math:`H[.]` is the Shannon entropy of the given probability distribution.
 
     References:
-        [1] "Simple Statistical Gradient-following Algorithms for Connectionist Reinforcement Learning", Williams, 1992
-        [2] "Asynchronous Methods for Deep Reinforcement Learning", Mnih et al., 2016
-        [3] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
+        - [1] "Simple Statistical Gradient-following Algorithms for Connectionist Reinforcement Learning", Williams, 1992
+        - [2] "Asynchronous Methods for Deep Reinforcement Learning", Mnih et al., 2016
+        - [3] "Proximal Policy Optimization Algorithms", Schulman et al., 2017
     """
 
     def __init__(self):

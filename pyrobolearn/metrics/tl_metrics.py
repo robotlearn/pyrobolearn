@@ -55,7 +55,7 @@ class JumpstartMetric(TLMetric):
         super(JumpstartMetric, self).__init__()
 
 
-class AsymptoticPerformance(TLMetric):
+class AsymptoticPerformanceMetric(TLMetric):
     r"""Asymptotic performance metric
 
     The asymptotic performance metric measures how much the final learned performance of an agent in the target task
@@ -69,7 +69,7 @@ class AsymptoticPerformance(TLMetric):
         """
         Initialize the asymptotic performance metric.
         """
-        super(AsymptoticPerformance, self).__init__()
+        super(AsymptoticPerformanceMetric, self).__init__()
 
 
 class TotalRewardMetric(TLMetric):

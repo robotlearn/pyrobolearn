@@ -52,7 +52,7 @@ class StorageSampler(Sampler):
     """
 
     def __init__(self, storage, sampler=None, num_batches=10, batch_size=None, batch_size_bounds=None,
-                 replacement=True):
+                 replacement=True, verbose=0):
         """
         Initialize the storage sampler.
 
@@ -71,6 +71,9 @@ class StorageSampler(Sampler):
                 one is too small (<16), it will be set to 16, and if this one is too big (>128), it will be set to 128.
             replacement (bool): if we should sample each element only one time, or we can sample the same ones multiple
                 times.
+            verbose (int, bool): verbose level, select between {0, 1, 2}. If 0=False, it won't print anything. If
+                1=True, it will print basic information about the sampler. If verbose=2, it will print detailed
+                information.
         """
         # set the storage
         self.storage = storage
@@ -80,6 +83,7 @@ class StorageSampler(Sampler):
         self._replacement = bool(replacement)
         self._batch_size_bounds = batch_size_bounds
         self._batch_size_given = batch_size is not None
+        self._verbose = verbose
 
         # set the sampler
         if sampler is None:
@@ -113,7 +117,9 @@ class StorageSampler(Sampler):
 
         self.sampler = sampler
 
-        print("Sampler: size: {} - num batches: {} - batch size: {}".format(self.size, num_batches, self.batch_size))
+        if verbose:
+            print("\nCreating sampler with size: {} - num batches: {} - batch size: {}".format(self.size, num_batches,
+                                                                                               self.batch_size))
 
     ##############
     # Properties #
@@ -244,8 +250,8 @@ class StorageSampler(Sampler):
         # get the filled size
         size = self.filled_size
 
-        print("Storage size: {}".format(self.size))
-        print("Storage filled size: {}".format(size))
+        if self._verbose:
+            print("Storage filled size: {} - size: {}".format(size, self.size))
 
         # modify the sampler (by changing the size)
         # check if there is a sub-sampler
@@ -268,6 +274,10 @@ class StorageSampler(Sampler):
             elif hasattr(self.sampler, 'indices'):
                 self.sampler.indices = range(size)
 
+        if self._verbose:
+            print("\nCreating sampler with size: {} - num batches: {} - batch size: {}".format(size, self.num_batches,
+                                                                                               self.batch_size))
+
         # provide the batches
         batch_idx = 0
         while True:  # this is to account for replacement = True
@@ -286,7 +296,7 @@ class BatchRandomSampler(StorageSampler):
 
     """
 
-    def __init__(self, storage, num_batches=10, batch_size=None, batch_size_bounds=None, replacement=True):
+    def __init__(self, storage, num_batches=10, batch_size=None, batch_size_bounds=None, replacement=True, verbose=0):
         """
         Initialize the storage sampler.
 
@@ -303,6 +313,10 @@ class BatchRandomSampler(StorageSampler):
                 one is too small (<16), it will be set to 16, and if this one is too big (>128), it will be set to 128.
             replacement (bool): if we should sample each element only one time, or we can sample the same ones multiple
                 times.
+            verbose (int, bool): verbose level, select between {0, 1, 2}. If 0=False, it won't print anything. If
+                1=True, it will print basic information about the sampler. If verbose=2, it will print detailed
+                information.
         """
         super(BatchRandomSampler, self).__init__(storage=storage, num_batches=num_batches, batch_size=batch_size,
-                                                 batch_size_bounds=batch_size_bounds, replacement=replacement)
+                                                 batch_size_bounds=batch_size_bounds, replacement=replacement,
+                                                 verbose=verbose)

@@ -2,13 +2,13 @@
 """Provide the Updater class used in the third and final step of RL algorithms
 
 The updater update the approximator (such as the policy and/or value function) parameters based on the loss, and
-using the specified optmizer.
+using the specified optimizer.
 
 Dependencies:
 - `pyrobolearn/approximators`: models (which contain parameters to update)
 - `pyrobolearn/losses`: to compute the loss
 - `pyrobolearn/optimizers`: the optimizers used to update the model parameters
-- `pyrobolearn/samplers`:
+- `pyrobolearn/samplers`: to sample from batches
 """
 
 import collections
@@ -26,6 +26,8 @@ from pyrobolearn.optimizers import Optimizer
 from pyrobolearn.samplers import StorageSampler
 from pyrobolearn.returns import Return, Target, Evaluator
 from pyrobolearn.parameters.updater import ParameterUpdater
+
+from pyrobolearn.metrics import Metric
 
 
 __author__ = "Brian Delhaisse"
@@ -50,7 +52,8 @@ class Updater(object):
     This class focuses on the third step of RL algorithms.
     """
 
-    def __init__(self, approximators, sampler, losses, optimizers, evaluators=None, updaters=None, ticks=None):
+    def __init__(self, approximators, sampler, losses, optimizers, evaluators=None, updaters=None, ticks=None,
+                 metrics=None):
         """
         Initialize the update phase.
 
@@ -67,6 +70,7 @@ class Updater(object):
             ticks (None, dictionary): dictionary containing as the key (updater or loss) and the value are the number
                 of time steps to wait before updating the corresponding key. By default, it will evaluate the given
                 losses and updaters at each time step.
+            metrics ((list of) Metric, None): metrics that are used to evaluate the algorithm.
         """
         self.approximators = approximators
         self.sampler = sampler
@@ -75,6 +79,7 @@ class Updater(object):
         self.evaluators = evaluators
         self.updaters = updaters
         self.ticks = ticks
+        self.metrics = metrics
 
         # counter
         self._cnt = 0
@@ -259,6 +264,31 @@ class Updater(object):
         # set the ticks
         self._ticks = ticks
 
+    @property
+    def metrics(self):
+        """Return the metric instances."""
+        return self._metrics
+
+    @metrics.setter
+    def metrics(self, metrics):
+        """Set the metrics."""
+        # check metrics type
+        if metrics is None:
+            metrics = []
+        elif isinstance(metrics, Metric):
+            metrics = [metrics]
+        elif not isinstance(metrics, list):
+            raise TypeError("Expecting the given 'metrics' to be an instance of `Metric` or a list of `Metric`, but "
+                            "got instead: {}".format(type(metrics)))
+
+        # check each metric type
+        for i, metric in enumerate(metrics):
+            if not isinstance(metric, Metric):
+                raise TypeError("The {}th metric is not an instance of `Metric`, but: {}".format(i, type(metric)))
+
+        # set metrics
+        self._metrics = metrics
+
     ###########
     # Methods #
     ###########
@@ -270,7 +300,10 @@ class Updater(object):
         Args:
             num_epochs (int): number of epochs.
             num_batches (int): number of batches.
-            verbose (bool): If true, print information on the standard output.
+            verbose (int, bool): verbose level, select between {0=False, 1=True, 2}. If 1 or 2, it will print
+                information about the update process. The level 2 will print more detailed information. Do not use
+                it when the states / actions are big or high dimensional, as it could be very hard to make sense of
+                the data.
 
         Returns:
             dict: dictionary of losses. There is a key for each loss, and the value is a nested list which contains
@@ -292,8 +325,8 @@ class Updater(object):
             for batch_idx, batch in enumerate(self.sampler):
 
                 if verbose:
-                    print("Epoch: {}/{} - Batch: {}/{} with size {}".format(epoch + 1, num_epochs, batch_idx + 1,
-                                                                            num_batches, batch.size))
+                    print("\nEpoch: {}/{} - Batch: {}/{} with size {}".format(epoch + 1, num_epochs, batch_idx + 1,
+                                                                              num_batches, batch.size))
 
                 # evaluate the evaluators with the current parameters on the given batch and save the results in the
                 # batch's `current` attribute
@@ -332,11 +365,21 @@ class Updater(object):
                                 print("\tRun updater {}".format(updater))
                             updater()
 
+                # compute metrics
+                for metric in self.metrics:
+                    metric.end_batch_update(batch_idx=batch_idx, num_batches=num_batches)
+
                 # increase counter
                 self._cnt += 1
 
-        if verbose:
+            # compute metrics
+            for metric in self.metrics:
+                metric.end_epoch_update(epoch_idx=epoch, num_epochs=num_epochs)
+
+        if verbose > 1:
             print("Losses: {}".format(losses))
+
+        if verbose:
             print("#### End of the Update phase ####")
 
         return losses  # shape=(epochs, batches)
