@@ -19,23 +19,23 @@ __status__ = "Development"
 
 
 class ProtoParser(RobotParser):
-    r"""Proto Parser"""
+    r"""Proto Parser and Generator."""
 
     def __init__(self, filename=None):
         """
         Initialize the Proto parser.
 
         Args:
-            filename (str, None): path to the MuJoCo XML file.
+            filename (str, None): path to the proto file.
         """
         super().__init__(filename)
 
     def parse(self, filename):
         """
-        Load and parse the given URDF file.
+        Load and parse the given proto file.
 
         Args:
-            filename (str): path to the MuJoCo XML file.
+            filename (str): path to the proto file.
         """
         pass
 

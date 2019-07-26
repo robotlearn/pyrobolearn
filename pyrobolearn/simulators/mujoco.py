@@ -62,7 +62,8 @@ except ImportError as e:
 
 # import pyrobolearn related functionalities
 from pyrobolearn.simulators.simulator import Simulator
-from pyrobolearn.utils.parsers.robots import mujoco_parser, urdf_parser, sdf_parser, converter
+# from pyrobolearn.utils.parsers.robots import mujoco_parser, urdf_parser, sdf_parser
+from pyrobolearn.utils.parsers.robots import URDFParser, MuJoCoParser, SDFParser
 
 
 # check Python version
@@ -237,8 +238,7 @@ class Mujoco(Simulator):
         self._root = ET.Element("mujoco")
 
         # create worldbody
-        ET.SubElement(self._root, 'worldbody')
-        self._worldbody = self._root.find('worldbody')
+        self._worldbody = ET.SubElement(self._root, 'worldbody')
 
         # add a light
         ET.SubElement(self._worldbody, "light", attrib={"diffuse": ".5 .5 .5", "pos": "0 0 3", "dir": "0 0 -1"})
@@ -572,8 +572,15 @@ class Mujoco(Simulator):
         Returns:
             int (non-negative): unique id associated to the load model.
         """
-        # create xml file based on URDF file
-        pass
+        # parse URDF file
+        urdf_parser = URDFParser(filename=filename)
+        mujoco_generator = MuJoCoParser()
+
+        # generate XML element
+        element = mujoco_generator.generate(urdf_parser.tree)
+
+        # append element to worldbody
+        self._worldbody.append(element)
 
     def load_sdf(self, filename, scaling=1., *args, **kwargs):
         """Load a SDF file in the simulator.
@@ -585,15 +592,23 @@ class Mujoco(Simulator):
         Returns:
             list(int): list of object unique id for each object loaded
         """
-        # parse sdf
-        tree = ET.parse(filename)
-        root = tree.getroot()
+        # parse sdf file
+        sdf_parser = SDFParser(filename=filename)
+        mujoco_generator = MuJoCoParser()
 
-        # add bodies
-        pass
+        # generate XML elements
+        elements = [mujoco_generator.generate(tree) for tree in sdf_parser.world.trees]
+
+        # append each element to worldbody
+        for element in elements:
+            self._worldbody.append(element)
 
     def load_mjcf(self, filename, scaling=1., *args, **kwargs):
         """Load a Mujoco file in the simulator.
+
+        Warnings: this only loads the bodies, joints, and assets. It does not load other elements such as the physical
+        engine properties (number of iterations, solver, etc), physical properties (gravity, friction, viscosity, etc),
+        and others.
 
         Args:
             filename (str): a relative or absolute path to the MJCF file on the file system of the physics server.
@@ -602,11 +617,19 @@ class Mujoco(Simulator):
         Returns:
             list(int): list of object unique id for each object loaded
         """
-        # update the world
+        # load MJCF  # TODO: check if empty world
+        # self.model = mujoco.load_model_from_path(filename)
+        # self.sim = mujoco.MjSim(self.model)
 
-        # load MJCF
-        self.model = mujoco.load_model_from_path(filename)
-        self.sim = mujoco.MjSim(self.model)
+        # parse MJCF file
+        parser = MuJoCoParser(filename=filename)
+
+        # generate XML elements
+        elements = [parser.generate(tree) for tree in parser.world.trees]
+
+        # append each element to worldbody
+        for element in elements:
+            self._worldbody.append(element)
 
     def load_mesh(self, filename, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None,
                   with_collision=True, flags=None, *args, **kwargs):
@@ -628,11 +651,18 @@ class Mujoco(Simulator):
         Returns:
             int: unique id of the mesh in the world
         """
+        # convert file '.obj' to '.stl' as MuJoCo only supports STL formats.
+
+        # try to look for textures and colors in the '.mtl' file
+
         # create collision shape if specified
 
         # create visual shape
 
         # create body
+        pass
+
+    def load_soft_body(self, shape=None, filename=None):  # TODO
         pass
 
     ##########

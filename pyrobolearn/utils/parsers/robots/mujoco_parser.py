@@ -4,10 +4,9 @@
 
 # import XML parser
 import xml.etree.ElementTree as ET
-from xml.dom import minidom  # to print in a pretty way the XML file
 
-from pyrobolearn.utils.parsers.robots.robot_parser import RobotParser
-from pyrobolearn.utils.parsers.robots.data_structures import Tree
+from pyrobolearn.utils.parsers.robots.world_parser import WorldParser
+from pyrobolearn.utils.parsers.robots.data_structures import Tree, World
 
 
 __author__ = "Brian Delhaisse"
@@ -20,8 +19,8 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class MuJoCoParser(RobotParser):
-    r"""MuJoCo Parser"""
+class MuJoCoParser(WorldParser):
+    r"""MuJoCo Parser and Generator"""
 
     def __init__(self, filename=None):
         """
@@ -40,23 +39,69 @@ class MuJoCoParser(RobotParser):
             filename (str): path to the MuJoCo XML file.
         """
         # load and parse the XML file
-        tree = ET.parse(filename)
+        tree_xml = ET.parse(filename)
 
         # get the root
-        root = tree.getroot()
+        root = tree_xml.getroot()
 
         # check that the root is <mujoco>
         if root.tag != 'mujoco':
             raise RuntimeError("Expecting the first XML tag to be 'mujoco' but found instead: {}".format(root.tag))
 
-        # build the tree
+        # build the world
+        world = World()
 
-    def get_tree(self):
+        # check default (this is the default configuration when they are not specified)
+        default_tag = root.find('default')
+        if default_tag is not None:
+            pass
+
+        # check physics
+
+        # check assets
+        asset_tag = root.find('asset')
+        if asset_tag is not None:
+            pass
+
+        # check world body
+        worldbody_tag = root.find('worldbody')
+        if worldbody_tag is not None:
+            pass
+
+        # check contact
+
+        # check equality constraint
+
+        # check actuator
+
+        # check sensor
+
+        # set the world
+        self.world = world
+
+    def _check_body(self, body_tag, idx):
         """
-        Return the Tree containing all the elements.
+        Return Body instance from a <body>.
+
+        Args:
+            body_tag (ET.Element): body XML element.
+            idx (int): link index.
 
         Returns:
-            Tree: tree data structure.
+            Body: body data structure.
+        """
+        pass
+
+    def _check_joint(self, joint_tag, idx):
+        """
+        Return Joint instance from a <joint> tag.
+
+        Args:
+            joint_tag (ET.Element): joint XML element.
+            idx (int): joint index.
+
+        Returns:
+            Joint: joint data structure.
         """
         pass
 

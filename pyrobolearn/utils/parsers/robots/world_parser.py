@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-"""Define the abstract Robot parser.
+"""Define the abstract world parser.
 """
 
 # import XML parser
 import xml.etree.ElementTree as ET
 from xml.dom import minidom  # to print in a pretty way the XML file
 
-from pyrobolearn.utils.parsers.robots.data_structures import Tree
+from pyrobolearn.utils.parsers.robots.data_structures import World, Tree
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2019, PyRoboLearn"
@@ -18,18 +18,18 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class RobotParser(object):
-    r"""Robot Parser and Generator."""
+class WorldParser(object):
+    r"""World Parser and Generator."""
 
     def __init__(self, filename=None):
         """
-        Initialize the robot parser.
+        Initialize the world parser.
 
         Args:
             filename (str, None): path to the file to parse.
         """
         self.root = None
-        self.tree = None
+        self.world = None
         self.filename = filename
         if filename is not None:
             self.parse(filename)
@@ -46,15 +46,15 @@ class RobotParser(object):
         self._root = root
 
     @property
-    def tree(self):
-        return self._tree
+    def world(self):
+        return self._world
 
-    @tree.setter
-    def tree(self, tree):
-        if tree is not None and not isinstance(tree, Tree):
-            raise TypeError("Expecting the given tree to be an instance of `Tree`, but got instead: "
-                            "{}".format(type(tree)))
-        self._tree = tree
+    @world.setter
+    def world(self, world):
+        if world is not None and not isinstance(world, World):
+            raise TypeError("Expecting the given world to be an instance of `World` but got instead: "
+                            "{}".format(type(world)))
+        self._world = world
 
     def parse(self, filename):
         """
@@ -65,21 +65,34 @@ class RobotParser(object):
         """
         pass
 
-    def get_tree(self):
+    def get_tree(self, index=None, tag=None):
         """
-        Return the Tree containing all the elements.
-
-        Returns:
-            Tree: tree data structure.
-        """
-        return self.tree
-
-    def generate(self, tree=None):
-        """
-        Generate the XML tree from the `Tree` data structure.
+        Get the specified tree(s).
 
         Args:
-            tree (Tree): Tree data structure.
+            index (int, None): tree index. If None, it will return all the trees.
+            tag (str, None): tag of the root that we want.
+
+        Returns:
+            (list of) Tree: tree data structure(s).
+        """
+        pass
+
+    def get_world(self):
+        """
+        Return the world containing all the elements that compose that world.
+
+        Returns:
+            World: World data structure.
+        """
+        return self.world
+
+    def generate(self, world=None):
+        """
+        Generate the XML world from the `World` data structure.
+
+        Args:
+            world (World): world data structure.
 
         Returns:
             ET.Element: root element in the XML file.
@@ -105,7 +118,7 @@ class RobotParser(object):
 
     def write(self, filename, root=None):
         """
-        Write the XML tree in the specified XML file.
+        Write the XML world in the specified XML file.
 
         Args:
             filename (str): path to the file to write the XML in.
