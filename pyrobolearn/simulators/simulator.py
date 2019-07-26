@@ -111,7 +111,8 @@ class Simulator(object):
     GEOM_MESH = 5
     GEOM_PLANE = 6
     GEOM_CAPSULE = 7
-    GEOM_CONE = 8       # NEW
+    GEOM_CONE = 8        # NEW
+    GEOM_ELLIPSOID = 9   # NEW
 
     GUI = 1
     GUI_MAIN_THREAD = 8
@@ -317,6 +318,16 @@ class Simulator(object):
     @staticmethod
     def supports_urdf():
         """Return True if we can use URDFs."""
+        return False
+
+    @staticmethod
+    def supports_light():
+        """Return True if we can define and access to the lights in the simulator."""
+        return False
+
+    @staticmethod
+    def can_load_heightmap():
+        """Return True if the simulator can load a heightmap."""
         return False
 
     ###########

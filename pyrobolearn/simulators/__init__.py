@@ -14,6 +14,9 @@ from .bullet_ros import BulletROS
 # dart simulator
 # from .dart import Dart
 
+# MuJoCo simulator
+# from .mujoco import Mujoco
+
 # # PyBullet simulator
 # import pybullet
 # import pybullet_data
