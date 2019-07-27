@@ -380,7 +380,7 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
         batch = {}
 
         # go through each attribute in the  and sample from the tensors
-        for key, value in self.iteritems():
+        for key, value in self.items():
             if isinstance(value, list):  # value = list of tensors
                 batch[key] = [val[indices] for val in value]
             else:  # value = tensor

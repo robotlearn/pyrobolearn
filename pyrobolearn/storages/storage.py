@@ -686,7 +686,7 @@ class Batch(DictStorage):
 
             # print other variables
             tmp = {'states', 'actions', 'rewards', 'masks', 'returns'}
-            for key, value in kwargs.iteritems():
+            for key, value in kwargs.items():
                 if key not in tmp:
                     print("{}: {}".format(key, value))
 
@@ -1166,7 +1166,7 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
         #     print("Indices: {}".format(indices))
 
         # go through each attribute and sample from the tensors
-        for key, value in self.iteritems():
+        for key, value in self.items():
             # print("batch - add key: {}".format(key))
             if isinstance(value, list):  # value = list of tensors
                 batch[key] = [sample(val, indices) for val in value]  # [[I, *shape] for each shape]

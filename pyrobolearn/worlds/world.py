@@ -269,7 +269,7 @@ class World(object):
         world = self.__class__(simulator=simulator, gravity=gravity)
 
         # load bodies in world
-        for id_, items in self.ids.iteritems():
+        for id_, items in self.ids.items():
             if not isinstance(items, list):
                 items = [items]
             for item in items:

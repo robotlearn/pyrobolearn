@@ -232,7 +232,7 @@ class Updater(object):
             raise TypeError("Expecting the given ticks to be a dictionary, instead got: {}".format(type(ticks)))
 
         # check first the items already present in the ticks
-        for key, value in ticks.iteritems():
+        for key, value in ticks.items():
             # check that the key is a Loss or ParamaterUpdater
             if not isinstance(key, (Loss, ParameterUpdater)):
                 raise TypeError("Expecting the given key for the tick to be an instance of `Loss` or "
