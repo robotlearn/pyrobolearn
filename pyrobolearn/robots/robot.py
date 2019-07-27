@@ -316,14 +316,14 @@ class Robot(ControllableBody):
 
     def sense(self):
         """Run all the sensors."""
-        for sensors in self.sensors.itervalues():
+        for sensors in self.sensors.values():
             for sensor in sensors:
                 sensor.clean()
                 sensor.sense()
 
     def act(self):
         """Run all the actuators."""
-        for actuators in self.actuators.itervalues():
+        for actuators in self.actuators.values():
             for actuator in actuators:
                 actuator()
 
