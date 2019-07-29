@@ -1,7 +1,11 @@
 #!/usr/bin/env python
-"""Define the URDF parser.
+"""Define the URDF parser/generator.
 
 URDF files are notably used in ROS, Gazebo, Bullet, Dart, and MuJoCo.
+
+References:
+    - URDF XML specifications: http://wiki.ros.org/urdf/XML
+    - Tutorial: Using a URDF in Gazebo: http://gazebosim.org/tutorials/?tut=ros_urdf
 """
 
 # import XML parser
@@ -148,7 +152,7 @@ class URDFParser(RobotParser):
             # geometry
             geometry_tag = visual_tag.find('geometry')
             if geometry_tag is not None:
-                for geometry_type in ['box', 'mesh', 'cylinder', 'sphere']:
+                for geometry_type in {'box', 'mesh', 'cylinder', 'sphere'}:
                     geometry_type_tag = geometry_tag.find(geometry_type)
                     if geometry_type_tag is not None:
                         dtype = geometry_type
@@ -200,7 +204,7 @@ class URDFParser(RobotParser):
             # geometry
             geometry_tag = collision_tag.find('geometry')
             if geometry_tag is not None:
-                for geometry_type in ['box', 'mesh', 'cylinder', 'sphere']:
+                for geometry_type in {'box', 'mesh', 'cylinder', 'sphere'}:
                     geometry_type_tag = geometry_tag.find(geometry_type)
                     if geometry_type_tag is not None:
                         dtype = geometry_type

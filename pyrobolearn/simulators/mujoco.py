@@ -62,7 +62,6 @@ except ImportError as e:
 
 # import pyrobolearn related functionalities
 from pyrobolearn.simulators.simulator import Simulator
-# from pyrobolearn.utils.parsers.robots import mujoco_parser, urdf_parser, sdf_parser
 from pyrobolearn.utils.parsers.robots import URDFParser, MuJoCoParser, SDFParser
 
 

@@ -12,9 +12,9 @@ dynamics, etc.
 Dependencies in PRL: None
 
 References:
-    [1] PyBullet: https://pybullet.org
-    [2] PyBullet Quickstart Guide: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA
-    [3] PEP8: https://www.python.org/dev/peps/pep-0008/
+    - [1] PyBullet: https://pybullet.org
+    - [2] PyBullet Quickstart Guide: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA
+    - [3] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
 
 from pyrobolearn.utils.data_structures.orderedset import OrderedSet
@@ -42,8 +42,8 @@ class Simulator(object):
         sim = GazeboROS()
 
     References:
-    [1] PyBullet: https://pybullet.org
-    [2] PEP8: https://www.python.org/dev/peps/pep-0008/
+        - [1] PyBullet: https://pybullet.org
+        - [2] PEP8: https://www.python.org/dev/peps/pep-0008/
     """
 
     # keep track of the instantiated simulators
@@ -2350,10 +2350,10 @@ class Simulator(object):
             np.array[N]: joint torques computed using the rigid-body equation of motion
 
         References:
-            [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
-            [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
-            [3] "Springer Handbook of Robotics", Siciliano et al., 2008
-            [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+            - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            - [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            - [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            - [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
                 http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
         pass
@@ -2398,10 +2398,10 @@ class Simulator(object):
             np.array[N]: joint accelerations computed using the rigid-body equation of motion
 
         References:
-            [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
-            [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
-            [3] "Springer Handbook of Robotics", Siciliano et al., 2008
-            [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+            - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            - [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            - [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            - [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
                 http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
         pass

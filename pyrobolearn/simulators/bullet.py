@@ -3513,10 +3513,10 @@ class Bullet(Simulator):
             np.array[N]: joint torques computed using the rigid-body equation of motion
 
         References:
-            [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
-            [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
-            [3] "Springer Handbook of Robotics", Siciliano et al., 2008
-            [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+            - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            - [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            - [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            - [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
                 http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
         # convert numpy arrays to lists
@@ -3570,10 +3570,10 @@ class Bullet(Simulator):
             np.array[N]: joint accelerations computed using the rigid-body equation of motion
 
         References:
-            [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
-            [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
-            [3] "Springer Handbook of Robotics", Siciliano et al., 2008
-            [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+            - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            - [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            - [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            - [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
                 http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
         # convert numpy arrays to lists

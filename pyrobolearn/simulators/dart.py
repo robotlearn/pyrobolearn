@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 """Define the DART (Dynamic Animation and Robotics Toolkit) Simulator API.
 
-This is the main interface that communicates with the PyDART simulator [1, 2]. By defining this interface, it allows to
+This is the main interface that communicates with the DART simulator [1, 2]. By defining this interface, it allows to
 decouple the PyRoboLearn framework from the simulator. It also converts some data types to the ones required by
-PyDART.
+``dartpy``.
 
 The signature of each method defined here are inspired by [1,2] but in accordance with the PEP8 style guide [3].
-Parts of the documentation for the methods have been copied-pasted from [2] for completeness purposes.
+Parts of the documentation for the methods have been copied-pasted from [1] for completeness purposes.
 
 Note that there are 2 python wrappers for DART [1]: `dartpy` (which uses `pybind11` to wrap C++ code) [1], and
 `pydart` (which uses `SWIG` to wrap the C++ code) [2]. Currently, it seems that:
@@ -16,39 +16,52 @@ repo. Note that you can only use it in Python 3 (>=3.4).
 It can be used with Python2.7 and Python3.5.
 - Both have a very poor Python documentation.
 
+We selected to use ``dartpy`` instead of ``pydart`` as this last one is no more under active development, and
+``dartpy`` is the official release.
+
 Dependencies in PRL:
 * `pyrobolearn.simulators.simulator.Simulator`
 
 Dependencies in PRL: None
 
 References:
-    [1] DART: Dynamic Animation and Robotics Toolkit
+    - [1] DART: Dynamic Animation and Robotics Toolkit
         - paper: http://joss.theoj.org/papers/10.21105/joss.00500
         - webpage: https://dartsim.github.io/
         - github: https://github.com/dartsim/dart/
         - dartpy: http://dartsim.github.io/install_dartpy_on_ubuntu.html
-    [2] PyDART
+    - [2] PyDART
         - source code: https://pydart2.readthedocs.io/en/latest/
         - documentation: https://pydart2.readthedocs.io/en/latest/
-    [3] PEP8: https://www.python.org/dev/peps/pep-0008/
+    - [3] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
 
-# TODO: finish to implement this interface and use dartpy instead of pydart2
+# import standard libraries
+import os
+import time
+import numpy as np
+from collections import OrderedDict
 
-# import pydart2
+# import dartpy
 try:
-    import pydart2 as pydart
+    import dartpy as dart
 except ImportError as e:
-    raise ImportError(e.__str__() + "\n: HINT: you can install pydart2 by following the instructions given at: "
-                                    "https://pydart2.readthedocs.io/en/latest/install.html")
+    raise ImportError(e.__str__() + "\n: HINT: you can install `dartpy` by following the instructions given at: "
+                                    "https://dartsim.github.io/install_dartpy_on_ubuntu.html")
 
 # import PRL simulator
 from pyrobolearn.simulators.simulator import Simulator
+from pyrobolearn.utils.parsers.robots import URDFParser, MuJoCoParser, SDFParser, SkelParser
+from pyrobolearn.utils.transformation import get_quaternion_from_matrix
 
+# check Python version
+import sys
+if sys.version_info[0] < 3:
+    raise RuntimeError("You must use Python 3 with the MuJoCo simulator.")
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__credits__ = ["DART", "PyDART", "Brian Delhaisse"]
+__credits__ = ["DART", "Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
@@ -57,42 +70,227 @@ __status__ = "Development"
 
 
 class Dart(Simulator):
-    r"""PyDART simulator
+    r"""DART simulator
 
-    This is a wrapper around the PyDART2 API [2] (which is a Python wrapper around DART [1]).
+    This is a wrapper around the ``dartpy`` API [1] (which is itself a Python wrapper around DART [1]).
 
     With DART, we first have to create a world, then spawn a skeleton (a `Skeleton` is a structure that consists of
     `BodyNode` which are connected by `Joint`.
+
+    Warnings: by default, in DART, the world frame axis are defined with x pointing forward, y pointing upward, and
+    z pointing on the right. To be consistent with the other simulators, we change this to be x pointing forward,
+    y pointing on the left, and z pointing upward.
+
+    Notes:
+        - In the documentation, Isometry refers to a homogeneous transformation matrix.
 
     Examples:
         sim = Dart()
 
     References:
-        [1] Dart:
+        - [1] Dart:
             - webpage: https://dartsim.github.io/
             - github: https://github.com/dartsim/dart/
             - dartpy: http://dartsim.github.io/install_dartpy_on_ubuntu.html
-        [2] PyDART:
-            - source code: https://pydart2.readthedocs.io/en/latest/
-            - documentation: https://pydart2.readthedocs.io/en/latest/
-        [3] PEP8: https://www.python.org/dev/peps/pep-0008/
+        - [2] PEP8: https://www.python.org/dev/peps/pep-0008/
     """
 
-    def __init__(self, render=True, dt=1.0/1000.0, **kwargs):
+    def __init__(self, render=True, dt=0.001, **kwargs):
         super(Dart, self).__init__(render, **kwargs)
 
-        # init pydart
-        pydart.init()
+        # dart = {'collision': ['BulletCollisionDetector', 'BulletCollisionGroup', 'CollisionDetector',
+        #                       'CollisionGroup', 'CollisionOption', 'CollisionResult', 'Contact',
+        #                       'DARTCollisionDetector', 'DARTCollisionGroup', 'DistanceOption', 'DistanceResult',
+        #                       'FCLCollisionDetector', 'FCLCollisionGroup', 'OdeCollisionDetector',
+        #                       'OdeCollisionGroup', 'RayHit', 'RaycastOption', 'RaycastResult'],
+        #         'common': ['Composite', 'Observer', 'Subject', 'Uri'],
+        #         'constraint': ['BallJointConstraint', 'BoxedLcpConstraintSolver', 'BoxedLcpSolver', 'ConstraintBase',
+        #                        'ConstraintSolver', 'DantzigBoxedLcpSolver', 'JointConstraint',
+        #                        'JointCoulombFrictionConstraint', 'JointLimitConstraint', 'PgsBoxedLcpSolver',
+        #                        'PgsBoxedLcpSolverOption', 'WeldJointConstraint'],
+        #         'dynamics': ['ArrowShape', 'ArrowShapeProperties', 'BallJoint', 'BallJointProperties', 'BodyNode',
+        #                      'BodyNodeAspectProperties', 'BodyNodeProperties', 'BoxShape', 'CapsuleShape', 'Chain',
+        #                      'ChainCriteria', 'CollisionAspect',
+        #                      'CompositeJoiner_EmbedProperties_EulerJoint_EulerJointUniqueProperties_GenericJoint_R3Space',
+        #                      'CompositeJoiner_EmbedProperties_PlanarJoint_PlanarJointUniqueProperties_GenericJoint_R3Space',
+        #                      'CompositeJoiner_EmbedProperties_PrismaticJoint_PrismaticJointUniqueProperties_GenericJoint_R1Space',
+        #                      'CompositeJoiner_EmbedProperties_RevoluteJoint_RevoluteJointUniqueProperties_GenericJoint_R1Space',
+        #                      'CompositeJoiner_EmbedProperties_ScrewJoint_ScrewJointUniqueProperties_GenericJoint_R1Space',
+        #                      'CompositeJoiner_EmbedProperties_TranslationalJoint2D_TranslationalJoint2DUniqueProperties_GenericJoint_R2Space',
+        #                      'CompositeJoiner_EmbedProperties_UniversalJoint_UniversalJointUniqueProperties_GenericJoint_R2Space',
+        #                      'CompositeJoiner_EmbedStateAndProperties_GenericJoint_R1GenericJointStateGenericJointUniqueProperties_Joint',
+        #                      'CompositeJoiner_EmbedStateAndProperties_GenericJoint_R2GenericJointStateGenericJointUniqueProperties_Joint',
+        #                      'CompositeJoiner_EmbedStateAndProperties_GenericJoint_R3GenericJointStateGenericJointUniqueProperties_Joint',
+        #                      'CompositeJoiner_EmbedStateAndProperties_GenericJoint_SE3GenericJointStateGenericJointUniqueProperties_Joint',
+        #                      'CompositeJoiner_EmbedStateAndProperties_GenericJoint_SO3GenericJointStateGenericJointUniqueProperties_Joint',
+        #                      'ConeShape', 'CylinderShape', 'DegreeOfFreedom', 'Detachable', 'DynamicsAspect',
+        #                      'EllipsoidShape',
+        #                      'EmbedPropertiesOnTopOf_EulerJoint_EulerJointUniqueProperties_GenericJoint_R3Space',
+        #                      'EmbedPropertiesOnTopOf_PlanarJoint_PlanarJointUniqueProperties_GenericJoint_R3Space',
+        #                      'EmbedPropertiesOnTopOf_PrismaticJoint_PrismaticJointUniqueProperties_GenericJoint_R1Space',
+        #                      'EmbedPropertiesOnTopOf_RevoluteJoint_RevoluteJointUniqueProperties_GenericJoint_R1Space',
+        #                      'EmbedPropertiesOnTopOf_ScrewJoint_ScrewJointUniqueProperties_GenericJoint_R1Space',
+        #                      'EmbedPropertiesOnTopOf_TranslationalJoint2D_TranslationalJoint2DUniqueProperties_GenericJoint_R2Space',
+        #                      'EmbedPropertiesOnTopOf_UniversalJoint_UniversalJointUniqueProperties_GenericJoint_R2Space',
+        #                      'EmbedProperties_EulerJoint_EulerJointUniqueProperties',
+        #                      'EmbedProperties_Joint_JointProperties',
+        #                      'EmbedProperties_PlanarJoint_PlanarJointUniqueProperties',
+        #                      'EmbedProperties_PrismaticJoint_PrismaticJointUniqueProperties',
+        #                      'EmbedProperties_RevoluteJoint_RevoluteJointUniqueProperties',
+        #                      'EmbedProperties_ScrewJoint_ScrewJointUniqueProperties',
+        #                      'EmbedProperties_TranslationalJoint2D_TranslationalJoint2DUniqueProperties',
+        #                      'EmbedProperties_UniversalJoint_UniversalJointUniqueProperties',
+        #                      'EmbedStateAndPropertiesOnTopOf_GenericJoint_R1_GenericJointState_GenericJointUniqueProperties_Joint',
+        #                      'EmbedStateAndPropertiesOnTopOf_GenericJoint_R2_GenericJointState_GenericJointUniqueProperties_Joint',
+        #                      'EmbedStateAndPropertiesOnTopOf_GenericJoint_R3_GenericJointState_GenericJointUniqueProperties_Joint',
+        #                      'EmbedStateAndPropertiesOnTopOf_GenericJoint_SE3_GenericJointState_GenericJointUniqueProperties_Joint',
+        #                      'EmbedStateAndPropertiesOnTopOf_GenericJoint_SO3_GenericJointState_GenericJointUniqueProperties_Joint',
+        #                      'EmbedStateAndProperties_GenericJoint_R1GenericJointState_GenericJointUniqueProperties',
+        #                      'EmbedStateAndProperties_GenericJoint_R2GenericJointState_GenericJointUniqueProperties',
+        #                      'EmbedStateAndProperties_GenericJoint_R3GenericJointState_GenericJointUniqueProperties',
+        #                      'EmbedStateAndProperties_GenericJoint_SE3GenericJointState_GenericJointUniqueProperties',
+        #                      'EmbedStateAndProperties_GenericJoint_SO3GenericJointState_GenericJointUniqueProperties',
+        #                      'Entity', 'EulerJoint', 'EulerJointProperties', 'EulerJointUniqueProperties', 'Frame',
+        #                      'FreeJoint', 'FreeJointProperties', 'GenericJointProperties_R1',
+        #                      'GenericJointProperties_R2', 'GenericJointProperties_R3', 'GenericJointProperties_SE3',
+        #                      'GenericJointProperties_SO3', 'GenericJointUniqueProperties_R1',
+        #                      'GenericJointUniqueProperties_R2', 'GenericJointUniqueProperties_R3',
+        #                      'GenericJointUniqueProperties_SE3', 'GenericJointUniqueProperties_SO3',
+        #                      'GenericJoint_R1', 'GenericJoint_R2', 'GenericJoint_R3', 'GenericJoint_SE3',
+        #                      'GenericJoint_SO3', 'InverseKinematics', 'InverseKinematicsErrorMethod', 'JacobianNode',
+        #                      'Joint', 'JointProperties', 'LineSegmentShape', 'Linkage', 'LinkageCriteria',
+        #                      'MeshShape', 'MetaSkeleton', 'MultiSphereConvexHullShape', 'Node', 'PlanarJoint',
+        #                      'PlanarJointProperties', 'PlanarJointUniqueProperties', 'PlaneShape', 'PrismaticJoint',
+        #                      'PrismaticJointProperties', 'PrismaticJointUniqueProperties', 'ReferentialSkeleton',
+        #                      'RequiresAspect_EmbeddedPropertiesAspect_EulerJoint_EulerJointUniqueProperties',
+        #                      'RequiresAspect_EmbeddedPropertiesAspect_Joint_JointProperties',
+        #                      'RequiresAspect_EmbeddedPropertiesAspect_PlanarJoint_PlanarJointUniqueProperties',
+        #                      'RequiresAspect_EmbeddedPropertiesAspect_PrismaticJoint_PrismaticJointUniqueProperties',
+        #                      'RequiresAspect_EmbeddedPropertiesAspect_RevoluteJoint_RevoluteJointUniqueProperties',
+        #                      'RequiresAspect_EmbeddedPropertiesAspect_ScrewJoint_ScrewJointUniqueProperties',
+        #                      'RequiresAspect_EmbeddedPropertiesAspect_TranslationalJoint2D_TranslationalJoint2DUniqueProperties',
+        #                      'RequiresAspect_EmbeddedPropertiesAspect_UniversalJoint_UniversalJointUniqueProperties',
+        #                      'RequiresAspect_EmbeddedStateAndPropertiesAspect_GenericJoint_R1_GenericJointState_GenericJointUniqueProperties',
+        #                      'RequiresAspect_EmbeddedStateAndPropertiesAspect_GenericJoint_R2_GenericJointState_GenericJointUniqueProperties',
+        #                      'RequiresAspect_EmbeddedStateAndPropertiesAspect_GenericJoint_R3_GenericJointState_GenericJointUniqueProperties',
+        #                      'RequiresAspect_EmbeddedStateAndPropertiesAspect_GenericJoint_SE3_GenericJointState_GenericJointUniqueProperties',
+        #                      'RequiresAspect_EmbeddedStateAndPropertiesAspect_GenericJoint_SO3_GenericJointState_GenericJointUniqueProperties',
+        #                      'RevoluteJoint', 'RevoluteJointProperties', 'RevoluteJointUniqueProperties',
+        #                      'ScrewJoint', 'ScrewJointProperties', 'ScrewJointUniqueProperties', 'Shape',
+        #                      'ShapeFrame', 'ShapeNode', 'SimpleFrame', 'Skeleton', 'SoftMeshShape',
+        #                      'SpecializedForAspect_EmbeddedPropertiesAspect_EulerJoint_EulerJointUniqueProperties',
+        #                      'SpecializedForAspect_EmbeddedPropertiesAspect_Joint_JointProperties',
+        #                      'SpecializedForAspect_EmbeddedPropertiesAspect_PlanarJoint_PlanarJointUniqueProperties',
+        #                      'SpecializedForAspect_EmbeddedPropertiesAspect_PrismaticJoint_PrismaticJointUniqueProperties',
+        #                      'SpecializedForAspect_EmbeddedPropertiesAspect_RevoluteJoint_RevoluteJointUniqueProperties',
+        #                      'SpecializedForAspect_EmbeddedPropertiesAspect_ScrewJoint_ScrewJointUniqueProperties',
+        #                      'SpecializedForAspect_EmbeddedPropertiesAspect_TranslationalJoint2D_TranslationalJoint2DUniqueProperties',
+        #                      'SpecializedForAspect_EmbeddedPropertiesAspect_UniversalJoint_UniversalJointUniqueProperties',
+        #                      'SpecializedForAspect_EmbeddedStateAndPropertiesAspect_GenericJoint_R1_GenericJointState_GenericJointUniqueProperties',
+        #                      'SpecializedForAspect_EmbeddedStateAndPropertiesAspect_GenericJoint_R2_GenericJointState_GenericJointUniqueProperties',
+        #                      'SpecializedForAspect_EmbeddedStateAndPropertiesAspect_GenericJoint_R3_GenericJointState_GenericJointUniqueProperties',
+        #                      'SpecializedForAspect_EmbeddedStateAndPropertiesAspect_GenericJoint_SE3_GenericJointState_GenericJointUniqueProperties',
+        #                      'SpecializedForAspect_EmbeddedStateAndPropertiesAspect_GenericJoint_SO3_GenericJointState_GenericJointUniqueProperties',
+        #                      'SphereShape', 'TemplatedJacobianBodyNode', 'TranslationalJoint', 'TranslationalJoint2D',
+        #                      'TranslationalJoint2DProperties', 'TranslationalJoint2DUniqueProperties',
+        #                      'TranslationalJointProperties', 'UniversalJoint', 'UniversalJointProperties',
+        #                      'UniversalJointUniqueProperties', 'VisualAspect', 'WeldJoint', 'ZeroDofJoint',
+        #                      'ZeroDofJointProperties'],
+        #         'gui': {'osg': ['BodyNodeDnD', 'DragAndDrop', 'GUIActionAdapter', 'GUIEventAdapter',
+        #                         'GUIEventHandler', 'GridVisual', 'ImGuiHandler', 'ImGuiViewer', 'ImGuiWidget',
+        #                         'InteractiveFrame', 'InteractiveFrameDnD', 'InteractiveTool', 'RealTimeWorldNode',
+        #                         'ShadowMap', 'ShadowTechnique', 'SimpleFrameDnD', 'SimpleFrameShapeDnD', 'Viewer',
+        #                         'ViewerAttachment', 'WorldNode']},
+        #         'math': ['AngleAxis', 'Isometry3', 'Quaternion', 'Random', 'eulerXYXToMatrix', 'eulerXYZToMatrix',
+        #                  'eulerXZXToMatrix', 'eulerXZYToMatrix', 'eulerYXYToMatrix', 'eulerYXZToMatrix',
+        #                  'eulerYZXToMatrix', 'eulerYZYToMatrix', 'eulerZXYToMatrix', 'eulerZXZToMatrix',
+        #                  'eulerZYXToMatrix', 'eulerZYZToMatrix', 'expAngular', 'expMap', 'expMapJac', 'expMapRot',
+        #                  'expToQuat', 'matrixToEulerXYX', 'matrixToEulerXYZ', 'matrixToEulerXZY', 'matrixToEulerYXZ',
+        #                  'matrixToEulerYZX', 'matrixToEulerZXY', 'matrixToEulerZYX', 'quatToExp', 'verifyRotation',
+        #                  'verifyTransform'],
+        #         'optimizer': ['Function', 'GradientDescentSolver', 'GradientDescentSolverProperties',
+        #                       'GradientDescentSolverUniqueProperties', 'ModularFunction', 'MultiFunction',
+        #                       'NloptSolver', 'NullFunction', 'Problem', 'Solver', 'SolverProperties'],
+        #         'simulation': ['World'],
+        #         'utils': ['DartLoader', 'SkelParser']]
+
+        # Skeleton = ['checkIndexingConsistency', 'clearConstraintImpulses', 'clearExternalForces', 'clearIK',
+        #             'clearInternalForces', 'clone', 'cloneMetaSkeleton', 'computeForwardDynamics',
+        #             'computeForwardKinematics', 'computeImpulseForwardDynamics', 'computeInverseDynamics',
+        #             'computeKineticEnergy', 'computeLagrangian', 'computePotentialEnergy',
+        #             'createBallJointAndBodyNodePair', 'createEulerJointAndBodyNodePair',
+        #             'createFreeJointAndBodyNodePair', 'createPlanarJointAndBodyNodePair',
+        #             'createPrismaticJointAndBodyNodePair', 'createRevoluteJointAndBodyNodePair',
+        #             'createScrewJointAndBodyNodePair', 'createTranslationalJoint2DAndBodyNodePair',
+        #             'createTranslationalJointAndBodyNodePair', 'createUniversalJointAndBodyNodePair',
+        #             'createWeldJointAndBodyNodePair', 'dirtyArticulatedInertia', 'dirtySupportPolygon',
+        #             'disableAdjacentBodyCheck', 'disableSelfCollisionCheck', 'enableAdjacentBodyCheck',
+        #             'enableSelfCollisionCheck', 'getAcceleration', 'getAccelerationLowerLimit',
+        #             'getAccelerationLowerLimits', 'getAccelerationUpperLimit', 'getAccelerationUpperLimits',
+        #             'getAccelerations', 'getAdjacentBodyCheck', 'getAngularJacobian', 'getAngularJacobianDeriv',
+        #             'getAugMassMatrix', 'getBodyNode', 'getBodyNodes', 'getCOM', 'getCOMJacobian',
+        #             'getCOMJacobianSpatialDeriv', 'getCOMLinearAcceleration', 'getCOMLinearJacobian',
+        #             'getCOMLinearJacobianDeriv', 'getCOMLinearVelocity', 'getCOMSpatialAcceleration',
+        #             'getCOMSpatialVelocity', 'getCommand', 'getCommands', 'getConfiguration', 'getConstraintForces',
+        #             'getCoriolisAndGravityForces', 'getCoriolisForces', 'getDof', 'getDofs', 'getExternalForces',
+        #             'getForce', 'getForceLowerLimit', 'getForceLowerLimits', 'getForceUpperLimit',
+        #             'getForceUpperLimits', 'getForces', 'getGravity', 'getGravityForces', 'getIK', 'getIndexOf',
+        #             'getInvMassMatrix', 'getJacobian', 'getJacobianClassicDeriv', 'getJacobianSpatialDeriv',
+        #             'getJoint', 'getJointConstraintImpulses', 'getJoints', 'getLinearJacobian',
+        #             'getLinearJacobianDeriv', 'getLockableReference', 'getMass', 'getMassMatrix', 'getName',
+        #             'getNumBodyNodes', 'getNumDofs', 'getNumEndEffectors', 'getNumJoints', 'getNumMarkers',
+        #             'getNumRigidBodyNodes', 'getNumShapeNodes', 'getNumSoftBodyNodes', 'getNumTrees', 'getPosition',
+        #             'getPositionDifferences', 'getPositionLowerLimit', 'getPositionLowerLimits',
+        #             'getPositionUpperLimit', 'getPositionUpperLimits', 'getPositions', 'getProperties', 'getPtr',
+        #             'getRootBodyNode', 'getRootJoint', 'getSelfCollisionCheck', 'getSkeleton', 'getState',
+        #             'getSupportVersion', 'getTimeStep', 'getTreeBodyNodes', 'getVelocities', 'getVelocity',
+        #             'getVelocityChanges', 'getVelocityDifferences', 'getVelocityLowerLimit',
+        #             'getVelocityLowerLimits', 'getVelocityUpperLimit', 'getVelocityUpperLimits', 'getWorldJacobian',
+        #             'hasBodyNode', 'hasJoint', 'integratePositions', 'integrateVelocities',
+        #             'isEnabledAdjacentBodyCheck', 'isEnabledSelfCollisionCheck', 'isImpulseApplied', 'isMobile',
+        #             'mUnionIndex', 'mUnionRootSkeleton', 'mUnionSize', 'resetAccelerations', 'resetCommands',
+        #             'resetGeneralizedForces', 'resetPositions', 'resetUnion', 'resetVelocities', 'setAcceleration',
+        #             'setAccelerationLowerLimit', 'setAccelerationLowerLimits', 'setAccelerationUpperLimit',
+        #             'setAccelerationUpperLimits', 'setAccelerations', 'setAdjacentBodyCheck', 'setAspectProperties',
+        #             'setCommand', 'setCommands', 'setConfiguration', 'setForce', 'setForceLowerLimit',
+        #             'setForceLowerLimits', 'setForceUpperLimit', 'setForceUpperLimits', 'setForces', 'setGravity',
+        #             'setImpulseApplied', 'setJointConstraintImpulses', 'setMobile', 'setName', 'setPosition',
+        #             'setPositionLowerLimit', 'setPositionLowerLimits', 'setPositionUpperLimit',
+        #             'setPositionUpperLimits', 'setPositions', 'setProperties', 'setSelfCollisionCheck', 'setState',
+        #             'setTimeStep', 'setVelocities', 'setVelocity', 'setVelocityLowerLimit', 'setVelocityLowerLimits',
+        #             'setVelocityUpperLimit', 'setVelocityUpperLimits', 'updateBiasImpulse', 'updateVelocityChange']
 
         # create world
-        self.world = pydart.World(dt)
+        self.sim = dart.simulation.World()
+        self.world = self.sim
+
+        # create urdf parser
+        self._urdf_parser = dart.utils.DartLoader()
+
+        # set time step
+        self.dt = self.world.getTimeStep()
 
         # main camera in the simulator
         self._camera = None
+        self.viewer = None
 
         # if we need to render
         if render:
             self.render()
+
+        # keep track of visual and collision shapes
+        self.visual_shapes = {}  # {visual_id: Visual}
+        self.collision_shapes = {}  # {collision_id: Collision}
+        self.bodies = OrderedDict()  # {body_id: Body}
+        self.textures = {}  # {texture_id: Texture}
+        self.constraints = OrderedDict()  # {constraint_id: Constraint}
+
+        # create counters
+        self._visual_cnt = 0
+        self._collision_cnt = 0
+        self._body_cnt = 1  # 0 is for the world
+        self._texture_cnt = 0
+        self._constraint_cnt = 0
 
     ##############
     # Properties #
@@ -101,7 +299,12 @@ class Dart(Simulator):
     @property
     def version(self):
         """Return the version of the simulator."""
-        return 0
+        return "6.10.0"  # TODO: get it from the code
+
+    @property
+    def timestep(self):
+        """Return the simulator time step."""
+        return self.dt
 
     #############
     # Operators #
@@ -127,11 +330,24 @@ class Dart(Simulator):
         memo[self] = sim
         return sim
 
+    ##################
+    # Static methods #
+    ##################
+
+    @staticmethod
+    def supports_acceleration():
+        """Return True if the simulator provides acceleration (dynamic) information (such as joint accelerations, link
+        Cartesian accelerations, etc). If not, the `Robot` class will have to implement these using finite
+        difference."""
+        return True
+
     ###########
     # Methods #
     ###########
 
-    # Simulators
+    ##############
+    # Simulators #
+    ##############
 
     def reset(self, *args, **kwargs):
         """Reset the simulator."""
@@ -139,7 +355,7 @@ class Dart(Simulator):
 
     def close(self):
         """Close the simulator."""
-        self.world.destroy()
+        del self.world
 
     def seed(self, seed=None):
         """Set the given seed in the simulator."""
@@ -173,11 +389,23 @@ class Dart(Simulator):
             enable (bool): If True, it will render the simulator by enabling the GUI.
         """
         self._render = enable
-        pydart.gui.viewer.launch(self.world)
+        self.viewer = dart.gui.osg.Viewer()
+        # gui_node = dart.gui.osg.WorldNode(self.world)
+        gui_node = dart.gui.osg.RealTimeWorldNode(self.world)
+        self.viewer.addWorldNode(gui_node)
+        self.viewer.run()  # TODO: call self.viewer.frame() instead (need to update the python wrapper)
 
     def hide(self):
         """Hide the GUI."""
         self.render(False)
+
+    def get_time_step(self):
+        """Get the time step in the simulator.
+
+        Returns:
+            float: time step in the simulator
+        """
+        return self.world.getTimeStep()
 
     def set_time_step(self, time_step):
         """Set the time step in the simulator.
@@ -185,7 +413,7 @@ class Dart(Simulator):
         Args:
             time_step (float): Each time you call 'step' the time step will proceed with 'time_step'.
         """
-        self.world.set_time_step(time_step)
+        self.world.setTimeStep(time_step)
 
     def set_real_time(self, enable=True):
         """Enable real time in the simulator.
@@ -193,7 +421,8 @@ class Dart(Simulator):
         Args:
             enable (bool): If True, it will enable the real-time simulation. If False, it will disable it.
         """
-        pass
+        # create real-time world node (dart.gui.osg.RealTimeWorldNode)
+        pass  # TODO: use threads and create class that inherits from dart.gui.osg.RealTimeWorldNode
 
     def pause(self):
         """Pause the simulator if in real-time."""
@@ -221,7 +450,7 @@ class Dart(Simulator):
 
     def get_gravity(self):
         """Return the gravity set in the simulator."""
-        return self.world.gravity()
+        return self.world.getGravity()
 
     def set_gravity(self, gravity=(0, 0, -9.81)):
         """Set the gravity in the simulator with the given acceleration.
@@ -229,7 +458,7 @@ class Dart(Simulator):
         Args:
             gravity (list, tuple of 3 floats): acceleration in the x, y, z directions.
         """
-        self.world.set_gravity([0.0, 0.0, -9.81])
+        self.world.setGravity(gravity)
 
     def save(self, filename=None, *args, **kwargs):
         """Save the state of the simulator.
@@ -282,9 +511,12 @@ class Dart(Simulator):
         """
         pass
 
-    # loading URDFs, SDFs, MJCFs
+    ######################################
+    # loading URDFs, SDFs, MJCFs, meshes #
+    ######################################
 
-    def load_urdf(self, filename, position=None, orientation=(0., 0., 0., 1.), use_fixed_base=0, scale=1.0, *args, **kwargs):
+    def load_urdf(self, filename, position=None, orientation=(0., 0., 0., 1.), use_fixed_base=0, scale=1.0, *args,
+                  **kwargs):
         """Load a URDF file in the simulator.
 
         Args:
@@ -298,7 +530,9 @@ class Dart(Simulator):
         Returns:
             int (non-negative): unique id associated to the load model.
         """
-        return self.world.add_skeleton(filename).id
+        skeleton = self._urdf_parser.parseSkeleton(filename)
+        self.world.addSkeleton(skeleton)
+        return self.world.getNumSkeletons() - 1
 
     def load_sdf(self, filename, scaling=1., *args, **kwargs):
         """Load a SDF file in the simulator.
@@ -310,7 +544,7 @@ class Dart(Simulator):
         Returns:
             list(int): list of object unique id for each object loaded
         """
-        return self.world.add_skeleton(filename).id
+        pass
 
     def load_mjcf(self, filename, scaling=1., *args, **kwargs):
         """Load a Mujoco file in the simulator.
@@ -322,7 +556,13 @@ class Dart(Simulator):
         Returns:
             list(int): list of object unique id for each object loaded
         """
-        raise NotImplementedError("This method is not available with the DART simulator.")
+        mujoco_parser = MuJoCoParser(filename=filename)
+        urdf_generator = URDFParser()
+        skel_generator = SkelParser()
+
+        # generate the URDF/Skel
+
+        raise NotImplementedError("This method is not available yet with the DART simulator.")
 
     def load_mesh(self, filename, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None,
                   with_collision=True, flags=None, *args, **kwargs):
@@ -344,7 +584,11 @@ class Dart(Simulator):
         Returns:
             int: unique id of the mesh in the world
         """
-        self.world.add_skeleton(filename)
+        # compute the mesh inertia
+
+        # create URDF with that file
+
+        self.world.addSkeleton(filename)
 
     @staticmethod
     def get_available_sdfs(fullpath=False):
@@ -386,7 +630,9 @@ class Dart(Simulator):
         """
         return []
 
-    # bodies
+    ##########
+    # Bodies #
+    ##########
 
     def create_body(self, visual_shape_id=-1, collision_shape_id=-1, mass=0., position=(0., 0., 0.),
                     orientation=(0., 0., 0., 1.), *args, **kwargs):
@@ -403,7 +649,15 @@ class Dart(Simulator):
         Returns:
             int: non-negative unique id or -1 for failure.
         """
-        pass
+        # TODO
+
+        # create skeleton
+        skeleton = dart.dynamics.Skeleton()
+
+        # add skeleton to the world
+        self.world.addSkeleton(skeleton)
+
+        return self.world.getNumSkeletons() - 1
 
     def remove_body(self, body_id):
         """Remove a particular body in the simulator.
@@ -411,7 +665,7 @@ class Dart(Simulator):
         Args:
             body_id (int): unique body id.
         """
-        pass
+        self.world.removeSkeleton(body_id)
 
     def num_bodies(self):
         """Return the number of bodies present in the simulator.
@@ -419,7 +673,7 @@ class Dart(Simulator):
         Returns:
             int: number of bodies
         """
-        return self.world.num_skeletons()
+        return self.world.getNumSkeletons()
 
     def get_body_info(self, body_id):
         """Get the specified body information.
@@ -443,7 +697,9 @@ class Dart(Simulator):
         """
         pass
 
-    # constraint
+    ###############
+    # constraints #
+    ###############
 
     def create_constraint(self, parent_body_id, parent_link_id, child_body_id, child_link_id, joint_type,
                           joint_axis, parent_frame_position, child_frame_position,
@@ -472,6 +728,10 @@ class Dart(Simulator):
         Returns:
             int: constraint unique id.
         """
+        # Check dart.constraint.*
+        # ['BallJointConstraint', 'BoxedLcpConstraintSolver', 'BoxedLcpSolver', 'ConstraintBase', 'ConstraintSolver',
+        # 'DantzigBoxedLcpSolver', 'JointConstraint', 'JointCoulombFrictionConstraint', 'JointLimitConstraint',
+        # 'PgsBoxedLcpSolver', 'PgsBoxedLcpSolverOption', 'WeldJointConstraint']
         pass
 
     def remove_constraint(self, constraint_id):
@@ -537,7 +797,9 @@ class Dart(Simulator):
         """
         pass
 
-    # objects
+    ###########
+    # objects #
+    ###########
 
     def get_mass(self, body_id):
         """
@@ -549,7 +811,8 @@ class Dart(Simulator):
         Returns:
             float: total mass of the robot [kg]
         """
-        return self.world.skeletons[body_id].mass()
+        skeleton = self.world.getSkeleton(body_id)
+        return skeleton.getMass()
 
     def get_base_mass(self, body_id):
         """Return the base mass of the robot.
@@ -557,7 +820,8 @@ class Dart(Simulator):
         Args:
             body_id (int): unique object id.
         """
-        pass
+        base = self.world.getSkeleton(body_id).getRootBodyNode()  # this is the same as getBodyNode(0)
+        return base.getMass()
 
     def get_base_name(self, body_id):
         """
@@ -569,7 +833,8 @@ class Dart(Simulator):
         Returns:
             str: base name
         """
-        pass
+        base = self.world.getSkeleton(body_id).getRootBodyNode()  # this is the same as getBodyNode(0)
+        return base.getName()
 
     def get_center_of_mass_position(self, body_id, link_ids=None):
         """
@@ -583,8 +848,20 @@ class Dart(Simulator):
         Returns:
             np.float[3]: center of mass position in the Cartesian world coordinates
         """
+        skeleton = self.world.getSkeleton(body_id)
+
         if link_ids is None:
-            return self.world.skeletons[body_id].com()
+            com = skeleton.getCOM()  # (3,1)
+            return com.reshape(-1)
+
+        # if isinstance(link_ids, int):
+        #     link_ids = [link_ids]
+        #
+        # coms = []
+        # for link_id in link_ids:
+        #     body = skeleton.getBodyNode(link_id + 1)
+        #
+        #
         return None  # TODO
 
     def get_center_of_mass_velocity(self, body_id, link_ids=None):
@@ -599,7 +876,13 @@ class Dart(Simulator):
         Returns:
             np.float[3]: center of mass linear velocity.
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if link_ids is None:
+            com_vel = skeleton.getCOMLinearVelocity()  # (3,1)
+            return com_vel.reshape(-1)
+
+        return None  # TODO
 
     def get_base_pose(self, body_id):
         """
@@ -612,7 +895,12 @@ class Dart(Simulator):
             np.float[3]: base position
             np.float[4]: base orientation (quaternion [x,y,z,w])
         """
-        pass
+        base = self.world.getSkeleton(body_id).getRootBodyNode()
+        transform = base.getWorldTransform()
+        # position = transform[:-1, 3]
+        position = base.getCOM().reshape(-1)
+        orientation = get_quaternion_from_matrix(transform[:-1, :-1])
+        return position, orientation
 
     def get_base_position(self, body_id):
         """
@@ -624,7 +912,9 @@ class Dart(Simulator):
         Returns:
             np.float[3]: base position.
         """
-        pass
+        base = self.world.getSkeleton(body_id).getRootBodyNode()
+        # return base.getWorldTransform()[:-1, 3]
+        return base.getCOM().reshape(-1)
 
     def get_base_orientation(self, body_id):
         """
@@ -636,7 +926,9 @@ class Dart(Simulator):
         Returns:
             np.float[4]: base orientation in the form of a quaternion (x,y,z,w)
         """
-        pass
+        base = self.world.getSkeleton(body_id).getRootBodyNode()
+        transform = base.getWorldTransform()
+        return get_quaternion_from_matrix(transform[:-1, :-1])
 
     def reset_base_pose(self, body_id, position, orientation):
         """
@@ -680,7 +972,10 @@ class Dart(Simulator):
             np.float[3]: linear velocity of the base in Cartesian world space coordinates
             np.float[3]: angular velocity of the base in Cartesian world space coordinates
         """
-        pass
+        base = self.world.getSkeleton(body_id).getRootBodyNode()
+        lin_vel = base.getLinearVelocity()
+        ang_vel = base.getAngularVelocity()
+        return lin_vel.reshape(-1), ang_vel.reshape(-1)
 
     def get_base_linear_velocity(self, body_id):
         """
@@ -692,7 +987,9 @@ class Dart(Simulator):
         Returns:
             np.float[3]: linear velocity of the base in Cartesian world space coordinates
         """
-        pass
+        base = self.world.getSkeleton(body_id).getRootBodyNode()
+        lin_vel = base.getLinearVelocity()
+        return lin_vel.reshape(-1)
 
     def get_base_angular_velocity(self, body_id):
         """
@@ -704,7 +1001,9 @@ class Dart(Simulator):
         Returns:
             np.float[3]: angular velocity of the base in Cartesian world space coordinates
         """
-        pass
+        base = self.world.getSkeleton(body_id).getRootBodyNode()
+        ang_vel = base.getAngularVelocity()
+        return ang_vel.reshape(-1)
 
     def reset_base_velocity(self, body_id, linear_velocity=None, angular_velocity=None):
         """
@@ -750,7 +1049,11 @@ class Dart(Simulator):
             frame (int): if frame = 1, then the force / position is described in the link frame. If frame = 2, they
                 are described in the world frame.
         """
-        pass
+        link = self.world.getSkeleton(body_id).getBodyNode(link_id + 1)
+        force = np.asarray(force).reshape(-1, 1)  # (3,1)
+        offset = np.asarray(position).reshape(-1, 1)  # (3,1)
+        is_local = (frame == 1)
+        link.setExtForce(force=force, offset=offset, isForceLocal=is_local, isOffsetLocal=is_local)
 
     def apply_external_torque(self, body_id, link_id=-1, torque=(0., 0., 0.), frame=1):
         """
@@ -764,9 +1067,18 @@ class Dart(Simulator):
             frame (int): Specify the coordinate system of force/position: either `pybullet.WORLD_FRAME` (=2) for
                 Cartesian world coordinates or `pybullet.LINK_FRAME` (=1) for local link coordinates.
         """
-        pass
+        link = self.world.getSkeleton(body_id).getBodyNode(link_id + 1)
+        torque = np.asarray(torque).reshape(-1, 1)  # (3,1)
+        is_local = (frame == 1)
+        link.setExtForce(torque=torque, isLocal=is_local)
 
-    # robots (joints and links)
+    ###################
+    # transformations #
+    ###################
+
+    #############################
+    # robots (joints and links) #
+    #############################
 
     def num_joints(self, body_id):
         """
@@ -778,7 +1090,8 @@ class Dart(Simulator):
         Returns:
             int: number of joints with the associated body id.
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+        return skeleton.getNumJoints()  # TODO: check if we have to add: -1
 
     def num_actuated_joints(self, body_id):
         """
@@ -790,7 +1103,8 @@ class Dart(Simulator):
         Returns:
             int: number of actuated joints of the specified body.
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+        return skeleton.getNumDofs()  # TODO: check with fixed and floating base
 
     def num_links(self, body_id):
         """
@@ -802,6 +1116,8 @@ class Dart(Simulator):
         Returns:
             int: number of links with the associated body id.
         """
+        # skeleton = self.world.getSkeleton(body_id)
+        # return skeleton.getNumBodyNodes()
         return self.num_joints(body_id)
 
     def get_joint_info(self, body_id, joint_id):
@@ -816,7 +1132,27 @@ class Dart(Simulator):
             joint_id (int): joint id is included in [0..`num_joints(body_id)`].
 
         Returns:
-            dict, list: joint info
+            [0] int:        the same joint id as the input parameter
+            [1] str:        name of the joint (as specified in the URDF/SDF/etc file)
+            [2] int:        type of the joint which implie the number of position and velocity variables.
+                            The types include JOINT_REVOLUTE (=0), JOINT_PRISMATIC (=1), JOINT_SPHERICAL (=2),
+                            JOINT_PLANAR (=3), and JOINT_FIXED (=4).
+            [3] int:        q index - the first position index in the positional state variables for this body
+            [4] int:        dq index - the first velocity index in the velocity state variables for this body
+            [5] int:        flags (reserved)
+            [6] float:      the joint damping value (as specified in the URDF file)
+            [7] float:      the joint friction value (as specified in the URDF file)
+            [8] float:      the positional lower limit for slider and revolute joints
+            [9] float:      the positional upper limit for slider and revolute joints
+            [10] float:     maximum force specified in URDF. Note that this value is not automatically used.
+                            You can use maxForce in 'setJointMotorControl2'.
+            [11] float:     maximum velocity specified in URDF. Note that this value is not used in actual
+                            motor control commands at the moment.
+            [12] str:       name of the link (as specified in the URDF/SDF/etc file)
+            [13] np.array[3]:  joint axis in local frame (ignored for JOINT_FIXED)
+            [14] np.array[3]:  joint position in parent frame
+            [15] np.array[4]:  joint orientation in parent frame
+            [16] int:       parent link index, -1 for base
         """
         pass
 
@@ -837,7 +1173,12 @@ class Dart(Simulator):
                 VELOCITY_CONTROL and POSITION_CONTROL. If you use TORQUE_CONTROL then the applied joint motor torque
                 is exactly what you provide, so there is no need to report it separately.
         """
-        pass
+        joint = self.world.getSkeleton(body_id).getJoint(joint_id + 1)
+        position = joint.getPosition(0)  # joints can have less or more than 1 DoF (like WeldJoint, FreeJoint)
+        velocity = joint.getVelocity(0)
+        reaction_forces = np.zeros(6)    # TODO
+        torque = joint.getForce(0)
+        return position, velocity, reaction_forces, torque
 
     def get_joint_states(self, body_id, joint_ids):
         """
@@ -857,7 +1198,9 @@ class Dart(Simulator):
                     VELOCITY_CONTROL and POSITION_CONTROL. If you use TORQUE_CONTROL then the applied joint motor
                     torque is exactly what you provide, so there is no need to report it separately.
         """
-        pass
+        if isinstance(joint_ids, int):
+            return self.get_joint_state(body_id, joint_ids)
+        return [self.get_joint_state(body_id, joint_id) for joint_id in joint_ids]
 
     def reset_joint_state(self, body_id, joint_id, position, velocity=0.):
         """
@@ -870,7 +1213,12 @@ class Dart(Simulator):
             position (float): the joint position (angle in radians [rad] or position [m])
             velocity (float): the joint velocity (angular [rad/s] or linear velocity [m/s])
         """
-        pass
+        joint = self.world.getSkeleton(body_id).getJoint(joint_id + 1)
+        # joint.resetPosition(0)
+        # joint.resetVelocity(0)
+        joint.setPosition(0, position)
+        if velocity is not None:
+            joint.setVelocity(0, velocity)
 
     def enable_joint_force_torque_sensor(self, body_id, joint_ids, enable=True):
         """
@@ -938,7 +1286,26 @@ class Dart(Simulator):
             np.float[3]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
             np.float[3]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
         """
-        pass
+        body = self.world.getSkeleton(body_id).getBodyNode(link_id + 1)
+        transform = body.getWorldTransform()
+        com_position = body.getCOM().reshape(-1)
+        com_orientation = get_quaternion_from_matrix(transform[:-1, :-1])
+
+        local_position = body.getLocalCOM().reshape(-1)
+        local_orientation = np.array([0., 0., 0., 1.])
+
+        world_position = transform[:-1, 3]
+        world_orientation = np.array(com_orientation)
+
+        results = [com_position, com_orientation, local_position, local_orientation, world_position, world_orientation]
+
+        if compute_velocity:
+            linear_velocity = body.getLinearVelocity().reshape(-1)
+            angular_velocity = body.getAngularVelocity().reshape(-1)
+            results.append(linear_velocity)
+            results.append(angular_velocity)
+
+        return results
 
     def get_link_states(self, body_id, link_ids, compute_velocity=False, compute_forward_kinematics=False):
         """
@@ -963,7 +1330,10 @@ class Dart(Simulator):
                 np.float[3]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
                 np.float[3]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
         """
-        pass
+        if isinstance(link_ids, int):
+            return self.get_link_state(body_id, link_ids, compute_velocity, compute_forward_kinematics)
+        return [self.get_link_state(body_id, link_id, compute_velocity, compute_forward_kinematics)
+                for link_id in link_ids]
 
     def get_link_names(self, body_id, link_ids):
         """
@@ -979,7 +1349,12 @@ class Dart(Simulator):
             if multiple links:
                 str[N]: link names
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(link_ids, int):
+            return skeleton.getBodyNode(link_ids + 1).getName()
+
+        return [skeleton.getBodyNode(link + 1).getName() for link in link_ids]
 
     def get_link_masses(self, body_id, link_ids):
         """
@@ -995,10 +1370,42 @@ class Dart(Simulator):
             else:
                 float[N]: mass of each link
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(link_ids, int):
+            return skeleton.getBodyNode(link_ids + 1).getMass()
+
+        return [skeleton.getBodyNode(link + 1).getMass() for link in link_ids]
 
     def get_link_frames(self, body_id, link_ids):
-        pass
+        r"""
+        Return the link world frame position(s) and orientation(s).
+
+        Args:
+            body_id (int): body id.
+            link_ids (int, int[N]): link id, or list of desired link ids.
+
+        Returns:
+            if 1 link:
+                np.array[3]: the link frame position in the world space
+                np.array[4]: Cartesian orientation of the link frame [x,y,z,w]
+            if multiple links:
+                np.array[N,3]: link frame position of each link in world space
+                np.array[N,4]: orientation of each link frame [x,y,z,w]
+        """
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(link_ids, int):
+            transform = skeleton.getBodyNode(link_ids + 1).getWorldTransform()
+            return transform[:-1, 3], get_quaternion_from_matrix(transform[:-1, :-1])
+
+        positions, orientations = [], []
+        for link_id in link_ids:
+            transform = skeleton.getBodyNode(link_ids + 1).getWorldTransform()
+            positions.append(transform[:-1, 3])
+            orientations.append(get_quaternion_from_matrix(transform[:-1, :-1]))
+
+        return np.array(positions), np.array(orientations)
 
     def get_link_world_positions(self, body_id, link_ids):
         """
@@ -1014,7 +1421,12 @@ class Dart(Simulator):
             if multiple links:
                 np.float[N,3]: CoM position of each link in world space
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(link_ids, int):
+            return skeleton.getBodyNode(link_ids + 1).getCOM().reshape(-1)
+
+        return [skeleton.getBodyNode(link + 1).getCOM().reshape(-1) for link in link_ids]
 
     def get_link_positions(self, body_id, link_ids):
         pass
@@ -1033,7 +1445,13 @@ class Dart(Simulator):
             if multiple links:
                 np.float[N,4]: CoM orientation of each link (x,y,z,w)
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(link_ids, int):
+            return get_quaternion_from_matrix(skeleton.getBodyNode(link_ids + 1).getWorldTransform()[:-1, :-1])
+
+        return [get_quaternion_from_matrix(skeleton.getBodyNode(link + 1).getWorldTransform()[:-1, :-1])
+                for link in link_ids]
 
     def get_link_orientations(self, body_id, link_ids):
         pass
@@ -1052,7 +1470,12 @@ class Dart(Simulator):
             if multiple links:
                 np.float[N,3]: linear velocity of each link
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(link_ids, int):
+            return skeleton.getBodyNode(link_ids + 1).getLinearVelocity().reshape(-1)
+
+        return [skeleton.getBodyNode(link + 1).getLinearVelocity.reshape(-1) for link in link_ids]
 
     def get_link_world_angular_velocities(self, body_id, link_ids):
         """
@@ -1068,7 +1491,12 @@ class Dart(Simulator):
             if multiple links:
                 np.float[N,3]: angular velocity of each link
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(link_ids, int):
+            return skeleton.getBodyNode(link_ids + 1).getAngularVelocity().reshape(-1)
+
+        return [skeleton.getBodyNode(link + 1).getAngularVelocity.reshape(-1) for link in link_ids]
 
     def get_link_world_velocities(self, body_id, link_ids):
         """
@@ -1085,7 +1513,21 @@ class Dart(Simulator):
             if multiple links:
                 np.float[N,6]: linear and angular velocity of each link
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(link_ids, int):
+            link = skeleton.getBodyNode(link_ids + 1)
+            lin_vel = link.getLinearVelocity().reshape(-1)
+            ang_vel = link.getAngularVelocity().reshape(-1)
+            return np.concatenate((lin_vel, ang_vel))
+
+        velocities = []
+        for link_id in link_ids:
+            link = skeleton.getBodyNode(link_id + 1)
+            lin_vel = link.getLinearVelocity().reshape(-1)
+            ang_vel = link.getAngularVelocity().reshape(-1)
+            velocities.append(np.concatenate((lin_vel, ang_vel)))
+        return velocities
 
     def get_link_velocities(self, body_id, link_ids):
         pass
@@ -1116,7 +1558,14 @@ class Dart(Simulator):
         Returns:
             list of int: actuated joint ids.
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        joint_ids = []
+        for joint_id in range(1, skeleton.getNumJoints()):
+            num_dofs = skeleton.getJoint(joint_id).getNumDofs()
+            if num_dofs > 0:
+                joint_ids.append(joint_id - 1)
+        return joint_ids
 
     def get_joint_names(self, body_id, joint_ids):
         """
@@ -1132,7 +1581,12 @@ class Dart(Simulator):
             if multiple joints:
                 str[N]: name of each joint
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(joint_ids, int):
+            return skeleton.getJoint(joint_ids + 1).getName()
+
+        return [skeleton.getJoint(joint + 1).getName() for joint in joint_ids]
 
     def get_joint_type_ids(self, body_id, joint_ids):
         """
@@ -1149,7 +1603,7 @@ class Dart(Simulator):
         """
         pass
 
-    def get_joint_type_names(self, body_id, joint_ids):
+    def get_joint_type_names(self, body_id, joint_ids):  # TODO: make sure it is the same as other simulators
         """
         Get joint type names.
 
@@ -1162,7 +1616,14 @@ class Dart(Simulator):
                 str: joint type name.
             if multiple joints: list of above
         """
-        pass
+        # bullet: ['revolute', 'prismatic', 'spherical', 'planar', 'fixed', 'point2point', 'gear']
+        # dart: ['ball', 'free', 'euler', 'weld' (=fixed), 'revolute', 'universal', 'prismatic']
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(joint_ids, int):
+            return skeleton.getJoint(joint_ids + 1).getType()
+
+        return [skeleton.getJoint(joint + 1).getType() for joint in joint_ids]
 
     def get_joint_dampings(self, body_id, joint_ids):
         """
@@ -1178,7 +1639,12 @@ class Dart(Simulator):
             if multiple joints:
                 np.float[N]: damping coefficient for each specified joint
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(joint_ids, int):
+            return skeleton.getJoint(joint_ids + 1).getDampingCoefficient(0)
+
+        return [skeleton.getJoint(joint + 1).getDampingCoefficient(0) for joint in joint_ids]
 
     def get_joint_frictions(self, body_id, joint_ids):
         """
@@ -1194,7 +1660,12 @@ class Dart(Simulator):
             if multiple joints:
                 np.float[N]: friction coefficient for each specified joint
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(joint_ids, int):
+            return skeleton.getJoint(joint_ids + 1).getCoulombFriction(0)
+
+        return [skeleton.getJoint(joint + 1).getCoulombFriction(0) for joint in joint_ids]
 
     def get_joint_limits(self, body_id, joint_ids):
         """
@@ -1210,7 +1681,17 @@ class Dart(Simulator):
             if multiple joints:
                 np.float[N,2]: lower and upper limit for each specified joint
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(joint_ids, int):
+            joint = skeleton.getJoint(joint_ids + 1)
+            return np.array([joint.getPositionLowerLimit(0), joint.getPositionUpperLimit(0)])
+
+        limits = []
+        for joint_id in joint_ids:
+            joint = skeleton.getJoint(joint_id + 1)
+            limits.append([joint.getPositionLowerLimit(0), joint.getPositionUpperLimit(0)])
+        return np.array(limits)
 
     def get_joint_max_forces(self, body_id, joint_ids):
         """
@@ -1228,7 +1709,18 @@ class Dart(Simulator):
             if multiple joints:
                 np.float[N]: maximum force for each specified joint [N]
         """
-        pass
+        # TODO
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(joint_ids, int):
+            joint = skeleton.getJoint(joint_ids + 1)
+            return np.max(np.abs([joint.getForceLowerLimit(0), joint.getForceUpperLimit(0)]))
+
+        forces = []
+        for joint_id in joint_ids:
+            joint = skeleton.getJoint(joint_id + 1)
+            forces.append(np.max(np.abs([joint.getForceLowerLimit(0), joint.getForceUpperLimit(0)])))
+        return np.array(forces)
 
     def get_joint_max_velocities(self, body_id, joint_ids):
         """
@@ -1246,7 +1738,18 @@ class Dart(Simulator):
             if multiple joints:
                 np.float[N]: maximum velocities for each specified joint [rad/s]
         """
-        pass
+        # TODO
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(joint_ids, int):
+            joint = skeleton.getJoint(joint_ids + 1)
+            return np.max(np.abs([joint.getVelocityLowerLimit(0), joint.getVelocityUpperLimit(0)]))
+
+        velocities = []
+        for joint_id in joint_ids:
+            joint = skeleton.getJoint(joint_id + 1)
+            velocities.append(np.max(np.abs([joint.getVelocityLowerLimit(0), joint.getVelocityUpperLimit(0)])))
+        return np.array(velocities)
 
     def get_joint_axes(self, body_id, joint_ids):
         """
@@ -1262,7 +1765,20 @@ class Dart(Simulator):
             if multiple joint:
                 np.float[N,3]: list of joint axis
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(joint_ids, int):
+            joint = skeleton.getJoint(joint_ids + 1)
+            if hasattr(joint, 'getAxis'):
+                return joint.getAxis()
+            return np.zeros(3)  # TODO: should we return None instead?
+
+        axes = []
+        for joint_id in joint_ids:
+            joint = skeleton.getJoint(joint_id + 1)
+            axis = np.zeros(3) if not hasattr(joint, 'getAxis') else joint.getAxis()
+            axes.append(axis)
+        return np.array(axes)
 
     def set_joint_positions(self, body_id, joint_ids, positions, velocities=None, kps=None, kds=None, forces=None):
         """
@@ -1277,7 +1793,16 @@ class Dart(Simulator):
             kds (None, float, np.float[N]): velocity gain(s)
             forces (None, float, np.float[N]): maximum motor force(s)/torque(s) used to reach the target values.
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        # TODO: use position control
+
+        if isinstance(joint_ids, int):
+            # Some joints have more or less than 1 DoF (like Free, Weld=Fixed)
+            return skeleton.getJoint(joint_ids + 1).setPosition(0, positions)
+
+        for joint_id, q in zip(joint_ids, positions):
+            skeleton.getJoint(joint_id + 1).setPosition(0, q)
 
     def get_joint_positions(self, body_id, joint_ids):
         """
@@ -1293,7 +1818,13 @@ class Dart(Simulator):
             if multiple joints:
                 np.float[N]: joint positions [rad]
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(joint_ids, int):
+            # Some joints have more or less than 1 DoF (like Free, Weld=Fixed)
+            return skeleton.getJoint(joint_ids + 1).getPosition(0)
+
+        return np.array([skeleton.getJoint(joint_id + 1).getPosition(0) for joint_id in joint_ids])
 
     def set_joint_velocities(self, body_id, joint_ids, velocities, max_force=None):
         """
@@ -1305,7 +1836,16 @@ class Dart(Simulator):
             velocities (float, np.float[N]): desired velocity, or list of desired velocities [rad/s]
             max_force (None, float, np.float[N]): maximum motor forces/torques
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        # TODO: use velocity control
+
+        if isinstance(joint_ids, int):
+            # Some joints have more or less than 1 DoF (like Free, Weld=Fixed)
+            return skeleton.getJoint(joint_ids + 1).setVelocity(0, velocities)
+
+        for joint_id, dq in zip(joint_ids, velocities):
+            skeleton.getJoint(joint_id + 1).setVelocity(0, dq)
 
     def get_joint_velocities(self, body_id, joint_ids):
         """
@@ -1321,7 +1861,13 @@ class Dart(Simulator):
             if multiple joints:
                 np.float[N]: joint velocities [rad/s]
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(joint_ids, int):
+            # Some joints have more or less than 1 DoF (like Free, Weld=Fixed)
+            return skeleton.getJoint(joint_ids + 1).getVelocity(0)
+
+        return np.array([skeleton.getJoint(joint_id + 1).getVelocity(0) for joint_id in joint_ids])
 
     def set_joint_accelerations(self, body_id, joint_ids, accelerations, q=None, dq=None):
         """
@@ -1353,7 +1899,13 @@ class Dart(Simulator):
             if multiple joints:
                 np.float[N]: joint accelerations [rad/s^2]
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(joint_ids, int):
+            # Some joints have more or less than 1 DoF (like Free, Weld=Fixed)
+            return skeleton.getJoint(joint_ids + 1).getAcceleration(0)
+
+        return np.array([skeleton.getJoint(joint_id + 1).getAcceleration(0) for joint_id in joint_ids])
 
     def set_joint_torques(self, body_id, joint_ids, torques):
         """
@@ -1364,7 +1916,16 @@ class Dart(Simulator):
             joint_ids (int, list of int): joint id, or list of joint ids.
             torques (float, list of float): desired torque(s) to apply to the joint(s) [N].
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        # TODO: use velocity control
+
+        if isinstance(joint_ids, int):
+            # Some joints have more or less than 1 DoF (like Free, Weld=Fixed)
+            return skeleton.getJoint(joint_ids + 1).setForce(0, torques)
+
+        for joint_id, dq in zip(joint_ids, torques):
+            skeleton.getJoint(joint_id + 1).setForce(0, dq)
 
     def get_joint_torques(self, body_id, joint_ids):
         """
@@ -1380,7 +1941,13 @@ class Dart(Simulator):
             if multiple joints:
                 np.float[N]: torques associated to the given joints [Nm]
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+
+        if isinstance(joint_ids, int):
+            # Some joints have more or less than 1 DoF (like Free, Weld=Fixed)
+            return skeleton.getJoint(joint_ids + 1).getForce(0)
+
+        return np.array([skeleton.getJoint(joint_id + 1).getForce(0) for joint_id in joint_ids])
 
     def get_joint_reaction_forces(self, body_id, joint_ids):
         """Return the joint reaction forces at the given joint. Note that the torque sensor must be enabled, otherwise
@@ -1411,9 +1978,13 @@ class Dart(Simulator):
             if multiple joints:
                 np.float[N]: power at each joint [W]
         """
-        pass
+        torque = self.get_joint_torques(body_id, joint_ids)
+        velocity = self.get_joint_velocities(body_id, joint_ids)
+        return torque * velocity
 
-    # visualization
+    #################
+    # Visualization #
+    #################
 
     def create_visual_shape(self, shape_type, radius=0.5, half_extents=(1., 1., 1.), length=1., filename=None,
                             mesh_scale=(1., 1., 1.), plane_normal=(0., 0., 1.), flags=-1, rgba_color=None,
@@ -1695,7 +2266,9 @@ class Dart(Simulator):
         """
         pass
 
-    # collisions
+    ##############
+    # Collisions #
+    ##############
 
     def create_collision_shape(self, shape_type, radius=0.5, half_extents=(1., 1., 1.), height=1., filename=None,
                                mesh_scale=(1., 1., 1.), plane_normal=(0., 0., 1.), flags=-1,
@@ -1806,6 +2379,8 @@ class Dart(Simulator):
                 float: lateral friction force in the second lateral friction direction (see next returned value)
                 np.float[3]: second lateral friction direction
         """
+        # results: contact point, normal and penetration depth
+        results = self.world.checkCollision()
         pass
 
     def get_closest_points(self, body1, body2, distance, link1_id=None, link2_id=None):
@@ -1909,7 +2484,9 @@ class Dart(Simulator):
         """
         pass
 
-    # kinematics and dynamics
+    ###########################
+    # Kinematics and Dynamics #
+    ###########################
 
     def get_dynamics_info(self, body_id, link_id=-1):
         """
@@ -1932,7 +2509,28 @@ class Dart(Simulator):
             float: damping of contact constraints. -1 if not available.
             float: stiffness of contact constraints. -1 if not available.
         """
-        pass
+        body = self.world.getSkeleton(body_id).getBodyNode(link_id + 1)
+        mass = body.getMass()
+
+        dynamics = body.getShapeNode(0).getDynamicsAspect()
+        friction = dynamics.getFrictionCoeff()
+
+        ixx, iyy, izz, ixy, ixz, iyz = 0., 0., 0., 0., 0., 0.
+        body.getMomentOfInertia(ixx, iyy, izz, ixy, ixz, iyz)
+        inertia = np.array([[ixx, ixy, ixz], [ixy, iyy, iyz], [ixz, iyz, izz]]).reshape(3, 3)
+        local_inertia_diag = np.linalg.eigh(inertia)[0]
+
+        position = body.getLocalCOM().reshape(-1)
+        orientation = get_quaternion_from_matrix(body.getWorldTransform()[:-1, :-1])
+
+        restitution = dynamics.getRestitutionCoeff()
+        rolling_friction = -1
+        spinning_friction = -1
+        damping = -1
+        stiffness = -1
+
+        return [mass, friction, local_inertia_diag, position, orientation, restitution, rolling_friction,
+                spinning_friction, damping, stiffness]
 
     def change_dynamics(self, body_id, link_id=-1, mass=None, lateral_friction=None, spinning_friction=None,
                         rolling_friction=None, restitution=None, linear_damping=None, angular_damping=None,
@@ -1964,7 +2562,30 @@ class Dart(Simulator):
                 joint damping field. Keep the value close to 0.
                 `joint_damping_force = -damping_coefficient * joint_velocity`.
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+        body = skeleton.getBodyNode(link_id + 1)
+        joint = skeleton.getJoint(link_id + 1)
+
+        if mass is not None:
+            body.setMass(mass)
+
+        if lateral_friction is not None:
+            dynamics = body.getShapeNode(0).getDynamicsAspect()
+            dynamics.setFrictionCoeff(lateral_friction)
+
+        if restitution is not None:
+            dynamics = body.getShapeNode(0).getDynamicsAspect()
+            dynamics.setRestitutionCoeff(restitution)
+
+        if local_inertia_diagonal is not None:
+            ixx, iyy, izz = local_inertia_diagonal
+            body.setMomentOfInertia(Ixx=ixx, Iyy=iyy, Izz=izz)
+
+        if joint_damping is not None:
+            joint.setDampingCoefficient(joint_damping)
+
+        # if joint_friction is not None:
+        #     joint.setCoulombFriction(joint_friction)
 
     def calculate_jacobian(self, body_id, link_id, local_position, q, dq=None, des_ddq=None):
         r"""
@@ -1990,8 +2611,11 @@ class Dart(Simulator):
             np.float[6,N], np.float[6,(6+N)]: full geometric (linear and angular) Jacobian matrix. The number of
                 columns depends if the base is fixed or floating.
         """
-        body = self.world.skeletons[body_id].bodynodes[link_id]
-        return body.jacobian(offset=local_position)  # body.world_jacobian(offset=local_position)
+        skeleton = self.world.getSkeleton(body_id)
+        body = skeleton.getBodyNode(link_id + 1)
+        # TODO: set q?
+        local_position = np.asarray(local_position).reshape(-1, 1)
+        return skeleton.getWorldJacobian(node=body, localOffset=local_position)
 
     def calculate_mass_matrix(self, body_id, q):
         r"""
@@ -2014,8 +2638,9 @@ class Dart(Simulator):
         Returns:
             np.float[N,N], np.float[6+N,6+N]: inertia matrix
         """
-        self.world.skeletons[body_id].set_positions(q)
-        return self.world.skeletons[body_id].mass_matrix()
+        skeleton = self.world.getSkeleton(body_id)
+        # TODO: set q?
+        return skeleton.getAugMassMatrix()
 
     def calculate_inverse_kinematics(self, body_id, link_id, position, orientation=None, lower_limits=None,
                                      upper_limits=None, joint_ranges=None, rest_poses=None, joint_dampings=None,
@@ -2098,13 +2723,16 @@ class Dart(Simulator):
             np.float[N]: joint torques computed using the rigid-body equation of motion
 
         References:
-            [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
-            [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
-            [3] "Springer Handbook of Robotics", Siciliano et al., 2008
-            [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+            - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            - [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            - [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            - [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
                 http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+        c = skeleton.getCoriolisAndGravityForces().reshape(-1)  # (M,)
+        H = skeleton.getAugMassMatrix()  # (M,M)
+        return H.dot(des_ddq) + c
 
     def calculate_forward_dynamics(self, body_id, q, dq, torques):
         r"""
@@ -2146,15 +2774,22 @@ class Dart(Simulator):
             np.float[N]: joint accelerations computed using the rigid-body equation of motion
 
         References:
-            [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
-            [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
-            [3] "Springer Handbook of Robotics", Siciliano et al., 2008
-            [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+            - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            - [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            - [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            - [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
                 http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+        c = skeleton.getCoriolisAndGravityForces().reshape(-1)  # (M,)
+        # H_inv = skeleton.getInvMassMatrix()  # (M,M)
+        H = skeleton.getAugMassMatrix()  # (M,M)
+        H_inv = np.linalg.inv(H)
+        return H_inv.dot((torques - c))
 
-    # debug
+    #########
+    # Debug #
+    #########
 
     def add_user_debug_line(self, from_pos, to_pos, rgb_color=None, width=None, lifetime=None, parent_object_id=None,
                             parent_link_id=None, line_id=None):
@@ -2403,7 +3038,9 @@ class Dart(Simulator):
         """
         pass
 
-    # events (mouse, keyboard)
+    ############################
+    # Events (mouse, keyboard) #
+    ############################
 
     def get_keyboard_events(self):
         """Get the key events.
@@ -2451,6 +3088,40 @@ if __name__ == '__main__':
     # create simulation
     sim = Dart(render=False)
 
-    skeleton = sim.load_urdf(os.path.dirname(__file__) + '/../robots/urdfs/coman/coman.urdf')
-    print(dir(skeleton))
-    sim.render()
+    skeleton_id = sim.load_urdf(os.path.dirname(__file__) + '/../robots/urdfs/cubli/cubli.urdf')
+    # skeleton_id = sim.load_urdf(os.path.dirname(__file__) + '/../robots/urdfs/rrbot/pendulum.urdf')
+    skeleton = sim.world.getSkeleton(skeleton_id)
+    print("World name: {}".format(sim.world.getName()))
+    print("Gravity: {}".format(sim.world.getGravity()))
+    print("Skeleton name from world: {}".format(sim.world.getSkeleton(0).getName()))
+    print("Skeleton name: {}".format(skeleton.getName()))
+    print("DoFs: {}".format(skeleton.getNumDofs()))
+    print("Num of Body nodes: {}".format(skeleton.getNumBodyNodes()))
+    print("Num of Joints: {}".format(skeleton.getNumJoints()))
+    print("Positions: {}".format(skeleton.getPositions()))
+    base = skeleton.getRootBodyNode()
+    print("Base name: {}".format(base.getName()))
+    print("Transform: {}".format(base.getTransform()))
+    body1 = skeleton.getBodyNode(0)
+    print("body1 name: {}".format(body1.getName()))
+    body2 = skeleton.getBodyNode(1)
+    print("body2 name: {}".format(body2.getName()))
+    print("body2 transform: {}".format(body2.getTransform()))
+    # print("body2 world transform: {}".format(body2.getWorldTransform()))
+    # print("body2 relative transform: {}".format(body2.getRelativeTransform()))
+    # sim.render()
+
+    for dof in range(skeleton.getNumDofs()):
+        skeleton.setPosition(dof, np.pi/5)
+
+    for joint_id in range(skeleton.getNumJoints()):
+        joint = skeleton.getJoint(joint_id)
+        print("\njoint id: {}".format(joint_id))
+        print("joint name: {}".format(joint.getName()))
+        print("joint type: {}".format(joint.getType()))
+        if hasattr(joint, 'getAxis'):
+            print("joint axis: {}".format(joint.getAxis()))
+        print("joint num DoFs: {}".format(joint.getNumDofs()))
+        print("joint position: {}".format(joint.getPosition(0)))
+        print("skeleton joint position: ", skeleton.getPosition(joint_id))
+

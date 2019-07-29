@@ -30,6 +30,7 @@ class WorldParser(object):
         """
         self.root = None
         self.world = None
+        self.worlds = []
         self.filename = filename
         if filename is not None:
             self.parse(filename)

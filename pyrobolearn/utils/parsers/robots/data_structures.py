@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Provide the data structures that are shared among the various parsers and converters.
+"""Provide the common data structures that are shared among the various parsers, generators, and converters.
 """
 
 import numpy as np
@@ -62,101 +62,18 @@ class PhysicsEngine(object):
         self.tolerance = None
 
 
-class World(object):
-    r"""World data structure.
-
-    World frame (robotics convention with the right-hand rule):
-    - the x axis points forward
-    - the y axis points to the left
-    - the z axis points upward
-    """
-
-    def __init__(self, name=None):
-        self.name = name
-        self.trees = OrderedDict()
-        self.physics = None
-
-    @property
-    def physics(self):
-        return self._physics
-
-    @physics.setter
-    def physics(self, physics):
-        if physics is not None and not isinstance(physics, Physics):
-            raise TypeError("Expecting the physics to be an instance of `Physics`, but got instead: "
-                            "{}".format(type(physics)))
-        self._physics = physics
-
-
-class Light(object):
-    r"""Light data structure.
-
-    Type of light: point, directional, and spot
-    """
-
-    def __init__(self, name=None, dtype=None, cast_shadows=None, diffuse=None, specular=None, attenuation=None,
-                 direction=None, spot=None, position=None, orientation=None):
-        """
-        Initialize the Light data structure.
-
-        Args:
-            name (str): unique name for the light.
-            dtype (str): type of light, select between {'point', 'directional', 'spot'}
-            cast_shadows (bool): if True, it will cast shadows.
-            diffuse (tuple of 4 float, np.array[4]): diffuse light (RGBA) color.
-            specular (tuple of 4 float, np.array[4]): specular light (RGBA) color.
-            attenuation: light attenuation
-            direction (np.array[3]): direction of the light if dtype='directional' or dtype='spot'.
-            spot: spot light parameters
-            position (tuple/list of 3 float, np.array[3]): position of the light in the world.
-            orientation (tuple/list of 3 float, np.array[3]): orientation of the light in the world.
-        """
-        self.name = name
-        self.dtype =dtype
-        self.shadows = cast_shadows
-        self.diffuse = diffuse
-        self.specular = specular
-        self.attenuation = attenuation
-        self.direction = direction
-        self.spot = spot
-        self.position = position
-        self.orientation = orientation
-
-
-class Physics(object):
-    r"""Physical properties of the world.
-
-    This includes gravity, friction, viscosity, etc.
-    """
-
-    def __init__(self, gravity=(0., 0., -9.81)):
-        self.gravity = gravity
-
-
 class Frame(object):
     r"""Reference Frame"""
 
-    def __init__(self, position=None, orientation=None, dtype=None, right_handed=True, forward_axis=(1., 0., 0.),
-                 up_axis=(0., 0., 1.)):
+    def __init__(self, position=None, orientation=None, dtype=None, right_handed=True):
+        # forward_axis=(1., 0., 0.), up_axis=(0., 0., 1.)):
+
         self.position = position
         self.orientation = orientation
         self.dtype = dtype  # world frame, body frame, joint frame, inertial frame, etc.
         self.right_handed = right_handed
-        self.forward_axis = forward_axis
-        self.up_axis = up_axis
-
-
-class Tree(object):
-    r"""Tree data structure."""
-
-    def __init__(self, name=None, root=None):
-        self.name = name
-        self.root = root
-        self.bodies = OrderedDict()
-        self.joints = OrderedDict()
-        self.materials = {}
-        self.position = None
-        self.orientation = None
+        # self.forward_axis = forward_axis
+        # self.up_axis = up_axis
 
     @property
     def position(self):
@@ -188,11 +105,11 @@ class Tree(object):
 
     @property
     def rpy(self):
-        return self._orientation
+        return self.orientation
 
     @property
     def quaternion(self):
-        return get_quaternion_from_rpy(self._orientation)
+        return get_quaternion_from_rpy(self.orientation)
 
     @property
     def rot(self):
@@ -200,6 +117,8 @@ class Tree(object):
 
     @property
     def pose(self):
+        if self.position is None and self.orientation is None:
+            return None
         return self.position, self.orientation
 
     @pose.setter
@@ -220,6 +139,266 @@ class Tree(object):
                     raise ValueError("Expecting the pose to be tuple, list or np.ndarray of length 2 or 6")
             else:
                 raise TypeError("Expecting the pose to be a str, list, tuple or np.ndarray")
+
+
+class Physics(object):
+    r"""Physical properties of the world.
+
+    This includes gravity, friction, viscosity, etc.
+    """
+
+    def __init__(self, gravity=(0., 0., -9.81), timestep=None):
+        # gravity depends on the world frame; the frame axis convention that we use.
+        # By default, x points forward, y on the left, and z upward.
+        self.gravity = gravity
+        self.timestep = timestep
+
+    @property
+    def gravity(self):
+        return self._gravity
+
+    @gravity.setter
+    def gravity(self, gravity):
+        if gravity is not None:
+            if isinstance(gravity, str):
+                gravity = [float(g) for g in gravity.split()]
+            gravity = np.asarray(gravity).reshape(-1)
+        self._gravity = gravity
+
+    @property
+    def timestep(self):
+        return self._timestep
+
+    @timestep.setter
+    def timestep(self, timestep):
+        if timestep is not None:
+            timestep = float(timestep)
+        self._timestep = timestep
+
+
+class World(object):
+    r"""World data structure.
+
+    World frame (robotics convention with the right-hand rule):
+    - the x axis points forward
+    - the y axis points to the left
+    - the z axis points upward
+    """
+
+    def __init__(self, name=None):
+        self.name = name
+        self.trees = OrderedDict()
+        self.physics = None
+        self.lights = OrderedDict()
+
+    @property
+    def physics(self):
+        return self._physics
+
+    @physics.setter
+    def physics(self, physics):
+        if physics is not None and not isinstance(physics, Physics):
+            raise TypeError("Expecting the physics to be an instance of `Physics`, but got instead: "
+                            "{}".format(type(physics)))
+        self._physics = physics
+
+
+class Light(object):
+    r"""Light data structure.
+
+    Type of light: point, directional, and spot
+    """
+
+    def __init__(self, name=None, dtype=None, cast_shadows=None, ambient=None, diffuse=None, specular=None,
+                 attenuation=None, direction=None, spot=None, position=None, orientation=None, active=True):
+        """
+        Initialize the Light data structure.
+
+        Args:
+            name (str): unique name for the light.
+            dtype (str): type of light, select between {'point', 'directional', 'spot'}
+            cast_shadows (bool): if True, it will cast shadows.
+            diffuse (tuple of 4 float, np.array[4]): diffuse light (RGBA) color.
+            specular (tuple of 4 float, np.array[4]): specular light (RGBA) color.
+            attenuation: light attenuation
+            direction (np.array[3]): direction of the light if dtype='directional' or dtype='spot'.
+            spot: spot light parameters
+            position (tuple/list of 3 float, np.array[3]): position of the light in the world.
+            orientation (np.array[3], str): orientation of the light expressed as roll-pitch-yaw angles.
+            active (bool): if True, the light is on.
+        """
+        self.name = name
+        self.dtype = dtype
+        self.shadows = cast_shadows
+        self.ambient = ambient
+        self.diffuse = diffuse
+        self.specular = specular
+        self.attenuation = attenuation
+        self.direction = direction
+        self.spot = spot
+        self.active = active
+        self.frame = Frame(position=position, orientation=orientation)
+
+    @property
+    def shadows(self):
+        return self._shadows
+
+    @shadows.setter
+    def shadows(self, enable):
+        if enable is not None:
+            if isinstance(enable, str):
+                enable = enable.lower()
+                if len(enable) == 1:
+                    enable = int(enable)
+                elif enable == 'false':
+                    enable = 0
+                elif enable == 'true':
+                    enable = 1
+            enable = bool(enable)
+        self._shadows = enable
+
+    @property
+    def position(self):
+        return self.frame.position
+
+    @position.setter
+    def position(self, position):
+        self.frame.position = position
+
+    @property
+    def orientation(self):
+        return self.frame.orientation
+
+    @orientation.setter
+    def orientation(self, orientation):
+        self.frame.orientation = orientation
+
+    @property
+    def rpy(self):
+        return self.frame.rpy
+
+    @property
+    def quaternion(self):
+        return self.frame.quaternion
+
+    @property
+    def rot(self):
+        return self.frame.quaternion
+
+    @property
+    def pose(self):
+        return self.frame.pose
+
+    @pose.setter
+    def pose(self, pose):
+        self.frame.pose = pose
+
+    @property
+    def direction(self):
+        return self._direction
+
+    @direction.setter
+    def direction(self, direction):
+        if direction is not None:
+            if isinstance(direction, str):
+                direction = [float(d) for d in direction.split()]
+            direction = np.asarray(direction).reshape(-1)
+        self._direction = direction
+
+    @property
+    def ambient(self):
+        return self._ambient
+
+    @ambient.setter
+    def ambient(self, ambient):
+        if ambient is not None:
+            if isinstance(ambient, str):  # e.g. '0.5 0.1 1. 1.'
+                ambient = (float(c) for c in ambient.split())
+            if not isinstance(ambient, (list, tuple)):
+                raise TypeError("Expecting the color to be a tuple or list of 3 or 4 float")
+            else:
+                ambient = tuple(ambient)
+        self._ambient = ambient
+
+    color = ambient
+
+    @property
+    def diffuse(self):
+        return self._diffuse
+
+    @diffuse.setter
+    def diffuse(self, diffuse):
+        if diffuse is not None:
+            if isinstance(diffuse, str):  # e.g. '0.5 0.1 1. 1.'
+                diffuse = (float(c) for c in diffuse.split())
+            if not isinstance(diffuse, (list, tuple)):
+                raise TypeError("Expecting the color to be a tuple or list of 3 or 4 float")
+            else:
+                diffuse = tuple(diffuse)
+        self._diffuse = diffuse
+
+    @property
+    def specular(self):
+        return self._specular
+
+    @specular.setter
+    def specular(self, specular):
+        if specular is not None:
+            if isinstance(specular, str):  # e.g. '0.5 0.1 1. 1.'
+                specular = (float(c) for c in specular.split())
+            if not isinstance(specular, (list, tuple)):
+                raise TypeError("Expecting the color to be a tuple or list of 3 or 4 float")
+            else:
+                specular = tuple(specular)
+        self._specular = specular
+
+
+class Tree(object):
+    r"""Tree data structure."""
+
+    def __init__(self, name=None, root=None):
+        self.name = name
+        self.root = root
+        self.bodies = OrderedDict()
+        self.joints = OrderedDict()
+        self.materials = {}
+        self.frame = Frame()
+
+    @property
+    def position(self):
+        return self.frame.position
+
+    @position.setter
+    def position(self, position):
+        self.frame.position = position
+
+    @property
+    def orientation(self):
+        return self.frame.orientation
+
+    @orientation.setter
+    def orientation(self, orientation):
+        self.frame.orientation = orientation
+
+    @property
+    def rpy(self):
+        return self.frame.rpy
+
+    @property
+    def quaternion(self):
+        return self.frame.quaternion
+
+    @property
+    def rot(self):
+        return self.frame.quaternion
+
+    @property
+    def pose(self):
+        return self.frame.pose
+
+    @pose.setter
+    def pose(self, pose):
+        self.frame.pose = pose
 
 
 class Body(object):
@@ -255,6 +434,11 @@ class Joint(object):
     - screw: a single DoF joint wich coupled sliding and rotational motion
     - universal: like a ball joint, but constrains one DoF
     - planar: allows motion in a plane perpendicular to the axis.
+
+    - URDF: continuous, fixed, floating, planar, prismatic, revolute
+    - SDF: ball, fixed, gearbox, prismatic, revolute, revolute2, screw, universal
+    - Dart: ball, free, euler, prismatic, weld (=fixed), revolute, universal
+    - MuJoCo: ball, free, hinge (=revolute), slide
     """
 
     def __init__(self, joint_id, name=None, dtype=None, limits=None, parent=None, child=None, axis=None,
@@ -266,12 +450,14 @@ class Joint(object):
         self.parent = parent
         self.child = child
         self.axis = axis
-        self.position = position
-        self.orientation = orientation
+        self.frame = Frame(position=position, orientation=orientation)
         self.friction = friction
         self.damping = damping
         self.effort = effort
         self.velocity = velocity
+
+        self.init_position = None
+        self.init_velocity = None
 
     @property
     def limits(self):
@@ -304,66 +490,39 @@ class Joint(object):
 
     @property
     def position(self):
-        return self._position
+        return self.frame.position
 
     @position.setter
     def position(self, position):
-        if position is not None:
-            if isinstance(position, str):
-                position = [float(p) for p in position.split()]
-            position = np.asarray(position)
-        self._position = position
+        self.frame.position = position
 
     @property
     def orientation(self):
-        return self._orientation
+        return self.frame.orientation
 
     @orientation.setter
     def orientation(self, orientation):
-        if orientation is not None:
-            if isinstance(orientation, str):
-                orientation = [float(o) for o in orientation.split()]
-            if len(orientation) == 4:  # quaternion
-                orientation = get_rpy_from_quaternion(orientation)
-            if len(orientation) == 3:  # rpy
-                pass
-            orientation = np.asarray(orientation)
-        self._orientation = orientation
+        self.frame.orientation = orientation
 
     @property
     def rpy(self):
-        return self._orientation
+        return self.frame.rpy
 
     @property
     def quaternion(self):
-        return get_quaternion_from_rpy(self._orientation)
+        return self.frame.quaternion
 
     @property
     def rot(self):
-        return get_matrix_from_rpy(self.rpy)
+        return self.frame.quaternion
 
     @property
     def pose(self):
-        return self.position, self.orientation
+        return self.frame.pose
 
     @pose.setter
     def pose(self, pose):
-        if pose is not None:
-            if isinstance(pose, str):
-                pose = pose.split()
-                self.position = pose[:3]
-                self.orientation = pose[3:]
-            elif isinstance(pose, (tuple, list, np.ndarray)):
-                if len(pose) == 2:
-                    self.position = pose[0]
-                    self.orientation = pose[1]
-                elif len(pose) == 6:
-                    self.position = pose[:3]
-                    self.orientation = pose[3:]
-                else:
-                    raise ValueError("Expecting the pose to be tuple, list or np.ndarray of length 2 or 6")
-            else:
-                raise TypeError("Expecting the pose to be a str, list, tuple or np.ndarray")
+        self.frame.pose = pose
 
     @property
     def friction(self):
@@ -404,6 +563,44 @@ class Joint(object):
         if velocity is not None:
             velocity = float(velocity)
         self._velocity = velocity
+
+    @property
+    def init_position(self):
+        return self._init_position
+
+    @init_position.setter
+    def init_position(self, position):
+        if position is not None:
+            if isinstance(position, str):
+                position = np.asarray([float(s) for s in position.split()])
+                if len(position) == 1:
+                    position = position[0]
+            elif isinstance(position, (tuple, list, np.ndarray)):
+                position = np.asarray([float(s) for s in position])
+                if len(position) == 1:
+                    position = position[0]
+            elif not isinstance(position, (float, int)):
+                raise TypeError("Expecting the init_position to be a float, int, list, tuple or np.ndarray")
+        self._init_position = position
+
+    @property
+    def init_velocity(self):
+        return self._init_velocity
+
+    @init_velocity.setter
+    def init_velocity(self, velocity):
+        if velocity is not None:
+            if isinstance(velocity, str):
+                velocity = np.asarray([float(s) for s in velocity.split()])
+                if len(velocity) == 1:
+                    velocity = velocity[0]
+            elif isinstance(velocity, (tuple, list, np.ndarray)):
+                velocity = np.asarray([float(s) for s in velocity])
+                if len(velocity) == 1:
+                    velocity = velocity[0]
+            elif not isinstance(velocity, (float, int)):
+                raise TypeError("Expecting the init_velocity to be a float, int, list, tuple or np.ndarray")
+        self._init_velocity = velocity
 
 
 class Inertia(object):
@@ -459,7 +656,7 @@ class Inertia(object):
 
     @ixx.setter
     def ixx(self, ixx):
-        if ixx is None:
+        if ixx is not None:
             ixx = float(ixx)
         self._ixx = ixx
 
@@ -529,8 +726,7 @@ class Inertial(object):
         """
         self.mass = mass
         self.inertia = inertia
-        self.position = position
-        self.orientation = orientation
+        self.frame = Frame(position=position, orientation=orientation)
 
     @property
     def mass(self):
@@ -603,70 +799,49 @@ class Inertial(object):
 
     @property
     def position(self):
-        return self._position
+        return self.frame.position
 
     @position.setter
     def position(self, position):
-        if position is not None:
-            if isinstance(position, str):
-                position = [float(p) for p in position.split()]
-            position = np.asarray(position)
-        self._position = position
+        self.frame.position = position
 
     @property
     def orientation(self):
-        return self._orientation
+        return self.frame.orientation
 
     @orientation.setter
     def orientation(self, orientation):
-        if orientation is not None:
-            if isinstance(orientation, str):
-                orientation = [float(o) for o in orientation.split()]
-            if len(orientation) == 4:  # quaternion
-                orientation = get_rpy_from_quaternion(orientation)
-            if len(orientation) == 3:  # rpy
-                pass
-            orientation = np.asarray(orientation)
-        self._orientation = orientation
+        self.frame.orientation = orientation
 
     @property
     def rpy(self):
-        return self._orientation
+        return self.frame.rpy
 
     @property
     def quaternion(self):
-        return get_quaternion_from_rpy(self._orientation)
+        return self.frame.quaternion
 
     @property
     def rot(self):
-        return get_matrix_from_rpy(self.rpy)
+        return self.frame.quaternion
 
     @property
     def pose(self):
-        return self.position, self.orientation
+        return self.frame.pose
 
     @pose.setter
     def pose(self, pose):
-        if pose is not None:
-            if isinstance(pose, str):
-                pose = pose.split()
-                self.position = pose[:3]
-                self.orientation = pose[3:]
-            elif isinstance(pose, (tuple, list, np.ndarray)):
-                if len(pose) == 2:
-                    self.position = pose[0]
-                    self.orientation = pose[1]
-                elif len(pose) == 6:
-                    self.position = pose[:3]
-                    self.orientation = pose[3:]
-                else:
-                    raise ValueError("Expecting the pose to be tuple, list or np.ndarray of length 2 or 6")
-            else:
-                raise TypeError("Expecting the pose to be a str, list, tuple or np.ndarray")
+        self.frame.pose = pose
 
 
 class Geometry(object):  # Shape
-    """Geometry: plane, sphere, box, mesh, cylinder, ellipsoid, capsule, heightmap, etc."""
+    """Geometry: plane, sphere, box, mesh, cylinder, ellipsoid, capsule, cone, heightmap, etc.
+
+    - URDF: box, cylinder, mesh, sphere
+    - SDF: box, cylinder, heightmap, image, mesh, plane, polyline, sphere
+    - Skel: box, capsule, cone, cylinder, ellipsoid, mesh, multi_sphere, sphere
+    - MuJoCo: box, capsule, cylinder, ellipsoid, hfield (=height field), mesh, plane, sphere
+    """
 
     def __init__(self, dtype=None, size=None, filename=None):
         self.dtype = dtype
@@ -706,14 +881,11 @@ Shape = Geometry
 class Visual(object):
     r"""visual parameters for body."""
 
-    def __init__(self, name=None, dtype=None, size=None, color=None, filename=None, position=None, orientation=None,
-                 material=None):
+    def __init__(self, name=None, dtype=None, size=None, color=None, filename=None, position=None, orientation=None):
         self.name = name
         self.geometry = Geometry(dtype=dtype, size=size, filename=filename)
-        self.color = color
-        self.position = position
-        self.orientation = orientation
-        self.material = material
+        self.frame = Frame(position=position, orientation=orientation)
+        self.material = Material(color=color)
 
     @property
     def dtype(self):
@@ -741,18 +913,11 @@ class Visual(object):
 
     @property
     def color(self):
-        return self._color
+        return self.material.color
 
     @color.setter
     def color(self, color):
-        if color is not None:
-            if isinstance(color, str):  # e.g. '0.5 0.1 1. 1.'
-                color = (float(c) for c in color.split())
-            if not isinstance(color, (list, tuple)):
-                raise TypeError("Expecting the color to be a tuple or list of 3 or 4 float")
-            else:
-                color = tuple(color)
-        self._color = color
+        self.material.color = color
 
     @property
     def format(self):
@@ -762,66 +927,39 @@ class Visual(object):
 
     @property
     def position(self):
-        return self._position
+        return self.frame.position
 
     @position.setter
     def position(self, position):
-        if position is not None:
-            if isinstance(position, str):
-                position = [float(p) for p in position.split()]
-            position = np.asarray(position)
-        self._position = position
+        self.frame.position = position
 
     @property
     def orientation(self):
-        return self._orientation
+        return self.frame.orientation
 
     @orientation.setter
     def orientation(self, orientation):
-        if orientation is not None:
-            if isinstance(orientation, str):
-                orientation = [float(o) for o in orientation.split()]
-            if len(orientation) == 4:  # quaternion
-                orientation = get_rpy_from_quaternion(orientation)
-            if len(orientation) == 3:  # rpy
-                pass
-            orientation = np.asarray(orientation)
-        self._orientation = orientation
+        self.frame.orientation = orientation
 
     @property
     def rpy(self):
-        return self._orientation
+        return self.frame.rpy
 
     @property
     def quaternion(self):
-        return get_quaternion_from_rpy(self._orientation)
+        return self.frame.quaternion
 
     @property
     def rot(self):
-        return get_matrix_from_rpy(self.rpy)
+        return self.frame.quaternion
 
     @property
     def pose(self):
-        return self.position, self.orientation
+        return self.frame.pose
 
     @pose.setter
     def pose(self, pose):
-        if pose is not None:
-            if isinstance(pose, str):
-                pose = pose.split()
-                self.position = pose[:3]
-                self.orientation = pose[3:]
-            elif isinstance(pose, (tuple, list, np.ndarray)):
-                if len(pose) == 2:
-                    self.position = pose[0]
-                    self.orientation = pose[1]
-                elif len(pose) == 6:
-                    self.position = pose[:3]
-                    self.orientation = pose[3:]
-                else:
-                    raise ValueError("Expecting the pose to be tuple, list or np.ndarray of length 2 or 6")
-            else:
-                raise TypeError("Expecting the pose to be a str, list, tuple or np.ndarray")
+        self.frame.pose = pose
 
 
 class Collision(object):
@@ -830,8 +968,7 @@ class Collision(object):
     def __init__(self, name=None, dtype=None, size=None, filename=None, position=None, orientation=None):
         self.name = name
         self.geometry = Geometry(dtype=dtype, size=size, filename=filename)
-        self.position = position
-        self.orientation = orientation
+        self.frame = Frame(position=position, orientation=orientation)
 
     @property
     def dtype(self):
@@ -864,82 +1001,63 @@ class Collision(object):
 
     @property
     def position(self):
-        return self._position
+        return self.frame.position
 
     @position.setter
     def position(self, position):
-        if position is not None:
-            if isinstance(position, str):
-                position = [float(p) for p in position.split()]
-            position = np.asarray(position)
-        self._position = position
+        self.frame.position = position
 
     @property
     def orientation(self):
-        return self._orientation
+        return self.frame.orientation
 
     @orientation.setter
     def orientation(self, orientation):
-        if orientation is not None:
-            if isinstance(orientation, str):
-                orientation = [float(o) for o in orientation.split()]
-            if len(orientation) == 4:  # quaternion
-                orientation = get_rpy_from_quaternion(orientation)
-            if len(orientation) == 3:  # rpy
-                pass
-            orientation = np.asarray(orientation)
-        self._orientation = orientation
+        self.frame.orientation = orientation
 
     @property
     def rpy(self):
-        return self._orientation
+        return self.frame.rpy
 
     @property
     def quaternion(self):
-        return get_quaternion_from_rpy(self._orientation)
+        return self.frame.quaternion
 
     @property
     def rot(self):
-        return get_matrix_from_rpy(self.rpy)
+        return self.frame.quaternion
 
     @property
     def pose(self):
-        return self.position, self.orientation
+        return self.frame.pose
 
     @pose.setter
     def pose(self, pose):
-        if pose is not None:
-            if isinstance(pose, str):
-                pose = pose.split()
-                self.position = pose[:3]
-                self.orientation = pose[3:]
-            elif isinstance(pose, (tuple, list, np.ndarray)):
-                if len(pose) == 2:
-                    self.position = pose[0]
-                    self.orientation = pose[1]
-                elif len(pose) == 6:
-                    self.position = pose[:3]
-                    self.orientation = pose[3:]
-                else:
-                    raise ValueError("Expecting the pose to be tuple, list or np.ndarray of length 2 or 6")
-            else:
-                raise TypeError("Expecting the pose to be a str, list, tuple or np.ndarray")
+        self.frame.pose = pose
 
 
 class Material(object):
-    r"""Material info."""
+    r"""Material info.
+
+    Type of colors:
+    - ambient: color of an object when no lights are pointing at it.
+    - diffuse: color of an object under a pure white light.
+    - specular: color and intensity of a highlight from a specular reflection (higher values make an object more shiny).
+    - emissive: color where the light appears to being emitted from the object.
+    """
 
     def __init__(self, name=None, color=None, texture=None):
         self.name = name
-        self.color = color
+        self.color = color  # ambient color
         self.texture = texture
 
-    @property
-    def color(self):
-        return self._color
+        # RGBA color
+        self.diffuse = None
+        self.specular = None
+        self.emissive = None
 
-    @color.setter
-    def color(self, color):
+    @staticmethod
+    def _check_color(color):
         if color is not None:
             if isinstance(color, str):  # e.g. '0.5 0.1 1. 1.'
                 color = (float(c) for c in color.split())
@@ -947,7 +1065,15 @@ class Material(object):
                 raise TypeError("Expecting the color to be a tuple or list of 3 or 4 float")
             else:
                 color = tuple(color)
-        self._color = color
+        return color
+
+    @property
+    def color(self):
+        return self._color
+
+    @color.setter
+    def color(self, color):
+        self._color = self._check_color(color)
 
     @property
     def rgb(self):
@@ -963,8 +1089,57 @@ class Material(object):
             return tuple(self.color) + (1.,)
         return tuple(self.color)
 
+    @property
+    def diffuse(self):
+        return self._diffuse
+
+    @diffuse.setter
+    def diffuse(self, diffuse):
+        if diffuse is not None:
+            if isinstance(diffuse, str):  # e.g. '0.5 0.1 1. 1.'
+                diffuse = (float(c) for c in diffuse.split())
+            if not isinstance(diffuse, (list, tuple)):
+                raise TypeError("Expecting the color to be a tuple or list of 3 or 4 float")
+            else:
+                diffuse = tuple(diffuse)
+        self._diffuse = diffuse
+
+    @property
+    def specular(self):
+        return self._specular
+
+    @specular.setter
+    def specular(self, specular):
+        if specular is not None:
+            if isinstance(specular, str):  # e.g. '0.5 0.1 1. 1.'
+                specular = (float(c) for c in specular.split())
+            if not isinstance(specular, (list, tuple)):
+                raise TypeError("Expecting the color to be a tuple or list of 3 or 4 float")
+            else:
+                specular = tuple(specular)
+        self._specular = specular
+
+    @property
+    def emissive(self):
+        return self._emissive
+
+    @emissive.setter
+    def emissive(self, emissive):
+        if emissive is not None:
+            if isinstance(emissive, str):  # e.g. '0.5 0.1 1. 1.'
+                emissive = (float(c) for c in emissive.split())
+            if not isinstance(emissive, (list, tuple)):
+                raise TypeError("Expecting the color to be a tuple or list of 3 or 4 float")
+            else:
+                emissive = tuple(emissive)
+        self._emissive = emissive
+
 
 class Sensor(object):
+    pass
+
+
+class Actuator(object):  # Motor
     pass
 
 

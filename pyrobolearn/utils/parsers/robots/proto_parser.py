@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Define the Proto parser.
+"""Define the Proto parser/generator.
 
 Proto files are notably used in Webots.
 """
