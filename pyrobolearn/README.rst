@@ -10,7 +10,7 @@ Here we provide a brief overview of each submodule and its intended use:
   have some features that other simulators don't have, in that case, an error is raised or an approximation is made.
   For instance, ``PyBullet`` don't provide joint accelerations, but a simulator like ``MuJoCo`` does. As such, it is
   checked in the ``Robot`` class if the simulator provide these accelerations, if not, it is approximated using finite
-  difference. Currently, only ``PyBullet`` is fully-supported.
+  difference. Currently, only ``Bullet`` is fully-supported. Interfaces for ``MuJoCo`` and ``Dart`` are ongoing.
 
   - ``middlewares``: this will contain the middleware classes that inherit from the ``Middleware`` class, such as
     ``ROS`` and others. You will be able to provide it to the simulator and the simulator will use it to publish or
@@ -36,20 +36,24 @@ Here we provide a brief overview of each submodule and its intended use:
   - ``data_structures``: this contains data structures such as ordered sets and the different type of queues.
   - ``plotting``: this contains real-time plotting tools than can plot the joint positions, velocities, accelerations,
     torques, or link frames in real-time. This is used in combination with the ``Simulator``.
-  - ``parsers``: this contains mainly parsers for some datasets.
+  - ``parsers``: this contains mainly parsers for some datasets, and robot/world file formats (such as URDF, SDF, Skel, 
+    MJCF, etc).
 
-- ``tools``: this contains the *interfaces* and *bridges*. *Interfaces* allows to receive or send the data from/to
-  various I/O interfaces (such as mouse, keyboard, 3D space mouse, game controllers, webcam, depth cameras, sensors
-  like LeapMotion, and others). They all inherit from the abstract ``Interface`` class which has thread supports. If
-  threads are not used, the user has to call the ``step`` method such that it reads the next value (i.e. these are not
-  event-driven, i.e. you control when you want to get/set the data). Interfaces are independent from the other
-  components in the PRL framework (with maybe at the exception of some ``utils`` methods), and as such can be used in
-  other software. *Bridges* makes the connection between an interface and another component in PRL (like a robot or
-  body in the world, or the world camera). Fundamentally, they accept as input an interface and the component, and the
-  user details what should be done in that class. This allows to decouple the interface from the application part; e.g.
-  the same game controller interface could be used to move a wheeled robot or quadcopter robot by providing two bridges
-  (one for wheeled robots, and one for quadcopter robots). All the bridges inherit from the abstract ``Bridge`` class,
-  and as with interface a ``step`` method can be called.
+- ``tools``: this contains the *interfaces* and *bridges*. 
+
+  - *Interfaces* allows to receive or send the data from/to various I/O interfaces (such as mouse, keyboard, 3D space 
+    mouse, game controllers, webcam, depth cameras, sensors like LeapMotion, and others). They all inherit from the 
+    abstract ``Interface`` class which has thread supports. If threads are not used, the user has to call the ``step`` 
+    method such that it reads the next value (i.e. these are not event-driven, i.e. you control when you want to get/set 
+    the data). Interfaces are independent from the other components in the PRL framework (with maybe at the exception 
+    of some ``utils`` methods), and as such can be used in other software. 
+  - *Bridges* makes the connection between an interface and another component in PRL (like a robot or body in the world, 
+    or the world camera). Fundamentally, they accept as input an interface and the component, and the user details what 
+    should be done in that class. This allows to decouple the interface from the application part; e.g. the same game 
+    controller interface could be used to move a wheeled robot or quadcopter robot by providing two bridges (one for 
+    wheeled robots, and one for quadcopter robots). All the bridges inherit from the abstract ``Bridge`` class, and as 
+    with interface a ``step`` method can be called.
+
 - ``states``: this contains the various states which all inherit from the ``State`` abstract class. States can easily
   be composed together such that you could specify which states you would like to have. For instance, if you want
   the joint positions, velocities, and the base position and orientation states, you can add them to form one common
@@ -104,11 +108,11 @@ Here we provide a brief overview of each submodule and its intended use:
 - ``dynamics``: this contains the various dynamic function approximators. This is mostly used by model-based 
   reinforcement learning algorithms. This is currently not fully-implemented/operational.
 
-- ``tasks``: this contains the various learning tasks. They all inherit from the ``Task`` class and accepts at least
-  as inputs the policy(ies) and environment. They act as a container for these two's, and calling the ``step`` method
-  will perform one full cycle in the agent-environment interaction loop. Subsequently, you can also call ``run`` to
-  run several loop for the specified number of steps. Tasks can notably be provided to algorithms (especially RL
-  algorithms).
+- ``tasks``: this contains the various learning tasks/paradigms. They all inherit from the ``Task`` class and accepts 
+  at least as inputs the policy(ies) and environment. They act as a container for these two's, and calling the 
+  ``step`` method will perform one full cycle in the agent-environment interaction loop. Subsequently, you can also 
+  call ``run`` to run several loop for the specified number of steps. Tasks can notably be provided to algorithms 
+  (especially RL algorithms).
 
 - ``distribution``: this contains few distributions that are used by exloration strategies (see next bullet point).
 - ``exploration``: this contains the various exploration strategies that can be used by the policy; parameter and
@@ -123,6 +127,8 @@ Here we provide a brief overview of each submodule and its intended use:
 - ``returns``: this provides the various returns and estimators that are used in RL.
 - ``algos``: this contains the various learning algorithms on how to acquire the data and train the various models
   (policies, values, dynamics, etc).
+- ``metrics``: this contains the various metrics that are used in different learning paradigms. They are not currently 
+  all implemented. You can put different metrics together and plot them by just calling the ``plot`` method.
 
 Other folders include:
 
