@@ -66,3 +66,8 @@ nlopt>=2.4.2.post2
 # gdal>=1.11.3
 
 # need to install rbdl, ipopt, tf
+
+# meshes
+trimesh>=3.1.1    # to compute volume, COM, inertia, etc.
+pyassimp>=4.1.4   # to import and export meshes in different formats
+# pymesh>=1.0.2

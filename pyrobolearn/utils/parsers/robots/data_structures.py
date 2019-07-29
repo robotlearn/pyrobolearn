@@ -3,9 +3,10 @@
 """
 
 import numpy as np
-from collections import OrderedDict
+from collections import OrderedDict, Iterable
 
-from pyrobolearn.utils.transformation import get_rpy_from_quaternion, get_quaternion_from_rpy, get_matrix_from_rpy
+from pyrobolearn.utils.transformation import get_rpy_from_quaternion, get_quaternion_from_rpy, get_matrix_from_rpy, \
+    get_rpy_from_matrix, get_matrix_from_axis_angle
 
 
 __author__ = "Brian Delhaisse"
@@ -98,8 +99,16 @@ class Frame(object):
                 orientation = [float(o) for o in orientation.split()]
             if len(orientation) == 4:  # quaternion
                 orientation = get_rpy_from_quaternion(orientation)
-            if len(orientation) == 3:  # rpy
-                pass
+            elif len(orientation) == 3:  # rpy or rot
+                if isinstance(orientation, np.ndarray) and orientation.shape == (3, 3):
+                    orientation = get_rpy_from_matrix(orientation)
+            elif len(orientation) == 2:  # tuple of (axis, angle)
+                axis, angle = orientation[0], orientation[1]
+                if isinstance(angle, str):
+                    angle = float(angle)
+                if isinstance(axis, str):
+                    axis = np.array([float(c) for c in axis.split()])
+                orientation = get_rpy_from_matrix(get_matrix_from_axis_angle(axis=axis, angle=angle))
             orientation = np.asarray(orientation)
         self._orientation = orientation
 
@@ -283,7 +292,7 @@ class Light(object):
 
     @property
     def rot(self):
-        return self.frame.quaternion
+        return self.frame.rot
 
     @property
     def pose(self):
@@ -390,7 +399,7 @@ class Tree(object):
 
     @property
     def rot(self):
-        return self.frame.quaternion
+        return self.frame.rot
 
     @property
     def pose(self):
@@ -410,11 +419,45 @@ class Body(object):
 
         # inner bodies / links
         self.bodies = []
-        self.joints = OrderedDict()
+        self.joints = OrderedDict()             # child joints
+        self.parent_joints = OrderedDict()      # parent joints
 
         self.inertial = None
         self.visual = None
         self.collision = None
+
+    @property
+    def inertial(self):
+        return self._inertial
+
+    @inertial.setter
+    def inertial(self, inertial):
+        if inertial is not None and not isinstance(inertial, Inertial):
+            raise TypeError("Expecting inertial to be an instance of `Inertial`, but got instead: "
+                            "{}".format(type(inertial)))
+        self._inertial = inertial
+
+    @property
+    def visual(self):
+        return self._visual
+
+    @visual.setter
+    def visual(self, visual):
+        if visual is not None and not isinstance(visual, Visual):
+            raise TypeError("Expecting visual to be an instance of `Visual`, but got instead: "
+                            "{}".format(type(visual)))
+        self._visual = visual
+
+    @property
+    def collision(self):
+        return self._collision
+
+    @collision.setter
+    def collision(self, collision):
+        if collision is not None and not isinstance(collision, Collision):
+            raise TypeError("Expecting collision to be an instance of `Collision`, but got instead: "
+                            "{}".format(type(collision)))
+        self._collision = collision
 
 
 class Joint(object):
@@ -437,8 +480,8 @@ class Joint(object):
 
     - URDF: continuous, fixed, floating, planar, prismatic, revolute
     - SDF: ball, fixed, gearbox, prismatic, revolute, revolute2, screw, universal
-    - Dart: ball, free, euler, prismatic, weld (=fixed), revolute, universal
-    - MuJoCo: ball, free, hinge (=revolute), slide
+    - Dart: ball, free (=floating), euler, prismatic, weld (=fixed), revolute, universal
+    - MuJoCo: ball, free (=floating), hinge (=revolute), slide (=prismatic)
     """
 
     def __init__(self, joint_id, name=None, dtype=None, limits=None, parent=None, child=None, axis=None,
@@ -455,9 +498,40 @@ class Joint(object):
         self.damping = damping
         self.effort = effort
         self.velocity = velocity
+        self.num_dofs = None
 
         self.init_position = None
         self.init_velocity = None
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    @dtype.setter
+    def dtype(self, dtype):
+        if dtype is not None:
+            if not isinstance(dtype, str):
+                raise TypeError("Expecting dtype to be a string")
+            dtype = dtype.lower().strip()
+
+            if dtype in {'fixed', 'weld'}:
+                dtype = 'fixed'
+                self.num_dofs = 0
+            elif dtype == 'hinge':
+                dtype = 'revolute'
+                self.num_dofs = 1
+            elif dtype in {'slide', 'prismatic'}:
+                dtype = 'prismatic'
+                self.num_dofs = 1
+            elif dtype in {'free', 'floating'}:
+                dtype = 'floating'
+                self.num_dofs = 6
+            elif dtype == 'ball':
+                self.num_dofs = 3
+            elif dtype == 'continuous':
+                self.num_dofs = 1
+
+        self._dtype = dtype
 
     @property
     def limits(self):
@@ -514,7 +588,7 @@ class Joint(object):
 
     @property
     def rot(self):
-        return self.frame.quaternion
+        return self.frame.rot
 
     @property
     def pose(self):
@@ -712,10 +786,27 @@ class Inertia(object):
 
 
 class Inertial(object):
-    r"""Inertial parameters."""
+    r"""Inertial parameters.
+
+    Moments of inertia of popular shapes:
+
+    - box: I = 1./12 * mass * np.array([h**2 + d**2, w**2 + d**2, w**2 + h**2]), where w=width, h=height, d=depth.
+    - capsule: from https://www.gamedev.net/articles/programming/math-and-physics/capsule-inertia-tensor-r3856/
+        - ixx = m_c * (h**2/12. + r**2/4.) + m_s * (2*r**2/5. + h**2/2. + 3*h*r/8.)
+        - iyy = m_c * (h**2/12. + r**2/4.) + m_s * (2*r**2/5. + h**2/2. + 3*h*r/8.)
+        - izz = m_c * r**2/2. + m_s * 2 * r**2 / 5.
+        - where m_c = mass of the cylinder, m_s = mass of the sphere, r = radius of hemispheres, h = height of the
+          cylinder.
+    - cylinder: I = 1./12 * mass * np.array([3*r**2 + h**2, 3*r**2 + h**2, r**2]), where r=radius, h=height.
+    - ellipsoid: I = 1./5 * mass * np.array([b**2 + c**2, a**2 + c**2, a**2 + b**2]), where a,b,c are the X,Y,Z radius.
+    - sphere: I = 2./5 * mass * radius**2 * np.ones(3)
+    - mesh: use ``trimesh`` library, after loading the mesh, you can access the moments of inertia with
+      ``mesh.moment_inertia``.
+    """
 
     def __init__(self, mass=None, inertia=None, position=(0., 0., 0.), orientation=(0., 0., 0.)):
         """
+        Initialize the inertial instance.
 
         Args:
             mass (float): mass value (in kg)
@@ -823,7 +914,7 @@ class Inertial(object):
 
     @property
     def rot(self):
-        return self.frame.quaternion
+        return self.frame.rot
 
     @property
     def pose(self):
@@ -841,6 +932,15 @@ class Geometry(object):  # Shape
     - SDF: box, cylinder, heightmap, image, mesh, plane, polyline, sphere
     - Skel: box, capsule, cone, cylinder, ellipsoid, mesh, multi_sphere, sphere
     - MuJoCo: box, capsule, cylinder, ellipsoid, hfield (=height field), mesh, plane, sphere
+
+    Depending on the type, the size can be a float, or a list of float:
+    - box: size = float[3] (length in each direction)
+    - cylinder: size = float[2] (radius and length/height)
+    - capsule: size = float[2] (radius and length/height)
+    - ellipsoid: size = float[3] (radius in X, Y, Z)
+    - mesh: size = scale = float[3] (scale in each direction), or size = scale = float (total scale factor)
+    - plane: size = float[2] (length in X and Y)
+    - sphere: size = float (radius)
     """
 
     def __init__(self, dtype=None, size=None, filename=None):
@@ -951,7 +1051,7 @@ class Visual(object):
 
     @property
     def rot(self):
-        return self.frame.quaternion
+        return self.frame.rot
 
     @property
     def pose(self):
@@ -1025,7 +1125,7 @@ class Collision(object):
 
     @property
     def rot(self):
-        return self.frame.quaternion
+        return self.frame.rot
 
     @property
     def pose(self):
