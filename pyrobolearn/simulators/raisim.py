@@ -1,34 +1,43 @@
 #!/usr/bin/env python
 """Define the RaiSim Simulator API.
 
-Warnings: Currently, the RaiSim simulator is closed-source and is only available for researchers at RSL and ETH Zurich.
+This is the main interface that communicates with the RaiSim simulator [1-5]. By defining this interface, it
+allows to decouple the PyRoboLearn framework from the simulator. It also converts some data types to the ones required
+by RaiSim. Because it didn't have a Python wrapper, one has been written in the ``raisim_wrapper`` folder using
+pybind11 [6].
 
-This is the main interface that communicates with the RaiSim simulator [1, 2]. By defining this interface, it allows to
-decouple the PyRoboLearn framework from the simulator. It also converts some data types to the ones required by
-RaiSim.
+The signature of each method defined here are inspired by [1,2] but in accordance with the PEP8 style guide [7].
+Parts of the documentation for the methods have been copied-pasted from [2-5] for completeness purposes.
 
-The signature of each method defined here are inspired by [1,2] but in accordance with the PEP8 style guide [3].
-Parts of the documentation for the methods have been copied-pasted from [2] for completeness purposes.
+RaiSim is distributed under the End-User License Agreement (EULA) [8], and officially works on Ubuntu 16.04 and 18.04.
 
 Dependencies in PRL:
 * `pyrobolearn.simulators.simulator.Simulator`
 
 References:
-    [1] "Per-Contact Iteration Method for Solving Contact Dynamics", Hwangbo et al., 2018
-    [2] RaiSim: https://leggedrobotics.github.io/SimBenchmark/about/sims.html
-    [3] PEP8: https://www.python.org/dev/peps/pep-0008/
+    - [1] "Per-Contact Iteration Method for Solving Contact Dynamics", Hwangbo et al., 2018
+    - [2] RaiSim benchmarks: https://leggedrobotics.github.io/SimBenchmark/about/sims.html
+    - [3] RaiSim, a physics engine for robotics and AI research: https://github.com/leggedrobotics/raisimLib
+    - [4] raisimOgre - Visualizer for raisim: https://github.com/leggedrobotics/raisimOgre
+    - [5] raisimGym - RL examples using raisim: https://github.com/leggedrobotics/raisimGym
+    - [6] pybind11 (documentation): https://pybind11.readthedocs.io/en/stable/
+    - [7] PEP8: https://www.python.org/dev/peps/pep-0008/
+    - [8] RaiSim license: https://github.com/leggedrobotics/raisimLib/blob/master/LICENSE.md
 """
 
-# TODO:
-#  1. wait for ETH to release the simulator (not sure if they will ever do it...)
-#  2. check if a Python wrapper is provided, if not, will have to implement it
+# import raisim
+try:
+    import raisimpy as raisim
+except ImportError as e:
+    print(e.__str__() + "\nHINT: you need to install `raisimLib` and `raisimOgre`, and build the Python wrappers "
+                        "that are located in the `raisim_wrapper` folder.")
 
 # import PRL simulator
 from pyrobolearn.simulators.simulator import Simulator
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
-__credits__ = ["RaiSim (ETHz)", "Brian Delhaisse"]
+__credits__ = ["RaiSim (ETHz, Hwangbo, Kang, Lee)", "Brian Delhaisse (Python wrappers + PRL)"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
@@ -52,6 +61,14 @@ class Raisim(Simulator):
 
     def __init__(self, render=True, **kwargs):
         super(Raisim, self).__init__(render, **kwargs)
+
+        # create world
+        self.world = raisim.World()
+        self.sim = self.world  # alias
+
+        # create visualizer if specified
+        self.visualizer = None
+
         raise NotImplementedError("The RaiSim simulator is not currently available as it has not been released for "
                                   "the moment")
 
