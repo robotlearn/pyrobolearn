@@ -28,6 +28,9 @@ class ANYmal(QuadrupedRobot):
         - [2] "Learning agile and dynamic motor skills for legged robots", Hwangbo et al., 2019
         - [3] www.rsl.ethz.ch/robots-media/anymal.html
         - [4] www.anybotics.com/anymal
+        - [5] raisimLib: https://github.com/leggedrobotics/raisimLib
+        - [6] raisimOgre - Visualizer for raisim: https://github.com/leggedrobotics/raisimOgre
+        - [7] raisimGym - RL examples using raisim: https://github.com/leggedrobotics/raisimGym
     """
 
     def __init__(self, simulator, position=(0, 0, .6), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
@@ -62,12 +65,33 @@ class ANYmal(QuadrupedRobot):
                                    ['LH_HIP', 'LH_THIGH', 'LH_SHANK'],
                                    ['RH_HIP', 'RH_THIGH', 'RH_SHANK']]]
 
-        self.feet = [self.get_link_ids(link) for link in ['LF_FOOT_MOUNT', 'RF_FOOT_MOUNT', 'LH_FOOT_MOUNT',
-                                                          'RH_FOOT_MOUNT'] if link in self.link_names]
+        # self.feet = [self.get_link_ids(link) for link in ['LF_FOOT_MOUNT', 'RF_FOOT_MOUNT', 'LH_FOOT_MOUNT',
+        #                                                   'RH_FOOT_MOUNT'] if link in self.link_names]
+        self.feet = [self.get_link_ids(link) for link in ['LF_FOOT', 'RF_FOOT', 'LH_FOOT', 'RH_FOOT']
+                     if link in self.link_names]
 
         # taken from "Learning agile and dynamic motor skills for legged robots", Hwangbo et al., 2019
         self.kp = 50. * np.ones(12)
         self.kd = 0.1 * np.ones(12)
+
+        # taken from "raisimGym/raisim_gym/env/env/ANYmal/Environment.hpp"
+        self.kp = 40. * np.ones(12)
+        self.kd = 1. * np.ones(12)
+
+        # init configuration
+        self.reset_joint_states(q=[0.03, 0.4, -0.8, -0.03, 0.4, -0.8, 0.03, -0.4, 0.8, -0.03, -0.4, 0.8])
+
+        # some values are taken from "raisimGym/raisim_gym/env/env/ANYmal/Environment.hpp"
+        self.base_height = 0.54
+        self.avg_height = 0.44
+
+    def get_home_joint_positions(self):
+        """Return the joint positions for the home position."""
+        return np.array([0.03, 0.4, -0.8, -0.03, 0.4, -0.8, 0.03, -0.4, 0.8, -0.03, -0.4, 0.8])
+
+    def get_joint_configurations(self, name=None):
+        if name == 'home' or name == 'init':
+            return np.array([0.03, 0.4, -0.8, -0.03, 0.4, -0.8, 0.03, -0.4, 0.8, -0.03, -0.4, 0.8])
 
 
 # Test
@@ -87,11 +111,12 @@ if __name__ == "__main__":
 
     # print information about the robot
     robot.print_info()
-
+    print("BASE HEIGHT: {}".format(robot.base_height))
     # Position control using sliders
     # robot.add_joint_slider(robot.left_front_leg)
 
     # run simulator
     for _ in count():
         # robot.update_joint_slider()
+        print("BASE HEIGHT: {}".format(robot.get_base_position()[2]))
         world.step(sleep_dt=1./240)
