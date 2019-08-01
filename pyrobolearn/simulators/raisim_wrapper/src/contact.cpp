@@ -1,7 +1,7 @@
 /**
  * Python wrappers for raisim.contact using pybind11.
  *
- * Copyright (c) 2019, Brian Delhaisse <briandelhaisse@gmail.com>
+ * Copyright (c) 2019, kangd and jhwangbo (C++), Brian Delhaisse <briandelhaisse@gmail.com> (Python wrappers)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -48,19 +48,20 @@ void init_contact(py::module &m) {
     /* Contact class */
     /*****************/
     py::class_<raisim::contact::Contact>(contact_module, "Contact", "Raisim Contact.")
-        .def("__init__", [](raisim::contact::Contact &self, py::array_t<double> position, py::array_t<double> normal,
-            bool objectA, size_t contact_problem_index, size_t contact_index_in_object, size_t pair_object_index,
+        .def(py::init([](py::array_t<double> position, py::array_t<double> normal, bool objectA,
+            size_t contact_problem_index, size_t contact_index_in_object, size_t pair_object_index,
             BodyType pair_object_body_type, size_t pair_contact_index_in_pair_object, size_t local_body_index,
             double depth)
             {
-            // convert the arrays to Vec<3>
-            raisim::Vec<3> pos = convert_np_to_vec<3>(position);
-            raisim::Vec<3> norm = convert_np_to_vec<3>(normal);
+                // convert the arrays to Vec<3>
+                raisim::Vec<3> pos = convert_np_to_vec<3>(position);
+                raisim::Vec<3> norm = convert_np_to_vec<3>(normal);
 
-            // instantiate the class
-            new (&self) raisim::contact::Contact(pos, norm, objectA, contact_problem_index, contact_index_in_object,
-                pair_object_index, pair_object_body_type, pair_contact_index_in_pair_object, local_body_index, depth);
-            },
+                // instantiate the class
+                return new raisim::contact::Contact(pos, norm, objectA, contact_problem_index, contact_index_in_object,
+                    pair_object_index, pair_object_body_type, pair_contact_index_in_pair_object, local_body_index,
+                    depth);
+            }),
             "Instantiate the contact class.\n\n"
 	        "Args:\n"
 	        "    position (np.array[float[3]]): position vector.\n"
@@ -233,17 +234,196 @@ void init_contact(py::module &m) {
 
 
     /**************************/
-    /* BisectionContactSolver */
+    /* Single3DContactProblem */
     /**************************/
 
     py::class_<raisim::contact::Single3DContactProblem>(contact_module, "Single3DContactProblem", "Raisim single 3D contact problem.")
+
         .def(py::init<>(), "Initialize the single 3D contact problem.")
-        .def(py::init<const MaterialPairProperties&, double, double, double, double>())
+
+        .def(py::init<const MaterialPairProperties&, double, double, double, double>(),
+        "Initialize the single 3D contact problem.\n\n"
+        "Args:\n"
+        "    material_properties (MaterialPairProperties): material pair properties.\n"
+        "    x (float): x position.\n"
+        "    y (float): y position.\n"
+        "    z (float): z position.\n"
+        "    depth_in (float): penetration depth.",
+        py::arg("material_properties"), py::arg("x"), py::arg("y"), py::arg("z"), py::arg("depth_in"))
+
         .def("check_rank", &raisim::contact::Single3DContactProblem::checkRank)
-    ;
+
+        .def_property("imp_i",
+            [](raisim::contact::Single3DContactProblem &self) { // getter
+                return convert_vec_to_np(self.imp_i);
+            }, [](raisim::contact::Single3DContactProblem &self, py::array_t<double> array) { // setter
+                Vec<3> vec = convert_np_to_vec<3>(array);
+                self.imp_i = vec;
+            })
+
+        .def_property("tau_i",
+            [](raisim::contact::Single3DContactProblem &self) { // getter
+                return convert_vec_to_np(self.tau_i);
+            }, [](raisim::contact::Single3DContactProblem &self, py::array_t<double> array) { // setter
+                Vec<3> vec = convert_np_to_vec<3>(array);
+                self.tau_i = vec;
+            })
+
+        .def_property("position_W",
+            [](raisim::contact::Single3DContactProblem &self) { // getter
+                return convert_vec_to_np(self.position_W);
+            }, [](raisim::contact::Single3DContactProblem &self, py::array_t<double> array) { // setter
+                Vec<3> vec = convert_np_to_vec<3>(array);
+                self.position_W = vec;
+            })
+
+        .def_property("MappInv_i",
+            [](raisim::contact::Single3DContactProblem &self) { // getter
+                return convert_mat_to_np(self.MappInv_i);
+            }, [](raisim::contact::Single3DContactProblem &self, py::array_t<double> array) { // setter
+                Mat<3, 3> mat = convert_np_to_mat<3, 3>(array);
+                self.MappInv_i = mat;
+            })
+
+        .def_property("MappInvWODel_i",
+            [](raisim::contact::Single3DContactProblem &self) { // getter
+                return convert_mat_to_np(self.MappInvWODel_i);
+            }, [](raisim::contact::Single3DContactProblem &self, py::array_t<double> array) { // setter
+                Mat<3, 3> mat = convert_np_to_mat<3, 3>(array);
+                self.MappInvWODel_i = mat;
+            })
+
+        .def_property("Mapp_i",
+            [](raisim::contact::Single3DContactProblem &self) { // getter
+                return convert_mat_to_np(self.Mapp_i);
+            }, [](raisim::contact::Single3DContactProblem &self, py::array_t<double> array) { // setter
+                Mat<3, 3> mat = convert_np_to_mat<3, 3>(array);
+                self.Mapp_i = mat;
+            })
+
+        .def_property("Mapp_iInv22",
+            [](raisim::contact::Single3DContactProblem &self) { // getter
+                return convert_mat_to_np(self.Mapp_iInv22);
+            }, [](raisim::contact::Single3DContactProblem &self, py::array_t<double> array) { // setter
+                Mat<2, 2> mat = convert_np_to_mat<2, 2>(array);
+                self.Mapp_iInv22 = mat;
+            })
+
+        .def_property("Mapp_i22",
+            [](raisim::contact::Single3DContactProblem &self) { // getter
+                return convert_mat_to_np(self.Mapp_i22);
+            }, [](raisim::contact::Single3DContactProblem &self, py::array_t<double> array) { // setter
+                Mat<2, 2> mat = convert_np_to_mat<2, 2>(array);
+                self.Mapp_i22 = mat;
+            })
+
+        .def_property("cooTrans_i",
+            [](raisim::contact::Single3DContactProblem &self) { // getter
+                return convert_vec_to_np(self.cooTrans_i);
+            }, [](raisim::contact::Single3DContactProblem &self, py::array_t<double> array) { // setter
+                Vec<3> vec = convert_np_to_vec<3>(array);
+                self.cooTrans_i = vec;
+            })
+
+        .def_property("MappInv_red",
+            [](raisim::contact::Single3DContactProblem &self) { // getter
+                return convert_mat_to_np(self.MappInv_red);
+            }, [](raisim::contact::Single3DContactProblem &self, py::array_t<double> array) { // setter
+                Mat<3, 2> mat = convert_np_to_mat<3, 2>(array);
+                self.MappInv_red = mat;
+            })
+
+        .def_property("MappInv_j",
+            [](raisim::contact::Single3DContactProblem &self) { // getter (avoid to use this one as we have to copy everything)
+                py::list list;
+                for (auto elem : self.MappInv_j)
+                    list.append(convert_mat_to_np(elem));
+                return list;
+            }, [](raisim::contact::Single3DContactProblem &self, py::list list) { // setter (avoid to use this one as possible as we have to copy everything)
+                std::vector<raisim::Mat<3,3>> vector;
+                for (auto elem : list) {
+                    py::array_t<double> e = elem.cast<py::array_t<double>>();
+                    vector.push_back(convert_np_to_mat<3, 3>(e));
+                }
+                self.MappInv_j = vector;
+            })
+
+        .def_property("imp_j",
+            [](raisim::contact::Single3DContactProblem &self) { // getter (avoid to use this one as we have to copy everything)
+                py::list list;
+                for (auto elem : self.imp_j)
+                    list.append(convert_vec_to_np(*elem));
+                return list;
+            }, [](raisim::contact::Single3DContactProblem &self, py::list list) { // setter (avoid to use this one as possible as we have to copy everything)
+                std::vector<raisim::Vec<3> *> vector;
+                for (auto elem : list) {
+                    py::array_t<double> e = elem.cast<py::array_t<double>>();
+                    auto item = convert_np_to_vec<3>(e);
+                    vector.push_back(&item);
+                }
+                self.imp_j = vector;
+            })
+
+        .def_readwrite("mu", &raisim::contact::Single3DContactProblem::mu)
+        .def_readwrite("n2_mu", &raisim::contact::Single3DContactProblem::n2_mu)
+        .def_readwrite("muinv", &raisim::contact::Single3DContactProblem::muinv)
+        .def_readwrite("negMuSquared", &raisim::contact::Single3DContactProblem::negMuSquared)
+        .def_readwrite("coeffRes", &raisim::contact::Single3DContactProblem::coeffRes)
+        .def_readwrite("bounceThres", &raisim::contact::Single3DContactProblem::bounceThres)
+        .def_readwrite("Mapp_iInv11", &raisim::contact::Single3DContactProblem::Mapp_iInv11)
+        .def_readwrite("impact_vel", &raisim::contact::Single3DContactProblem::impact_vel)
+        .def_readwrite("depth", &raisim::contact::Single3DContactProblem::depth)
+        .def_readwrite("rank", &raisim::contact::Single3DContactProblem::rank)
+        .def_readwrite("obA", &raisim::contact::Single3DContactProblem::obA)
+        .def_readwrite("obB", &raisim::contact::Single3DContactProblem::obB)
+        .def_readwrite("point_idA", &raisim::contact::Single3DContactProblem::pointIdA)
+        .def_readwrite("point_idB", &raisim::contact::Single3DContactProblem::pointIdB)
+        .def_readwrite("atLeastOneWithoutDel", &raisim::contact::Single3DContactProblem::atLeastOneWithoutDel);
+
+
+    /**************************/
+    /* BisectionContactSolver */
+    /**************************/
+
+    py::class_<raisim::contact::BisectionContactSolver> solver(contact_module, "BisectionContactSolver", "Raisim Bisection Contact Solver.");
+
+    py::class_<raisim::contact::BisectionContactSolver::SolverConfiguration>(solver, "SolverConfiguration", "Raisim solver configuration struct.")
+        .def_readwrite("alpha_init", &raisim::contact::BisectionContactSolver::SolverConfiguration::alpha_init)
+        .def_readwrite("alpha_low", &raisim::contact::BisectionContactSolver::SolverConfiguration::alpha_low)
+        .def_readwrite("alpha_decay", &raisim::contact::BisectionContactSolver::SolverConfiguration::alpha_decay)
+        .def_readwrite("error_to_terminate", &raisim::contact::BisectionContactSolver::SolverConfiguration::error_to_terminate)
+        .def_readwrite("erp", &raisim::contact::BisectionContactSolver::SolverConfiguration::erp)
+        .def_readwrite("erp2", &raisim::contact::BisectionContactSolver::SolverConfiguration::erp2)
+        .def_readwrite("maxIteration", &raisim::contact::BisectionContactSolver::SolverConfiguration::maxIteration);
+
+    solver.def(py::init<double>(), "Initialize the bisection contact solver.", py::arg("dt"))
+        .def("solve", &raisim::contact::BisectionContactSolver::solve, py::arg("contact"))
+        .def("update_config", &raisim::contact::BisectionContactSolver::updateConfig, py::arg("config"))
+        .def("set_time_step", &raisim::contact::BisectionContactSolver::setTimestep, py::arg("dt"))
+        .def("set_order", &raisim::contact::BisectionContactSolver::setOrder, py::arg("order"))
+        .def("get_loop_counter", &raisim::contact::BisectionContactSolver::getLoopCounter)
+        .def("get_error_history", &raisim::contact::BisectionContactSolver::getErrorHistory)
+        .def("get_config", py::overload_cast<>(&raisim::contact::BisectionContactSolver::getConfig))
+        .def("get_config", py::overload_cast<>(&raisim::contact::BisectionContactSolver::getConfig, py::const_));
+
 
     /************************/
     /* PerObjectContactList */
     /************************/
+    py::class_<raisim::contact::PerObjectContactList>(contact_module, "PerObjectContactList",
+        "Raisim PerObjectContactList, where each object has a list of Contacts.")
+        .def(py::init<>(), "Initialize the per object contact list.")
+        .def("add_contact", &raisim::contact::PerObjectContactList::addContact)
+        .def("clear_contacts", &raisim::contact::PerObjectContactList::clearContacts)
+        .def("get_num_contacts", &raisim::contact::PerObjectContactList::getNumContacts)
+        .def("get_contact_at", &raisim::contact::PerObjectContactList::getContactAt, py::arg("index"))
+        .def("get_contacts", py::overload_cast<>(&raisim::contact::PerObjectContactList::getContacts))
+        .def("get_contacts", py::overload_cast<>(&raisim::contact::PerObjectContactList::getContacts, py::const_))
+
+        .def("save_impulses_for_warm_start", &raisim::contact::PerObjectContactList::saveImpulsesForWarmStart)
+        .def("warm_start", &raisim::contact::PerObjectContactList::warmStart)
+
+        .def("get_impact_velocities", &raisim::contact::PerObjectContactList::getImpactVel);
+
 
 }

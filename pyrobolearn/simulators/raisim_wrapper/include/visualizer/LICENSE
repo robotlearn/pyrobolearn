@@ -1,8 +1,4 @@
-MIT License
-
-Copyright (c) 2019, Robotic Systems Lab, ETH Zurich  (Original C++ code by Hwangbo et al.)
-Copyright (c) 2019, Brian Delhaisse <briandelhaisse@gmail.com>  (Python wrappers)
-
+Copyright (c) 2019 Robotic Systems Lab, ETH Zurich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

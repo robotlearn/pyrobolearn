@@ -28,15 +28,16 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>   // numpy types
 
-#include <sstream>   // for ostringstream
+#include <sstream>           // for ostringstream
 #include "raisim/math.hpp"   // contains the definitions of Vec, Mat, VecDyn, MatDyn, etc.
+#include "Eigen/Geometry"    // for Eigen::Quaterniond
 
 namespace py = pybind11;
 
 
 /// \brief: convert from raisim::Vec<n> to np.array
 template<size_t n>
-py::array_t<double> convert_vec_to_np(const raisim::Vec<n> &vec) {
+py::array_t<double> convert_vec_to_np(raisim::Vec<n> &vec) {
     const double *ptr = vec.ptr();  // get data pointer
 
     // return np.array[float64[n]]
@@ -136,6 +137,22 @@ py::array_t<double> convert_matdyn_to_np(const raisim::MatDyn &mat);
 
 /// \brief: convert from np.array[float[n,m]] to raisim::MatDyn
 raisim::MatDyn convert_np_to_matdyn(py::array_t<double> array);
+
+
+/// \brief: convert from raisim::Transformation to np.array[float[4,4]]
+py::array_t<double> convert_transformation_to_np(const raisim::Transformation &transfo);
+
+
+/// \brief: convert from np.array[float[4,4]] to raisim::Transformation
+raisim::Transformation convert_np_to_transformation(py::array_t<double> array);
+
+
+/// \brief: convert from Eigen::Quaterniond to np.array[float[4]]
+py::array_t<double> convert_quaternion_to_np(const Eigen::Quaterniond &quaternion);
+
+
+/// \brief: convert from np.array[float[4]] to Eigen::Quaterniond
+Eigen::Quaterniond convert_np_to_quaternion(py::array_t<double> array);
 
 
 #endif
