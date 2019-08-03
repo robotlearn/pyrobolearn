@@ -3,8 +3,8 @@
 
 This is the main interface that communicates with the RaiSim simulator [1-5]. By defining this interface, it
 allows to decouple the PyRoboLearn framework from the simulator. It also converts some data types to the ones required
-by RaiSim. Because it didn't have a Python wrapper, one has been written in the ``raisim_wrapper`` folder using
-pybind11 [6].
+by RaiSim. Because it didn't have a Python wrapper, one has been written using pybind11 [6]. This wrapper ``raisimpy`` 
+can be found in the following repository: https://github.com/robotlearn/raisimpy
 
 The signature of each method defined here are inspired by [1,2] but in accordance with the PEP8 style guide [7].
 Parts of the documentation for the methods have been copied-pasted from [2-5] for completeness purposes.
@@ -23,14 +23,14 @@ References:
     - [6] pybind11 (documentation): https://pybind11.readthedocs.io/en/stable/
     - [7] PEP8: https://www.python.org/dev/peps/pep-0008/
     - [8] RaiSim license: https://github.com/leggedrobotics/raisimLib/blob/master/LICENSE.md
+    - [9] raisimpy: https://github.com/robotlearn/raisimpy
 """
 
 # import raisim
 try:
     import raisimpy as raisim
 except ImportError as e:
-    print(e.__str__() + "\nHINT: you need to install `raisimLib` and `raisimOgre`, and build the Python wrappers "
-                        "that are located in the `raisim_wrapper` folder.")
+    print(e.__str__() + "\nHINT: you need to install `raisimLib`, `raisimOgre`, and `raisimpy")
 
 # import PRL simulator
 from pyrobolearn.simulators.simulator import Simulator
