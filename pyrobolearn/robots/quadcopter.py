@@ -75,8 +75,8 @@ class Quadcopter(RotaryWingUAV):
 
         Args:
             simulator (Simulator): simulator instance.
-            position (np.array[3]): Cartesian world position.
-            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
             fixed_base (bool): if True, the robot base will be fixed in the world.
             scale (float): scaling factor that is used to scale the robot.
             urdf (str): path to the urdf. Do not change it unless you know what you are doing.
@@ -156,7 +156,7 @@ class Quadcopter(RotaryWingUAV):
         joint id(s).
 
         Args:
-            velocities (np.array[4]): velocity of each propeller
+            velocities (np.array[float[4]]): velocity of each propeller
             forces (float, np.float[N], None, bool): maximum motor torques / forces. If True, it will apply the
                 default maximum force values.
             max_velocity (float, bool, None): if True, it will make sure that the given velocity(ies) are below their
@@ -242,7 +242,7 @@ class Quadcopter(RotaryWingUAV):
         """Move the robot at the specified 3D velocity vector.
 
         Args:
-            velocity (np.array[3]): 3D velocity vector defined in the xy plane. The magnitude represents the speed.
+            velocity (np.array[float[3]]): 3D velocity vector defined in the xy plane. The magnitude represents the speed.
         """
         speed = np.linalg.norm(velocity[:2])
         angle = np.arctan2(velocity[1], velocity[0])

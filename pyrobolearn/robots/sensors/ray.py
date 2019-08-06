@@ -32,16 +32,16 @@ class RaySensor(LinkSensor):
         Args:
             simulator (Simulator): simulator instance.
             body_id (int): unique body id.
-            to_position (np.array[3]): position where the ray should stop with respect to the new local link frame
-                (specified by :attr:`position` and :attr:`orientation`).
+            to_position (np.array[float[3]]): position where the ray should stop with respect to the new local link
+                frame (specified by :attr:`position` and :attr:`orientation`).
             link_id (int): unique id of the link.
             noise (None, Noise): noise to be added.
             ticks (int): number of steps to wait/sleep before acquisition of the next sensor value.
             latency (int, float, None): latency time / step.
-            position (np.array[3], None): local position of the sensor with respect to the given link. If None, it will
-                be the zero vector.
-            orientation (np.array[4], None): local orientation of the sensor with respect to the given link (expressed
-                as a quaternion [x,y,z,w]). If None, it will be the unit quaternion [0,0,0,1].
+            position (np.array[float[3]], None): local position of the sensor with respect to the given link. If None,
+                it will be the zero vector.
+            orientation (np.array[float[4]], None): local orientation of the sensor with respect to the given link
+                (expressed as a quaternion [x,y,z,w]). If None, it will be the unit quaternion [0,0,0,1].
         """
         super(RaySensor, self).__init__(simulator, body_id=body_id, link_id=link_id, noise=noise, ticks=ticks,
                                         latency=latency, position=position, orientation=orientation)
@@ -73,6 +73,17 @@ class RaySensor(LinkSensor):
             hit = self._noise(hit)
         return hit
 
+    def render(self, enable=True, color=None):
+        """Render the ray in the simulator; they are only visual and attached to the sensor (link). The visual shape
+        is updated at runtime (each time you call this function).
+
+        Args:
+            enable (bool): if we should render or not.
+            color (None, tuple/list of 4 float, np.ndarray[float[4]]): RGBA color of all the rays, where each channel
+                is between 0 and 1.
+        """
+        pass
+
 
 class RayBatchSensor(LinkSensor):
     r"""Ray batch sensor.
@@ -98,10 +109,10 @@ class RayBatchSensor(LinkSensor):
             noise (None, Noise): noise to be added.
             ticks (int): number of steps to wait/sleep before acquisition of the next sensor value.
             latency (int, float, None): latency time / step.
-            position (np.array[3], None): local position of the sensor with respect to the given link. If None, it will
-                be the zero vector.
-            orientation (np.array[4], None): local orientation of the sensor with respect to the given link (expressed
-                as a quaternion [x,y,z,w]). If None, it will be the unit quaternion [0,0,0,1].
+            position (np.array[float[3]], None): local position of the sensor with respect to the given link. If None,
+                it will be the zero vector.
+            orientation (np.array[float[4]], None): local orientation of the sensor with respect to the given link
+                (expressed as a quaternion [x,y,z,w]). If None, it will be the unit quaternion [0,0,0,1].
         """
         super(RayBatchSensor, self).__init__(simulator, body_id=body_id, link_id=link_id, noise=noise, ticks=ticks,
                                              latency=latency, position=position, orientation=orientation)
@@ -140,6 +151,17 @@ class RayBatchSensor(LinkSensor):
             hit = self._noise(hit)
         return hit
 
+    def render(self, enable=True, color=None):
+        """Render the batch of rays in the simulator; they are only visual and attached to the sensor (link). The
+        visual shape of each ray is updated at runtime (each time you call this function).
+
+        Args:
+            enable (bool): if we should render or not.
+            color (None, tuple/list of 4 float, np.ndarray[float[4]]): RGBA color of all the rays, where each channel
+                is between 0 and 1.
+        """
+        pass
+
 
 class HeightmapSensor(LinkSensor):
     r"""Heightmap Sensor
@@ -168,10 +190,10 @@ class HeightmapSensor(LinkSensor):
             num_rays_height (int): number of rays along the height dimension (front-back axis). This will be
                 the 'height' of the returned heightmap. This must be bigger or equal to 2.
             max_ray_length (float): maximum length of each ray.
-            position (np.array[3], None): local position of the sensor with respect to the given link. If None, it will
-                be the zero vector. This position represents the center of the map.
-            orientation (np.array[4], None): local orientation of the sensor with respect to the given link (expressed
-                as a quaternion [x,y,z,w]). If None, it will be the unit quaternion [0,0,0,1].
+            position (np.array[float[3]], None): local position of the sensor with respect to the given link. If None,
+                it will be the zero vector. This position represents the center of the map.
+            orientation (np.array[float[4]], None): local orientation of the sensor with respect to the given link
+                (expressed as a quaternion [x,y,z,w]). If None, it will be the unit quaternion [0,0,0,1].
         """
         super(HeightmapSensor, self).__init__(simulator, body_id=body_id, link_id=link_id, position=position,
                                               orientation=orientation)
@@ -246,3 +268,14 @@ class HeightmapSensor(LinkSensor):
         if apply_noise:
             hit = self._noise(hit)
         return hit
+
+    def render(self, enable=True, color=None):
+        """Render the grid map in the simulator; each point/intersection in the grid is represented as a visual
+        sphere. The position of these spheres is updated at runtime (each time you call this function).
+
+        Args:
+            enable (bool): if we should render or not.
+            color (None, tuple/list of 4 float, np.ndarray[float[4]]): RGBA color of all the rays, where each channel
+                is between 0 and 1.
+        """
+        pass

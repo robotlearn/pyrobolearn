@@ -36,8 +36,8 @@ class LeggedRobot(Robot):
         Args:
             simulator (Simulator): simulator instance.
             urdf (str): path to the urdf. Do not change it unless you know what you are doing.
-            position (np.array[3]): Cartesian world position.
-            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
             fixed_base (bool): if True, the robot base will be fixed in the world.
             scale (float): scaling factor that is used to scale the robot.
             foot_frictions (float, list of float): foot friction value(s).
@@ -181,7 +181,7 @@ class LeggedRobot(Robot):
             floor_id (int, None): id of the floor in the simulator. If None, it will use the force/pressure sensors.
 
         Returns:
-            np.array[3], None: center of pressure. None if the robot is not in contact with the ground.
+            np.array[float[3]], None: center of pressure. None if the robot is not in contact with the ground.
 
         References:
             - [1] "Postural Stability of Biped Robots and Foot-Rotation Index (FRI) Point", Goswami, 1999
@@ -273,7 +273,7 @@ class LeggedRobot(Robot):
             floor_id (int, None): id of the floor in the simulator. If None, it will use the force/pressure sensors.
 
         Returns:
-            np.array[3], None: zero-moment point. None if the ground reaction force in z is 0.
+            np.array[float[3]], None: zero-moment point. None if the ground reaction force in z is 0.
 
         References:
             - [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
@@ -391,7 +391,7 @@ class LeggedRobot(Robot):
             floor_id (int, None): id of the floor in the simulator. If None, it will use the force/pressure sensors.
 
         Returns:
-            np.array[3], None: centroidal moment pivot point. None if the ground reaction force in z is 0.
+            np.array[float[3]], None: centroidal moment pivot point. None if the ground reaction force in z is 0.
 
         References:
             - [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
@@ -646,7 +646,7 @@ class LeggedRobot(Robot):
         Draw the CoP in the simulator.
 
         Args:
-            cop (np.array[3], None, int): center of pressure. If None or int, it will compute the CoP. If None, it
+            cop (np.array[float[3]], None, int): center of pressure. If None or int, it will compute the CoP. If None, it
                 will compute it using the force sensors. If int, it will be assumed to be the floor's id, and will
                 use the simulator to compute the CoP.
             radius (float): radius of the sphere representing the CoP of the robot
@@ -668,7 +668,7 @@ class LeggedRobot(Robot):
         Draw the ZMP in the simulator.
 
         Args:
-            zmp (np.array[3], None, int): zero-moment point. If None or int, it will compute the ZMP. If None, it
+            zmp (np.array[float[3]], None, int): zero-moment point. If None or int, it will compute the ZMP. If None, it
                 will compute it using the force sensors. If int, it will be assumed to be the floor's id, and will
                 use the simulator to compute the ZMP.
             radius (float): radius of the sphere representing the ZMP of the robot
@@ -691,7 +691,7 @@ class LeggedRobot(Robot):
         Draw the CMP in the simulator.
 
         Args:
-            cmp (np.array[3], None, int): central moment pivot. If None or int, it will compute the CMP. If None, it
+            cmp (np.array[float[3]], None, int): central moment pivot. If None or int, it will compute the CMP. If None, it
                 will compute it using the force sensors. If int, it will be assumed to be the floor's id, and will
                 use the simulator to compute the CMP.
             radius (float): radius of the sphere representing the CMP of the robot
@@ -714,7 +714,7 @@ class LeggedRobot(Robot):
         Draw the FRI in the simulator.
 
         Args:
-            fri (np.array[3], None, int): central moment pivot. If None or int, it will compute the FRI. If None, it
+            fri (np.array[float[3]], None, int): central moment pivot. If None or int, it will compute the FRI. If None, it
                 will compute it using the force sensors. If int, it will be assumed to be the floor's id, and will
                 use the simulator to compute the FRI.
             radius (float): radius of the sphere representing the FRI of the robot
@@ -805,8 +805,8 @@ class BipedRobot(LeggedRobot):
         Args:
             simulator (Simulator): simulator instance.
             urdf (str): path to the urdf. Do not change it unless you know what you are doing.
-            position (np.array[3]): Cartesian world position.
-            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
             fixed_base (bool): if True, the robot base will be fixed in the world.
             scale (float): scaling factor that is used to scale the robot.
         """
@@ -853,8 +853,8 @@ class QuadrupedRobot(LeggedRobot):
         Args:
             simulator (Simulator): simulator instance.
             urdf (str): path to the urdf. Do not change it unless you know what you are doing.
-            position (np.array[3]): Cartesian world position.
-            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
             fixed_base (bool): if True, the robot base will be fixed in the world.
             scale (float): scaling factor that is used to scale the robot.
         """
@@ -923,8 +923,8 @@ class HexapodRobot(LeggedRobot):
         Args:
             simulator (Simulator): simulator instance.
             urdf (str): path to the urdf. Do not change it unless you know what you are doing.
-            position (np.array[3]): Cartesian world position.
-            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
             fixed_base (bool): if True, the robot base will be fixed in the world.
             scale (float): scaling factor that is used to scale the robot.
         """

@@ -42,7 +42,7 @@ import tf.transformations as tft
 from pyrobolearn.simulators.ros_rbdl import ROS_RBDL
 
 __author__ = "Brian Delhaisse"
-__copyright__ = "Copyright 2018, PyRoboLearn"
+__copyright__ = "Copyright 2019, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
@@ -116,7 +116,7 @@ class GazeboROS(ROS_RBDL):
         rospy.wait_for_service('/gazebo/reset_simulation')
         try:
             self.reset_srv()
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             print("/gazebo/reset_simulation service call failed")
 
     def close(self):
@@ -139,7 +139,7 @@ class GazeboROS(ROS_RBDL):
         rospy.wait_for_service('/gazebo/set_seed')
         try:
             rospy.ServiceProxy('/gazebo/set_seed', SetSeedSrv)(seed)
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             print("/GazeboRosGym/set_seed service call failed")
         return [seed]
 
@@ -170,7 +170,7 @@ class GazeboROS(ROS_RBDL):
         rospy.wait_for_service('/gazebo/set_physics_properties')
         try:
             self.set_physics_properties_srv(set_physics_request)
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             print("/gazebo/reset_simulation service call failed")
 
     def set_real_time(self):
@@ -182,7 +182,7 @@ class GazeboROS(ROS_RBDL):
         rospy.wait_for_service('/gazebo/pause_physics')
         try:
             self.pause_srv()
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             print("/gazebo/pause_physics service call failed")
 
     def unpause(self):
@@ -190,7 +190,7 @@ class GazeboROS(ROS_RBDL):
         rospy.wait_for_service('/gazebo/unpause_physics')
         try:
             self.unpause_srv()
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             print("/gazebo/unpause_physics service call failed")
 
     def get_physics_properties(self):
@@ -198,7 +198,7 @@ class GazeboROS(ROS_RBDL):
         rospy.wait_for_service('/gazebo/get_physics_properties')
         try:
             srv = self.get_physics_properties_srv()
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             print("/gazebo/reset_simulation service call failed")
         return srv
 
@@ -207,7 +207,7 @@ class GazeboROS(ROS_RBDL):
         rospy.wait_for_service('/gazebo/set_physics_properties')
         try:
             self.set_physics_properties_srv()
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             print("/gazebo/reset_simulation service call failed")
 
     def start_logging(self, *args, **kwargs):
@@ -231,7 +231,7 @@ class GazeboROS(ROS_RBDL):
         rospy.wait_for_service('/gazebo/set_physics_properties')
         try:
             self.set_physics_properties_srv(set_physics_request)
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             print("/gazebo/reset_simulation service call failed")
 
     def save(self, on_disk=False):
@@ -394,7 +394,7 @@ class GazeboROSEnv(gazebo_env.GazeboEnv):
         rospy.wait_for_service('/GazeboRosGym/set_seed')
         try:
             rospy.ServiceProxy('/GazeboRosGym/set_seed', SetSeed)(seed)
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             print("/GazeboRosGym/set_seed service call failed")
         return [seed]
     
@@ -405,7 +405,7 @@ class GazeboROSEnv(gazebo_env.GazeboEnv):
         rospy.wait_for_service('/gazebo/reset_simulation')
         try:
             self.reset_srv()
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             print("/gazebo/reset_simulation service call failed")
             
     def pause_physics(self):
@@ -415,7 +415,7 @@ class GazeboROSEnv(gazebo_env.GazeboEnv):
         rospy.wait_for_service('/gazebo/pause_physics')
         try:
             self.pause_srv()
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             print("/gazebo/pause_physics service call failed")
             
     def unpause_physics(self):
@@ -425,7 +425,7 @@ class GazeboROSEnv(gazebo_env.GazeboEnv):
         rospy.wait_for_service('/gazebo/unpause_physics')
         try:
             self.unpause_srv()
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             print("/gazebo/unpause_physics service call failed")
             
     def configure(self, *args, **kwargs):

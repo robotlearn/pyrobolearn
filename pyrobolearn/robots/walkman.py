@@ -37,8 +37,8 @@ class Walkman(BipedRobot, BiManipulator):
 
         Args:
             simulator (Simulator): simulator instance.
-            position (np.array[3]): Cartesian world position.
-            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
             fixed_base (bool): if True, the robot base will be fixed in the world.
             scale (float): scaling factor that is used to scale the robot.
             lower_body (bool): if True, it will instantiate only the lower part of the robot (i.e. the legs).

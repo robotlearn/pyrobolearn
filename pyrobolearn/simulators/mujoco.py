@@ -92,11 +92,11 @@ class Visual(object):
         Args:
             visual_id (int): unique visual id.
             dtype (str): primitive type {"plane", "sphere", "box", "capsule", "ellipsoid", "cylinder", "mesh"}.
-            size (float, tuple of float, np.array): size.
+            size (float, tuple of float, np.array[float]): size.
             mesh (str): path to mesh.
             color (tuple of 4 float): RGBA color. Each channel is between 0 and 1.
-            position (tuple of 3 float, np.array[3]): position.
-            orientation (tuple of 4 float, np.array[4]): quaternion (x,y,z,w)
+            position (tuple of 3 float, np.array[float[3]]): position.
+            orientation (tuple of 4 float, np.array[float[4]]): quaternion (x,y,z,w)
         """
         self.id = visual_id
         self.dtype = dtype
@@ -120,8 +120,8 @@ class Collision(object):
             dtype (str): primitive type {"plane", "sphere", "box", "capsule", "ellipsoid", "cylinder", "mesh"}.
             size (float, tuple of float, np.array): size.
             mesh (str, None): path to the mesh.
-            position (tuple of 3 float, np.array[3]): position.
-            orientation (tuple of 4 float, np.array[4]): quaternion (x,y,z,w)
+            position (tuple of 3 float, np.array[float[3]]): position.
+            orientation (tuple of 4 float, np.array[float[4]]): quaternion (x,y,z,w)
         """
         self.id = collision_id
         self.dtype = dtype
@@ -554,7 +554,7 @@ class Mujoco(Simulator):
         self.sim.set_state(state)
 
     ######################################
-    # loading URDFs, SDFs, MJCFs, meshes #
+    # Loading URDFs, SDFs, MJCFs, meshes #
     ######################################
 
     def load_urdf(self, filename, position, orientation, use_fixed_base=0, scale=1.0, *args, **kwargs):
@@ -677,8 +677,8 @@ class Mujoco(Simulator):
             collision_shape_id (int): unique id from createCollisionShape or -1. You can re-use the collision shape
                 for multiple multibodies (instancing)
             mass (float): mass of the base, in kg (if using SI units)
-            position (np.array[3]): Cartesian world position of the base
-            orientation (np.array[4]): Orientation of base as quaternion [x,y,z,w]
+            position (np.array[float[3]]): Cartesian world position of the base
+            orientation (np.array[float[4]]): Orientation of base as quaternion [x,y,z,w]
 
         Returns:
             int: non-negative unique id or -1 for failure.
@@ -829,7 +829,7 @@ class Mujoco(Simulator):
         return list(self.bodies.items())[index][0]
 
     ###############
-    # constraints #
+    # Constraints #
     ###############
 
     def create_constraint(self, parent_body_id, parent_link_id, child_body_id, child_link_id, joint_type,
@@ -847,13 +847,13 @@ class Mujoco(Simulator):
             child_link_id (int): child link index, or -1 for the base
             joint_type (int): joint type: JOINT_PRISMATIC (=1), JOINT_FIXED (=4), JOINT_POINT2POINT (=5),
                 JOINT_GEAR (=6)
-            joint_axis (np.array[3]): joint axis, in child link frame
-            parent_frame_position (np.array[3]): position of the joint frame relative to parent CoM frame.
-            child_frame_position (np.array[3]): position of the joint frame relative to a given child CoM frame (or
-                world origin if no child specified)
-            parent_frame_orientation (np.array[4]): the orientation of the joint frame relative to parent CoM
+            joint_axis (np.array[float[3]]): joint axis, in child link frame
+            parent_frame_position (np.array[float[3]]): position of the joint frame relative to parent CoM frame.
+            child_frame_position (np.array[float[3]]): position of the joint frame relative to a given child CoM frame
+                (or world origin if no child specified)
+            parent_frame_orientation (np.array[float[4]]): the orientation of the joint frame relative to parent CoM
                 coordinate frame
-            child_frame_orientation (np.array[4]): the orientation of the joint frame relative to the child CoM
+            child_frame_orientation (np.array[float[4]]): the orientation of the joint frame relative to the child CoM
                 coordinate frame (or world origin frame if no child specified)
 
         Returns:
@@ -950,7 +950,7 @@ class Mujoco(Simulator):
         pass
 
     ###########
-    # objects #
+    # Objects #
     ###########
 
     def get_mass(self, body_id):
@@ -995,11 +995,11 @@ class Mujoco(Simulator):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): link ids associated with the given body id. If None, it will take all the links
+            link_ids (list[int]): link ids associated with the given body id. If None, it will take all the links
                 of the specified body.
 
         Returns:
-            np.array[3]: center of mass position in the Cartesian world coordinates
+            np.array[float[3]]: center of mass position in the Cartesian world coordinates
         """
         return self.sim.data.subtree_com[body_id]
 
@@ -1009,11 +1009,11 @@ class Mujoco(Simulator):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): link ids associated with the given body id. If None, it will take all the links
+            link_ids (list[int]): link ids associated with the given body id. If None, it will take all the links
                 of the specified body.
 
         Returns:
-            np.array[3]: center of mass linear velocity.
+            np.array[float[3]]: center of mass linear velocity.
         """
         return self.sim.data.subtree_linvel[body_id]
 
@@ -1025,8 +1025,8 @@ class Mujoco(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.array[3]: base position
-            np.array[4]: base orientation (quaternion [x,y,z,w])
+            np.array[float[3]]: base position
+            np.array[float[4]]: base orientation (quaternion [x,y,z,w])
         """
         # WARNING: body_xpos is one step late compared to qpos
         # return self.sim.data.body_xpos[body_id], self._convert_wxyz_to_xyzw(self.sim.data.body_xquat[body_id])
@@ -1046,7 +1046,7 @@ class Mujoco(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.array[3]: base position.
+            np.array[float[3]]: base position.
         """
         # return self.sim.data.body_xpos[body_id]
         body = self.bodies[body_id]
@@ -1061,7 +1061,7 @@ class Mujoco(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.array[4]: base orientation in the form of a quaternion (x,y,z,w)
+            np.array[float[4]]: base orientation in the form of a quaternion (x,y,z,w)
         """
         # return self._convert_wxyz_to_xyzw(self.sim.data.body_xquat[body_id])
         body = self.bodies[body_id]
@@ -1078,8 +1078,8 @@ class Mujoco(Simulator):
 
         Args:
             body_id (int): unique object id.
-            position (np.array[3]): new base position.
-            orientation (np.array[4]): new base orientation (expressed as a quaternion [x,y,z,w])
+            position (np.array[float[3]]): new base position.
+            orientation (np.array[float[4]]): new base orientation (expressed as a quaternion [x,y,z,w])
         """
         body = self.bodies[body_id]
         q = self.sim.data.qpos
@@ -1092,7 +1092,7 @@ class Mujoco(Simulator):
 
         Args:
             body_id (int): unique object id.
-            position (np.array[3]): new base position.
+            position (np.array[float[3]]): new base position.
         """
         # self.sim.data.body_xpos[body_id] = position
         # self.sim.forward()
@@ -1106,7 +1106,7 @@ class Mujoco(Simulator):
 
         Args:
             body_id (int): unique object id.
-            orientation (np.array[4]): new base orientation (expressed as a quaternion [x,y,z,w])
+            orientation (np.array[float[4]]): new base orientation (expressed as a quaternion [x,y,z,w])
         """
         body = self.bodies[body_id]
         q = self.sim.data.qpos
@@ -1120,8 +1120,8 @@ class Mujoco(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.array[3]: linear velocity of the base in Cartesian world space coordinates
-            np.array[3]: angular velocity of the base in Cartesian world space coordinates
+            np.array[float[3]]: linear velocity of the base in Cartesian world space coordinates
+            np.array[float[3]]: angular velocity of the base in Cartesian world space coordinates
         """
         body = self.bodies[body_id]
         dq = self.sim.data.qvel
@@ -1135,7 +1135,7 @@ class Mujoco(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.array[3]: linear velocity of the base in Cartesian world space coordinates
+            np.array[float[3]]: linear velocity of the base in Cartesian world space coordinates
         """
         body = self.bodies[body_id]
         dq = self.sim.data.qvel
@@ -1149,7 +1149,7 @@ class Mujoco(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.array[3]: angular velocity of the base in Cartesian world space coordinates
+            np.array[float[3]]: angular velocity of the base in Cartesian world space coordinates
         """
         body = self.bodies[body_id]
         dq = self.sim.data.qvel
@@ -1161,8 +1161,8 @@ class Mujoco(Simulator):
 
         Args:
             body_id (int): unique object id.
-            linear_velocity (np.array[3]): new linear velocity of the base.
-            angular_velocity (np.array[3]): new angular velocity of the base.
+            linear_velocity (np.array[float[3]]): new linear velocity of the base.
+            angular_velocity (np.array[float[3]]): new angular velocity of the base.
         """
         body = self.bodies[body_id]
         dq = self.sim.data.qvel
@@ -1175,7 +1175,7 @@ class Mujoco(Simulator):
 
         Args:
             body_id (int): unique object id.
-            linear_velocity (np.array[3]): new linear velocity of the base
+            linear_velocity (np.array[float[3]]): new linear velocity of the base
         """
         body = self.bodies[body_id]
         dq = self.sim.data.qvel
@@ -1187,7 +1187,7 @@ class Mujoco(Simulator):
 
         Args:
             body_id (int): unique object id.
-            angular_velocity (np.array[3]): new angular velocity of the base
+            angular_velocity (np.array[float[3]]): new angular velocity of the base
         """
         body = self.bodies[body_id]
         dq = self.sim.data.qvel
@@ -1201,8 +1201,8 @@ class Mujoco(Simulator):
             body_id (int): unique object id.
 
         Returns:
-            np.array[3]: linear acceleration [m/s^2]
-            np.array[3]: angular acceleration [rad/s^2]
+            np.array[float[3]]: linear acceleration [m/s^2]
+            np.array[float[3]]: angular acceleration [rad/s^2]
         """
         body = self.bodies[body_id]
         ddq = self.sim.data.qacc
@@ -1215,8 +1215,8 @@ class Mujoco(Simulator):
         Args:
             body_id (int): unique body id.
             link_id (int): unique link id. If -1, it will be the base.
-            force (np.array[3]): external force to be applied.
-            position (np.array[3]): position on the link where the force is applied. See `flags` for coordinate
+            force (np.array[float[3]]): external force to be applied.
+            position (np.array[float[3]]): position on the link where the force is applied. See `flags` for coordinate
                 systems. If None, it is the center of mass of the body (or the link if specified).
             frame (int): if frame = 1, then the force / position is described in the link frame. If frame = 2, they
                 are described in the world frame.
@@ -1238,7 +1238,7 @@ class Mujoco(Simulator):
         pass
 
     #############################
-    # robots (joints and links) #
+    # Robots (joints and links) #
     #############################
 
     def num_joints(self, body_id):
@@ -1268,7 +1268,7 @@ class Mujoco(Simulator):
         return len(body.joints)
 
     #################
-    # visualization #
+    # Visualization #
     #################
 
     def create_visual_shape(self, shape_type, radius=0.5, half_extents=(1., 1., 1.), length=1., filename=None,
@@ -1282,25 +1282,26 @@ class Mujoco(Simulator):
             shape_type (int): type of shape; GEOM_SPHERE (=2), GEOM_BOX (=3), GEOM_CAPSULE (=7), GEOM_CYLINDER (=4),
                 GEOM_PLANE (=6), GEOM_MESH (=5), GEOM_ELLIPSOID (=9)
             radius (float): only for GEOM_SPHERE, GEOM_CAPSULE, GEOM_CYLINDER
-            half_extents (np.array[3], list/tuple of 3 floats): only for GEOM_BOX, and GEOM_ELLIPSOID
+            half_extents (np.array[float[3]], list/tuple of 3 floats): only for GEOM_BOX, and GEOM_ELLIPSOID
             length (float): only for GEOM_CAPSULE, GEOM_CYLINDER (length = height).
             filename (str): Filename for GEOM_MESH, currently only Wavefront .obj. Will create convex hulls for each
                 object (marked as 'o') in the .obj file.
-            mesh_scale (np.array[3], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
-            plane_normal (np.array[3], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
+            mesh_scale (np.array[float[3]], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
+            plane_normal (np.array[float[3]], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
             flags (int): unused / to be decided
             rgba_color (list/tuple of 4 floats): color components for red, green, blue and alpha, each in range [0..1].
             specular_color (list/tuple of 3 floats): specular reflection color, red, green, blue components in range
                 [0..1]
-            visual_frame_position (np.array[3]): translational offset of the visual shape with respect to the link frame
-            vertices (list of np.array[3]): Instead of creating a mesh from obj file, you can provide vertices, indices,
-                uvs and normals
-            indices (list of int): triangle indices, should be a multiple of 3.
+            visual_frame_position (np.array[float[3]]): translational offset of the visual shape with respect to the
+                link frame.
+            vertices (list of np.array[float[3]]): Instead of creating a mesh from obj file, you can provide vertices,
+                indices, uvs and normals
+            indices (list[int]): triangle indices, should be a multiple of 3.
             uvs (list of np.array[2]): uv texture coordinates for vertices. Use changeVisualShape to choose the
                 texture image. The number of uvs should be equal to number of vertices
-            normals (list of np.array[3]): vertex normals, number should be equal to number of vertices.
-            visual_frame_orientation (np.array[4]): rotational offset (quaternion x,y,z,w) of the visual shape with
-                respect to the link frame
+            normals (list of np.array[float[3]]): vertex normals, number should be equal to number of vertices.
+            visual_frame_orientation (np.array[float[4]]): rotational offset (quaternion x,y,z,w) of the visual shape
+                with respect to the link frame
 
         Returns:
             int: The return value is a non-negative int unique id for the visual shape or -1 if the call failed.
@@ -1354,11 +1355,11 @@ class Mujoco(Simulator):
                 int: object unique id.
                 int: link index or -1 for the base
                 int: visual geometry type (TBD)
-                np.array[3]: dimensions (size, local scale) of the geometry
+                np.array[float[3]]: dimensions (size, local scale) of the geometry
                 str: path to the triangle mesh, if any. Typically relative to the URDF, SDF or MJCF file location, but
                     could be absolute
-                np.array[3]: position of local visual frame, relative to link/joint frame
-                np.array[4]: orientation of local visual frame relative to link/joint frame
+                np.array[float[3]]: position of local visual frame, relative to link/joint frame
+                np.array[float[4]]: orientation of local visual frame relative to link/joint frame
                 list of 4 floats: URDF color (if any specified) in Red / Green / Blue / Alpha
                 int: texture unique id of the shape or -1 if None. This field only exists if using
                     VISUAL_SHAPE_DATA_TEXTURE_UNIQUE_IDS (=1) flag.
@@ -1429,11 +1430,11 @@ class Mujoco(Simulator):
         Args:
             width (int): horizontal image resolution in pixels
             height (int): vertical image resolution in pixels
-            view_matrix (np.array[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.array[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.array[3]): `light_direction` specifies the world position of the light source,
+            view_matrix (np.array[float[4,4]]): 4x4 view matrix, see `compute_view_matrix`
+            projection_matrix (np.array[float[4,4]]): 4x4 projection matrix, see `compute_projection`
+            light_direction (np.array[float[3]]): `light_direction` specifies the world position of the light source,
                 the direction is from the light source position to the origin of the world frame.
-            light_color (np.array[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
+            light_color (np.array[float[3]]): directional light color in [RED,GREEN,BLUE] in range 0..1
             light_distance (float): distance of the light along the normalized `light_direction`
             shadow (bool): True for shadows, False for no shadows
             light_ambient_coeff (float): light ambient coefficient
@@ -1445,9 +1446,9 @@ class Mujoco(Simulator):
         Returns:
             int: width image resolution in pixels (horizontal)
             int: height image resolution in pixels (vertical)
-            np.int[width, height, 4]: RBGA pixels (each pixel is in the range [0..255] for each channel R, G, B, A)
-            np.array[width, heigth]: Depth buffer.
-            np.int[width, height]: Segmentation mask buffer. For each pixels the visible object unique id.
+            np.array[int[width, height, 4]]: RBGA pixels (each pixel is in the range [0..255] for each channel).
+            np.array[float[width, height]]: Depth buffer.
+            np.array[int[width, height]]: Segmentation mask buffer. For each pixels the visible object unique id.
         """
         # based on the arguments, check the camera name
         camera_name = None
@@ -1463,11 +1464,11 @@ class Mujoco(Simulator):
         Args:
             width (int): horizontal image resolution in pixels
             height (int): vertical image resolution in pixels
-            view_matrix (np.array[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.array[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.array[3]): `light_direction` specifies the world position of the light source,
+            view_matrix (np.array[float[4,4]]): 4x4 view matrix, see `compute_view_matrix`
+            projection_matrix (np.array[float[4,4]]): 4x4 projection matrix, see `compute_projection`
+            light_direction (np.array[float[3]]): `light_direction` specifies the world position of the light source,
                 the direction is from the light source position to the origin of the world frame.
-            light_color (np.array[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
+            light_color (np.array[float[3]]): directional light color in [RED,GREEN,BLUE] in range 0..1
             light_distance (float): distance of the light along the normalized `light_direction`
             shadow (bool): True for shadows, False for no shadows
             light_ambient_coeff (float): light ambient coefficient
@@ -1477,7 +1478,7 @@ class Mujoco(Simulator):
             flags (int): flags.
 
         Returns:
-            np.int[width, height, 4]: RBGA pixels (each pixel is in the range [0..255] for each channel R, G, B, A)
+            np.array[int[width, height, 4]]: RBGA pixels (each pixel is in the range [0..255] for each channel).
         """
         # based on the arguments, check the camera name
         camera_name = None
@@ -1494,11 +1495,11 @@ class Mujoco(Simulator):
         Args:
             width (int): horizontal image resolution in pixels
             height (int): vertical image resolution in pixels
-            view_matrix (np.array[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.array[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.array[3]): `light_direction` specifies the world position of the light source,
+            view_matrix (np.array[float[4,4]]): 4x4 view matrix, see `compute_view_matrix`
+            projection_matrix (np.array[float[4,4]]): 4x4 projection matrix, see `compute_projection`
+            light_direction (np.array[float[3]]): `light_direction` specifies the world position of the light source,
                 the direction is from the light source position to the origin of the world frame.
-            light_color (np.array[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
+            light_color (np.array[float[3]]): directional light color in [RED,GREEN,BLUE] in range 0..1
             light_distance (float): distance of the light along the normalized `light_direction`
             shadow (bool): True for shadows, False for no shadows
             light_ambient_coeff (float): light ambient coefficient
@@ -1508,7 +1509,7 @@ class Mujoco(Simulator):
             flags (int): flags.
 
         Returns:
-            np.array[width, height]: Depth buffer.
+            np.array[float[width, height]]: Depth buffer.
         """
         # based on the arguments, check the camera name
         camera_name = None
@@ -1531,17 +1532,17 @@ class Mujoco(Simulator):
             shape_type (int): type of shape; GEOM_SPHERE (=2), GEOM_BOX (=3), GEOM_CAPSULE (=7), GEOM_CYLINDER (=4),
                 GEOM_PLANE (=6), GEOM_MESH (=5), GEOM_ELLIPSOID (=9)
             radius (float): only for GEOM_SPHERE, GEOM_CAPSULE, GEOM_CYLINDER
-            half_extents (np.array[3], list/tuple of 3 floats): only for GEOM_BOX.
+            half_extents (np.array[float[3]], list/tuple of 3 floats): only for GEOM_BOX.
             height (float): only for GEOM_CAPSULE, GEOM_CYLINDER (length = height).
             filename (str): Filename for GEOM_MESH, currently only Wavefront .obj. Will create convex hulls for each
                 object (marked as 'o') in the .obj file.
-            mesh_scale (np.array[3], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
-            plane_normal (np.array[3], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
+            mesh_scale (np.array[float[3]], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
+            plane_normal (np.array[float[3]], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
             flags (int): unused / to be decided
-            collision_frame_position (np.array[3]): translational offset of the collision shape with respect to the
-                link frame
-            collision_frame_orientation (np.array[4]): rotational offset (quaternion x,y,z,w) of the collision shape
-                with respect to the link frame
+            collision_frame_position (np.array[float[3]]): translational offset of the collision shape with respect to
+                the link frame
+            collision_frame_orientation (np.array[float[4]]): rotational offset (quaternion x,y,z,w) of the collision
+                shape with respect to the link frame
 
         Returns:
             int: The return value is a non-negative int unique id for the collision shape or -1 if the call failed.
@@ -1595,14 +1596,14 @@ class Mujoco(Simulator):
             int: object unique id.
             int: link id.
             int: geometry type; GEOM_BOX (=3), GEOM_SPHERE (=2), GEOM_CAPSULE (=7), GEOM_MESH (=5), GEOM_PLANE (=6)
-            np.array[3]: depends on geometry type:
+            np.array[float[3]]: depends on geometry type:
                 for GEOM_BOX: extents,
                 for GEOM_SPHERE: dimensions[0] = radius,
                 for GEOM_CAPSULE and GEOM_CYLINDER: dimensions[0] = height (length), dimensions[1] = radius.
                 For GEOM_MESH: dimensions is the scaling factor.
             str: Only for GEOM_MESH: file name (and path) of the collision mesh asset.
-            np.array[3]: Local position of the collision frame with respect to the center of mass/inertial frame
-            np.array[4]: Local orientation of the collision frame with respect to the inertial frame
+            np.array[float[3]]: Local position of the collision frame with respect to the center of mass/inertial frame
+            np.array[float[4]]: Local orientation of the collision frame with respect to the inertial frame
         """
         pass
 
@@ -1611,16 +1612,16 @@ class Mujoco(Simulator):
         Performs a single raycast to find the intersection information of the first object hit.
 
         Args:
-            from_position (np.array[3]): start of the ray in world coordinates
-            to_position (np.array[3]): end of the ray in world coordinates
+            from_position (np.array[float[3]]): start of the ray in world coordinates
+            to_position (np.array[float[3]]): end of the ray in world coordinates
 
         Returns:
             list:
                 int: object unique id of the hit object
                 int: link index of the hit object, or -1 if none/parent
                 float: hit fraction along the ray in range [0,1] along the ray.
-                np.array[3]: hit position in Cartesian world coordinates
-                np.array[3]: hit normal in Cartesian world coordinates
+                np.array[float[3]]: hit position in Cartesian world coordinates
+                np.array[float[3]]: hit normal in Cartesian world coordinates
         """
         vec = to_position - from_position
         return self.sim.ray(pnt=from_position, vec=vec)  # this return the distance and id of the geom

@@ -79,8 +79,8 @@ class ECAA9(UUVRobot):
 
         Args:
             simulator (Simulator): simulator instance.
-            position (np.array[3]): Cartesian world position.
-            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
             fixed_base (bool): if True, the vehicle base will be fixed in the world.
             scale (float): scaling factor that is used to scale the vehicle.
             urdf (str): path to the urdf. Do not change it unless you know what you are doing.
@@ -111,7 +111,7 @@ class ECAA9(UUVRobot):
             g (gravity): gravity value in the z direction.
 
         Returns:
-            np.array[3]: buoyancy force
+            np.array[float[3]]: buoyancy force
         """
         # currently, we assume that the whole body is submerged in the
         if fluid_density is None:
@@ -126,7 +126,7 @@ class ECAA9(UUVRobot):
 
         Args:
             mass (float): mass that will be added to the base link.
-            local_inertia_diagonal (np.array[3]): local inertia diagonal around the CoM of the base link.
+            local_inertia_diagonal (np.array[float[3]]): local inertia diagonal around the CoM of the base link.
         """
         info = self.sim.get_dynamics_info(body_id=self.id, link_id=-1)
         mass += info[0]

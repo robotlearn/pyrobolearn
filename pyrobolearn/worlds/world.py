@@ -67,7 +67,7 @@ class World(object):
 
         Args:
             simulator (Simulator): simulator instance.
-            gravity (tuple/list of 3 float, np.array[3]): gravity vector.
+            gravity (tuple/list of 3 float, np.array[float[3]]): gravity vector.
         """
         # set simulator
         self.simulator = simulator
@@ -125,7 +125,7 @@ class World(object):
         """Set the gravity vector in the world.
 
         Args:
-            gravity (np.array[3]): 3d gravity vector.
+            gravity (np.array[float[3]]): 3d gravity vector.
         """
         self.simulator.gravity = gravity
 
@@ -585,7 +585,7 @@ class World(object):
                 unique id.
 
         Returns:
-            list of int, list of Body: list of unique ids or bodies
+            list[int], list[Body]: list of unique ids or bodies
         """
         bodies = self.sim.load_sdf(filename, scaling=scaling)
         self.ids[tuple(bodies)] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
@@ -609,7 +609,7 @@ class World(object):
                 unique id.
 
         Returns:
-            list of int, list of Body: list of bodies
+            list[int], list[Body]: list of bodies
         """
         bodies = self.sim.load_mjcf(filename, scaling=scaling)
         self.ids[tuple(bodies)] = [self.__get_method_and_parameters(frame=inspect.currentframe())]
@@ -627,12 +627,12 @@ class World(object):
         """Create a body in the simulator.
 
         Args:
-            position (np.array[3]): Cartesian world position of the base
+            position (np.array[float[3]]): Cartesian world position of the base
             visual_shape_id (int): unique id from createVisualShape or -1. You can reuse the visual shape (instancing)
             collision_shape_id (int): unique id from createCollisionShape or -1. You can re-use the collision shape
                 for multiple multibodies (instancing)
             mass (float): mass of the base, in kg (if using SI units)
-            orientation (np.array[4]): Orientation of base as quaternion [x,y,z,w]
+            orientation (np.array[float[4]]): Orientation of base as quaternion [x,y,z,w]
             return_body (bool): if True, it will return an instance of the `Body`, otherwise, it will return the
                 unique id.
 
@@ -711,9 +711,9 @@ class World(object):
         Args:
             body_id (int): body id to apply the force on
             link_id (int): link id to apply the force, if -1 it will apply the force on the base
-            force (np.array[3]): Cartesian forces to be applied on the body
-            position (np.array[3]): position on the link where the force is applied. If None, it is the center of mass
-                of the object (or the link if specified)
+            force (np.array[float[3]]): Cartesian forces to be applied on the body
+            position (np.array[float[3]]): position on the link where the force is applied. If None, it is the center
+                of mass of the object (or the link if specified)
             frame (int): allows to specify the coordinate system of force/position. sim.LINK_FRAME (=1) for local
                 link frame, and sim.WORLD_FRAME (=2) for world frame. By default, it is the world frame.
         """
@@ -752,7 +752,7 @@ class World(object):
             body_id (int): body id
 
         Returns:
-            np.array[3]: position of the body (expressed in the world Cartesian frame)
+            np.array[float[3]]: position of the body (expressed in the world Cartesian frame)
         """
         return self.sim.get_base_pose(body_id)[0]
 
@@ -764,7 +764,7 @@ class World(object):
             body_id (int): body id
 
         Returns:
-            np.array[4]: orientation of the body (expressed as a quaternion [x,y,z,w]).
+            np.array[float[4]]: orientation of the body (expressed as a quaternion [x,y,z,w]).
         """
         return self.sim.get_base_pose(body_id)[1]
 
@@ -789,7 +789,7 @@ class World(object):
             body_id (int): body id
 
         Returns:
-            np.array[3]: linear velocity of the body
+            np.array[float[3]]: linear velocity of the body
         """
         return self.sim.get_base_velocity(body_id)[0]
 
@@ -801,7 +801,7 @@ class World(object):
             body_id (int): body id
 
         Returns:
-            np.array[3]: angular velocity of the body
+            np.array[float[3]]: angular velocity of the body
         """
         return self.sim.get_base_velocity(body_id)[1]
 
@@ -881,8 +881,8 @@ class World(object):
             link_id (int): optional link id
 
         Returns:
-            np.array[3]: coordinates in world space of the min corner of the AABB
-            np.array[3]: coordinates in world space of the max corner of the AABB
+            np.array[float[3]]: coordinates in world space of the min corner of the AABB
+            np.array[float[3]]: coordinates in world space of the max corner of the AABB
         """
         aabb_min, aabb_max = self.sim.get_aabb(body_id, link_id)
         return aabb_min, aabb_max
@@ -944,15 +944,15 @@ class World(object):
                 int: body unique id of body B
                 int: link index of body A, -1 for base
                 int: link index of body B, -1 for base
-                np.array[3]: contact position on A, in Cartesian world coordinates
-                np.array[3]: contact position on B, in Cartesian world coordinates
-                np.array[3]: contact normal on B, pointing towards A
+                np.array[float[3]]: contact position on A, in Cartesian world coordinates
+                np.array[float[3]]: contact position on B, in Cartesian world coordinates
+                np.array[float[3]]: contact normal on B, pointing towards A
                 float: contact distance, positive for separation, negative for penetration
                 float: normal force applied during the last `step`. Always equal to 0.
                 float: lateral friction force in the first lateral friction direction (see next returned value)
-                np.array[3]: first lateral friction direction
+                np.array[float[3]]: first lateral friction direction
                 float: lateral friction force in the second lateral friction direction (see next returned value)
-                np.array[3]: second lateral friction direction
+                np.array[float[3]]: second lateral friction direction
         """
         if isinstance(body, Body):
             body = body.id
@@ -988,13 +988,13 @@ class World(object):
                 along the given joint axis with respect to the parent body's link. If the JOINT_POINT2POINT is set
                 (which should really be called spherical), the child body's link will be able to rotate along the 3
                 axis while maintaining the given position relative to the parent body's link.
-            joint_axis (np.array[3]): joint axis, in child link frame
-            parent_frame_position (np.array[3]): position of the joint frame relative to parent CoM frame.
-            child_frame_position (np.array[3]): position of the joint frame relative to a given child CoM frame (or
-                world origin if no child specified)
-            parent_frame_orientation (np.array[4]): the orientation of the joint frame relative to parent CoM
+            joint_axis (np.array[float[3]]): joint axis, in child link frame
+            parent_frame_position (np.array[float[3]]): position of the joint frame relative to parent CoM frame.
+            child_frame_position (np.array[float[3]]): position of the joint frame relative to a given child CoM frame
+                (or world origin if no child specified)
+            parent_frame_orientation (np.array[float[4]]): the orientation of the joint frame relative to parent CoM
                 coordinate frame (expressed as a quaternion [x,y,z,w])
-            child_frame_orientation (np.array[4]): the orientation of the joint frame relative to the child CoM
+            child_frame_orientation (np.array[float[4]]): the orientation of the joint frame relative to the child CoM
                 coordinate frame, or world origin frame if no child specified (expressed as a quaternion [x,y,z,w])
 
         Returns:
@@ -1039,13 +1039,13 @@ class World(object):
             body2 (int, Body): body unique id, or a Body instance.
             link1 (int, None): link id. By default, it will be the base (=-1).
             link2 (int, None): link id. By default, it will be the base (=-1).
-            joint_axis (np.array[3]): joint axis, in child link frame
-            parent_frame_position (np.array[3]): position of the joint frame relative to parent CoM frame.
-            child_frame_position (np.array[3]): position of the joint frame relative to a given child CoM frame (or
-                world origin if no child specified)
-            parent_frame_orientation (np.array[4]): the orientation of the joint frame relative to parent CoM
+            joint_axis (np.array[float[3]]): joint axis, in child link frame
+            parent_frame_position (np.array[float[3]]): position of the joint frame relative to parent CoM frame.
+            child_frame_position (np.array[float[3]]): position of the joint frame relative to a given child CoM frame
+                (or world origin if no child specified)
+            parent_frame_orientation (np.array[float[4]]): the orientation of the joint frame relative to parent CoM
                 coordinate frame (expressed as a quaternion [x,y,z,w])
-            child_frame_orientation (np.array[4]): the orientation of the joint frame relative to the child CoM
+            child_frame_orientation (np.array[float[4]]): the orientation of the joint frame relative to the child CoM
                 coordinate frame, or world origin frame if no child specified (expressed as a quaternion [x,y,z,w])
 
         Returns:
@@ -2007,7 +2007,7 @@ class World(object):
             **kwargs: dictionary of arguments to be given to :attr:`body` if this last one is callable.
 
         Returns:
-            list of int, list of Body: list of unique ids for each body, or list of bodies
+            list[int], list[Body]: list of unique ids for each body, or list of bodies
         """
         # check size
         if size < 1:
@@ -2087,9 +2087,9 @@ class World(object):
         Returns:
             float: mass in kg
             float: lateral friction coefficient
-            np.array[3]: local inertia diagonal
-            np.array[3]: position of inertial frame in local coordinates of joint frame
-            np.array[4]: orientation of inertial frame in local coordinates of joint frame
+            np.array[float[3]]: local inertia diagonal
+            np.array[float[3]]: position of inertial frame in local coordinates of joint frame
+            np.array[float[4]]: orientation of inertial frame in local coordinates of joint frame
             float: restitution coefficient (if 0, the object does not bounce)
             float: rolling friction coefficient orthogonal to contact normal
             float: spinning friction coefficient around contact normal

@@ -34,8 +34,8 @@ class ICub(BipedRobot, BiManipulator):
 
         Args:
             simulator (Simulator): simulator instance.
-            position (np.array[3]): Cartesian world position.
-            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
             fixed_base (bool): if True, the robot base will be fixed in the world.
             scale (float): scaling factor that is used to scale the robot.
             urdf (str): path to the urdf. Do not change it unless you know what you are doing.

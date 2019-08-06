@@ -227,13 +227,13 @@ class Light(object):
             name (str): unique name for the light.
             dtype (str): type of light, select between {'point', 'directional', 'spot'}
             cast_shadows (bool): if True, it will cast shadows.
-            diffuse (tuple of 4 float, np.array[4]): diffuse light (RGBA) color.
-            specular (tuple of 4 float, np.array[4]): specular light (RGBA) color.
+            diffuse (tuple of 4 float, np.array[float[4]]): diffuse light (RGBA) color.
+            specular (tuple of 4 float, np.array[float[4]]): specular light (RGBA) color.
             attenuation: light attenuation
-            direction (np.array[3]): direction of the light if dtype='directional' or dtype='spot'.
+            direction (np.array[float[3]]): direction of the light if dtype='directional' or dtype='spot'.
             spot: spot light parameters
-            position (tuple/list of 3 float, np.array[3]): position of the light in the world.
-            orientation (np.array[3], str): orientation of the light expressed as roll-pitch-yaw angles.
+            position (tuple/list of 3 float, np.array[float[3]]): position of the light in the world.
+            orientation (np.array[float[3]], str): orientation of the light expressed as roll-pitch-yaw angles.
             active (bool): if True, the light is on.
         """
         self.name = name
@@ -699,7 +699,7 @@ class Inertia(object):
         """Aligned inertia.
 
         Returns:
-            np.array[3]: principal moments of the inertia.
+            np.array[float[3]]: principal moments of the inertia.
 
         References:
             - [1] https://en.wikipedia.org/wiki/Moment_of_inertia#Inertia_matrix_in_different_reference_frames
@@ -710,8 +710,8 @@ class Inertia(object):
 
     @property
     def principal_inertia(self):
-        """Return the principal moments of the inertia (np.array[3]), and the direction of the principal axes of the
-        body (np.array[3,3])."""
+        """Return the principal moments of the inertia (np.array[float[3]]), and the direction of the principal axes of the
+        body (np.array[float[3,3]])."""
         inertia = self.full_inertia
         evals, evecs = np.linalg.eigh(inertia)
         return evals, evecs
@@ -812,8 +812,8 @@ class Inertial(object):
             mass (float): mass value (in kg)
             inertia (str, list / tuple of 3/6/9 float, np.ndarray[3/6/9], np.ndarray[3,3]): inertia matrix represented
                 in the body frame.
-            position (np.array[3], str): position of the center of mass.
-            orientation (np.array[3], str): rotation expressed as roll-pitch-yaw angles.
+            position (np.array[float[3]], str): position of the center of mass.
+            orientation (np.array[float[3]], str): rotation expressed as roll-pitch-yaw angles.
         """
         self.mass = mass
         self.inertia = inertia
@@ -864,8 +864,8 @@ class Inertial(object):
 
     @property
     def principal_inertia(self):
-        """Return the principal moments of the inertia (np.array[3]), and the direction of the principal axes of the
-        body (np.array[3,3])."""
+        """Return the principal moments of the inertia (np.array[float[3]]), and the direction of the principal axes
+        of the body (np.array[float[3,3]])."""
         evals, evecs = self.inertia.principal_inertia
         return evals, self.rot.dot(evecs)
 
@@ -874,7 +874,7 @@ class Inertial(object):
         """Aligned inertia.
 
         Returns:
-            np.array[3]: principal moments of the inertia.
+            np.array[float[3]]: principal moments of the inertia.
 
         References:
             - [1] https://en.wikipedia.org/wiki/Moment_of_inertia#Inertia_matrix_in_different_reference_frames

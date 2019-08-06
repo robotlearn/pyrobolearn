@@ -48,6 +48,18 @@ class SLIP2D(LeggedRobot):
         super(SLIP2D, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'SLIP_2d'
 
+        # create mass sphere
+
+        # create leg (capsule or cylinder with sphere at the end)
+
+        # create spring (capsules or cylinders)
+
+        # create prismatic constraint for spring
+
+        # create planar constraint
+
+        # simulate the force due to the spring (in step)
+
 
 class DualSLIP2D(LeggedRobot):
     r"""Dual Linear Inverted Pendulum Model 2D

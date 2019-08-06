@@ -29,7 +29,7 @@ setup(
     author_email='briandelhaisse@gmail.com',
     maintainer='Brian Delhaisse',
     maintainer_email='briandelhaisse@gmail.com',
-    license='(c) Brian Delhaisse',
+    license='GNU GPLv3',
     url='https://github.com/robotlearn/pyrobolearn',
     platforms=['Linux Ubuntu'],
     # python_requires='==2.7.*',

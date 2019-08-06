@@ -27,8 +27,8 @@ class Gripper(Robot):
         Args:
             simulator (Simulator): simulator instance.
             urdf (str): path to the URDF file.
-            position (np.array[3]): Cartesian world position.
-            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
             fixed_base (bool): if True, the gripper will be fixed in the world.
             scale (float): scaling factor that is used to scale the gripper.
         """
@@ -75,7 +75,7 @@ class Gripper(Robot):
             strength (float): scalar describing how much to increases the stiffness (the torques that are applied on
                 the joint fingers). If positive, it closes the gripper fingers. If negative, it opens the gripper
                 fingers.
-            point (np.array[3], list of np.array[3], None): attractor point(s) described in the specified frame.
+            point (np.array[float[3]], list of np.array[float[3]], None): attractor point(s) described in the specified frame.
                 If multiple points are specified, they have to match the number of fingers and will be used in the
                 same order. If None, it will grasp in a "natural" way (which is let to the user that has implemented
                 this method).
@@ -99,8 +99,8 @@ class ParallelGripper(Gripper):
         Args:
             simulator (Simulator): simulator instance.
             urdf (str): path to the URDF file.
-            position (np.array[3]): Cartesian world position.
-            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
             fixed_base (bool): if True, the gripper will be fixed in the world.
             scale (float): scaling factor that is used to scale the gripper.
         """
@@ -121,8 +121,8 @@ class AngularGripper(Gripper):
         Args:
             simulator (Simulator): simulator instance.
             urdf (str): path to the URDF file.
-            position (np.array[3]): Cartesian world position.
-            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
             fixed_base (bool): if True, the gripper will be fixed in the world.
             scale (float): scaling factor that is used to scale the gripper.
         """
@@ -143,8 +143,8 @@ class VacuumGripper(Gripper):
         Args:
             simulator (Simulator): simulator instance.
             urdf (str): path to the URDF file.
-            position (np.array[3]): Cartesian world position.
-            orientation (np.array[4]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
             fixed_base (bool): if True, the gripper will be fixed in the world.
             scale (float): scaling factor that is used to scale the gripper.
         """

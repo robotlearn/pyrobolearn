@@ -57,10 +57,10 @@ class IMUSensor(LinkSensor):
             noise (None, Noise): noise to be added.
             ticks (int): number of steps to wait/sleep before acquisition of the next sensor value.
             latency (int, float, None): latency time / step.
-            position (np.array[3], None): local position of the sensor with respect to the given link. If None, it will
-                be the zero vector.
-            orientation (np.array[4], None): local orientation of the sensor with respect to the given link (expressed
-                as a quaternion [x,y,z,w]). If None, it will be the unit quaternion [0,0,0,1].
+            position (np.array[float[3]], None): local position of the sensor with respect to the given link. If None,
+                it will be the zero vector.
+            orientation (np.array[float[4]], None): local orientation of the sensor with respect to the given link
+                (expressed as a quaternion [x,y,z,w]). If None, it will be the unit quaternion [0,0,0,1].
         """
         super(IMUSensor, self).__init__(simulator, body_id=body_id, link_id=link_id, noise=noise, ticks=ticks,
                                         latency=latency, position=position, orientation=orientation)

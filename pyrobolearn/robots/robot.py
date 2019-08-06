@@ -66,8 +66,8 @@ class Robot(ControllableBody):
         Args:
             simulator: reference to the simulator such that the robot can access it.
             urdf (str): path to the URDF/MJCF file.
-            position (np.array[3]): initial position.
-            orientation (np.array[4]): initial orientation represented as a quaternion (x,y,z,w).
+            position (np.array[float[3]]): initial position.
+            orientation (np.array[float[4]]): initial orientation represented as a quaternion (x,y,z,w).
             fixed_base (bool, None): if True, the base of the robot will be fixed.
             scale (float): scaling factor.
             visual_ticks (int): the number of ticks to sleep before updating the visuals.
@@ -341,10 +341,10 @@ class Robot(ControllableBody):
 
         Returns:
             if concatenate:
-                np.array[7]: concatenated position and orientation
+                np.array[float[7]]: concatenated position and orientation
             else:
-                np.array[3]: position
-                np.array[4]: orientation (x, y, z, w)
+                np.array[float[3]]: position
+                np.array[float[4]]: orientation (x, y, z, w)
         """
         pose = self.sim.get_base_pose(self.id)
         if concatenate:
@@ -356,7 +356,7 @@ class Robot(ControllableBody):
         Return the base position.
 
         Returns:
-            np.array[3]: base position.
+            np.array[float[3]]: base position.
         """
         return self.sim.get_base_position(self.id)
 
@@ -365,7 +365,7 @@ class Robot(ControllableBody):
         Get the base orientation in the form of a quaternion (x, y, z, w).
 
         Returns:
-            quaternion (np.array[4]): base orientation in the form of a quaternion (x, y, z, w).
+            quaternion (np.array[float[4]]): base orientation in the form of a quaternion (x, y, z, w).
         """
         return self.sim.get_base_orientation(self.id)
 
@@ -378,10 +378,10 @@ class Robot(ControllableBody):
 
         Returns:
             if concatenate:
-                np.array[6]: linear and angular velocities of the base
+                np.array[float[6]]: linear and angular velocities of the base
             else:
-                np.array[3]: linear velocity of the base
-                np.array[3]: angular velocity of the base
+                np.array[float[3]]: linear velocity of the base
+                np.array[float[3]]: angular velocity of the base
         """
         # check if cached
         if 'vel' in self._state:
@@ -399,7 +399,7 @@ class Robot(ControllableBody):
         Return the linear velocity of the base.
 
         Returns:
-            np.array[3]: linear velocity of the base
+            np.array[float[3]]: linear velocity of the base
         """
         return self.sim.get_base_linear_velocity(self.id)
 
@@ -408,7 +408,7 @@ class Robot(ControllableBody):
         Return the angular velocity of the base.
 
         Returns:
-            np.array[3]: angular velocity of the base
+            np.array[float[3]]: angular velocity of the base
         """
         return self.sim.get_base_angular_velocity(self.id)
 
@@ -417,7 +417,7 @@ class Robot(ControllableBody):
         Return the base spatial velocity (which is the concatenation of the angular and linear velocity).
 
         Returns:
-            np.array[6]: spatial velocity
+            np.array[float[6]]: spatial velocity
         """
         lin_vel, ang_vel = self.get_base_velocity(concatenate=False)
         return np.concatenate((ang_vel, lin_vel))
@@ -430,10 +430,10 @@ class Robot(ControllableBody):
 
         Returns:
             if concatenate:
-                np.array[6]: concatenation of the linear and angular acceleration
+                np.array[float[6]]: concatenation of the linear and angular acceleration
             else:
-                np.array[3]: linear acceleration
-                np.array[3]: angular acceleration
+                np.array[float[3]]: linear acceleration
+                np.array[float[3]]: angular acceleration
         """
         # check if cached
         if 'acc' in self._state:
@@ -484,7 +484,7 @@ class Robot(ControllableBody):
         zero vector for the linear acceleration).
 
         Returns:
-            np.array[3]: linear acceleration
+            np.array[float[3]]: linear acceleration
         """
         return self.get_base_acceleration(concatenate=False)[0]
 
@@ -495,7 +495,7 @@ class Robot(ControllableBody):
         zero vector for the angular acceleration).
 
         Returns:
-            np.array[3]: angular acceleration
+            np.array[float[3]]: angular acceleration
         """
         return self.get_base_acceleration(concatenate=False)[1]
 
@@ -504,7 +504,7 @@ class Robot(ControllableBody):
         Return the base spatial acceleration (which is the concatenation of the angular and linear acceleration).
 
         Returns:
-            np.array[6]: spatial acceleration
+            np.array[float[6]]: spatial acceleration
         """
         lin_acc, ang_acc = self.get_base_acceleration(concatenate=False)
         return np.concatenate((ang_acc, lin_acc))
@@ -561,7 +561,7 @@ class Robot(ControllableBody):
         Return the center of mass position.
 
         Returns:
-            np.array[3]: center of mass position [m]
+            np.array[float[3]]: center of mass position [m]
         """
         if 'com' in self._state:
             return self._state['com']
@@ -577,7 +577,7 @@ class Robot(ControllableBody):
         Return the center of mass velocity.
 
         Returns:
-            np.array[3]: center of mass velocity [m/s]
+            np.array[float[3]]: center of mass velocity [m/s]
         """
         if 'com_vel' in self._state:
             return self._state['com_vel'][0]
@@ -593,7 +593,7 @@ class Robot(ControllableBody):
         Return the center of mass acceleration.
 
         Returns:
-            np.array[3]: center of mass acceleration [m/s]
+            np.array[float[3]]: center of mass acceleration [m/s]
         """
         # if already cached, return it
         if 'com_acc' in self._state:
@@ -635,7 +635,7 @@ class Robot(ControllableBody):
     #     where :math:`p` is the linear momentum, :math:`m` is the total mass, and :math:`v` is the velocity.
     #
     #     Returns:
-    #         np.array[3]: linear momentum
+    #         np.array[float[3]]: linear momentum
     #     """
     #     return self.mass * self.get_base_linear_velocity()
     #
@@ -649,7 +649,7 @@ class Robot(ControllableBody):
     #     and :math:`\omega` is the angular velocity.
     #
     #     Returns:
-    #         np.array[3]: angular momentum
+    #         np.array[float[3]]: angular momentum
     #     """
     #     pass
 
@@ -665,7 +665,7 @@ class Robot(ControllableBody):
         while the q index goes from 0 to the number of actuated joints.
 
         Args:
-            joint (str, int, list of str/int, None): if str, it will get the joint id associated to the given name.
+            joint (str, int, list[int,str], None): if str, it will get the joint id associated to the given name.
                 If int, it will get the joint id associated to the given q index. If it is a list of str and/or int,
                 it will get the corresponding joint ids. If None, it will return all the (actuated) joint ids.
 
@@ -673,7 +673,7 @@ class Robot(ControllableBody):
             if 1 joint:
                 int: joint id
             if multiple joint:
-                int[N]: joint ids
+                list[int[N]]: joint ids
         """
         if joint is None:
             return self.joints
@@ -701,14 +701,14 @@ class Robot(ControllableBody):
         only the desired information. Also, note that we do not convert the data here.
 
         Args:
-            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, return the information for all
-                (actuated) joints.
+            joint_ids (int, list[int], None): joint id, or list of joint ids. If None, return the information for
+                all (actuated) joints.
 
         Returns:
             if 1 joint:
                 [0] int:        the same joint id as the input parameter
                 [1] str:        name of the joint (as specified in the URDF/SDF/etc file)
-                [2] int:        type of the joint which implie the number of position and velocity variables.
+                [2] int:        type of the joint which implies the number of position and velocity variables.
                                 The types include JOINT_REVOLUTE (=0), JOINT_PRISMATIC (=1), JOINT_SPHERICAL (=2),
                                 JOINT_PLANAR (=3), and JOINT_FIXED (=4).
                 [3] int:        q index - the first position index in the positional state variables for this body
@@ -723,9 +723,9 @@ class Robot(ControllableBody):
                 [11] float:     maximum velocity specified in URDF. Note that this value is not used in actual
                                 motor control commands at the moment.
                 [12] str:       name of the link (as specified in the URDF/SDF/etc file)
-                [13] np.array[3]:  joint axis in local frame (ignored for JOINT_FIXED)
-                [14] np.array[3]:  joint position in parent frame
-                [15] np.array[4]:  joint orientation in parent frame (x, y, z, w)
+                [13] np.array[float[3]]:  joint axis in local frame (ignored for JOINT_FIXED)
+                [14] np.array[float[3]]:  joint position in parent frame
+                [15] np.array[float[4]]:  joint orientation in parent frame (x, y, z, w)
                 [16] int:       parent link index, -1 for base
 
             if multiple joints: list of joint information (i.e. list of above)
@@ -744,14 +744,14 @@ class Robot(ControllableBody):
         only the desired information. Also, note that we do not convert the data here.
 
         Args:
-            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, return the axis for all
+            joint_ids (int, list[int], None): joint id, or list of joint ids. If None, return the axis for all
                 (actuated) joints.
 
         Returns:
             if 1 joint:
-                np.array[3]: joint axis
+                np.array[float[3]]: joint axis
             if multiple joint:
-                [np.array[3]]: list of joint axis
+                list[np.array[float[3]]]: list of joint axis
         """
         if joint_ids is None:
             joint_ids = self.joints
@@ -762,14 +762,14 @@ class Robot(ControllableBody):
         Get the corresponding q index of the given joint(s).
 
         Args:
-            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, return the q indices for all
+            joint_ids (int, list[int], None): joint id, or list of joint ids. If None, return the q indices for all
                 (actuated) joints.
 
         Returns:
             if 1 joint:
                 int: q index
             if multiple joints:
-                int[N]: q indices
+                list[int]: q indices
         """
         if joint_ids is None:
             joint_ids = self.joints
@@ -780,7 +780,7 @@ class Robot(ControllableBody):
         Get the joint type as a string or integer.
 
         Args:
-            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, return the information for all
+            joint_ids (int, list[int], None): joint id, or list of joint ids. If None, return the information for all
                 (actuated) joints.
             to_string (bool): if True, it will return the joint type in a readable string format
 
@@ -805,9 +805,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 joint:
-                np.array[2]: lower and upper limit
+                np.array[float[2]]: lower and upper limit
             if multiple joints:
-                np.array[N,2]: lower and upper limit for each specified joint
+                np.array[float[N,2]]: lower and upper limit for each specified joint
         """
         if joint_ids is None:
             joint_ids = self.joints
@@ -818,14 +818,14 @@ class Robot(ControllableBody):
         Get the damping coefficient of the given joint(s).
 
         Args:
-            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, return the information for all
-                (actuated) joints.
+            joint_ids (int, list[int[M]], None): joint id, or list of joint ids. If None, return the information for
+                all (actuated) joints.
 
         Returns:
             if 1 joint:
                 float: damping coefficient of the given joint
             if multiple joints:
-                np.array[N]: damping coefficient for each specified joint
+                np.array[float[M]]: damping coefficient for each specified joint
         """
         if joint_ids is None:
             joint_ids = self.joints
@@ -836,14 +836,14 @@ class Robot(ControllableBody):
         Get the friction coefficient of the given joint(s).
 
         Args:
-            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, return the information for all
-                (actuated) joints.
+            joint_ids (int, list[int[M]], None): joint id, or list of joint ids. If None, return the information for
+                all (actuated) joints.
 
         Returns:
             if 1 joint:
                 float: friction coefficient of the given joint
             if multiple joints:
-                np.array[N]: friction coefficient for each specified joint
+                np.array[float[M]]: friction coefficient for each specified joint
         """
         if joint_ids is None:
             joint_ids = self.joints
@@ -856,14 +856,14 @@ class Robot(ControllableBody):
         Warning: Note that this is not automatically used in position, velocity, or torque control.
 
         Args:
-            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, return the information for all
-                (actuated) joints.
+            joint_ids (int, list[int[M]], None): joint id, or list of joint ids. If None, return the information for
+                all (actuated) joints.
 
         Returns:
             if 1 joint:
                 float: maximum force [N]
             if multiple joints:
-                np.array[N]: maximum force for each specified joint [N]
+                np.array[float[M]]: maximum force for each specified joint [N]
         """
         if joint_ids is None:
             joint_ids = self.joints
@@ -876,14 +876,14 @@ class Robot(ControllableBody):
         Warning: Note that this is not automatically used in position, velocity, or torque control.
 
         Args:
-            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, return the information for all
-                (actuated) joints.
+            joint_ids (int, list[int[M]], None): joint id, or list of joint ids. If None, return the information for
+                all (actuated) joints.
 
         Returns:
             if 1 joint:
                 float: maximum velocity [rad/s]
             if multiple joints:
-                np.array[N]: maximum velocities for each specified joint [rad/s]
+                np.array[float[M]]: maximum velocities for each specified joint [rad/s]
         """
         if joint_ids is None:
             joint_ids = self.joints
@@ -894,13 +894,14 @@ class Robot(ControllableBody):
         Return the name of the given joint(s).
 
         Args:
-            joint_ids (int, int[N]): joint id, or list of joint ids. If None, get the name of all (actuated) joints.
+            joint_ids (int, list[int[M]]): joint id, or list of joint ids. If None, get the name of all (actuated)
+                joints.
 
         Returns:
             if 1 joint:
                 str: name of the joint
             if multiple joints:
-                str[N]: name of each joint
+                list[str[M]]: name of each joint
         """
         if joint_ids is None:
             joint_ids = self.joints
@@ -911,14 +912,14 @@ class Robot(ControllableBody):
         Get the state of the given joint(s).
 
         Args:
-            joint_ids (int, int[N], None): id of the joint, or list of joint ids. If None, get the state of all
+            joint_ids (int, list[int], None): id of the joint, or list of joint ids. If None, get the state of all
                 (actuated) joints.
 
         Returns:
             for 1 joint:
                 float: joint position [rad]
                 float: joint velocity [rad/s]
-                np.array[6]: joint reaction forces [fx,fy,fz,mx,my,mz]
+                np.array[float[6]]: joint reaction forces [fx,fy,fz,mx,my,mz]
                 float: applied joint motor torque (during the last step)
             for multiple joints: list of each joint state
         """
@@ -935,14 +936,14 @@ class Robot(ControllableBody):
         See Also: :func:`~Robot.get_augmented_joint_positions`.
 
         Args:
-            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, get the position of all (actuated)
-                joints.
+            joint_ids (int, list[int[M]], None): joint id, or list of joint ids. If None, get the position of all
+                (actuated) joints.
 
         Returns:
             if 1 joint:
                 float: joint position [rad]
             if multiple joints:
-                np.array[N]: joint positions [rad]
+                np.array[float[M]]: joint positions [rad]
         """
         # check if cached
         if 'q' in self._state:
@@ -965,14 +966,14 @@ class Robot(ControllableBody):
         If the robot has a fixed base, this is the same as calling :func:`~Robot.get_joint_positions`.
 
         Args:
-            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, get the position of all (actuated)
-                joints.
+            joint_ids (int, list[int[M]], None): joint id, or list of joint ids. If None, get the position of all
+                (actuated) joints.
 
         Returns:
             if 1 joint:
-                float, np.array[6+1]: joint position(s) [rad]
+                float, np.array[float[6+1]]: joint position(s) [rad]
             if multiple joints:
-                np.array[N], np.array[6+N]: joint positions [rad]
+                np.array[float[M]], np.array[float[6+M]]: joint positions [rad]
         """
         q = self.get_joint_positions(joint_ids=joint_ids)
         if self.has_fixed_base():
@@ -988,14 +989,14 @@ class Robot(ControllableBody):
         See Also: :func:`~Robot.get_augmented_joint_velocities`.
 
         Args:
-            joint_ids (int, int[N], None): joint id, or list of joint ids. If None, get the velocity of all (actuated)
-                joints.
+            joint_ids (int, list[int[N]], None): joint id, or list of joint ids. If None, get the velocity of all
+                (actuated) joints.
 
         Returns:
             if 1 joint:
                 float: joint velocity [rad/s]
             if multiple joints:
-                np.array[N]: joint velocities [rad/s]
+                np.array[float[N]]: joint velocities [rad/s]
         """
         # check if cached
         if 'dq' in self._state:
@@ -1023,9 +1024,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 joint:
-                float, np.array[6+1]: joint velocity [rad/s]
+                float, np.array[float[6+1]]: joint velocity [rad/s]
             if multiple joints:
-                np.array[N], np.array[6+N]: joint velocities [rad/s]
+                np.array[float[N]], np.array[float[6+N]]: joint velocities [rad/s]
         """
         dq = self.get_joint_velocities(joint_ids=joint_ids)
         if self.has_fixed_base():
@@ -1048,7 +1049,7 @@ class Robot(ControllableBody):
     #         if 1 joint:
     #             float: joint acceleration [rad/s^2]
     #         if multiple joints:
-    #             np.array[N]: joint accelerations [rad/s^2]
+    #             np.array[float[N]]: joint accelerations [rad/s^2]
     #     """
     #     # check joint id
     #     if joint_ids is None:
@@ -1084,7 +1085,7 @@ class Robot(ControllableBody):
             if 1 joint:
                 float: joint acceleration [rad/s^2]
             if multiple joints:
-                np.array[N]: joint accelerations [rad/s^2]
+                np.array[float[N]]: joint accelerations [rad/s^2]
         """
         # check if cached
         if 'ddq' in self._state:
@@ -1150,9 +1151,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 joint:
-                float, np.array[6+1]: joint acceleration [rad/s^2]
+                float, np.array[float[6+1]]: joint acceleration [rad/s^2]
             if multiple joints:
-                np.array[N], np.array[6+N]: joint accelerations [rad/s^2]
+                np.array[float[N]], np.array[float[6+N]]: joint accelerations [rad/s^2]
         """
         ddq = self.get_joint_accelerations(joint_ids=joint_ids)
         if self.has_fixed_base():
@@ -1166,14 +1167,14 @@ class Robot(ControllableBody):
         it will always return [0,0,0,0,0,0].
 
         Args:
-            joint_ids (int, int[N], None): unique id of the joint, or list of joint ids. If None, get the joint
+            joint_ids (int, list[int[N]], None): unique id of the joint, or list of joint ids. If None, get the joint
                 reaction forces of all (actuated) joints.
 
         Returns:
             if 1 joint:
-                np.array[6]: joint reaction force (fx,fy,fz,mx,my,mz) [N,Nm]
+                np.array[float[6]]: joint reaction force (fx,fy,fz,mx,my,mz) [N,Nm]
             if multiple joints:
-                np.array[N,6]: joint reaction forces [N, Nm]
+                np.array[float[N,6]]: joint reaction forces [N, Nm]
         """
         if joint_ids is None:
             joint_ids = self.joints
@@ -1184,14 +1185,14 @@ class Robot(ControllableBody):
         Get the applied torque on the given joint(s).
 
         Args:
-            joint_ids (int, int[N], None): id of the joint, or list of joint ids. If None, get the joint torques of
-                all (actuated) joints.
+            joint_ids (int, list[int[N]], None): id of the joint, or list of joint ids. If None, get the joint torques
+                of all (actuated) joints.
 
         Returns:
             if 1 joint:
                 float: torque [Nm]
             if multiple joints:
-                np.array[N]: torques associated to the given joints [Nm]
+                np.array[float[N]]: torques associated to the given joints [Nm]
         """
         if joint_ids is None:
             joint_ids = self.joints
@@ -1209,7 +1210,7 @@ class Robot(ControllableBody):
             if 1 joint:
                 float: joint power [W]
             if multiple joints:
-                np.array[N]: power at each joint [W]
+                np.array[float[N]]: power at each joint [W]
         """
         if joint_ids is None:
             joint_ids = self.joints
@@ -1222,11 +1223,11 @@ class Robot(ControllableBody):
 
         Args:
             joint_ids (int, int[N], None): joint id, or list of joint ids. If None, get all the actuated joints.
-            positions (float, np.array[N]): desired position, or list of desired positions [rad]
-            velocities (float, np.array[N], None): desired velocity, or list of desired velocities [rad/s]
-            kp (float, np.array[N], None): position gain(s)
-            kd (float, np.array[N], None): velocity gain(s)
-            forces (float, np.array[N], None, bool): maximum motor torques / forces. If True, it will apply the
+            positions (float, np.array[float[N]]): desired position, or list of desired positions [rad]
+            velocities (float, np.array[float[N]], None): desired velocity, or list of desired velocities [rad/s]
+            kp (float, np.array[float[N]], None): position gain(s)
+            kd (float, np.array[float[N]], None): velocity gain(s)
+            forces (float, np.array[float[N]], None, bool): maximum motor torques / forces. If True, it will apply the
                 default maximum force values.
         """
         if joint_ids is None:
@@ -1240,9 +1241,9 @@ class Robot(ControllableBody):
         Set the velocity of the given joint(s) (using velocity control).
 
         Args:
-            velocities (float, np.array[N]): desired velocity, or list of desired velocities [rad/s]
+            velocities (float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
             joint_ids (int, int[N], None): joint id, or list of joint ids. If None, get all the actuated joints.
-            forces (float, np.array[N], None, bool): maximum motor torques / forces. If True, it will apply the
+            forces (float, np.array[float[N]], None, bool): maximum motor torques / forces. If True, it will apply the
                 default maximum force values.
             max_velocity (float, bool, None): if True, it will make sure that the given velocity(ies) are below their
                 authorized maximum value(s) (inferred from the URDF, or set previously by the user). If you already
@@ -1259,8 +1260,8 @@ class Robot(ControllableBody):
         dynamic which given the joint accelerations compute the joint torques to be applied.
 
         Args:
-            accelerations (float, np.array[N]): desired joint acceleration, or list of desired joint accelerations
-                [rad/s^2]
+            accelerations (float, np.array[float[N]]): desired joint acceleration, or list of desired joint
+                accelerations [rad/s^2]
             joint_ids (int, int[N], None): joint id, or list of joint ids. If None, get all the actuated joints.
             max_acceleration (bool, float, None): if True, it will make sure that the given acceleration(s) are below
                 their authorized maximum value(s). If you already did the check outside the method or if you don't want
@@ -1302,8 +1303,8 @@ class Robot(ControllableBody):
         Set the torque to the given joint(s) (using force/torque control).
 
         Args:
-            torques (float, np.array[N], None): desired torque(s) to apply to the joint(s) [N]. If None, it will apply
-                a torque of 0 to the given joint(s).
+            torques (float, np.array[float[N]], None): desired torque(s) to apply to the joint(s) [N]. If None, it will
+                apply a torque of 0 to the given joint(s).
             joint_ids (int, int[N], None): joint id, or list of joint ids. If None, it will set the joint torques to
                 all (actuated) joints.
         """
@@ -1339,14 +1340,16 @@ class Robot(ControllableBody):
             joint_ids (int, int[N]): joint id, or list of joint ids
             control_mode (int): sim.VELOCITY_CONTROL (=0), sim.TORQUE_CONTROL (=1), sim.POSITION_CONTROL (=2)
             kwargs:
-                positions (float, np.array[N]) (optional): target position of the joint (in position control) [rad]
-                velocities (float, np.array[N]) (optional): target velocity of the joint (in position/velocity
+                positions (float, np.array[float[N]]) (optional): target position of the joint (in position control)
+                    [rad]
+                velocities (float, np.array[float[N]]) (optional): target velocity of the joint (in position/velocity
                     control) [rad/s]
-                forces (float, np.array[N]) (optional): in position/velocity control, this is the maximum force used
-                    to reach the target value. In torque control, this is the force/torque to be applied.
-                kp (float, np.array[N]) (optional): position gain :math:`Kp`
-                kd (float, np.array[N]) (optional): velocity gain :math:`Kd`
-                maxVelocity (float, np.array[N]) (optional): in position control, this limits the velocity to a maximum.
+                forces (float, np.array[float[N]]) (optional): in position/velocity control, this is the maximum force
+                    used to reach the target value. In torque control, this is the force/torque to be applied.
+                kp (float, np.array[float[N]]) (optional): position gain :math:`Kp`
+                kd (float, np.array[float[N]]) (optional): velocity gain :math:`Kd`
+                maxVelocity (float, np.array[float[N]]) (optional): in position control, this limits the velocity to a
+                    maximum.
         """
         self.sim.set_joint_motor_control(self.id, joint_ids, control_mode, **kwargs)
 
@@ -1367,8 +1370,8 @@ class Robot(ControllableBody):
         Reset the state of the robot.
 
         Args:
-            q (int, float, np.array[N], None): joint position(s).
-            dq (int, float, np.array[N], None): joint velocity(ies).
+            q (int, float, np.array[float[N]], None): joint position(s).
+            dq (int, float, np.array[float[N]], None): joint velocity(ies).
             joint_ids (int, int[N], None): joint id, or list of joint ids. If None, it will disable the motors of
                 all actuated joints.
 
@@ -1465,8 +1468,8 @@ class Robot(ControllableBody):
                 list:
                     str: name of each joint configuration.
             else:
-                np.array[M]: joint ids to move.
-                np.array[M]: joint positions.
+                np.array[float[M]]: joint ids to move.
+                np.array[float[M]]: joint positions.
         """
         pass
 
@@ -1482,7 +1485,7 @@ class Robot(ControllableBody):
         while the q index goes from 0 to the number of links associated with actuated joints.
 
         Args:
-            link (str, int, list of str/int, None): if str, it will get the link id associated to the given name.
+            link (str, int, list[str,int], None): if str, it will get the link id associated to the given name.
                 If int, it will get the link id associated to the given q index. If it is a list of str and/or int,
                 it will get the corresponding link ids. If None, it will return all the link ids (associated to
                 actuated joints).
@@ -1491,7 +1494,7 @@ class Robot(ControllableBody):
             if 1 link:
                 int: link id
             if multiple links:
-                int[N]: link ids
+                list[int]: link ids
         """
         if link is None:
             return self.joints
@@ -1516,14 +1519,14 @@ class Robot(ControllableBody):
         Return the parent link of the given link(s)
 
         Args:
-            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the state of all links
+            link_ids (int, list[int], None): link id, or list of desired link ids. If None, get the state of all links
                 associated to actuated joints.
 
         Returns:
             if 1 link:
                 int: link id
             if multiple links:
-                int[N]: link ids
+                list[int]: link ids
         """
         if isinstance(link_ids, int):
             return self.sim.get_joint_info(self.id, link_ids)[-1]
@@ -1536,12 +1539,13 @@ class Robot(ControllableBody):
         Return the link ids that constitute the chain(s) that go(es) from `fromLinkId` to `toLinkId`.
 
         Args:
-            to_link_id (int, int[M]): link id(s) that end(s) the chain(s).
-            from_link_id (int, int[M], None): link id(s) that start(s) the chain(s). `fromLinkId` has to be a parent or
-                ancestor of the `toLinkId`. If None, it will return the chain going from the base to the `toLinkId`.
+            to_link_id (int, list[int[M]]): link id(s) that end(s) the chain(s).
+            from_link_id (int, list[int[M]], None): link id(s) that start(s) the chain(s). `from_link_id` has to be a
+                parent or ancestor of the `to_link_id`. If None, it will return the chain going from the base to the
+                `to_link_id`.
 
         Returns:
-            int[N], [int[N]]: chain(s) containing the link ids.
+            list[int], list[list[int]]: chain(s) containing the link ids.
         """
         if from_link_id is None:
             if isinstance(to_link_id, collections.Iterable):
@@ -1578,15 +1582,15 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                [0] np.array[3]: Cartesian position of center of mass
-                [1] np.array[4]: Cartesian orientation of center of mass
-                [2] np.array[3]: local position offset of inertial frame (CoM) expressed in the URDF link frame
-                [3] np.array[4]: local orientation (quat. [x,y,z,w]) offset of the inertial frame expressed in URDF
-                    link frame
-                [4] np.array[3]: world position of the URDF link frame
-                [5] np.array[4]: world orientation of the URDF link frame
-                [6] np.array[3]: Cartesian world linear velocity
-                [7] np.array[3]: Cartesian world angular velocity
+                [0] np.array[float[3]]: Cartesian position of center of mass
+                [1] np.array[float[4]]: Cartesian orientation of center of mass
+                [2] np.array[float[3]]: local position offset of inertial frame (CoM) expressed in the URDF link frame
+                [3] np.array[float[4]]: local orientation (quat. [x,y,z,w]) offset of the inertial frame expressed in
+                    URDF link frame
+                [4] np.array[float[3]]: world position of the URDF link frame
+                [5] np.array[float[4]]: world orientation of the URDF link frame
+                [6] np.array[float[3]]: Cartesian world linear velocity
+                [7] np.array[float[3]]: Cartesian world angular velocity
             if multiple links: list of above
         """
         if isinstance(link_ids, int):  # one link
@@ -1608,7 +1612,7 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[3]: local position offset of inertial frame (CoM) expressed in the URDF link frame
+                np.array[float[3]]: local position offset of inertial frame (CoM) expressed in the URDF link frame
             if multiple links: list of above
         """
         if isinstance(link_ids, int):
@@ -1626,8 +1630,8 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[4]: local orientation (quaternion [x,y,z,w]) offset of inertial frame (CoM) expressed in the
-                    URDF link frame
+                np.array[float[4]]: local orientation (quaternion [x,y,z,w]) offset of inertial frame (CoM) expressed
+                    in the URDF link frame
             if multiple links: list of above
         """
         if isinstance(link_ids, int):
@@ -1639,14 +1643,14 @@ class Robot(ControllableBody):
         Return the name of the given link(s).
 
         Args:
-            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the name of all links
-                associated to actuated joints.
+            link_ids (int, list[int[N]], None): link id, or list of desired link ids. If None, get the name of all
+                links associated to actuated joints.
 
         Returns:
             if 1 link:
                 str: link name
             if multiple links:
-                str[N]: link names
+                list[str[N]]: link names
         """
         if link_ids is None:
             link_ids = self.joints
@@ -1664,7 +1668,7 @@ class Robot(ControllableBody):
             if 1 link:
                 float: mass of the given link
             else:
-                np.array[N]: mass of each link
+                np.array[float[N]]: mass of each link
         """
         if isinstance(link_ids, int):
             return self.sim.get_dynamics_info(self.id, link_ids)[0]
@@ -1683,11 +1687,11 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[3]: the link frame position in the world space
-                np.array[4]: Cartesian orientation of the link frame [x,y,z,w]
+                np.array[float[3]]: the link frame position in the world space
+                np.array[float[4]]: Cartesian orientation of the link frame [x,y,z,w]
             if multiple links:
-                np.array[N*3], np.array[N,3]: link frame position of each link in world space
-                np.array[N*4], np.array[N,4]: orientation of each link frame [x,y,z,w]
+                np.array[float[N*3]], np.array[float[N,3]]: link frame position of each link in world space
+                np.array[float[N*4]], np.array[float[N,4]]: orientation of each link frame [x,y,z,w]
 
         """
         positions, orientations = self.sim.get_link_frames(body_id=self.id, link_ids=link_ids)
@@ -1706,9 +1710,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[3]: the link frame position in the world space
+                np.array[float[3]]: the link frame position in the world space
             if multiple links:
-                np.array[N*3], np.array[N,3]: link frame position of each link in world space
+                np.array[float[N*3]], np.array[float[N,3]]: link frame position of each link in world space
         """
         return self.get_link_frames(link_ids=link_ids, flatten=flatten)[0]
 
@@ -1723,9 +1727,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[4]: Cartesian orientation of the link frame [x,y,z,w]
+                np.array[float[4]]: Cartesian orientation of the link frame [x,y,z,w]
             if multiple links:
-                np.array[N*4], np.array[N,4]: orientation of each link frame [x,y,z,w]
+                np.array[float[N*4]], np.array[float[N,4]]: orientation of each link frame [x,y,z,w]
         """
         return self.get_link_frames(link_ids=link_ids, flatten=flatten)[1]
 
@@ -1740,9 +1744,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[3]: the link CoM position in the world space
+                np.array[float[3]]: the link CoM position in the world space
             if multiple links:
-                np.array[N*3], np.array[N,3]: CoM position of each link in world space
+                np.array[float[N*3]], np.array[float[N,3]]: CoM position of each link in world space
         """
         # check if cached
         if 'link_pos' in self._state:
@@ -1780,9 +1784,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[3]: the link CoM position
+                np.array[float[3]]: the link CoM position
             if multiple links:
-                np.array[N*3], np.array[N,3]: CoM position of each link
+                np.array[float[N*3]], np.array[float[N,3]]: CoM position of each link
         """
         p1 = self.get_link_world_positions(link_ids, flatten=False)
         p0 = self.get_base_position() if wrt_link_id is None or wrt_link_id == -1 \
@@ -1807,9 +1811,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[4]: Cartesian orientation of the link CoM [x,y,z,w]
+                np.array[float[4]]: Cartesian orientation of the link CoM [x,y,z,w]
             if multiple links:
-                np.array[N*4], np.array[N,4]: CoM orientation of each link [x,y,z,w]
+                np.array[float[N*4]], np.array[float[N,4]]: CoM orientation of each link [x,y,z,w]
         """
         if isinstance(link_ids, int):
             return self.sim.get_link_state(self.id, link_ids)[1]
@@ -1832,9 +1836,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[4]: Cartesian orientation of the link CoM [x,y,z,w]
+                np.array[float[4]]: Cartesian orientation of the link CoM [x,y,z,w]
             if multiple links:
-                np.array[N*4], np.array[N,4]: CoM orientation of each link [x,y,z,w]
+                np.array[float[N*4]], np.array[float[N,4]]: CoM orientation of each link [x,y,z,w]
         """
         q1 = self.get_link_world_orientations(link_ids)
         if wrt_link_id is None or wrt_link_id == -1:
@@ -1865,9 +1869,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[7]: Cartesian pose of the link CoM
+                np.array[float[7]]: Cartesian pose of the link CoM
             if multiple links:
-                np.array[N*7], np.array[N,7]: CoM pose of each link
+                np.array[float[N*7]], np.array[float[N,7]]: CoM pose of each link
         """
         # get positions and orientations
         positions = self.get_link_world_positions(link_ids=link_ids, flatten=False)  # (N,3)
@@ -1892,9 +1896,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[3]: linear velocity of the link in the Cartesian world space
+                np.array[float[3]]: linear velocity of the link in the Cartesian world space
             if multiple links:
-                np.array[N*3], np.array[N,3]: linear velocity of each link
+                np.array[float[N*3]], np.array[float[N,3]]: linear velocity of each link
         """
         if isinstance(link_ids, int):
             return np.asarray(self.sim.get_link_state(self.id, link_ids, compute_velocity=True)[6])
@@ -1916,9 +1920,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[3]: angular velocity of the link in the Cartesian world space
+                np.array[float[3]]: angular velocity of the link in the Cartesian world space
             if multiple links:
-                np.array[N*3], np.array[N,3]: angular velocity of each link
+                np.array[float[N*3]], np.array[float[N,3]]: angular velocity of each link
         """
         if isinstance(link_ids, int):
             return np.asarray(self.sim.get_link_state(self.id, link_ids, compute_velocity=True)[7])
@@ -1941,9 +1945,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[6]: linear and angular velocity of the link in the Cartesian world space
+                np.array[float[6]]: linear and angular velocity of the link in the Cartesian world space
             if multiple links:
-                np.array[N*6], np.array[N,6]: linear and angular velocity of each link
+                np.array[float[N*6]], np.array[float[N,6]]: linear and angular velocity of each link
         """
         # check if cached
         if 'link_vel' in self._state:
@@ -1983,9 +1987,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[6]: angular and linear velocity of the link in the Cartesian world space
+                np.array[float[6]]: angular and linear velocity of the link in the Cartesian world space
             if multiple links:
-                np.array[N*6], np.array[N,6]: angular and linear velocity of each link
+                np.array[float[N*6]], np.array[float[N,6]]: angular and linear velocity of each link
         """
         velocities = self.get_link_world_velocities(link_ids=link_ids, flatten=False)
 
@@ -2015,9 +2019,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[3]: the linear velocity of the given link wrt to the other link
+                np.array[float[3]]: the linear velocity of the given link wrt to the other link
             if multiple links:
-                np.array[N*3], np.array[N,3]: linear velocity of each link wrt to the other link(s)
+                np.array[float[N*3]], np.array[float[N,3]]: linear velocity of each link wrt to the other link(s)
         """
         v1 = self.get_link_world_linear_velocities(link_ids, flatten=False)
         v0 = self.get_base_linear_velocity() if wrt_link_id is None or wrt_link_id == -1 \
@@ -2040,9 +2044,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[3]: the angular velocity of the given link wrt to the other link
+                np.array[float[3]]: the angular velocity of the given link wrt to the other link
             if multiple links:
-                np.array[N*3], np.array[N,3]: angular velocity of each link wrt to the other link(s)
+                np.array[float[N*3]], np.array[float[N,3]]: angular velocity of each link wrt to the other link(s)
         """
         w1 = self.get_link_world_angular_velocities(link_ids, flatten=False)
         w0 = self.get_base_angular_velocity() if wrt_link_id is None or wrt_link_id == -1 \
@@ -2065,9 +2069,10 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[6]: the linear and angular velocity of the given link wrt to the other link
+                np.array[float[6]]: the linear and angular velocity of the given link wrt to the other link
             if multiple links:
-                np.array[N*6], np.array[N,6]: linear and angular velocity of each link wrt to the other link(s)
+                np.array[float[N*6]], np.array[float[N,6]]: linear and angular velocity of each link wrt to the other
+                    link(s)
         """
         v1 = self.get_link_world_velocities(link_ids, flatten=False)
         v0 = self.get_base_velocity() if wrt_link_id is None or wrt_link_id == -1 \
@@ -2140,9 +2145,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[6]: linear and angular acceleration of the link in the Cartesian world space
+                np.array[float[6]]: linear and angular acceleration of the link in the Cartesian world space
             if multiple links:
-                np.array[N*6], np.array[N,6]: linear and angular acceleration of each link
+                np.array[float[N*6]], np.array[float[N,6]]: linear and angular acceleration of each link
 
         References:
             - [1] "Rigid Body Dynamics Algorithms" (chap 2.11), Featherstone, 2008
@@ -2219,9 +2224,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[3]: linear acceleration of the link in the Cartesian world space
+                np.array[float[3]]: linear acceleration of the link in the Cartesian world space
             if multiple links:
-                np.array[N*3], np.array[N,3]: linear acceleration of each link
+                np.array[float[N*3]], np.array[float[N,3]]: linear acceleration of each link
         """
         accelerations = self.get_link_world_accelerations(link_ids=link_ids, flatten=False)
         if isinstance(link_ids, int):
@@ -2244,9 +2249,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[3]: angular acceleration of the link in the Cartesian world space
+                np.array[float[3]]: angular acceleration of the link in the Cartesian world space
             if multiple links:
-                np.array[N*3], np.array[N,3]: angular acceleration of each link
+                np.array[float[N*3]], np.array[float[N,3]]: angular acceleration of each link
         """
         accelerations = self.get_link_world_accelerations(link_ids=link_ids, flatten=False)
         if isinstance(link_ids, int):
@@ -2306,9 +2311,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[6]: angular and linear acceleration of the link in the Cartesian world space
+                np.array[float[6]]: angular and linear acceleration of the link in the Cartesian world space
             if multiple links:
-                np.array[N*6], np.array[N,6]: angular and linear acceleration of each link
+                np.array[float[N*6]], np.array[float[N,6]]: angular and linear acceleration of each link
         """
         accelerations = self.get_link_world_accelerations(link_ids=link_ids, flatten=False)
 
@@ -2342,9 +2347,9 @@ class Robot(ControllableBody):
                     int: unique id of body B
                     int: link index of body A (-1 for base, this should be the same as the given link)
                     int: link index of body B (-1 for base)
-                    np.array[3]: contact position on A (in Cartesian world coordinates)
-                    np.array[3]: contact position on B (in Cartesian world coordinates)
-                    np.array[3]: contact normal on B pointing towards A
+                    np.array[float[3]]: contact position on A (in Cartesian world coordinates)
+                    np.array[float[3]]: contact position on B (in Cartesian world coordinates)
+                    np.array[float[3]]: contact normal on B pointing towards A
                     float: contact distance (positive for separation and negative for penetration)
                     float: normal force applied during the last simulation step
             if multiple links: list of above
@@ -2363,9 +2368,9 @@ class Robot(ControllableBody):
 
         Returns:
             if 1 link:
-                np.array[3]: local inertia (diagonal vector) of the given link
+                np.array[float[3]]: local inertia (diagonal vector) of the given link
             else:
-                np.array[N]: mass of each link
+                np.array[float[N]]: mass of each link
         """
         if isinstance(link_ids, int):
             return self.sim.get_dynamics_info(body_id=self.id, link_id=link_ids)[2]
@@ -2382,9 +2387,9 @@ class Robot(ControllableBody):
 
         Args:
             link_ids (int, int[N]): link id, or list of desired link ids.
-            positions (np.array[3], [np.array[3]], np.array[N,3]): desired link position(s).
-            orientations (np.array[4], list of np.array[4], np.array[N,4]): desired link orientation(s) (expressed as
-                quaternions [x,y,z,w])
+            positions (np.array[float[3]], list[np.array[float[3]]], np.array[float[N,3]]): desired link position(s).
+            orientations (np.array[float[4]], list[np.array[float[4]]], np.array[float[N,4]]): desired link
+                orientation(s) (expressed as quaternions [x,y,z,w])
         """
         # TODO: think when setting the position of multiple links where some joints are shared (need to use the
         #  null-space)
@@ -2483,12 +2488,12 @@ class Robot(ControllableBody):
         Return the Homogeneous transform matrix given the position vector and the orientation.
 
         Args:
-            position (np.array[3]): position vector
-            orientation (np.array[4], np.array[3,3], np.array[3]): orientation (expressed as a quaternion [x,y,z,w],
-                3x3 rotation matrix, or roll-pitch-yaw angles).
+            position (np.array[float[3]]): position vector
+            orientation (np.array[float[4]], np.array[float[3,3]], np.array[float[3]]): orientation (expressed as a
+                quaternion [x,y,z,w], 3x3 rotation matrix, or roll-pitch-yaw angles).
 
         Returns:
-            np.array[4,4]: homogeneous matrix
+            np.array[float[4,4]],4]: homogeneous matrix
         """
         return get_homogeneous_transform(position, orientation)
 
@@ -2510,14 +2515,14 @@ class Robot(ControllableBody):
 
         Args:
             link_id (int): link id.
-            q (np.array[N], None): joint positions of size N, where N is the number of DoFs. If None, it will compute q
-                based on the current joint positions.
-            local_position (None, np.array[3]): the point on the specified link to compute the Jacobian (in link local
-                coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+            q (np.array[float[N]], None): joint positions of size N, where N is the number of DoFs. If None, it will
+                compute q based on the current joint positions.
+            local_position (None, np.array[float[3]]): the point on the specified link to compute the Jacobian (in link
+                local coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
 
         Returns:
-            np.array[6,N], np.array[6,(6+N)]: full geometric (linear and angular) Jacobian matrix. The number of
-                columns depends if the base is fixed or floating.
+            np.array[float[6,N]], np.array[float[6,6+N]]: full geometric (linear and angular) Jacobian matrix. The
+                number of columns depends if the base is fixed or floating.
         """
         if q is None:
             q = self.get_joint_positions()
@@ -2548,14 +2553,14 @@ class Robot(ControllableBody):
 
         Args:
             link_id (int): link id
-            q (np.array[N]): joint positions of size N, where N is the number of DoFs. If None, it will compute q based
-                on the current joint positions.
+            q (np.array[float[N]]): joint positions of size N, where N is the number of DoFs. If None, it will compute
+                q based on the current joint positions.
             local_position: the point on the specified link to compute the Jacobian (in link local coordinates around
                 its center of mass). If None, it will use the CoM position (in the link frame).
 
         Returns:
-            np.array[3,N], np.array[3,(6+N)]: full linear geometric Jacobian matrix. The number of columns depends if
-                the base is fixed or floating.
+            np.array[float[3,N]], np.array[float[3,6+N]]: full linear geometric Jacobian matrix. The number of
+                columns depends if the base is fixed or floating.
         """
         return self.get_jacobian(link_id, q, local_position)[:3]
 
@@ -2572,14 +2577,14 @@ class Robot(ControllableBody):
 
         Args:
             link_id (int): link id
-            q (np.array[N]): joint positions of size N, where N is the number of DoFs. If None, it will compute q based
-                on the current joint positions.
+            q (np.array[float[N]]): joint positions of size N, where N is the number of DoFs. If None, it will compute
+                q based on the current joint positions.
             local_position: the point on the specified link to compute the Jacobian (in link local coordinates around
                 its center of mass). If None, it will use the CoM position (in the link frame).
 
         Returns:
-            np.array[3,N], np.array[3,(6+N)]: full angular geometric Jacobian matrix. The number of columns depends if
-                the base is fixed or floating.
+            np.array[float[3,N]], np.array[float[3,6+N]]: full angular geometric Jacobian matrix. The number of
+                columns depends if the base is fixed or floating.
         """
         return self.get_jacobian(link_id, q, local_position)[3:]
 
@@ -2592,14 +2597,14 @@ class Robot(ControllableBody):
 
         Args:
             link_id (int): link id.
-            q (np.array[N], None): joint positions of size N, where N is the number of DoFs. If None, it will compute q
-                based on the current joint positions.
-            local_position (None, np.array[3]): the point on the specified link to compute the Jacobian (in link local
-                coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+            q (np.array[float[N]], None): joint positions of size N, where N is the number of DoFs. If None, it will
+                compute q based on the current joint positions.
+            local_position (None, np.array[float[3]]): the point on the specified link to compute the Jacobian (in link
+                local coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
 
         Returns:
-            np.array[6,N], np.array[6,(6+N)]: spatial Jacobian matrix. The number of columns depends if the base is
-                fixed or floating.
+            np.array[float[6,N]], np.array[float[6,6+N]]: spatial Jacobian matrix. The number of columns depends if
+                the base is fixed or floating.
         """
         jacobian = self.get_jacobian(link_id=link_id, q=q, local_position=local_position)
         return np.vstack((jacobian[3:], jacobian[:3]))
@@ -2612,10 +2617,10 @@ class Robot(ControllableBody):
         Warnings: :math:`T` is singular when the pitch angle :math:`\theta_p = \pm \frac{\pi}{2}`
 
         Args:
-            rpy_angle (np.array[3]): RPY Euler angles [rad]
+            rpy_angle (np.array[float[3]]): RPY Euler angles [rad]
 
         Returns:
-            np.array[3,3]: Jacobian matrix that maps RPY angle rates to angular velocities.
+            np.array[float[3,3]]: Jacobian matrix that maps RPY angle rates to angular velocities.
         """
         r, p, y = rpy_angle
         T = np.array([[1., 0., np.sin(p)],
@@ -2631,10 +2636,10 @@ class Robot(ControllableBody):
         Warnings: :math:`T` is singular when the angle associated with `Y` is :math:`0` or :math:`\pi`.
 
         Args:
-            zyz_angle (np.array[3]): ZYZ Euler angles [rad]
+            zyz_angle (np.array[float[3]]): ZYZ Euler angles [rad]
 
         Returns:
-            np.array[3,3]: Jacobian matrix that maps ZYZ angle rates to angular velocities.
+            np.array[float[3,3]]: Jacobian matrix that maps ZYZ angle rates to angular velocities.
         """
         z, y = zyz_angle[:2]
         T = np.array([[0., -np.sin(z), np.cos(z) * np.sin(y)],
@@ -2669,12 +2674,12 @@ class Robot(ControllableBody):
                 Euler angles then T is singular when the pitch angle :math:`\theta_p = \pm \frac{\pi}{2}.
 
         Args:
-            jacobian (np.array[6,N], np.array[6,6+N]): full geometric Jacobian.
-            rpy_angle (np.array[3]): RPY Euler angles
+            jacobian (np.array[float[6,N]], np.array[float[6,6+N]]): full geometric Jacobian.
+            rpy_angle (np.array[float[3]]): RPY Euler angles
 
         Returns:
-            np.array[6,N], np.foat[6,(6+N)]: the full analytical Jacobian. The number of columns depends if the base
-                is fixed or floating.
+            np.array[float[6,N]], np.array[float[6,6+N]]: the full analytical Jacobian. The number of columns
+                depends if the base is fixed or floating.
         """
         T = self.get_jacobian_derivative_rpy_to_angular_velocity(rpy_angle)
         Tinv = np.linalg.inv(T)
@@ -2693,10 +2698,10 @@ class Robot(ControllableBody):
         .. math:: \frac{d}{dq} J(q)
 
         Args:
-            jacobian (np.array[6,N], np.array[6,6+N]): jacobian matrix J.
+            jacobian (np.array[float[6,N]], np.array[float[6,6+N]]): jacobian matrix J.
 
         Returns:
-            np.array[6,N,N]: derivative of the Jacobian wrt joint values (dJ/dq)
+            np.array[float[6,N,N]]: derivative of the Jacobian wrt joint values (dJ/dq)
 
         References:
             - [1] "Symbolic differentiation of the velocity mapping for a serial kinematic chain", Bruyninck et al.,
@@ -2740,13 +2745,13 @@ class Robot(ControllableBody):
         .. math:: \dot{J}(q) \sim \frac{ J(q(t)) - J(q(t-dt)) }{dt}
 
         Args:
-            prev_jacobian (np.array[6,N], np.array[6,(6+N)]): previous Jacobian.
-            curr_jacobian (np.array[6,N], np.array[6,(6+N)]): current Jacobian.
+            prev_jacobian (np.array[float[6,N]], np.array[float[6,6+N]]): previous Jacobian.
+            curr_jacobian (np.array[float[6,N]], np.array[float[6,6+N]]): current Jacobian.
             dt (float): time difference (should be bigger than 0).
 
         Returns:
-            np.array[6,N], np.array[6,(6+N)]: time derivative of the Jacobian matrix. The number of columns depends
-                if the base is fixed or floating.
+            np.array[float[6,N]], np.array[float[6,6+N]]: time derivative of the Jacobian matrix. The number of columns
+                depends if the base is fixed or floating.
         """
         return (curr_jacobian - prev_jacobian) / dt
 
@@ -2761,12 +2766,14 @@ class Robot(ControllableBody):
 
         Args:
             link_id (int): link id.
-            local_position (None, np.array[3]): the point on the specified link to compute the Jacobian (in link local
-                coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+            local_position (np.array[float[3]], None): the point on the specified link to compute the Jacobian (in
+                link local coordinates around its center of mass). If None, it will use the CoM position (in the link
+                frame).
 
         Returns:
-            np.array[6,N], np.array[6,(6+N)]: time derivative of the Jacobian matrix (which is the concatenation of
-                the linear and angular parts). The number of columns depends if the base is fixed or floating.
+            np.array[float[6,N]], np.array[float[6,6+N]]: time derivative of the Jacobian matrix (which is the
+                concatenation of the linear and angular parts). The number of columns depends if the base is fixed or
+                floating.
         """
         # convert type if necessary
         local_position = None if local_position is None else tuple(local_position)
@@ -2824,12 +2831,13 @@ class Robot(ControllableBody):
 
         Args:
             link_id (int): link id.
-            local_position (None, np.array[3]): the point on the specified link to compute the Jacobian (in link local
-                coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+            local_position (None, np.array[float[3]]): the point on the specified link to compute the Jacobian (in
+                link local coordinates around its center of mass). If None, it will use the CoM position (in the link
+                frame).
 
         Returns:
-            np.array[6,N], np.array[6,(6+N)]: time derivative of the spatial Jacobian matrix. The number of columns
-                depends if the base is fixed or floating.
+            np.array[float[6,N]], np.array[float[6,6+N]]: time derivative of the spatial Jacobian matrix. The number
+                of columns depends if the base is fixed or floating.
         """
         jacobian = self.get_jacobian_time_derivative(link_id=link_id, local_position=local_position)
         return np.vstack((jacobian[3:], jacobian[:3]))
@@ -2841,11 +2849,11 @@ class Robot(ControllableBody):
         method is [1].
 
         Args:
-            q (np.array[N]): joint positions of size N, where N is the number of DoFs. If None, it will compute q
-                based on the current joint positions.
+            q (np.array[float[N]]): joint positions of size N, where N is the number of DoFs. If None, it will compute
+                q based on the current joint positions.
 
         Returns:
-            np.array[6,N]: CoM Jacobian
+            np.array[float[6,N]]: CoM Jacobian
 
         References:
             - [1] "Whole-body cooperative balancing of humanoid robot using COG Jacobian", Sugihara et al., IROS, 2002
@@ -2908,11 +2916,11 @@ class Robot(ControllableBody):
         Note that :math:`T` is singular when the pitch angle :math:`\theta_p = \pm \frac{\pi}{2}`.
 
         Args:
-            rpy_angle (np.array[3]): RPY Euler angles [rad]
-            dRPY (np.array[3]): time derivative of RPY Euler angles [rad/s]
+            rpy_angle (np.array[float[3]]): RPY Euler angles [rad]
+            dRPY (np.array[float[3]]): time derivative of RPY Euler angles [rad/s]
 
         Returns:
-            np.array[3]: angular velocities [rad/s]
+            np.array[float[3]]: angular velocities [rad/s]
         """
         T = self.get_jacobian_derivative_rpy_to_angular_velocity(rpy_angle)
         return T.dot(dRPY)
@@ -2927,11 +2935,11 @@ class Robot(ControllableBody):
         corresponding angular velocities :math:`\omega` are not defined.
 
         Args:
-            rpy_angle (np.array[3]): RPY Euler angles [rad]
-            angular_velocity (np.array[3]): angular velocities [rad/s]
+            rpy_angle (np.array[float[3]]): RPY Euler angles [rad]
+            angular_velocity (np.array[float[3]]): angular velocities [rad/s]
 
         Returns:
-            np.array[3]: time derivative of RPY Euler angles [rad/s]
+            np.array[float[3]]: time derivative of RPY Euler angles [rad/s]
 
         Raises:
             LinAlgError: if singular configuration.
@@ -2946,10 +2954,10 @@ class Robot(ControllableBody):
         Given the Jacobian, it returns :math:`JJ^T`. This relation is used in many places in robotics.
 
         Args:
-            jacobian (np.array[D,N]): Jacobian matrix
+            jacobian (np.array[float[D,N]]): Jacobian matrix
 
         Returns:
-            np.array[D,D]: :math:`JJ^T`
+            np.array[float[D,D]]: :math:`JJ^T`
         """
         return jacobian.dot(jacobian.T)
 
@@ -2964,11 +2972,11 @@ class Robot(ControllableBody):
         :math:`\dot{q} = \hat{J} v`.
 
         Args:
-            jacobian (np.array[D,N]): Jacobian matrix
+            jacobian (np.array[float[D,N]]): Jacobian matrix
             damping_factor (float): damping factor
 
         Returns:
-            np.array[N,D]: DLS inverse matrix
+            np.array[float[N,D]]: DLS inverse matrix
         """
         J, k = jacobian, damping_factor
         return J.T.dot(np.linalg.inv(J.dot(J.T) + k**2 * np.identity(J.shape[0])))
@@ -2979,10 +2987,10 @@ class Robot(ControllableBody):
         Return the right pseudo-inverse of the jacobian, i.e. :math:`J^\dagger = J^T(JJ^T)^{-1}`.
 
         Args:
-            jacobian (np.array[D,N]): Jacobian matrix
+            jacobian (np.array[float[D,N]]): Jacobian matrix
 
         Returns:
-            np.array[N,N]: right pseudo-inverse of the Jacobian
+            np.array[float[N,N]]: right pseudo-inverse of the Jacobian
         """
         return np.linalg.pinv(jacobian)
 
@@ -2994,10 +3002,10 @@ class Robot(ControllableBody):
         :math:`\dot{q} = J^\dagger v + P \dot{q}_0` with :math:`\dot{q}_0` representing arbitrary joint velocities.
 
         Args:
-            jacobian (np.array[D,N]): Jacobian matrix
+            jacobian (np.array[float[D,N]]): Jacobian matrix
 
         Returns:
-            np.array[N,N]: null space projector matrix
+            np.array[float[N,N]]: null space projector matrix
         """
         J = jacobian
         I = np.identity(J.shape[1])
@@ -3010,7 +3018,7 @@ class Robot(ControllableBody):
         configurations (see [1]).
 
         Args:
-            jacobian (np.array[D,N]): Jacobian matrix
+            jacobian (np.array[float[D,N]]): Jacobian matrix
 
         Returns:
             float: manipulability measure :math:`w(q)`
@@ -3025,10 +3033,10 @@ class Robot(ControllableBody):
         Compute the velocity manipulability ellipsoid (matrix) as `M = J(q)J(q)^T`.
 
         Args:
-            jacobian (np.array[D,N]): Jacobian matrix
+            jacobian (np.array[float[D,N]]): Jacobian matrix
 
         Returns:
-            np.array[D,D]: velocity manipulability
+            np.array[float[D,D]]: velocity manipulability
 
         References:
             - [1] "Robotics: Modelling, Planning and Control" (section 3.9), Siciliano et al., 2010
@@ -3040,10 +3048,10 @@ class Robot(ControllableBody):
         Compute the force manipulability ellipsoid (matrix) as `M = (J(q)J(q)^T)^-1`.
 
         Args:
-            jacobian (np.array[D,N]): Jacobian matrix
+            jacobian (np.array[float[D,N]]): Jacobian matrix
 
         Returns:
-            np.array[D,D]: force manipulability
+            np.array[float[D,D]]: force manipulability
 
         References:
             - [1] "Robotics: Modelling, Planning and Control" (section 3.9), Siciliano et al., 2010
@@ -3061,7 +3069,7 @@ class Robot(ControllableBody):
         - around them, small velocities in the task/operational space may cause large velocities in the joint space
 
         Args:
-            jacobian (np.array[D,N]): Jacobian matrix
+            jacobian (np.array[float[D,N]]): Jacobian matrix
 
         Returns:
             bool: True if in a singular configuration
@@ -3084,11 +3092,11 @@ class Robot(ControllableBody):
         where :math:`J^\dagger` is the right pseudo-inverse of J, i.e. :math:`J^\dagger = J^T(JJ^T)^{-1}`.
 
         Args:
-            jacobian (np.array[3,N], np.array[6,N]): Jacobian matrix
-            velocity (np.array[3], np.array[6]): linear and/or angular velocities
+            jacobian (np.array[float[3,N]], np.array[float[6,N]]): Jacobian matrix
+            velocity (np.array[float[3]], np.array[float[6]]): linear and/or angular velocities
 
         Returns:
-            np.array[N]: joint velocities
+            np.array[float[N]]: joint velocities
         """
         Jpinv = self.get_pinv_jacobian(jacobian)
         return Jpinv.dot(velocity)
@@ -3102,11 +3110,11 @@ class Robot(ControllableBody):
         .. math:: v = J(q) \dot{q}
 
         Args:
-            jacobian (np.array[D,N], np.array[D,N]): Jacobian matrix
-            dq (np.array[N]): joint velocities
+            jacobian (np.array[float[D,N]], np.array[float[D,N]]): Jacobian matrix
+            dq (np.array[float[N]]): joint velocities
 
         Returns:
-            np.array[6]: Cartesian linear and angular velocities
+            np.array[float[6]]: Cartesian linear and angular velocities
         """
         return jacobian.dot(dq)
 
@@ -3119,28 +3127,28 @@ class Robot(ControllableBody):
 
         Args:
             link_id (int): end effector link index.
-            position (np.array[3]): target position of the end effector (its link coordinate, not center of mass
+            position (np.array[float[3]]): target position of the end effector (its link coordinate, not center of mass
                 coordinate!). By default this is in Cartesian world space, unless you provide `q_curr` joint angles.
-            orientation (np.array[4]): target orientation in Cartesian world space, quaternion [x,y,w,z]. If not
+            orientation (np.array[float[4]]): target orientation in Cartesian world space, quaternion [x,y,w,z]. If not
                 specified, pure position IK will be used.
-            lower_limits (np.array[N], list of N floats): lower joint limits. Optional null-space IK.
-            upper_limits (np.array[N], list of N floats): upper joint limits. Optional null-space IK.
-            joint_ranges (np.array[N], list of N floats): range of value of each joint.
-            rest_poses (np.array[N], list of N floats): joint rest poses. Favor an IK solution closer to a given rest
-                pose.
-            joint_dampings (np.array[N], list of N floats): joint damping factors. Allow to tune the IK solution using
-                joint damping factors.
+            lower_limits (np.array[float[N]], list of N floats): lower joint limits. Optional null-space IK.
+            upper_limits (np.array[float[N]], list of N floats): upper joint limits. Optional null-space IK.
+            joint_ranges (np.array[float[N]], list of N floats): range of value of each joint.
+            rest_poses (np.array[float[N]], list of N floats): joint rest poses. Favor an IK solution closer to a given
+                rest pose.
+            joint_dampings (np.array[float[N]], list of N floats): joint damping factors. Allow to tune the IK solution
+                using joint damping factors.
             solver (int): p.IK_DLS (=0) or p.IK_SDLS (=1), Damped Least Squares or Selective Damped Least Squares, as
                 described in the paper by Samuel Buss "Selectively Damped Least Squares for Inverse Kinematics".
-            q_curr (np.array[N]): list of joint positions. By default PyBullet uses the joint positions of the body.
-                If provided, the target_position and targetOrientation is in local space!
+            q_curr (np.array[float[N]]): list of joint positions. By default PyBullet uses the joint positions of the
+                body. If provided, the target_position and targetOrientation is in local space!
             max_iters (int): maximum number of iterations. Refine the IK solution until the distance between target
                 and actual end effector position is below this threshold, or the `max_iters` is reached.
             threshold (float): residual threshold. Refine the IK solution until the distance between target and actual
                 end effector position is below this threshold, or the `max_iters` is reached.
 
         Returns:
-            np.array[M]: joint positions (for each actuated joint).
+            np.array[float[M]]: joint positions (for each actuated joint).
         """
         # calculate joint positions solving IK and return them
         return self.sim.calculate_inverse_kinematics(self.id, link_id, position=position, orientation=orientation,
@@ -3156,12 +3164,12 @@ class Robot(ControllableBody):
         all the actuated joints [1].
 
         Args:
-            jacobian (np.array[D,N]): jacobian matrix
-            target_velocity_manipulability (np.array[D,D]): target velocity manipulability
+            jacobian (np.array[float[D,N]]): jacobian matrix
+            target_velocity_manipulability (np.array[float[D,D]]): target velocity manipulability
             Km (float[,]): Proportional gain for manipulability error
 
         Returns:
-            np.array[N]: joint velocities
+            np.array[float[N]]: joint velocities
             float: minimum of eigenvalues of the velocity manip. Jacobian
             float: Distance between desired and current manip. ellipsoids
 
@@ -3193,11 +3201,11 @@ class Robot(ControllableBody):
         Compute the velocity manipulability Jacobian [1].
 
         Args:
-            jacobian (np.array[D,N]): jacobian matrix
+            jacobian (np.array[float[D,N]]): jacobian matrix
             num_task_vars (int): number of task variables (usually 3 or 6)
 
         Returns:
-            np.array[(num_task_vars * num_task_vars + num_task_vars) / 2, N]: manipulability jacobian matrix
+            np.array[float[(num_task_vars * num_task_vars + num_task_vars) / 2, N]]: manipulability jacobian matrix
 
         References:
             - [1] "Geometry-aware Tracking of Manipulability Ellipsoids", Jaquier et al., R:SS, 2018
@@ -3279,12 +3287,12 @@ class Robot(ControllableBody):
         of motion in task/operational space (instead of joint space), check the references [1-4].
 
         Args:
-            q (np.array[M]): joint positions
-            dq (np.array[M]): joint velocities
-            des_ddq (np.array[M]): desired joint accelerations
+            q (np.array[float[M]]): joint positions
+            dq (np.array[float[M]]): joint velocities
+            des_ddq (np.array[float[M]]): desired joint accelerations
 
         Returns:
-            np.array[M]: joint torques computed using the rigid-body equation of motion
+            np.array[float[M]]: joint torques computed using the rigid-body equation of motion
 
         References:
             - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
@@ -3333,12 +3341,12 @@ class Robot(ControllableBody):
         of motion in task/operational space (instead of joint space), check the references [1-4].
 
         Args:
-            q (np.array[M]): joint positions
-            dq (np.array[M]): joint velocities
-            torques (np.array[M]): desired joint torques
+            q (np.array[float[M]]): joint positions
+            dq (np.array[float[M]]): joint velocities
+            torques (np.array[float[M]]): desired joint torques
 
         Returns:
-            np.array[M]: joint accelerations computed using the rigid-body equation of motion
+            np.array[float[M]]: joint accelerations computed using the rigid-body equation of motion
 
         References:
             - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
@@ -3374,12 +3382,12 @@ class Robot(ControllableBody):
             joints. If the base is fixed, it will return a [N,N] inertia matrix
 
         Args:
-            q (np.array[N], None): joint positions of size N, where N is the total number of DoFs. If None, it will
-                get the current joint positions (but note that this could lead to a decrease of performance).
+            q (np.array[float[N]], None): joint positions of size N, where N is the total number of DoFs. If None, it
+                will get the current joint positions.
             q_idx (slice, None): if provided, it will slice the inertia matrix at the given q indices (0 < M <= N).
 
         Returns:
-            np.array[N,N], np.array[6+N,6+N], np.array[M,M]: inertia matrix
+            np.array[float[N,N]], np.array[float[6+N,6+N]], np.array[float[M,M]]: inertia matrix
         """
         if q is None:
             q = self.get_joint_positions()
@@ -3406,7 +3414,7 @@ class Robot(ControllableBody):
         The computation is based on [1].
 
         Args:
-            jacobian (np.array[D,N]): Jacobian matrix
+            jacobian (np.array[float[D,N]]): Jacobian matrix
 
         Returns:
             float[N,N,N]: derivative of the inertia matrix wrt joint values (dH/dq)
@@ -3451,13 +3459,13 @@ class Robot(ControllableBody):
         :math:`v = [\dot{p} \omega]^T = J(q) \dot{q}`, where :math:`\omega` are the angular velocities.
 
         Args:
-            H (np.array[N,N], None): Joint inertia matrix. If None, it will be computed here (the q's then need to be
-                provided).
-            Ja (np.array[6,N], None): Analytical Jacobian. If None, it will be computed here (the q's then need to be
-                provided and the link_id
+            H (np.array[float[N,N]], None): Joint inertia matrix. If None, it will be computed here (the q's then need
+                to be provided).
+            Ja (np.array[float[6,N]], None): Analytical Jacobian. If None, it will be computed here (the q's then need
+                to be provided and the link_id
 
         Returns:
-            np.array[6,6]: Cartesian inertia matrix
+            np.array[float[6,6]]: Cartesian inertia matrix
         """
         Ja_inv = np.linalg.inv(Ja)
         return Ja_inv.T.dot(H).dot(Ja_inv)
@@ -3469,10 +3477,10 @@ class Robot(ControllableBody):
         .. math:: T(q,\dot{q}) = \frac{1}{2} \dot{q}^T H(q) \dot{q}
 
         Args:
-            q (np.array[N], None): joint positions of size N, where N is the total number of DoFs. If None, it will
-                get the current joint positions (but note that this could lead to a decrease of performance).
-            dq (np.array[M], None): joint velocities of size M (with 0 < M <= N). If None, it will
-                get the current joint velocities (but note that this could lead to a decrease of performance).
+            q (np.array[float[N]], None): joint positions of size N, where N is the total number of DoFs. If None, it
+                will get the current joint positions.
+            dq (np.array[float[M]], None): joint velocities of size M (with 0 < M <= N). If None, it will
+                get the current joint velocities.
             q_idx (slice, None): if provided, it will slice the inertia matrix at the given q indices (0 < M <= N),
                 and the joint velocities vector.
 
@@ -3496,11 +3504,12 @@ class Robot(ControllableBody):
         vector, and :math:`p_l` is the position of the link.
 
         Args:
-            q (np.array[N], None): joint positions of size N, where N is the total number of DoFs. THIS IS CURRENTLY
-                NOT USED, as we can get the link positions from the simulator (instead of using forward kinematics).
-            q_idx (int[M], None): if provided, it will slice the inertia matrix at the given q indices (0 < M <= N),
-                and the joint velocities vector.
-            g (np.array[3], tuple/list of 3 float): gravity vector.
+            q (np.array[float[N]], None): joint positions of size N, where N is the total number of DoFs. THIS IS
+                CURRENTLY NOT USED, as we can get the link positions from the simulator (instead of using forward
+                kinematics).
+            q_idx (list[int[M]], None): if provided, it will slice the inertia matrix at the given q indices
+                (0 < M <= N), and the joint velocities vector.
+            g (np.array[float[3]], tuple/list[float[3]]): gravity vector.
 
         Returns:
             float: potential energy due to gravity
@@ -3523,10 +3532,10 @@ class Robot(ControllableBody):
         `get_gravity_potential_energy`.
 
         Args:
-            q (np.array[N], None): joint positions of size N, where N is the total number of DoFs. If None, it will
-                get the current joint positions (but note that this could lead to a decrease of performance).
-            dq (np.array[M], None): joint velocities of size M (with 0 < M <= N). If None, it will
-                get the current joint velocities (but note that this could lead to a decrease of performance).
+            q (np.array[float[N]], None): joint positions of size N, where N is the total number of DoFs. If None, it
+                will get the current joint positions.
+            dq (np.array[float[M]], None): joint velocities of size M (with 0 < M <= N). If None, it will
+                get the current joint velocities.
             q_idx (int[M], None): if provided, it will slice the inertia matrix at the given q indices (0 < M <= N),
                 and the joint velocities vector.
 
@@ -3544,10 +3553,10 @@ class Robot(ControllableBody):
         where :math:`T` and :math:`V` are the kinetic and potential energy respectively.
 
         Args:
-            q (np.array[N], None): joint positions of size N, where N is the total number of DoFs. If None, it will
-                get the current joint positions (but note that this could lead to a decrease of performance).
-            dq (np.array[M], None): joint velocities of size M (with 0 < M <= N). If None, it will
-                get the current joint velocities (but note that this could lead to a decrease of performance).
+            q (np.array[float[N]], None): joint positions of size N, where N is the total number of DoFs. If None, it
+                will get the current joint positions.
+            dq (np.array[float[M]], None): joint velocities of size M (with 0 < M <= N). If None, it will
+                get the current joint velocities.
             q_idx (int[M], None): if provided, it will slice the inertia matrix at the given q indices (0 < M <= N),
                 and the joint velocities vector.
 
@@ -3569,11 +3578,12 @@ class Robot(ControllableBody):
         applied at the link), and :math:`J` is the geometric Jacobian.
 
         Args:
-            jacobian (np.array[3,N], np.array[6,N]): jacobian matrix.
-            wrench (np.array[3], np.array[6]): wrench applied to the link (point) associated to the given jacobian.
+            jacobian (np.array[float[3,N]], np.array[float[6,N]]): jacobian matrix.
+            wrench (np.array[float[3]], np.array[float[6]]): wrench applied to the link (point) associated to the given
+                jacobian.
 
         Returns:
-            np.array[N]: joint torques [Nm]
+            np.array[float[N]]: joint torques [Nm]
         """
         return jacobian.T.dot(wrench)
 
@@ -3588,11 +3598,11 @@ class Robot(ControllableBody):
         applied at the link), and :math:`J` is the geometric Jacobian.
 
         Args:
-            jacobian (np.array[6,N]): jacobian matrix.
-            torques (np.array[N]): torques.
+            jacobian (np.array[float[6,N]]): jacobian matrix.
+            torques (np.array[float[N]]): torques.
 
         Returns:
-            np.array[6]: forces and torques (=wrench) in the Cartesian world space [N,Nm]
+            np.array[float[6]]: forces and torques (=wrench) in the Cartesian world space [N,Nm]
         """
         J = jacobian
         return J.dot(np.linalg.inv(J.T.dot(J))).dot(torques)
@@ -3624,15 +3634,14 @@ class Robot(ControllableBody):
         effects.
 
         Args:
-            q (np.array[N], None): all the joint positions. If None, it will get the current joint positions of all the
-                joints. However, note that if you already got the joint positions in your code,
-                it is better to pass them to this method for performance.
-            dq (np.array[N], None): all the joint velocities. If None, it will get the current joint velocities of
+            q (np.array[float[N]], None): all the joint positions. If None, it will get the current joint positions of
                 all the joints.
+            dq (np.array[float[N]], None): all the joint velocities. If None, it will get the current joint velocities
+                of all the joints.
             q_idx (int[M], None): slice the torques at the given q indices (0 < M <= N).
 
         Returns:
-            np.array[M]: joint torques to be applied [Nm]
+            np.array[float[M]]: joint torques to be applied [Nm]
         """
         if q is None:
             q = self.get_joint_positions()
@@ -3663,13 +3672,12 @@ class Robot(ControllableBody):
         These are the torques that need to be applied to the robot joints to compensate for gravity.
 
         Args:
-            q (np.array[N], None): all the joint positions. If None, it will get the current joint positions of all the
-                joints. However, note that if you already got the joint positions in your code,
-                it is better to pass them to this method for performance.
+            q (np.array[float[N]], None): all the joint positions. If None, it will get the current joint positions of
+                all the joints.
             q_idx (int[M], None): slice the torques at the given q indices (0 < M <= N).
 
         Returns:
-            np.array[M]: joint torques to be applied [Nm]
+            np.array[float[M]]: joint torques to be applied [Nm]
         """
         if q is None:
             q = self.get_joint_positions()
@@ -3696,15 +3704,14 @@ class Robot(ControllableBody):
         We can then get :math:`C(q,\dot{q}) \dot{q} = \tau_1 - \tau_2`.
 
         Args:
-            q (np.array[N], None): all the joint positions. If None, it will get the current joint positions of all the
-                joints. However, note that if you already got the joint positions in your code,
-                it is better to pass them to this method for performance.
-            dq (np.array[N], None): all the joint velocities. If None, it will get the current joint velocities of
+            q (np.array[float[N]], None): all the joint positions. If None, it will get the current joint positions of
                 all the joints.
+            dq (np.array[float[N]], None): all the joint velocities. If None, it will get the current joint velocities
+                of all the joints.
             q_idx (int[M], None): slice the torques at the given q indices (0 < M <= N).
 
         Returns:
-            np.array[M]: joint torques to be applied [Nm]
+            np.array[float[M]]: joint torques to be applied [Nm]
         """
         if q is None:
             q = self.get_joint_positions()
@@ -3725,13 +3732,12 @@ class Robot(ControllableBody):
         .. math::  \tau = C(q,\dot{q}) \dot{q} + g(q).
 
         Args:
-            q (np.array[N], None): all the joint positions. If None, it will get the current joint positions of all the
-                joints. However, note that if you already got the joint positions in your code,
-                it is better to pass them to this method for performance.
-            dq (np.array[N], None): all the joint velocities. If None, it will get the current joint velocities of
+            q (np.array[float[N]], None): all the joint positions. If None, it will get the current joint positions of
                 all the joints.
+            dq (np.array[float[N]], None): all the joint velocities. If None, it will get the current joint velocities
+                of all the joints.
             q_idx (int[M], None): slice the torques at the given q indices (0 < M <= N).
-            external_torques (np.array[M], float): external torques to be applied.
+            external_torques (np.array[float[M]], float): external torques to be applied.
         """
         joint_ids = self.joints if q_idx is None else self.joints[q_idx]
         torques = self.get_coriolis_and_gravity_compensation_torques(q, dq, q_idx)
@@ -3751,17 +3757,16 @@ class Robot(ControllableBody):
         where :math:`F = - D v` with :math:`v` are the Cartesian velocities, and :math:`D` is the damping factor.
 
         Args:
-            q (np.array[N], None): all the joint positions. If None, it will get the current joint positions of all the
-                joints. However, note that if you already got the joint positions in your code,
-                it is better to pass them to this method for performance.
-            dq (np.array[N], None): all the joint velocities. If None, it will get the current joint velocities of
+            q (np.array[float[N]], None): all the joint positions. If None, it will get the current joint positions of
                 all the joints.
+            dq (np.array[float[N]], None): all the joint velocities. If None, it will get the current joint velocities
+                of all the joints.
             q_idx (int[M], None): slice the torques at the given q indices (0 < M <= N).
-            jacobian (np.array[6,N], np.array[6,6+N]): Jacobian matrix.
-            link_velocity (np.array[6]): linear and angular velocity of the link in the Cartesian world space
+            jacobian (np.array[float[6,N]], np.array[float[6,6+N]]): Jacobian matrix.
+            link_velocity (np.array[float[6]]): linear and angular velocity of the link in the Cartesian world space
 
         Returns:
-            np.array[M]: joint torques to be applied [Nm]
+            np.array[float[M]]: joint torques to be applied [Nm]
         """
         if q is None:
             q = self.get_joint_positions()
@@ -3785,13 +3790,12 @@ class Robot(ControllableBody):
         force projected from the Cartesian space to the joint space.
 
         Args:
-            q (np.array[N], None): all the joint positions. If None, it will get the current joint positions of all the
-                joints. However, note that if you already got the joint positions in your code,
-                it is better to pass them to this method for performance.
-            dq (np.array[N], None): all the joint velocities. If None, it will get the current joint velocities of
+            q (np.array[float[N]], None): all the joint positions. If None, it will get the current joint positions of
                 all the joints.
+            dq (np.array[float[N]], None): all the joint velocities. If None, it will get the current joint velocities
+                of all the joints.
             q_idx (int[M], None): slice the torques at the given q indices (0 < M <= N).
-            external_torques (float, np.array[M]): external torques.
+            external_torques (float, np.array[float[M]]): external torques.
         """
         joint_id = self.joints if q_idx is None else self.joints[q_idx]
         torques = self.get_active_compliant_torques(q, dq, q_idx)
@@ -3807,7 +3811,7 @@ class Robot(ControllableBody):
     #
     #
     #     Returns:
-    #         np.array[N]: impedance torques
+    #         np.array[float[N]]: impedance torques
     #
     #     References:
     #         - [1] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
@@ -3825,17 +3829,17 @@ class Robot(ControllableBody):
         and :math:`K` and :math:`D` are the stiffness and damping factor, respectively.
 
         Args:
-            q (np.array[N]): joint positions
-            dq (np.array[N]): joint velocities
-            x_des (np.array[3]): desired position of the link
-            x (np.array[3]): cartesian world position of the link
-            dx (np.array[3]): cartesian world linear velocity of the link
-            jacobian (np.array[3,N]): linear jacobian associated to the link
-            K (float, np.array[3,3]): proportional gain scalar or matrix
-            D (float, np.array[3,3]): derivative gain scalar or matrix
+            q (np.array[float[N]]): joint positions
+            dq (np.array[float[N]]): joint velocities
+            x_des (np.array[float[3]]): desired position of the link
+            x (np.array[float[3]]): cartesian world position of the link
+            dx (np.array[float[3]]): cartesian world linear velocity of the link
+            jacobian (np.array[float[3,N]]): linear jacobian associated to the link
+            K (float, np.array[float[3,3]]): proportional gain scalar or matrix
+            D (float, np.array[float[3,3]]): derivative gain scalar or matrix
 
         Returns:
-            np.array[N]: torques to apply
+            np.array[float[N]]: torques to apply
 
         References:
             - [1] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
@@ -3869,11 +3873,11 @@ class Robot(ControllableBody):
         Compute the dynamic manipulability ellipsoid (matrix) as `M = J(q)H(q)^{-1} (J(q)H(q)^{-1})^T`.
 
         Args:
-            jacobian (np.array[D,N]): Jacobian matrix
-            inertia (np.array[N,N]): inertia matrix in joint space
+            jacobian (np.array[float[D,N]]): Jacobian matrix
+            inertia (np.array[float[N,N]]): inertia matrix in joint space
 
         Returns:
-            np.array[D,D]: dynamic manipulability
+            np.array[float[D,D]]: dynamic manipulability
         """
         epsilon = jacobian.dot(np.linalg.inv(inertia))
         return epsilon.dot(epsilon.T)
@@ -3885,13 +3889,13 @@ class Robot(ControllableBody):
         the actuated joints.
 
         Args:
-            jacobian (np.array[D,N]): Jacobian matrix
-            inertia (np.array[N,N]): inertia matrix
-            target_dynamic_manipulability (np.array[D,D]): target dynamic manipulability
+            jacobian (np.array[float[D,N]]): Jacobian matrix
+            inertia (np.array[float[N,N]]): inertia matrix
+            target_dynamic_manipulability (np.array[float[D,D]]): target dynamic manipulability
             Km (float[,]): Proportional gain for manipulability error
 
         Returns:
-            np.array[N]: joint velocities
+            np.array[float[N]]: joint velocities
             float: minimum of eigenvalues of the dynamic manip. Jacobian
             float: Distance between desired and current manip. ellipsoids
         """
@@ -3922,8 +3926,8 @@ class Robot(ControllableBody):
         Compute the dynamic manipulability Jacobian.
 
         Args:
-            jacobian (np.array[D,N]): Jacobian matrix
-            inertia (np.array[N,N]): inertia matrix
+            jacobian (np.array[float[D,N]]): Jacobian matrix
+            inertia (np.array[float[N,N]]): inertia matrix
             num_task_vars (int): number of task variables (usually 3 or 6)
 
         Returns:
@@ -3990,16 +3994,16 @@ class Robot(ControllableBody):
         Warnings: this currently does not work with a fixed base.
 
         Args:
-            q (np.array[N], None): joint positions of size N, where N is the total number of free joints. If None, it
-                will get the current joint positions (but note that this could lead to a decrease of performance).
-            dq (np.array[N], None): joint velocities of size N, where N is the total number of free joints. If None, it
-                will get the current joint velocities (but note that this could lead to a decrease of performance).
-            inertia (np.array[6+N,6+N]): inertia matrix. If None, it will get the current inertia matrix
+            q (np.array[float[N]], None): joint positions of size N, where N is the total number of free joints. If
+                None, it will get the current joint positions.
+            dq (np.array[float[N]], None): joint velocities of size N, where N is the total number of free joints. If
+                None, it will get the current joint velocities.
+            inertia (np.array[float[6+N,6+N]]): inertia matrix. If None, it will get the current inertia matrix
                 (but note that this could lead to a decrease of performance if you have already computed it).
 
         Returns:
-            np.array[6, N+6]: the centroidal momentum matrix :math:`A_G`
-            np.array[6]: the centroidal dynamics velocity-dependent bias vector :math:`\dot{A}_G \dot{q}`
+            np.array[float[6,6+N]]: the centroidal momentum matrix :math:`A_G`
+            np.array[float[6]]: the centroidal dynamics velocity-dependent bias vector :math:`\dot{A}_G \dot{q}`
 
         Raises:
             RuntimeError: if the robot has not a floating base (i.e. it has a fixed base).
@@ -4073,15 +4077,15 @@ class Robot(ControllableBody):
         angular momentum together.
 
         Args:
-            q (np.array[N], None): joint positions of size N, where N is the total number of free joints. If None, it
-                will get the current joint positions (but note that this could lead to a decrease of performance).
-            dq (np.array[N], None): joint velocities of size N, where N is the total number of free joints. If None, it
-                will get the current joint velocities (but note that this could lead to a decrease of performance).
-            inertia (np.array[6+N,6+N]): inertia matrix. If None, it will get the current inertia matrix
+            q (np.array[float[N]], None): joint positions of size N, where N is the total number of free joints. If
+                None, it will get the current joint positions.
+            dq (np.array[float[N]], None): joint velocities of size N, where N is the total number of free joints. If
+                None, it will get the current joint velocities.
+            inertia (np.array[float[6+N,6+N]]): inertia matrix. If None, it will get the current inertia matrix
                 (but note that this could lead to a decrease of performance if you have already computed it).
 
         Returns:
-            np.array[6]: the centroidal momentum
+            np.array[float[6]]: the centroidal momentum
 
         Raises:
             RuntimeError: if the robot has not a floating base (i.e. it has a fixed base).
@@ -4103,10 +4107,10 @@ class Robot(ControllableBody):
         Return the singular values of the centroidal momentum matrix.
 
         Args:
-            A_G (np.array[6, N+6]): centroidal momentum matrix
+            A_G (np.array[float[6,6+N]]): centroidal momentum matrix
 
         Returns:
-            np.array[6]: singular values
+            np.array[float[6]]: singular values
         """
         u, s, vh = np.linalg.svd(A_G, full_matrices=True)
         return s
@@ -4117,10 +4121,10 @@ class Robot(ControllableBody):
         Return the orientation and scale of the centroidal momentum matrix ellipsoid.
 
         Args:
-            A_G (np.array[6, N+6]): centroidal momentum matrix
+            A_G (np.array[float[6,6+N]]): centroidal momentum matrix
 
         Returns:
-            np.array[4]: orientation (expressed as a quaternion [x,y,z,w])
+            np.array[float[4]]: orientation (expressed as a quaternion [x,y,z,w])
             float: scale
         """
         u, scale, vh = np.linalg.svd(A_G, full_matrices=True)
@@ -4159,8 +4163,8 @@ class Robot(ControllableBody):
     #         point:
     #
     #     Returns:
-    #         np.array[M,M]: :math:`A` matrix, where M is the size of the state vector
-    #         np.array[M,N]: :math:`B` matrix, where N is the size of the input vector
+    #         np.array[float[M,M]]: :math:`A` matrix, where M is the size of the state vector
+    #         np.array[float[M,N]]: :math:`B` matrix, where N is the size of the input vector
     #
     #     References:
     #         - [1] "State-Space Representation of LTI Systems", Rowell, 2002 (handout):
@@ -4623,7 +4627,7 @@ class Robot(ControllableBody):
             color (tuple/list of 4 float): rgba color of the sphere. By default, it is red.
 
         Returns:
-            np.array[3]: center of mass
+            np.array[float[3]]: center of mass
         """
         self.get_center_of_mass_position()
         self.draw_com_position(radius=radius, color=color)
@@ -4664,7 +4668,7 @@ class Robot(ControllableBody):
             max_depth (float): if there is an object more than max_depth, it is not considered
 
         Returns:
-            np.array[3], None: position of the projected CoM, or None if it couldn't project the CoM
+            np.array[float[3]], None: position of the projected CoM, or None if it couldn't project the CoM
         """
         com = self.get_center_of_mass_position()
         object_id, _, _, hit_position, _ = self.sim.ray_test(com, com - np.array([0., 0., max_depth]))[0]
@@ -4682,7 +4686,7 @@ class Robot(ControllableBody):
             color (tuple/list of 4 float): rgba color of the sphere. By default it is blue.
 
         Returns:
-            np.array[3], None: position of the projected CoM, or None if it couldn't project the CoM
+            np.array[float[3]], None: position of the projected CoM, or None if it couldn't project the CoM
         """
         projected_com = self.get_projected_com_position()
         if projected_com is not None:
@@ -4849,8 +4853,8 @@ class Robot(ControllableBody):
         Warnings: Currently, PyBullet doesn't support to load an ellipsoid, so we load from a mesh file.
 
         Args:
-            position (np.array[3]): position in the world space
-            orientation (np.array[4]): orientation in the world space
+            position (np.array[float[3]]): position in the world space
+            orientation (np.array[float[4]]): orientation in the world space
             scale (list/tuple of 3 float): scale in the (x,y,z) directions
             color (list/tuple of 4 float): RGBA color
 
@@ -4873,7 +4877,7 @@ class Robot(ControllableBody):
             X (np.array): 2D matrix
 
         Returns:
-            np.array[4]: orientation (expressed as a quaternion [x,y,z,w])
+            np.array[float[4]]: orientation (expressed as a quaternion [x,y,z,w])
             float: scale
         """
         # compute evecs and singular values
@@ -4934,9 +4938,9 @@ class Robot(ControllableBody):
 
         Args:
             link_id (int): link id. This will be used to check where to draw the ellipsoid.
-            linear_jacobian (np.array[3,N], None): linear Jacobian matrix. It doesn't need to be provided if `JJT` is
-                given.
-            JJT (np.array[3,3], None): if None, it will compute it using the provided linear Jacobian matrix.
+            linear_jacobian (np.array[float[3,N]], None): linear Jacobian matrix. It doesn't need to be provided if
+                `JJT` is given.
+            JJT (np.array[float[3,3]], None): if None, it will compute it using the provided linear Jacobian matrix.
             color (tuple of 4 float): RGBA color (each channel is between 0 and 1)
 
         Returns:
@@ -4964,9 +4968,9 @@ class Robot(ControllableBody):
 
         Args:
             link_id (int): link id. This will be used to check where to draw the ellipsoid.
-            linear_jacobian (np.array[3,N], None): linear Jacobian matrix. It doesn't need to be provided if `JJT` is
-                given.
-            JJT (np.array[3,3], None): if None, it will compute it using the provided linear Jacobian matrix.
+            linear_jacobian (np.array[float[3,N]], None): linear Jacobian matrix. It doesn't need to be provided if
+                `JJT` is given.
+            JJT (np.array[float[3,3]], None): if None, it will compute it using the provided linear Jacobian matrix.
             color (tuple of 4 float): RGBA color (each channel is between 0 and 1)
 
         Returns:

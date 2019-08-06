@@ -20,7 +20,7 @@ References:
 from pyrobolearn.simulators.simulator import Simulator
 
 __author__ = "Brian Delhaisse"
-__copyright__ = "Copyright 2018, PyRoboLearn"
+__copyright__ = "Copyright 2019, PyRoboLearn"
 __credits__ = ["Gazebo", "ROS", "Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"

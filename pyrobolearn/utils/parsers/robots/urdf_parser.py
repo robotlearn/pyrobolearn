@@ -390,7 +390,7 @@ class URDFParser(RobotParser):
                 # <material>
                 if visual.material is not None:
                     material = visual.material
-                    material_tag = ET.SubElement(visual, 'material', attrib={'name': material.name})
+                    material_tag = ET.SubElement(visual_tag, 'material', attrib={'name': material.name})
                     if material.color is not None:
                         ET.SubElement(material_tag, 'color', attrib={'rgba': str(np.asarray(material.rgba))[1:-1]})
                     if material.texture is not None:

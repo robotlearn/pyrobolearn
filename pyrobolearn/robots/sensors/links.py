@@ -39,10 +39,10 @@ class LinkSensor(Sensor):
             simulator (Simulator): simulator instance.
             body_id (int): unique id of the body.
             link_id (int): unique id of the link.
-            position (np.array[3], None): local position of the sensor with respect to the given link. If None, it will
-                be the zero vector.
-            orientation (np.array[4], None): local orientation of the sensor with respect to the given link (expressed
-                as a quaternion [x,y,z,w]). If None, it will be the unit quaternion [0,0,0,1].
+            position (np.array[float[3]], None): local position of the sensor with respect to the given link. If None,
+                it will be the zero vector.
+            orientation (np.array[float[4]], None): local orientation of the sensor with respect to the given link
+                (expressed as a quaternion [x,y,z,w]). If None, it will be the unit quaternion [0,0,0,1].
             noise (None, Noise): noise to be added.
             ticks (int): number of steps to wait/sleep before acquisition of the next sensor value.
             latency (int, float, None): latency time / step.
@@ -100,7 +100,7 @@ class LinkSensor(Sensor):
         Return the CoM position (in the Cartesian world space coordinates) of the link associated with the sensor.
 
         Returns:
-            np.array[3]: the link CoM position in the world space
+            np.array[float[3]]: the link CoM position in the world space
         """
         # check if cached
         if 'pos' in self._state:
