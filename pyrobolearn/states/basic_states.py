@@ -174,6 +174,48 @@ class PreviousActionState(State):
         self.data = self.action.data
 
 
+class GoalState(State):
+    r"""Goal state
+
+    This is a wrapper around any states to specify it is a goal state. This is notably useful for Hindsight Experience
+    Replay (HER).
+
+    .. seealso:: `pyrobolearn/storages/her.py`
+
+    References:
+        - [1] "Hindsight Experience Replay", Andrychowicz et al., 2017
+    """
+
+    def __init__(self, state, name=None):
+        """
+        Initialize the goal state.
+
+        Args:
+            state (State): the inner state to wrap as a goal state.
+            name (str, None): name of the state. If None, by default, it will have the name of the class.
+        """
+        super(GoalState, self).__init__(name=name)
+        self.state = state
+
+    @property
+    def state(self):
+        """Return the inner state."""
+        return self._state
+
+    @state.setter
+    def state(self, state):
+        """Set the inner state."""
+        if not isinstance(state, State):
+            raise TypeError("Expecting the given 'state' to be an instance of `State`, instead got: "
+                            "{}".format(type(state)))
+        self._state = state
+
+    def __getattr__(self, name):
+        if name == 'name':
+            return self.name
+        return getattr(self.state, name)
+
+
 # Tests
 if __name__ == '__main__':
     s1 = FixedState([1, 2])

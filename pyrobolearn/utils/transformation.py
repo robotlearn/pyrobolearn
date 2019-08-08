@@ -1059,6 +1059,10 @@ def quaternion_distance(q1, q2):
 
     Returns:
         float: distance between the 2 given quaternions
+
+    References:
+        - [1] "Orientation in Cartesian Space Dynamic Movement Primitives", Ude et al., 2014
+        - [2] "Metrics for 3D Rotations: Comparison and Analysis", Huynh, 2009
     """
     q1 = quat_converter.convert_to(q1)
     q2 = quat_converter.convert_to(q2)
