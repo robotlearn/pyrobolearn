@@ -80,18 +80,23 @@ class ANYmal(QuadrupedRobot):
 
         # init configuration
         self.reset_joint_states(q=[0.03, 0.4, -0.8, -0.03, 0.4, -0.8, 0.03, -0.4, 0.8, -0.03, -0.4, 0.8])
+        # self.reset_joint_states(q=[0.052, 1.66, -2.8, -0.052, 1.66, -2.8, 0.052, -1.66, 2.8, -0.052, -1.66, 2.8])
 
         # some values are taken from "raisimGym/raisim_gym/env/env/ANYmal/Environment.hpp"
         self.base_height = 0.54
         self.avg_height = 0.44
 
+        self._joint_configuration = {'home': np.array([0.03, 0.4, -0.8, -0.03, 0.4, -0.8, 0.03, -0.4, 0.8, -0.03,
+                                                       -0.4, 0.8]),
+                                     'standing': 'home',
+                                     'init': 'home',
+                                     'crouching': np.array([0.052, 1.66, -2.8, -0.052, 1.66, -2.8, 0.052, -1.66, 2.8,
+                                                            -0.052, -1.66, 2.8]),
+                                     'lying': 'crouching'}
+
     def get_home_joint_positions(self):
         """Return the joint positions for the home position."""
-        return np.array([0.03, 0.4, -0.8, -0.03, 0.4, -0.8, 0.03, -0.4, 0.8, -0.03, -0.4, 0.8])
-
-    def get_joint_configurations(self, name=None):
-        if name == 'home' or name == 'init':
-            return np.array([0.03, 0.4, -0.8, -0.03, 0.4, -0.8, 0.03, -0.4, 0.8, -0.03, -0.4, 0.8])
+        return self._joint_configuration['home']
 
 
 # Test
@@ -118,5 +123,7 @@ if __name__ == "__main__":
     # run simulator
     for _ in count():
         # robot.update_joint_slider()
+        robot.step()
         print("BASE HEIGHT: {}".format(robot.get_base_position()[2]))
+        print(robot.get_joint_positions())
         world.step(sleep_dt=1./240)

@@ -2,8 +2,8 @@
 """Provides the experience replay (ER) storage.
 
 References:
-    [1] "Reinforcement Learning for robots using neural networks", Lin, 1993
-    [2] "Playing Atari with Deep Reinforcement Learning", Mnih et al., 2013
+    - [1] "Reinforcement Learning for robots using neural networks", Lin, 1993
+    - [2] "Playing Atari with Deep Reinforcement Learning", Mnih et al., 2013
 """
 
 import random
@@ -37,8 +37,8 @@ __status__ = "Development"
 #     The following code is inspired by [3] but modified such that it uses a PyTorch list storage.
 #
 #     References:
-#         [1] "Reinforcement Learning for robots using neural networks", Lin, 1993
-#         [2] "Playing Atari with Deep Reinforcement Learning", Mnih et al., 2013
+#         - [1] "Reinforcement Learning for robots using neural networks", Lin, 1993
+#         - [2] "Playing Atari with Deep Reinforcement Learning", Mnih et al., 2013
 #     """
 #
 #     def __init__(self, capacity=10000, device=None, dtype=torch.float):
@@ -172,8 +172,8 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
     The following code is inspired by [3] but modified such that it uses a PyTorch list storage.
 
     References:
-        [1] "Reinforcement Learning for robots using neural networks", Lin, 1993
-        [2] "Playing Atari with Deep Reinforcement Learning", Mnih et al., 2013
+        - [1] "Reinforcement Learning for robots using neural networks", Lin, 1993
+        - [2] "Playing Atari with Deep Reinforcement Learning", Mnih et al., 2013
     """
 
     def __init__(self, state_shapes, action_shapes, capacity=10000, *args, **kwargs):

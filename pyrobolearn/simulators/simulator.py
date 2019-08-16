@@ -1305,7 +1305,7 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list[int]): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
@@ -1324,7 +1324,7 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list[int]): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
@@ -1343,7 +1343,7 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list[int]): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
@@ -1359,7 +1359,7 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list[int]): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
@@ -1376,7 +1376,7 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list[int]): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
@@ -1396,7 +1396,7 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list[int]): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:

@@ -60,9 +60,8 @@ class State(object):
         policy = NNPolicy(states, actions)
 
     References:
-        [1] "Wikipedia: Composition over Inheritance", https://en.wikipedia.org/wiki/Composition_over_inheritance
-        [2] "OpenAI gym": https://gym.openai.com/   and    https://github.com/openai/gym
-
+        - [1] "Wikipedia: Composition over Inheritance", https://en.wikipedia.org/wiki/Composition_over_inheritance
+        - [2] "OpenAI gym": https://gym.openai.com/   and    https://github.com/openai/gym
     """
 
     def __init__(self, states=(), data=None, space=None, window_size=1, axis=None, ticks=1, name=None):
@@ -386,13 +385,21 @@ class State(object):
         return torch.cat([data.reshape(-1) for data in self.merged_torch_data])
 
     @property
+    def spaces(self):
+        if self.has_space():
+            return [self._space]
+        return [state._space for state in self._states]
+
+    @property
     def space(self):
         """
         Get the corresponding space.
         """
         if self.has_space():
-            return [self._space]
-        return [state._space for state in self._states]
+            # return [self._space]
+            return gym.spaces.Tuple([self._space])
+        # return [state._space for state in self._states]
+        return gym.spaces.Tuple([state._space for state in self._states])
 
     @space.setter
     def space(self, space):
@@ -401,6 +408,13 @@ class State(object):
         """
         if self.has_data() and not self.has_space() and isinstance(space, (gym.spaces.Box, gym.spaces.Discrete)):
             self._space = space
+
+    @property
+    def merged_space(self):
+        """
+        Get the corresponding merged space.
+        """
+        return False
 
     @property
     def name(self):
@@ -743,8 +757,8 @@ class State(object):
         """
         if self.is_combined_states():
             return [state.sample() for state in self._states]
-        if self._distribution is None:
-            return
+        if self._distribution is None:  # uniform distribution
+            return self._space.sample()
         else:
             pass
         raise NotImplementedError
@@ -786,8 +800,8 @@ class State(object):
         it will be min(dimension, axis).
 
         Examples:
-            s0 = JntPositionState(robot)
-            s1 = JntVelocityState(robot)
+            s0 = JointPositionState(robot)
+            s1 = JointVelocityState(robot)
             s = s0 & s1
             print(s)
             print(s.shape)

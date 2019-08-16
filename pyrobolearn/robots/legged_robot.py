@@ -769,7 +769,7 @@ class LeggedRobot(Robot):
         Update all visuals.
         """
         # update robot visuals
-        super(LeggedRobot, self).update_visual()
+        super(LeggedRobot, self).update_visuals()
 
         # update support polygon
 

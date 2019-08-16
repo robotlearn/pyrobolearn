@@ -26,19 +26,19 @@ class TerminalReward(Reward):
     value once the goal has been achieved (e.g. games).
     """
 
-    def __init__(self, terminal_condition, subreward, final_reward):
+    def __init__(self, terminal_conditions, subreward, final_reward):
         r"""
         Terminal reward.
 
         Args:
-            terminal_condition (TerminalCondition): terminal condition.
+            terminal_conditions (TerminalCondition, list of TerminalCondition): terminal condition(s).
             subreward (Reward, float, int): sub reward that is called until the terminal condition is not fulfilled.
             final_reward (Reward, float, int): final reward that is called when the terminal condition has been reached.
         """
         super(TerminalReward, self).__init__()
 
         # set the attributes
-        self.terminal_condition = terminal_condition
+        self.terminal_conditions = terminal_conditions
         self.subreward = subreward
         self.final_reward = final_reward
 
@@ -47,17 +47,26 @@ class TerminalReward(Reward):
     ##############
 
     @property
-    def terminal_condition(self):
-        """Return the terminal condition instance."""
-        return self._terminal_condition
+    def terminal_conditions(self):
+        """Return the terminal condition instances."""
+        return self._terminal_conditions
 
-    @terminal_condition.setter
-    def terminal_condition(self, condition):
-        """Set the terminal condition instance."""
-        if not isinstance(condition, TerminalCondition):
-            raise TypeError("Expecting the given 'terminal_condition' to be an instance of `TerminalCondition`, "
-                            "instead got: {}".format(type(condition)))
-        self._terminal_condition = condition
+    @terminal_conditions.setter
+    def terminal_conditions(self, conditions):
+        """Set the terminal condition instances."""
+        if conditions is None:
+            conditions = [TerminalCondition()]
+        elif isinstance(conditions, TerminalCondition):
+            conditions = [conditions]
+        elif isinstance(conditions, (list, tuple)):
+            for idx, condition in enumerate(conditions):
+                if not isinstance(condition, TerminalCondition):
+                    raise TypeError("Expecting the {} item in the given terminal conditions to be an instance of "
+                                    "`TerminalCondition`, instead got: {}".format(idx, type(condition)))
+        else:
+            raise TypeError("Expecting the terminal conditions to be an instance of `TerminalCondition`, or a list of "
+                            "`TerminalCondition`, but instead got: {}".format(type(conditions)))
+        self._terminal_conditions = conditions
 
     @property
     def subreward(self):
@@ -95,7 +104,7 @@ class TerminalReward(Reward):
 
     def _compute(self):
         """Compute the terminal reward."""
-        done = self.terminal_condition()
+        done = any([condition() for condition in self.terminal_conditions])
         if done:
             return self.final_reward()
         return self.subreward()

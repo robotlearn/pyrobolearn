@@ -176,6 +176,9 @@ class Robot(ControllableBody):
         self.sensors = {}  # dict of sensors {SensorClass: [sensorInstance]}
         self.actuators = {}  # dict of actuators {ActuatorClass: [actuatorInstance]}
 
+        # joint configurations
+        self._joint_configuration = {}  # {str: np.array[float[N]]} or {str: tuple(list[int], np.array[float[N]])}
+
     #############
     # Operators #
     #############
@@ -1465,13 +1468,32 @@ class Robot(ControllableBody):
 
         Returns:
             if name is None:
-                list:
-                    str: name of each joint configuration.
+                list[str]: name of each joint configuration.
             else:
-                np.array[float[M]]: joint ids to move.
+                list[int[M]]: joint ids to move.
                 np.array[float[M]]: joint positions.
         """
-        pass
+        if name is None:
+            return list(self._joint_configuration.keys())
+        if name in self._joint_configuration:
+            item = self._joint_configuration[name]
+            if isinstance(item, str):  # the item is an alias
+                return self._joint_configuration[item]
+            return item
+
+    def has_joint_configuration(self, name):
+        """
+        Check if the robot has the specified joint configuration.
+
+        This method has to be implemented in the child class.
+
+        Args:
+            name (str): name of the joint configuration to move the robot to.
+
+        Returns:
+            bool: True if the robot has the specified joint configuration.
+        """
+        return name in self._joint_configuration
 
     ##################################
     # Links (task/operational space) #

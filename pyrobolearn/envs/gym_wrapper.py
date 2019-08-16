@@ -12,7 +12,6 @@ import numpy as np
 import torch
 import gym
 # import baselines
-from gym import *
 import warnings
 warnings.simplefilter("ignore")
 

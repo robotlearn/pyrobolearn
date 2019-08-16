@@ -12,7 +12,7 @@ Dependencies:
 
 import copy
 import pickle
-# import gym
+import gym
 
 from pyrobolearn.worlds import World, BasicWorld
 from pyrobolearn.states import State
@@ -34,7 +34,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
+class Env(gym.Env):  # TODO: make it inheriting the gym.Env
     r"""Environment class.
 
     This class defines the environment as it described in a reinforcement learning setting [1]. That is, given an
@@ -87,6 +87,10 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
         self.state_generators = initial_state_generators
         self.extra_info = extra_info if extra_info is not None else lambda: False
         self.actions = actions
+
+        # state dictionary which contains at least {'policy': State, 'value': State}
+        # if not specified, it will be the same state for the policy and value function approximator
+        self._state_dict = None
 
         # check if we are rendering with the simulator
         self.is_rendering = self.simulator.is_rendering()
@@ -144,6 +148,44 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
         return self._states[0]
 
     @property
+    def state_dict(self):
+        """Return the state dictionary which contains at least the 'policy' and 'value' keys."""
+        if self._state_dict is not None:
+            return self._state_dict
+        states = self.states
+        if len(states) == 1:
+            states = states[0]
+        return {'policy': states, 'value': states}
+
+    @state_dict.setter
+    def state_dict(self, state_dict):
+        """Set the state dictionary which should contains at least the 'policy' and 'value' keys."""
+        if state_dict is not None:
+            if not isinstance(state_dict, dict):
+                raise TypeError("Expecting the given 'state_dict' to be a dictionary, but got instead: "
+                                "{}".format(type(state_dict)))
+            for key, value in state_dict.items():
+                if isinstance(value, (list, tuple)):
+                    for v in value:
+                        if not isinstance(v, State):
+                            raise TypeError("Expecting the values in the given 'state_dict' to be an instance of "
+                                            "`State`, or a list/tuple of them, but got instead: {}".format(type(v)))
+                if not isinstance(value, State):
+                    raise TypeError("Expecting the value in the given 'state_dict' to be an instance of `State`, or "
+                                    "a list/tuple of them, but got instead: {}".format(type(value)))
+        self._state_dict = state_dict
+
+    @property
+    def state_spaces(self):
+        """Return the state space for each state."""
+        return [state.merged_space for state in self.states]
+
+    @property
+    def state_space(self):
+        """Return the state space of the first (combined) state."""
+        return self.states[0].merged_space
+
+    @property
     def actions(self):
         """Return the actions."""
         return self._actions
@@ -171,6 +213,20 @@ class Env(object):  # gym.Env):  # TODO: make it inheriting the gym.Env
         if self.actions is None:
             return None
         return self.actions[0]
+
+    @property
+    def action_spaces(self):
+        """Return the action space for each action."""
+        if self.actions is None:
+            return None
+        return [action.merged_space for action in self.actions]
+
+    @property
+    def action_space(self):
+        """Return the action space of the first (combined) action."""
+        if self.actions is None:
+            return None
+        return self.actions[0].merged_space
 
     @property
     def rewards(self):
@@ -440,6 +496,40 @@ class BasicEnv(Env):
         world = BasicWorld(sim)
         super(BasicEnv, self).__init__(world, states, rewards, terminal_conditions, initial_state_generators,
                                        physics_randomizers, extra_info, actions)
+
+
+class GymEnv(gym.Env):
+    r"""Gym Environment.
+
+    This is a thin wrapper around a PRL environment to a Gym environment. Notably, we make sure that the action is
+    defined in the environment, as in PRL the actions don't have to be specified.
+
+    Few notes with respect to PRL:
+    - in PRL Env, you don't have to provide the action space nor the action. The reason is that it is the policy that
+      should be aware of the action space.
+    - in PRL Env, the returned state data can be a list of state data if the states have different dimensions.
+    """
+
+    def __init__(self, prl_env):
+        """
+        Initialize the Gym PRL Environment.
+
+        Args:
+            prl_env (Env): pyrobolearn (PRL) environment.
+        """
+        # check environment
+        if not isinstance(prl_env, Env):
+            raise TypeError("Expecting the given 'prl_env' to be an instance of `Env`, instead got: "
+                            "{}".format(type(prl_env)))
+        self.env = prl_env
+
+        # check that the environment has actions
+        if self.env.actions is None:
+            raise RuntimeError("Expecting the environment to have actions")
+
+    def __getattr__(self, item):
+        """The Gym Env have the same methods and attributes as the PRL Env."""
+        return getattr(self.env, item)
 
 
 # Tests
