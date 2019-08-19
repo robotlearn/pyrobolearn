@@ -1,11 +1,11 @@
 Simulators
 ==========
 
-The simulator is the starting point in the **PyRoboLearn** (PRL) framework. To avoid a tight coupling with a particular simulator, a ``Simulator`` interface class (from which all the other simulators inherit from) has been implemented. Other .
+The simulator is the starting point in the **PyRoboLearn** (PRL) framework. To avoid a tight coupling with a particular simulator, a ``Simulator`` interface class (from which all the other simulators inherit from) has been implemented. The ``Simulator`` interface notably provides a common interface such that it provides features in the same way without regard to the simulator. For instance, a quaternion might be returned as [x,y,z,w] with one simulator, while with another it could be returned as [w,x,y,z]. This is addressed by the ``Simulator`` interfaces which uses only one convention, and convert if necessary the quaternion returned by the inner simulator. 
 
-We provide the ``Bullet`` interface, which uses the ``pybullet`` library.
+Currently, the fully supported simulator is ``pybullet`` through the ``Bullet`` interface. Other simulators such as ``MuJoCo``, ``Dart`` and ``Raisim`` are partially implemented but their full integration is still in progress. 
 
-The general idea is that you would be able to change the simulator if you wish without having to modify any other lines of code. See example below.
+The general idea is that you would be able to change the simulator if you wish without having to modify any other lines of code. See example below. 
 
 
 Design
@@ -86,12 +86,14 @@ FAQs and Troubleshootings
 Future works
 ------------
 
-My main objectives for future works are the implementation of:
-
+Currently, I am working on supporting the following simulators:
 - the Mujoco interface; I originally did not start with it as it is closed-source and requires a License. However, it is used a lot in research and thus it could be interesting to have it as well.
+- the DART interface; there is a minimal implementation of it in PRL where I was mostly playing around with it.
+- the RaiSim interface; the ``raisimpy`` python wrapper has been implemented, and a minimal implementation is provided.
+
+My main objectives for future works are the implementation of:
 - the Gazebo-ROS interface; a part has already been implemented but it is far from over.
 - the Isaac interface if Nvidia provided a nice Python API.
 
 Possible other future works might include the implementation of:
-- the DART interface; there is a minimal implementation of it when I was playing around with it
 - the opensim interface; this interface is for musculoskeletal models but this can be interesting when testing algorithms/models.
