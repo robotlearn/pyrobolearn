@@ -12,6 +12,7 @@ Dependencies:
 
 import copy
 import pickle
+import numpy as np
 import gym
 
 from pyrobolearn.worlds import World, BasicWorld
@@ -50,9 +51,9 @@ class Env(gym.Env):  # TODO: make it inheriting the gym.Env
     the `gym.Env` class (see `core.py` in `https://github.com/openai/gym/blob/master/gym/core.py`).
 
     References:
-        [1] "Reinforcement Learning: An Introduction", Sutton and Barto, 1998
-        [2] "Wikipedia: Composition over Inheritance", https://en.wikipedia.org/wiki/Composition_over_inheritance
-        [3] "OpenAI gym": https://gym.openai.com/   and    https://github.com/openai/gym
+        - [1] "Reinforcement Learning: An Introduction", Sutton and Barto, 1998
+        - [2] "Wikipedia: Composition over Inheritance", https://en.wikipedia.org/wiki/Composition_over_inheritance
+        - [3] "OpenAI gym": https://gym.openai.com/   and    https://github.com/openai/gym
     """
 
     def __init__(self, world, states, rewards=None, terminal_conditions=None, initial_state_generators=None,
@@ -66,11 +67,11 @@ class Env(gym.Env):  # TODO: make it inheriting the gym.Env
             states ((list of) State): states that are returned by the environment at each time step.
             rewards (None, Reward): The rewards can be None when for instance we are in an imitation learning setting,
                 instead of a reinforcement learning one. If None, only the state is returned by the environment.
-            terminal_conditions (None, callable, TerminalCondition, list of TerminalCondition): A callable function or
+            terminal_conditions (None, callable, TerminalCondition, list[TerminalCondition]): A callable function or
                 object that check if the policy has failed or succeeded the task.
-            initial_state_generators (None, StateGenerator, list of StateGenerator): state generators which are used
+            initial_state_generators (None, StateGenerator, list[StateGenerator]): state generators which are used
                 when resetting the environment to generate the initial states.
-            physics_randomizers (None, PhysicsRandomizer, list of PhysicsRandomizer): physics randomizers. This will be
+            physics_randomizers (None, PhysicsRandomizer, list[PhysicsRandomizer]): physics randomizers. This will be
                 called each time you reset the environment.
             extra_info (None, callable): Extra info returned by the environment at each time step.
             actions ((list of) Action): actions that are given to the environment. Note that this is not used here in
@@ -85,7 +86,7 @@ class Env(gym.Env):  # TODO: make it inheriting the gym.Env
         self.terminal_conditions = terminal_conditions
         self.physics_randomizers = physics_randomizers
         self.state_generators = initial_state_generators
-        self.extra_info = extra_info if extra_info is not None else lambda: False
+        self.extra_info = extra_info if extra_info is not None else lambda: dict()
         self.actions = actions
 
         # state dictionary which contains at least {'policy': State, 'value': State}
@@ -184,6 +185,13 @@ class Env(gym.Env):  # TODO: make it inheriting the gym.Env
     def state_space(self):
         """Return the state space of the first (combined) state."""
         return self.states[0].merged_space
+
+    # alias
+    observations = states
+    observation = state
+    observation_dict = state_dict
+    observation_spaces = state_spaces
+    observation_space = state_space
 
     @property
     def actions(self):
@@ -351,8 +359,11 @@ class Env(gym.Env):  # TODO: make it inheriting the gym.Env
         for generator in self.state_generators:
             generator(reset_state=False)
 
+        self.world.step()
+
         # reset states and return first states/observations
-        states = [state.reset() for state in self.states]
+        states = [state.reset(merged_data=True) for state in self.states]
+        print("Reset: ", states)
         return self._convert_state_to_data(states)
 
     def step(self, actions=None, sleep_dt=None):
@@ -363,12 +374,14 @@ class Env(gym.Env):  # TODO: make it inheriting the gym.Env
 
         Args:
             actions (None, (list of) Action, (list of) np.array): an action provided by the policy(ies) to the
-                environment. Note that this is not used in this method; calling the actions should be done inside the
-                policy(ies), and not in the environment. The policy decides when to execute an action. Several problems
-                can appear by providing the actions in the environment instead of letting the policy executes them.
-                For instance, think about when there are multiple policies, when using multiprocessing, or when the
-                environment runs in real-time.
-            sleep_dt (float):
+                environment. Note that this is not normally used in this method; calling the actions should be done
+                inside the policy(ies), and not in the environment. The policy decides when to execute an action.
+                Several problems can appear by providing the actions in the environment instead of letting the policy
+                executes them. For instance, think about when there are multiple policies, when using multiprocessing,
+                or when the environment runs in real-time. However, if an action is given as a (list of) np.array,
+                it will be set as the action data, and the action will be executed. If the action is a (list of) Action,
+                it will call each action.
+            sleep_dt (float): time to sleep.
 
         Returns:
             observation (object): agent's observation of the current environment
@@ -391,6 +404,32 @@ class Env(gym.Env):  # TODO: make it inheriting the gym.Env
         # if actions is not None and isinstance(actions, Action):
         #     actions()
 
+        # if the actions are provided, set and apply them in the environment
+        if actions is not None:
+            if isinstance(actions, Action):
+                actions()
+            elif isinstance(actions, np.ndarray) and isinstance(self.actions, list):  # set the data
+                if len(self.actions) == 1:
+                    self.actions[0].data = actions
+                else:
+                    raise ValueError("There are multiple actions defined in the environment, so it is unclear to "
+                                     "which action the data should be set to.")
+            elif isinstance(actions, (list, tuple)):
+                for idx, action in enumerate(actions):
+                    if isinstance(action, Action):
+                        action()
+                    elif isinstance(action, np.ndarray) and self.actions is not None:
+                        if len(actions) != len(self.actions):
+                            raise ValueError("The number of given actions (={}) is different from the number of "
+                                             "actions defined in the environments (={})".format(len(actions),
+                                                                                                len(self.actions)))
+                        self.actions[idx].data = action
+                    else:
+                        raise TypeError("Expecting a list of np.array or `Action` instead got: {}".format(type(action)))
+            else:
+                raise TypeError("Expecting an instance of `Action`, np.array, or a list of the previous ones, but got "
+                                "instead: {}".format(type(actions)))
+
         # perform a step forward in the simulation which computes all the dynamics
         self.world.step(sleep_dt=sleep_dt)
 
@@ -403,7 +442,7 @@ class Env(gym.Env):  # TODO: make it inheriting the gym.Env
 
         # get next state/obs for each policy
         # TODO: this should be before computing the rewards as some rewards need the next state
-        states = [state() for state in self.states]
+        states = [state(merged_data=True) for state in self.states]
         states = self._convert_state_to_data(states, convert=True)
 
         # get extra information
@@ -418,7 +457,7 @@ class Env(gym.Env):  # TODO: make it inheriting the gym.Env
         self.sim.render()
 
     def hide(self):
-        """hide the GUI."""
+        """Hide the GUI."""
         self.is_rendering = False
         self.sim.hide()
 

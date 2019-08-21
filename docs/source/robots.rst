@@ -236,6 +236,8 @@ To illustrate how to create your own robot, let's assume you want to create a hu
 Sensors and Actuators
 ---------------------
 
+Both sensors and actuators are attached to joints or links, and interact with the simulator interface. They notably both accept a ``noise`` distribution, the number of ``ticks`` (i.e. the number of steps to wait/sleep before the acquisition of the next sensor value), the ``latency`` (currently fixed).
+
 * Sensors
 * Actuators
 

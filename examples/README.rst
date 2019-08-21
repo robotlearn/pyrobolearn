@@ -21,4 +21,4 @@ You can check the following folders on:
 - ``rewards``: how to use the reward functions.
 - ``environments``: provide a full example on how to create an environment from scratch in PRL.
 - ``imitation``: how to use imitation learning with the framework.
-- ``gym/cartpole``: policies that are trained with different algorithms on the gym Cartpole environment.
+- ``reinforcement``: how to use reinforcement learning with the framework.

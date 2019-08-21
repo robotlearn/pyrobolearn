@@ -64,10 +64,15 @@ class CartpoleEnv(ControlEnv):
         Initialize the Cartpole environment.
 
         Args:
-            simulator (Simulator): simulator instance.
+            simulator (Simulator): simulator instance. If None, by default, it will instantiate the Bullet
+                simulator.
             num_links (int): the number of links that forms the inverted pendulum.
             verbose (bool): if True, it will print information when creating the environment.
         """
+        # simulator
+        if simulator is None:
+            simulator = prl.simulators.Bullet(render=verbose)
+
         # create basic world
         world = prl.worlds.World(simulator)
         robot = prl.robots.CartPole(simulator, position=(0., 0., 0.), num_links=num_links, inverted_pole=False)

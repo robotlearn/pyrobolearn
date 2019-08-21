@@ -117,15 +117,19 @@ class FixedStateGenerator(StateGenerator):
     This generator returns the same initial state each time it is called.
     """
 
-    def __init__(self, state, fct=None):
+    def __init__(self, state, data=None, fct=None):
         """Initialize the fixed state generator.
 
         Args:
             state (State): state instance.
+            data (int, float, list[float/int] np.array[float/int], None): initial data. If None, it will get the data
+              from the given state, and set this last one as the initial data.
             fct (callable, None): callback function to be called after generating the data.
         """
         super(FixedStateGenerator, self).__init__(state, fct=fct)
-        self.initial_data = self.state.data
+        if data is None:
+            data = self.state.data
+        self.initial_data = data
 
     def _generate(self, set_data=True, reset_state=True):
         """Generate the state.
@@ -478,7 +482,7 @@ class UniformStateGenerator(StateDistributionGenerator):
                 for state, low, high in zip(self.state, self.low, self.high)]
         if set_data:
             self.state.data = data
-            # print("Generate: {}".format(self.state.data))
+            print("Generate: {}".format(self.state.data))
         if reset_state:
             self.state.reset()
         return data
@@ -491,21 +495,87 @@ class NormalStateGenerator(StateDistributionGenerator):
     The states are then truncated / clipped to be inside their corresponding range.
     """
 
-    def __init__(self, state, means=0, scales=1., seed=None, fct=None):
+    def __init__(self, state, mean=0, covariance=1., seed=None, fct=None):
         """
         Initialize the Normal state generator.
 
         Args:
             state (State): state instance.
-            means:
-            scales:
+            mean (int, float, np.array[float[N]]): mean.
+            scale (int, float, np.array[float[N]]): covariance matrix or variance vector.
             seed (None, int): random seed.
             fct (callable, None): callback function to be called after generating the data.
         """
         super(NormalStateGenerator, self).__init__(state, seed=seed, fct=fct)
+        self.mean = mean
+        self.covariance = covariance
+
+    @property
+    def mean(self):
+        """Return the mean vector."""
+        return self._mean
+
+    @mean.setter
+    def mean(self, mean):
+        """Set the mean vector."""
+        if mean is None:
+            mean = [0.] * len(self.state)
+        elif isinstance(mean, (int, float)):
+            mean = [mean] * len(self.state)
+        elif isinstance(mean, (list, tuple, np.ndarray)):
+            if len(mean) != len(self.state):
+                raise ValueError("The mean vector doesn't have the same size as the number of states; len(mean) = {} "
+                                 "and len(state) = {}".format(len(mean), len(self.state)))
+        else:
+            raise TypeError("Expecting the mean vector to be an int, float, or list/tuple/np.array of int/float, "
+                            "instead got: {}".format(type(mean)))
+        self._mean = np.asarray(mean)
+
+    @property
+    def covariance(self):
+        """Return the variance vector and covariance matrix."""
+        return self._covariance
+
+    @covariance.setter
+    def covariance(self, covariance):
+        """Set the variance vector or covariance matrix."""
+        if covariance is None:
+            covariance = [1.] * len(self.state)
+        elif isinstance(covariance, (int, float)):
+            covariance = [covariance] * len(self.state)
+        elif isinstance(covariance, (list, tuple, np.ndarray)):
+            if len(covariance) != len(self.state):
+                raise ValueError("The variance vector or covariance matrix doesn't have the same size as the number of "
+                                 "states; len(covariance) = {} and len(state) = {}".format(len(covariance),
+                                                                                           len(self.state)))
+        else:
+            raise TypeError("Expecting the variance vector or covariance matrix to be an int, float, or list/tuple/"
+                            "np.array of int/float, but instead got: {}".format(type(covariance)))
+        self._covariance = np.asarray(covariance)
 
     def _generate(self, set_data=True, reset_state=True):
-        pass
+        """Generate the state.
+
+        Args:
+            set_data (bool): If True, it will set the generated data to the state.
+            reset_state (bool): If True, it will reset the state with the generated data (if `set_data` has been set
+                to True).
+
+        Returns:
+            (list of) np.array: state data
+        """
+
+        if self.covariance.ndim == 2:
+            data = [np.random.multivariate_normal(self.mean, self.covariance)]
+        else:
+            data = [np.random.normal(self.mean, scale=np.sqrt(self.covariance))]
+
+        if set_data:
+            self.state.data = data
+            # print("Generate: {}".format(self.state.data))
+        if reset_state:
+            self.state.reset()
+        return data
 
 
 class GenerativeStateGenerator(StateGenerator):

@@ -548,7 +548,6 @@ class JointTorqueAction(JointAction):
     def _write_continuous(self, data):
         """apply the action data on the robot."""
         data = np.clip(data, self.f_min, self.f_max)
-        print(data)
         self.robot.set_joint_torques(data, self.joints)
 
     def __copy__(self):

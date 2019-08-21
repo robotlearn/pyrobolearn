@@ -54,10 +54,15 @@ class AcrobotEnv(ControlEnv):
         Initialize the acrobot environment.
 
         Args:
-            simulator (Simulator): simulator instance.
+            simulator (Simulator): simulator instance. If None, by default, it will instantiate the Bullet
+                simulator.
             use_reward_shaping (bool): if True, it will use a reward that guides how to achieve the goal.
             verbose (bool): if True, it will print information when creating the environment.
         """
+        # simulator
+        if simulator is None:
+            simulator = prl.simulators.Bullet(render=verbose)
+
         # create basic world
         world = prl.worlds.BasicWorld(simulator)
         robot = world.load_robot('acrobot')

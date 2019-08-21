@@ -72,7 +72,7 @@ class IMUSensor(LinkSensor):
             apply_noise (bool): if we should apply the noise or not. Note that the sensor might already have some noise.
 
         Returns:
-            np.array[6]: concatenation of linear accelerations and angular velocities
+            np.array[float[6]]: concatenation of linear accelerations and angular velocities
         """
         # if the simulator supports IMU sensors, return the sensed data
         if self.simulator.supports_sensors("imu"):

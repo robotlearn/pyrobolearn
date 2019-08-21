@@ -23,7 +23,7 @@ __status__ = "Development"
 class LinkCondition(RobotCondition):
     r"""Link Terminal Condition
 
-    This terminal condition describes 8 cases:
+    This terminal condition describes 8 cases (4 failure and 4 success cases):
 
     1. all the dimensions of the link state are:
         1. in a certain bounds and must stay between these bounds. Once one gets out, the terminal condition is over,
@@ -48,7 +48,7 @@ class LinkCondition(RobotCondition):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, robot, link_id, wrt_link_id=None, bounds=(None, None), dim=None, out=False, stay=False, all=all):
+    def __init__(self, robot, link_id, wrt_link_id=None, bounds=(None, None), out=False, stay=False, all=False):
         """
         Initialize the link terminal condition.
 
@@ -65,7 +65,7 @@ class LinkCondition(RobotCondition):
                 are checked if they are inside or outside the bounds depending on the other parameters. if False, any
                 dimensions will be checked.
         """
-        super(LinkCondition, self).__init__(robot, bounds=bounds, dim=dim, out=out, stay=stay, all=all)
+        super(LinkCondition, self).__init__(robot, bounds=bounds, out=out, stay=stay, all=all)
 
         # set link
         if not isinstance(link_id, int):
@@ -105,7 +105,7 @@ class LinkCondition(RobotCondition):
 class LinkPositionCondition(LinkCondition):
     r"""Link position terminal condition
 
-    This terminal condition describes 8 cases:
+    This terminal condition describes 8 cases (4 failure and 4 success cases):
 
     1. all the dimensions of the link position state are:
         1. in a certain bounds and must stay between these bounds. Once one gets out, the terminal condition is over,
@@ -127,8 +127,7 @@ class LinkPositionCondition(LinkCondition):
            over, and results in a failure. (all=False, out=True, stay=True)
     """
 
-    def __init__(self, robot, link_id=None, wrt_link_id=None, bounds=(None, None), dim=None, out=False, stay=False,
-                 all=False):
+    def __init__(self, robot, link_id=None, wrt_link_id=None, bounds=(None, None), out=False, stay=False, all=False):
         """
         Initialize the link position terminal condition.
 
@@ -145,7 +144,7 @@ class LinkPositionCondition(LinkCondition):
                 if the link position leaves the bounds, it results in a success.
         """
         super(LinkPositionCondition, self).__init__(robot, link_id=link_id, wrt_link_id=wrt_link_id, bounds=bounds,
-                                                    dim=dim, out=out, stay=stay, all=all)
+                                                    out=out, stay=stay, all=all)
 
     def _get_states(self):
         """Return the link position state."""
@@ -163,7 +162,7 @@ class LinkPositionCondition(LinkCondition):
 class LinkOrientationCondition(LinkCondition):
     r"""Link orientation terminal condition
 
-    This terminal condition describes 8 cases:
+    This terminal condition describes 8 cases (4 failure and 4 success cases):
 
     1. all the dimensions of the link orientation (expressed as roll-pitch-yaw angles) state are:
         1. in a certain bounds and must stay between these bounds. Once one gets out, the terminal condition is over,
@@ -187,8 +186,7 @@ class LinkOrientationCondition(LinkCondition):
     Warnings: the orientation is expressed as roll-pitch-yaw angles.
     """
 
-    def __init__(self, robot, link_id, wrt_link_id=None, bounds=(None, None), dim=None, out=False, stay=False,
-                 all=False):
+    def __init__(self, robot, link_id, wrt_link_id=None, bounds=(None, None), out=False, stay=False, all=False):
         """
         Initialize the link orientation terminal condition.
 
@@ -205,7 +203,7 @@ class LinkOrientationCondition(LinkCondition):
                 these bounds; if the link orientation leaves the bounds, it results in a success.
         """
         super(LinkOrientationCondition, self).__init__(robot, link_id=link_id, wrt_link_id=wrt_link_id, bounds=bounds,
-                                                       dim=dim, out=out, stay=stay, all=all)
+                                                       out=out, stay=stay, all=all)
 
     def _get_states(self):
         """Return the link orientation state."""

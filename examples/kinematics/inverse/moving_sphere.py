@@ -72,4 +72,5 @@ for t in count():
     robot.set_joint_positions(q, joint_ids=joint_ids)
 
     # step in simulation
+    robot.step()
     world.step(sleep_dt=dt)

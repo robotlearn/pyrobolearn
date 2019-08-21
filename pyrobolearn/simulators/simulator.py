@@ -2105,20 +2105,20 @@ class Simulator(object):
 
         Returns:
             list:
-                int: contact flag (reserved)
-                int: body unique id of body A
-                int: body unique id of body B
-                int: link index of body A, -1 for base
-                int: link index of body B, -1 for base
-                np.array[float[3]]: contact position on A, in Cartesian world coordinates
-                np.array[float[3]]: contact position on B, in Cartesian world coordinates
-                np.array[float[3]]: contact normal on B, pointing towards A
-                float: contact distance, positive for separation, negative for penetration
-                float: normal force applied during the last `step`
-                float: lateral friction force in the first lateral friction direction (see next returned value)
-                np.array[float[3]]: first lateral friction direction
-                float: lateral friction force in the second lateral friction direction (see next returned value)
-                np.array[float[3]]: second lateral friction direction
+                [0] int: contact flag (reserved)
+                [1] int: body unique id of body A
+                [2] int: body unique id of body B
+                [3] int: link index of body A, -1 for base
+                [4] int: link index of body B, -1 for base
+                [5] np.array[float[3]]: contact position on A, in Cartesian world coordinates
+                [6] np.array[float[3]]: contact position on B, in Cartesian world coordinates
+                [7] np.array[float[3]]: contact normal on B, pointing towards A
+                [8] float: contact distance, positive for separation, negative for penetration
+                [9] float: normal force applied during the last `step`
+                [10] float: lateral friction force in the first lateral friction direction (see next returned value)
+                [11] np.array[float[3]]: first lateral friction direction
+                [12] float: lateral friction force in the second lateral friction direction (see next returned value)
+                [13] np.array[float[3]]: second lateral friction direction
         """
         pass
 

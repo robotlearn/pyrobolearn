@@ -50,10 +50,10 @@ class CameraSensor(LinkSensor):  # TODO: double-check this class
         plt.show()
 
     References:
-        [1] http://www.codinglabs.net/article_world_view_projection_matrix.aspx
-        [2] https://learnopengl.com/Getting-started/Coordinate-Systems
-        [3] http://www.thecodecrate.com/opengl-es/opengl-transformation-matrices/
-        [4] http://learnwebgl.brown37.net/08_projections/projections_perspective.html
+        - [1] http://www.codinglabs.net/article_world_view_projection_matrix.aspx
+        - [2] https://learnopengl.com/Getting-started/Coordinate-Systems
+        - [3] http://www.thecodecrate.com/opengl-es/opengl-transformation-matrices/
+        - [4] http://learnwebgl.brown37.net/08_projections/projections_perspective.html
     """
 
     def __init__(self, simulator, body_id, link_id, width, height, noise=None, ticks=50, latency=None,
@@ -228,7 +228,7 @@ class DepthCameraSensor(CameraSensor):
             apply_noise (bool): if we should apply the noise or not. Note that the sensor might already have some noise.
 
         Returns:
-            np.array[W,H]: depth image
+            np.array[float[W,H]]: depth image
         """
         data = self.get_depth_image()
         if apply_noise:
@@ -248,7 +248,7 @@ class RGBCameraSensor(CameraSensor):
             apply_noise (bool): if we should apply the noise or not. Note that the sensor might already have some noise.
 
         Returns:
-            np.array[W,H]: depth image
+            np.array[int[W,H,3]]: RGB image
         """
         data = self.get_rgb_image()
         if apply_noise:
@@ -262,13 +262,13 @@ class RGBCameraSensor(CameraSensor):
 #
 #     def _sense(self, apply_noise=True):
 #         """
-#         Sense using the camera RGB sensor.
+#         Sense using the camera segmentation sensor.
 #
 #         Args:
 #             apply_noise (bool): if we should apply the noise or not. Note that the sensor might already have some noise.
 #
 #         Returns:
-#             np.array[W,H]: depth image
+#             np.array[int[W,H]]: segmentation image
 #         """
 #         data = self.get_rgb_image()
 #         if apply_noise:

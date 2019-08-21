@@ -163,8 +163,9 @@ we now provide a brief overview of each submodule and its intended use:
 - ``returns``: this provides the various returns and estimators that are used in RL.
 - ``algos``: this contains the various learning algorithms on how to acquire the data and train the various models
   (policies, values, dynamics, etc).
-- ``metrics``: this contains the various metrics that are used in different learning paradigms. They are not currently 
-  all implemented. You can put different metrics together and plot them by just calling the ``plot`` method.
+- ``metrics``: this contains the various metrics that are used in different learning paradigms (imitation, reinforcement, 
+  transfer, etc). They are not currently all implemented. You can combine different metrics together and plot them by 
+  just calling the ``plot`` method.
 
 Other folders include:
 

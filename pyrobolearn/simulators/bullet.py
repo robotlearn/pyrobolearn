@@ -373,43 +373,44 @@ class Bullet(Simulator):
             if mode == 'rgb':
                 np.array[W,H,D]: RGB image
         """
-        if enable:
-            if mode == 'human':
-                # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING,  1)
-                if self.connection_mode == pybullet.DIRECT:
-                    # save the state of the simulator
-                    filename = 'PYROBOLEARN_RENDERING_STATE.bullet'
-                    self.save(filename=filename)
-                    # change the connection mode
-                    self.connection_mode = pybullet.GUI
-                    self.__init(self.connection_mode)
-                    # load the state of the world in the simulator
-                    self.load(filename)
-                    os.remove(filename)
-                    # reset the camera
-                    self.reset_scene_camera(camera=self._camera)
-            elif mode == 'rgb' or mode == 'rgba':
-                width, height, view_matrix, projection_matrix = self.get_debug_visualizer()[:4]
-                img = np.asarray(self.get_camera_image(width, height, view_matrix, projection_matrix)[2])
-                img = img.reshape(width, height, 4)  # RGBA
-                if mode == 'rgb':
-                    return img[:, :, :3]
-                return img
-        else:
-            if mode == 'human':
-                # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING, 0)
-                if self.connection_mode == pybullet.GUI:
-                    # save the state of the simulator
-                    filename = 'PYROBOLEARN_RENDERING_STATE.bullet'
-                    self.save(filename=filename)
-                    # save main camera configuration (for later)
-                    self._camera = self.get_debug_visualizer()[-4:]
-                    # change the connection mode
-                    self.connection_mode = pybullet.DIRECT
-                    self.__init(self.connection_mode)
-                    # load the state of the world in the simulator
-                    self.load(filename)
-                    os.remove(filename)
+        if not self._render:
+            if enable:
+                if mode == 'human':
+                    # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING,  1)
+                    if self.connection_mode == pybullet.DIRECT:
+                        # save the state of the simulator
+                        filename = 'PYROBOLEARN_RENDERING_STATE.bullet'
+                        self.save(filename=filename)
+                        # change the connection mode
+                        self.connection_mode = pybullet.GUI
+                        self.__init(self.connection_mode)
+                        # load the state of the world in the simulator
+                        self.load(filename)
+                        os.remove(filename)
+                        # reset the camera
+                        self.reset_scene_camera(camera=self._camera)
+                elif mode == 'rgb' or mode == 'rgba':
+                    width, height, view_matrix, projection_matrix = self.get_debug_visualizer()[:4]
+                    img = np.asarray(self.get_camera_image(width, height, view_matrix, projection_matrix)[2])
+                    img = img.reshape(width, height, 4)  # RGBA
+                    if mode == 'rgb':
+                        return img[:, :, :3]
+                    return img
+            else:
+                if mode == 'human':
+                    # self.sim.configureDebugVisualizer(self.sim.COV_ENABLE_RENDERING, 0)
+                    if self.connection_mode == pybullet.GUI:
+                        # save the state of the simulator
+                        filename = 'PYROBOLEARN_RENDERING_STATE.bullet'
+                        self.save(filename=filename)
+                        # save main camera configuration (for later)
+                        self._camera = self.get_debug_visualizer()[-4:]
+                        # change the connection mode
+                        self.connection_mode = pybullet.DIRECT
+                        self.__init(self.connection_mode)
+                        # load the state of the world in the simulator
+                        self.load(filename)
+                        os.remove(filename)
 
         # set the render variable (useful when calling the method `is_rendering`)
         self._render = enable

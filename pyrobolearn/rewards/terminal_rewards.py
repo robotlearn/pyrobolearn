@@ -26,12 +26,12 @@ class TerminalReward(Reward):
     value once the goal has been achieved (e.g. games).
     """
 
-    def __init__(self, terminal_conditions, subreward, final_reward):
+    def __init__(self, terminal_conditions, subreward=0., final_reward=0.):
         r"""
         Terminal reward.
 
         Args:
-            terminal_conditions (TerminalCondition, list of TerminalCondition): terminal condition(s).
+            terminal_conditions (TerminalCondition, list[TerminalCondition]): terminal condition(s).
             subreward (Reward, float, int): sub reward that is called until the terminal condition is not fulfilled.
             final_reward (Reward, float, int): final reward that is called when the terminal condition has been reached.
         """

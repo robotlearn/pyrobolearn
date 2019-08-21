@@ -4,7 +4,10 @@ from .reward import Reward, ceil, cos, cosh, degrees, exp, expm1, floor, frexp, 
     radians, sin, sinh, sqrt, tan, tanh, trunc
 
 # import basic rewards
-from .basic_rewards import *
+from .basic_rewards import FixedReward, DirectiveReward
+
+# import robot rewards
+from .robot_reward import RobotReward, BaseLinearVelocityReward, ForwardProgressReward
 
 # import gym wrapper reward
 from .gym_reward import GymReward
@@ -14,8 +17,9 @@ from .terminal_rewards import TerminalReward
 
 # import costs
 from .cost import *
+from .robot_cost import *
 from .joint_cost import *
 from .link_cost import *
 
-# import processors
+# import reward processors
 from .processors import *

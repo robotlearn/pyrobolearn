@@ -22,7 +22,7 @@ __status__ = "Development"
 class JointCondition(RobotCondition):
     r"""Joint Terminal Condition
 
-    This terminal condition describes 8 cases:
+    This terminal condition describes 8 cases (4 failure and 4 success cases):
 
     1. all the joint states are:
         1. in a certain bounds and must stay between these bounds. Once one gets out, the terminal condition is over,
@@ -106,7 +106,7 @@ class JointCondition(RobotCondition):
 class JointPositionCondition(JointCondition):
     r"""Joint position terminal condition
 
-    This terminal condition describes 8 cases:
+    This terminal condition describes 8 cases (4 failure and 4 success cases):
 
     1. all the joint positions are:
         1. in a certain bounds and must stay between these bounds. Once one gets out, the terminal condition is over,
@@ -155,7 +155,7 @@ class JointPositionCondition(JointCondition):
 class JointVelocityCondition(JointCondition):
     r"""Joint velocity terminal condition
 
-    This terminal condition describes 8 cases:
+    This terminal condition describes 8 cases (4 failure and 4 success cases):
 
     1. all the joint velocities are:
         1. in a certain bounds and must stay between these bounds. Once one gets out, the terminal condition is over,
@@ -204,7 +204,7 @@ class JointVelocityCondition(JointCondition):
 class JointAccelerationCondition(JointCondition):
     r"""Joint acceleration terminal condition
 
-    This terminal condition describes 8 cases:
+    This terminal condition describes 8 cases (4 failure and 4 success cases):
 
     1. all the joint accelerations are:
         1. in a certain bounds and must stay between these bounds. Once one gets out, the terminal condition is over,
@@ -253,7 +253,7 @@ class JointAccelerationCondition(JointCondition):
 class JointTorqueCondition(JointCondition):
     r"""Joint torque terminal condition
 
-    This terminal condition describes 8 cases:
+    This terminal condition describes 8 cases (4 failure and 4 success cases):
 
     1. all the joint torques are:
         1. in a certain bounds and must stay between these bounds. Once one gets out, the terminal condition is over,

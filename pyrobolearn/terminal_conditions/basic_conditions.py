@@ -28,13 +28,13 @@ class TimeLimitCondition(TerminalCondition):
         Initialize the time limit terminal condition.
 
         Args:
-            num_steps (int):
+            num_steps (int): number of steps to perform in the environment.
             btype (bool, str, None): if the terminal condition represents a failure or success condition. If None, it
                 represents a neutral terminal condition (which is neither a failure or success condition, but just
                 means the episode is over). If string, it has to be among {"success", "failure", "neutral"}.
         """
         super(TimeLimitCondition, self).__init__(btype=btype)
-        self.num_steps = num_steps
+        self.num_steps = int(num_steps)
         self.cnt = 0
 
     def reset(self):

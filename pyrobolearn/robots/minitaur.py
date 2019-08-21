@@ -110,6 +110,17 @@ class Minitaur(QuadrupedRobot):
         # set feet friction
         self.set_foot_friction(frictions=foot_friction, feet_ids=self.feet)
 
+        h = np.pi / 2  # hip angle from [2]
+        k = 2.1834  # knee angle from [2]
+        right_front_leg_initial_pos = [-h, k, -h, k]  # (outer, inner)
+        right_back_leg_initial_pos = [h, -k, h, -k]  # (outer, inner)
+        left_front_leg_initial_pos = [h, -k, h, -k]  # (outer, inner)
+        left_back_leg_initial_pos = [-h, k, -h, k]  # (outer, inner)
+        self._joint_configuration = {'home': np.array(right_front_leg_initial_pos + right_back_leg_initial_pos +
+                                                      left_front_leg_initial_pos + left_back_leg_initial_pos),
+                                     'standing': 'home',
+                                     'init': 'home'}
+
         # set joint angles to home position
         self.set_home_joint_positions()
 

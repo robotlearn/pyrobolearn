@@ -205,7 +205,7 @@ class Sensor(object):  # sensor attached to a link or joint
         """
         if self._enabled:
             self._cnt += 1
-            if (self._cnt % self._ticks) == 0:
+            if (self._cnt % self._ticks) == 0:  # if time to update
                 if self._latency == 0:  # if no latency
                     self._data = self._sense()
                     self._latent_data = self._data

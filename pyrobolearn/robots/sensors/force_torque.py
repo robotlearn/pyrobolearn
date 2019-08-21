@@ -46,7 +46,7 @@ class JointTorqueSensor(JointSensor):
             apply_noise (bool): if we should apply the noise or not. Note that the sensor might already have some noise.
 
         Returns:
-            np.array[N]: torque values
+            np.array[float[N]]: torque values
         """
         # check if the simulator supports that sensor
         if self.sim.supports_sensors("torque"):
@@ -97,7 +97,7 @@ class JointForceTorqueSensor(JointSensor):
             apply_noise (bool): if we should apply the noise or not. Note that the sensor might already have some noise.
 
         Returns:
-            np.array[6*N]: F/T values
+            np.array[float[6*N]]: F/T values
         """
         # check if the simulator supports that sensor
         if self.sim.supports_sensors("force-torque"):

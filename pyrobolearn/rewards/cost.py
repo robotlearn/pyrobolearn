@@ -43,14 +43,22 @@ class Cost(Reward):
     Every classes that defines a cost inherits from this one. A cost is defined as an objective that
     penalizes a certain behavior.
     """
-    def __init__(self):
-        super(Cost, self).__init__()
+    def __init__(self, state=None, action=None, costs=None, range=(-np.infty, np.infty)):
+        super(Cost, self).__init__(state=state, action=action, rewards=costs, range=range)
         # super(Cost, self).__init__(maximize=False)
 
 
 def logistic_kernel_function(error, alpha):
     r"""
-    The logistic kernel function :math:`K(x|\alpha) = \frac{1}{(e^{\alpha x} + 2 + e^{-\alpha x})} \in [-0.25,0)`.
+    The logistic kernel function :math:`K(x|\alpha) = \frac{1}{(e^{\alpha x} + 2 + e^{-\alpha x})} \in [-0.25,0)`,
+    where :math:`x` is an error term, and :math:`\alpha` is a sensitivity factor.
+
+    According to the authors of [1,2]: "We found the logistic kernel function to be more useful than Euclidean norm,
+    which is a more common choice. An Euclidean norm generates a high cost in the beginning of training where the
+    tracking error is high such that termination (i.e. falling) becomes more rewarding strategy. On the other hand,
+    the logistic kernel ensures that the cost is lower-bounded by zero and termination becomes less favorable. Many
+    other bell-shaped kernels (Gaussian, triweight, biweight, etc) have the same functionality and can be used instead
+    of a logistic kernel."
 
     Args:
         error (Cost, float): cost (e.g. error term)
@@ -58,6 +66,10 @@ def logistic_kernel_function(error, alpha):
 
     Return:
         callable, float: logistic kernel function
+
+    References:
+        - [1] "Learning agile and dynamic motor skills for legged robots", Hwangbo et al., 2019
+        - [2] Supp: https://robotics.sciencemag.org/content/robotics/suppl/2019/01/14/4.26.eaau5872.DC1/aau5872_SM.pdf
     """
     if callable(error):
         y = copy.copy(error)  # shallow copy
@@ -140,29 +152,47 @@ class OrientationGravityCost(Cost):
         - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
     """
 
-    def __init__(self, gravity_state, gravity_vector=[0., 0., -1.]):
+    def __init__(self, state, gravity_vector=[0., 0., -1.]):
         super(OrientationGravityCost, self).__init__()
-        self.gravity_state = gravity_state
-        self.gravity = np.array(gravity_vector)
+        self.gravity_state = state
+        self.gravity = np.asarray(gravity_vector)
 
     def _compute(self):
-        return np.linalg.norm(self.gravity_state.data - self.gravity)
+        return np.linalg.norm(self.gravity_state.data[0] - self.gravity)
 
 
 class PowerCost(Cost):
     r"""Power Consumption Cost
 
-    Return the power consumption cost, where the power is computed as the torque times the velocity.
+    Return the power consumption cost, where the power is computed as the torque times the velocity. This is given by
+    [1] as:
+
+    .. math:: \sum
 
     References:
         - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
     """
+
     def __init__(self, torque_state, velocity_state):
         super(PowerCost, self).__init__()
         self.tau = torque_state
         self.vel = velocity_state
 
-    def compute(self):
+    def _compute(self):
+        return - np.sum(np.maximum(self.tau.data[0] * self.vel.data[0], 0))
+
+
+class PowerAbsoluteCost(Cost):
+    r"""Power Consumption Cost
+
+    """
+
+    def __init__(self, torque_state, velocity_state):
+        super(PowerCost, self).__init__()
+        self.tau = torque_state
+        self.vel = velocity_state
+
+    def _compute(self):
         return - np.sum(np.maximum(self.tau.data[0] * self.vel.data[0], 0))
 
 
@@ -283,31 +313,6 @@ class ImpactCost(Cost):
 
     def __init__(self, body1, body2):
         super(ImpactCost, self).__init__()
-
-    def _compute(self):
-        pass
-
-
-class DriftCost(Cost):
-    """Drift cost.
-
-    Calculates the drift of a moving object wrt a direction.
-    """
-
-    def __init__(self, body, direction):
-        super(DriftCost, self).__init__()
-
-    def _compute(self):
-        pass
-
-
-class ShakeCost(Cost):
-    """Shake cost.
-
-    Calculates the
-    """
-    def __init__(self, body, direction):
-        super(ShakeCost, self).__init__()
 
     def _compute(self):
         pass

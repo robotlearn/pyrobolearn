@@ -1,7 +1,7 @@
 
 # import the basic robot states
 from .robot_states import RobotState, BasePositionState, BaseHeightState, BaseOrientationState, BasePoseState, \
-    BaseLinearVelocityState, BaseAngularVelocityState, BaseVelocityState
+    BaseLinearVelocityState, BaseAngularVelocityState, BaseVelocityState, BaseAxisState
 
 # import the joint states
 from .joint_states import JointState, JointPositionState, JointTrigonometricPositionState, JointVelocityState, \

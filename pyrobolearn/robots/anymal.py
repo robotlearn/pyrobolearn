@@ -71,6 +71,7 @@ class ANYmal(QuadrupedRobot):
                      if link in self.link_names]
 
         # taken from "Learning agile and dynamic motor skills for legged robots", Hwangbo et al., 2019
+        # nominal range of torque (30 N·m) / nominal range of motion (0.6 rad)
         self.kp = 50. * np.ones(12)
         self.kd = 0.1 * np.ones(12)
 

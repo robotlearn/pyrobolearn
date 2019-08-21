@@ -79,7 +79,7 @@ class RaySensor(LinkSensor):
 
         Args:
             enable (bool): if we should render or not.
-            color (None, tuple/list of 4 float, np.ndarray[float[4]]): RGBA color of all the rays, where each channel
+            color (None, tuple/list[float[4]], np.ndarray[float[4]]): RGBA color of all the rays, where each channel
                 is between 0 and 1.
         """
         pass
@@ -140,7 +140,7 @@ class RayBatchSensor(LinkSensor):
             apply_noise (bool): if we should apply the noise or not. Note that the sensor might already have some noise.
 
         Returns:
-            np.array[N]: hit fractions along each ray in range [0,1] along the ray.
+            np.array[float[N]]: hit fractions along each ray in range [0,1] along the ray.
         """
         if self.simulator.supports_sensors("ray_batch"):
             return self.simulator.get_sensor("ray_batch", self.body_id, self.link_id).sense()
@@ -157,7 +157,7 @@ class RayBatchSensor(LinkSensor):
 
         Args:
             enable (bool): if we should render or not.
-            color (None, tuple/list of 4 float, np.ndarray[float[4]]): RGBA color of all the rays, where each channel
+            color (None, tuple/list[float[4]], np.ndarray[float[4]]): RGBA color of all the rays, where each channel
                 is between 0 and 1.
         """
         pass
@@ -237,8 +237,8 @@ class HeightmapSensor(LinkSensor):
         Return the world positions for the rays to start and end.
 
         Returns:
-            np.array[N,3]: list of starting positions for the rays
-            np.array[N,3]: list of ending positions for the rays
+            np.array[float[N,3]]: list of starting positions for the rays
+            np.array[float[N,3]]: list of ending positions for the rays
         """
         pos = self.position
         w2, h2 = self._width / 2., self._height / 2.
@@ -259,8 +259,8 @@ class HeightmapSensor(LinkSensor):
         Return the heightmap.
 
         Returns:
-            np.array[width, height]: Height map with shape [width, height] where the values are the hit fractions [0,1],
-                you can multiply it by :attr:`max_ray_length` to get the depth in meters.
+            np.array[float[width, height]]: Height map with shape [width, height] where the values are the hit
+                fractions [0,1], you can multiply it by :attr:`max_ray_length` to get the depth in meters.
         """
         from_positions, to_positions = self.get_ray_from_to_positions()
         rays = self.sim.ray_test_batch(from_positions=from_positions, to_positions=to_positions)

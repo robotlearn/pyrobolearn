@@ -6,10 +6,11 @@ from .terminal_condition import TerminalCondition, HasFallenCondition, HasReache
 from .basic_conditions import TimeLimitCondition, GymTerminalCondition
 
 # import body terminal condition
-from .body_conditions import BodyCondition, PositionCondition, OrientationCondition
+from .body_conditions import BodyCondition, PositionCondition, OrientationCondition, DistanceCondition, \
+    BaseHeightCondition, BaseOrientationAxisCondition
 
 # import robot terminal condition
-from .robot_condition import RobotCondition
+from .robot_condition import RobotCondition, ContactCondition
 
 # import joint conditions
 from .joint_conditions import JointCondition, JointPositionCondition, JointVelocityCondition, \

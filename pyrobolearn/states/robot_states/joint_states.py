@@ -201,6 +201,13 @@ class JointVelocityState(JointState):
         """
         super(JointVelocityState, self).__init__(robot, joint_ids, window_size=window_size, axis=axis, ticks=ticks)
 
+        # define space
+        max_vel = self.robot.get_joint_max_velocities(joint_ids=self.joints)
+        if np.allclose(max_vel, 0):
+            print("WARNING: joint max velocities are 0, setting low=-10 and high=10.")
+            max_vel = 10 * np.ones(len(self.joints))  # TODO: np.infty instead of 10?
+        self._space = spaces.Box(low=-max_vel, high=max_vel, dtype=np.float32)
+
     def _read(self):
         """Read the next joint velocity state."""
         self.data = self.robot.get_joint_velocities(self.joints)
@@ -212,6 +219,7 @@ class JointVelocityState(JointState):
 
         # reset the robot joint position based on the data
         if len(self.data) > 0:
+            print("reset data: ", self.data[0])
             self.robot.reset_joint_states(dq=self.data[0], joint_ids=self.joints)
 
         # read the next data

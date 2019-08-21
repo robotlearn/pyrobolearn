@@ -51,9 +51,14 @@ class InvertedPendulumSwingUpEnv(ControlEnv):
         Initialize the inverted pendulum swing-up environment.
 
         Args:
-            simulator (Simulator): simulator instance.
+            simulator (Simulator, None): simulator instance. If None, by default, it will instantiate the Bullet
+                simulator.
             verbose (bool): if True, it will print information when creating the environment
         """
+        # simulator
+        if simulator is None:
+            simulator = prl.simulators.Bullet(render=verbose)
+
         # create basic world with the robot
         world = prl.worlds.BasicWorld(simulator)
         robot = world.load_robot('pendulum')
@@ -122,12 +127,15 @@ if __name__ == "__main__":
 
     # create environment
     env = InvertedPendulumSwingUpEnv(sim, verbose=True)
+    action = env.action
+    action.data = 2.
 
     # run simulation
     env.reset()
     for t in prl.count():
-        # if (t % 800) == 0:
-        #     env.reset()  # test reset function
+        if (t % 800) == 0:
+            env.reset()  # test reset function
+        action()
         states, rewards, done, info = env.step(sleep_dt=1./240)
         # print("State: {}".format(states))
-        print("Reward: {}".format(rewards))
+        # print("Reward: {}".format(rewards))
