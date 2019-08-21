@@ -166,7 +166,7 @@ class Action(object):
                     # check if given logits or not
                     if data.shape[-1] != 1:  # logits
                         data = np.array([np.argmax(data)])
-                elif isinstance(data, float):
+                elif isinstance(data, (float, np.integer)):
                     data = int(data)
                 else:
                     raise TypeError("Expecting the `data` action to be an int, numpy array, instead got: "

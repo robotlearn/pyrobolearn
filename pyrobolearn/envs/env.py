@@ -408,7 +408,8 @@ class Env(gym.Env):  # TODO: make it inheriting the gym.Env
         if actions is not None:
             if isinstance(actions, Action):
                 actions()
-            elif isinstance(actions, np.ndarray) and isinstance(self.actions, list):  # set the data
+            elif isinstance(actions, (np.ndarray, int, float, np.integer)) and \
+                    isinstance(self.actions, list):  # set the data
                 if len(self.actions) == 1:
                     self.actions[0].data = actions
                 else:
