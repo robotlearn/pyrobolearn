@@ -47,6 +47,7 @@ neat-python>=0.92
 cma>=2.6.0
 # ray>=0.6.3 [rllib]
 # git+git://github.com/ikostrikov/pytorch-a2c-ppo-acktr
+stable-baselines>=2.7.0
 
 # robots
 urdf-parser-py>=0.0.3
