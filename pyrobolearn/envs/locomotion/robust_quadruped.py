@@ -133,10 +133,11 @@ class SelfRightingEnv(LocomotionEnv):
         action = prl.actions.JointPositionAction(robot, kp=robot.kp, kd=robot.kd)
 
         # create state
+        ang_vel_state = prl.states.BaseAngularVelocityState(robot)
         q_state = prl.states.JointPositionState(robot)
         dq_state = prl.states.JointVelocityState(robot)
         action_state = prl.states.PreviousActionState(action)
-        state = None
+        state = ang_vel_state + q_state + dq_state
 
         # create cost
         c_tau = prl.rewards.JointTorqueCost(state=robot)

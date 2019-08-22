@@ -47,14 +47,13 @@ import pyrobolearn as prl
 
 
 # create simulator (ros core will automatically be launched if it has not already been launched)
-sim = prl.simulators.BulletROS(subscribe=False, publish=True, teleoperate=True)
+sim = prl.simulators.BulletROS(publish=True, teleoperate=True)
 
 # load world
 world = prl.worlds.BasicWorld(sim)
 
-# load rrbot
-robot = prl.robots.RRBot(sim)
-
+# load robot
+robot = world.load_robot('wam')
 
 # run simulation
 for t in count():
@@ -64,3 +63,35 @@ for t in count():
 
     # perform a step in the simulator (and sleep for `sim.dt`)
     world.step(sim.dt)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

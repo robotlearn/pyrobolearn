@@ -355,15 +355,16 @@ class Env(gym.Env):  # TODO: make it inheriting the gym.Env
         for randomizer in self.physics_randomizers:
             randomizer.randomize()
 
-        # generate initial states
+        # generate initial states (states are reset by the states generators)
         for generator in self.state_generators:
-            generator(reset_state=False)
+            generator()  # reset_state=False)
 
-        self.world.step()
+        # self.world.step()
 
         # reset states and return first states/observations
-        states = [state.reset(merged_data=True) for state in self.states]
-        print("Reset: ", states)
+        # states = [state.reset(merged_data=True) for state in self.states]
+        # print("Reset: ", states)
+        states = [state.merged_data for state in self.states]
         return self._convert_state_to_data(states)
 
     def step(self, actions=None, sleep_dt=None):
@@ -386,8 +387,8 @@ class Env(gym.Env):  # TODO: make it inheriting the gym.Env
         Returns:
             observation (object): agent's observation of the current environment
             reward (float) : amount of reward returned after previous action
-            done (boolean): whether the episode has ended, in which case further step() calls will return undefined
-                            results
+            done (bool): whether the episode has ended, in which case further step() calls will return undefined
+              results
             info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)
         """
         # if not isinstance(actions, (list, tuple)):
