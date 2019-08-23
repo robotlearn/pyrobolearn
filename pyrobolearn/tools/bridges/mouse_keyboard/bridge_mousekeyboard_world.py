@@ -22,7 +22,7 @@ from pyrobolearn.tools.bridges import Bridge
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "GNU GPLv3"
+__license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
@@ -105,6 +105,7 @@ class BridgeMouseKeyboardWorld(Bridge):
         self.pausing = False
         self.debug = verbose
 
+        # mapping from keys to methods
         self.events_fn = {(Key.x,): self.change_camera_view_x,
                           (Key.y,): self.change_camera_view_y,
                           (Key.z,): self.change_camera_view_z,
@@ -135,6 +136,11 @@ class BridgeMouseKeyboardWorld(Bridge):
                           (Key.bottom_arrow,): lambda: None,
                           (Key.left_arrow,): lambda: None,
                           (Key.right_arrow,): lambda: None}
+
+        # replace key tuples by frozenset
+        for key in list(self.events_fn.keys()):
+            value = self.events_fn[key]
+            self.events_fn[frozenset(key)] = value
 
         # self.vs = self.simulator.createVisualShape(self.simulator.GEOM_SPHERE, radius=0.02, rgbaColor=(0, 0, 1, 1))
         # self.vs1 = self.simulator.createVisualShape(self.simulator.GEOM_SPHERE, radius=0.2, rgbaColor=(1, 0, 0, 1))
@@ -285,12 +291,12 @@ class BridgeMouseKeyboardWorld(Bridge):
         self.print_debug('unselect robot/link')
         self.robot, self.link_id = None, None
 
-    def add_world_text(self, string, position, color=(0.,0.,0.), size=1., lifetime=0.):
+    def add_world_text(self, string, position, color=(0., 0., 0.), size=1., lifetime=0.):
         """Add world text."""
         self.print_debug('add world text')
         self.simulator.add_user_debug_text(string, position, color, size, lifetime)
 
-    def add_screen_text(self, string, world_position, color=(0.,0.,0.), size=1., lifetime=0.):
+    def add_screen_text(self, string, world_position, color=(0., 0., 0.), size=1., lifetime=0.):
         """Add screen text."""
         self.print_debug('add screen text')
         V, P, Vp, V_inv, P_inv, Vp_inv = self.world_camera.get_matrices(True)
@@ -300,7 +306,7 @@ class BridgeMouseKeyboardWorld(Bridge):
     def check_key_events(self):
         # call function corresponding to key combination
         if self.interface.key_pressed:
-            key = tuple(self.interface.key_pressed)
+            key = frozenset(self.interface.key_pressed)
             if key in self.events_fn:
                 self.events_fn[key]()
 
@@ -329,11 +335,11 @@ class BridgeMouseKeyboardWorld(Bridge):
             # if collision, proceed the inverse operation to get the depth on the screen
             if len(collision) > 0:
                 object_id, link_id, hit_frac, hit_pos, hit_normal = collision[0]
-                # self.simulator.addUserDebugLine(list(x_world_init[:3]), list(x_world_final[:3]), (0, 0, 1))
-                # bodyId = self.simulator.createMultiBody(baseMass=0, baseVisualShapeIndex=self.vs1,
-                #                                   basePosition=list(x_world_init[:3]))
-                # bodyId = self.simulator.createMultiBody(baseMass=0, baseVisualShapeIndex=self.vs2,
-                #                                   basePosition=list(x_world_final[:3]))
+                # self.simulator.add_user_debug_line(list(x_world_init[:3]), list(x_world_final[:3]), (0, 0, 1))
+                # bodyId = self.simulator.create_body(mass=0, visual_shape_id=self.vs1,
+                #                                   position=list(x_world_init[:3]))
+                # bodyId = self.simulator.create_body(mass=0, visual_shape_id=self.vs2,
+                #                                   position=list(x_world_final[:3]))
                 if object_id != -1 and self.world.is_robot_id(object_id):  # valid object
 
                     # Set robot and link_id
@@ -381,8 +387,8 @@ class BridgeMouseKeyboardWorld(Bridge):
 
             # # draw some spheres on the plane
             # if self.display_trajectories:
-            #    bodyId = self.simulator.createMultiBody(baseMass=0, baseVisualShapeIndex=self.vs,
-            #                                      basePosition=point)
+            #    bodyId = self.simulator.create_body(mass=0, visual_shape_id=self.vs,
+            #                                      position=point)
             #    self.visual_points[tuple(point)] = bodyId
             # else:
             #    self.visual_points[tuple(point)] = None
@@ -391,7 +397,7 @@ class BridgeMouseKeyboardWorld(Bridge):
             # if self.display_trajectories:
             #     self.visual_points.append(point)
             #     if len(self.visual_points) > 1:
-            #         self.simulator.addUserDebugLine(self.visual_points[-2], self.visual_points[-1],
+            #         self.simulator.add_user_debug_line(self.visual_points[-2], self.visual_points[-1],
             #                                   RGBColor.red, 1., 2.)
 
             # # perform inverse kinematics

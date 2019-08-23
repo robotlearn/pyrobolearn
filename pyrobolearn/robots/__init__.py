@@ -35,7 +35,7 @@ from .humanoid import Humanoid
 from .aibo import Aibo
 from .minitaur import Minitaur
 from .littledog import LittleDog
-# from .anymal import ANYmal
+from .anymal import ANYmal
 from .hyq import HyQ
 from .hyq2max import HyQ2Max
 from .opendog import OpenDog
@@ -172,3 +172,12 @@ for robot_name in implemented_robots:
 
 implemented_robots = set(list(robot_names_to_classes.keys()))
 implemented_grippers = set(implemented_grippers)
+
+
+# function to disable the motors
+# this can be useful when resetting the joint state
+def reset_robot(robot, joint_ids=None):
+    """Return a function that disables the motors."""
+    def reset():
+        robot.disable_motor(joint_ids=joint_ids)
+    return reset

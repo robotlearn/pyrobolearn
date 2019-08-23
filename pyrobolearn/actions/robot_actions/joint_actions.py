@@ -256,8 +256,9 @@ class JointPositionAction(JointAction):
 
     def _write_continuous(self, data):
         """apply the action data on the robot."""
-        self.robot.set_joint_positions(data, self.joints, bounds=self.bounds, kp=self.kp, kd=self.kd,
-                                       forces=self.max_force, discrete_values=self.discrete_values)
+        # self.robot.set_joint_positions(data, self.joints, bounds=self.bounds, kp=self.kp, kd=self.kd,
+        #                                forces=self.max_force, discrete_values=self.discrete_values)
+        self.robot.set_joint_positions(data, self.joints, kp=self.kp, kd=self.kd, forces=self.max_force)
 
     def __copy__(self):
         """Return a shallow copy of the action. This can be overridden in the child class."""

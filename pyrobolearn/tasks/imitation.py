@@ -20,7 +20,7 @@ from pyrobolearn.tools.bridges.mouse_keyboard import BridgeMouseKeyboardImitatio
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "GNU GPLv3"
+__license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
@@ -188,10 +188,10 @@ class ILTask(Task):
         for policy in self.policies:
             # prev_obs = copy.deepcopy(policy.states.data)
             if self.testing_enabled:
-                actions = policy.act(policy.states, deterministic=deterministic)
+                actions = policy.act(policy.states, deterministic=deterministic, to_numpy=True, apply_action=True)
             else:
                 actions = None
-            obs, rew, done, info = self.env.step(actions)
+            obs, rew, done, info = self.env.step()
             self._done = done
             # d = {'prev_obs': prev_obs, 'actions': copy.deepcopy(actions.data),
             #      'obs': copy.deepcopy(policy.states.data), 'rew': rew, 'done': done}
@@ -352,7 +352,7 @@ class ILTask(Task):
             dt = 1. / 240
 
         # run several steps in the environment
-        print('Test: resetting...')
+        # print('Test: resetting...')
         self.reset()
         # time.sleep(10)
         for t in count():

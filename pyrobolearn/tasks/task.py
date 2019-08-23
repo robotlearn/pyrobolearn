@@ -33,7 +33,7 @@ from pyrobolearn.policies import Policy
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "GNU GPLv3"
+__license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
@@ -72,8 +72,9 @@ class Task(object):
             policies (list of Policy, Policy): the policy(ies).
         """
         # check the environment
-        if not isinstance(environment, (Env, gym.Env)):
-            raise TypeError("Expecting 'environment' to be an instance of Env or gym.Env")
+        if not isinstance(environment, Env):
+            raise TypeError("Expecting 'environment' to be an instance of `Env`, but got instead: "
+                            "{}".format(type(environment)))
         self.env = environment
 
         # check the policies

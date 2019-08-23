@@ -23,7 +23,7 @@ from pyrobolearn.tools.bridges.mouse_keyboard.bridge_mousekeyboard_world import 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "GNU GPLv3"
+__license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
@@ -86,6 +86,7 @@ class BridgeMouseKeyboardImitationTask(BridgeMouseKeyboardWorld):  # Bridge):
         Initialize the Bridge between a Mouse-Keyboard interface and an imitation learning task.
 
         Args:
+            world (World): world instance.
             interface (MouseKeyboardInterface, Env, World): mouse keyboard interface.
                 If the interface is an instance of Env, World, or Simulator, it will create automatically
                 a mouse-keyboard interface.
@@ -121,6 +122,7 @@ class BridgeMouseKeyboardImitationTask(BridgeMouseKeyboardWorld):  # Bridge):
         self.visual_points = []  # {}
         # self.display_trajectories = True
 
+        # mapping from keys to methods
         self.events_fn = {(Key.x,): self.change_camera_view_x,
                           (Key.y,): self.change_camera_view_y,
                           (Key.z,): self.change_camera_view_z,
@@ -162,6 +164,11 @@ class BridgeMouseKeyboardImitationTask(BridgeMouseKeyboardWorld):  # Bridge):
                           (Key.bottom_arrow,): lambda: None,
                           (Key.left_arrow,): lambda: None,
                           (Key.right_arrow,): lambda: None}
+
+        # replace key tuples by frozenset
+        for key in list(self.events_fn.keys()):
+            value = self.events_fn[key]
+            self.events_fn[frozenset(key)] = value
 
         # define few variables
         self.enable_training = False
@@ -367,7 +374,7 @@ class BridgeMouseKeyboardImitationTask(BridgeMouseKeyboardWorld):  # Bridge):
         #        self.visual_points[key] = bodyId
         # self.display_trajectories = not self.display_trajectories
         for i in range(len(self.visual_points[:-1])):
-            self.simulator.addUserDebugLine(self.visual_points[i], self.visual_points[i + 1], RGBColor.red, 1., 2.)
+            self.simulator.add_user_debug_line(self.visual_points[i], self.visual_points[i + 1], RGBColor.red, 1., 2.)
 
     def reset_visual_points(self):
         # for key in self.visual_points:

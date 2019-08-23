@@ -741,7 +741,10 @@ class State(object):
         """
         If all the states are discrete, then it is discrete.
         """
-        return all(self.has_discrete_values())
+        values = self.has_discrete_values()
+        if len(values) == 0:
+            return False
+        return all(values)
 
     def has_continuous_values(self):
         """

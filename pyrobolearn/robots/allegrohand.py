@@ -24,7 +24,7 @@ class AllegroHand(Hand):
         - [2] https://github.com/simlabrobotics/allegro_hand_ros
     """
 
-    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), scale=1., fixed_base=True):
+    def __init__(self, simulator, position=(0, 0, 0.1), orientation=(0, 0, 0, 1), scale=1., fixed_base=True):
         # left=False
         """
         Initialize the Allegro hand.
@@ -38,9 +38,9 @@ class AllegroHand(Hand):
         """
         # check parameters
         if position is None:
-            position = (0., 0., 0.)
+            position = (0., 0., 0.1)
         if len(position) == 2:  # assume x, y are given
-            position = tuple(position) + (0.,)
+            position = tuple(position) + (0.1,)
         if orientation is None:
             orientation = (0, 0, 0, 1)
         if fixed_base is None:
