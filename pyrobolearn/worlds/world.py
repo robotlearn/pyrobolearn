@@ -733,16 +733,18 @@ class World(object):
         """
         return self.sim.get_visual_shape_data(body_id)[-1]
 
-    def change_body_color(self, body_id, color, link_id=-1):
+    def change_body_color(self, body, color, link_id=-1):
         """
         Change the color of the given body.
 
         Args:
-            body_id (int, Body): body (id)
+            body (int, Body): body (id)
             color (float[4]): RGBA color where each channel is between 0 and 1.
             link_id (int): link id
         """
-        self.sim.change_visual_shape(body_id, link_id, rgba_color=color)
+        if isinstance(body, Body):
+            body = body.id
+        self.sim.change_visual_shape(body, link_id, rgba_color=color)
 
     def get_body_position(self, body_id):
         """

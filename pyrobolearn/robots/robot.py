@@ -1638,8 +1638,9 @@ class Robot(ControllableBody):
             if multiple links: list of above
         """
         if isinstance(link_ids, int):
-            return self.get_link_states(self, link_ids, False, False)[2]
-        return [state[2] for state in self.get_link_states(self, link_ids, False, False)]
+            return self.get_link_states(link_ids, compute_link_velocity=False, compute_forward_kinematics=False)[2]
+        return [state[2] for state in self.get_link_states(link_ids, compute_link_velocity=False,
+                                                           compute_forward_kinematics=False)]
 
     def get_link_local_orientations(self, link_ids=None):
         """

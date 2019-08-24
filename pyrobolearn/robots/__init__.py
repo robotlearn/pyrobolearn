@@ -176,7 +176,7 @@ implemented_grippers = set(implemented_grippers)
 
 # function to disable the motors
 # this can be useful when resetting the joint state
-def reset_robot(robot, joint_ids=None):
+def disable_motors(robot, joint_ids=None):
     """Return a function that disables the motors."""
     def reset():
         robot.disable_motor(joint_ids=joint_ids)

@@ -22,6 +22,7 @@ robot = prl.robots.RRBot(sim)
 robot.disable_motor()           # disable motors; comment the `robot.set_joint_torques(torques)` to see what happens
 robot.print_info()
 robot.change_transparency()
+world.load_robot(robot)
 
 # define variables
 link_id = robot.get_link_ids('hokuyo_link')         # the link we are interested to

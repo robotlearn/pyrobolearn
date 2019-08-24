@@ -50,7 +50,7 @@ class RBDL(object):
             floating_base (bool): if True, the model will be considered to have a floating base, thus 6 more DoFs will
                 be added.
         """
-        self.model = rbdl.loadModel(filename, verbose=verbose, floating_base=floating_base)
+        self.model = rbdl.loadModel(filename.encode(), verbose=verbose, floating_base=floating_base)
 
     # alias
     load_urdf = load_model
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     import os
     import pyrobolearn as prl
 
-    fixed_base = False
+    fixed_base = True
 
     robot = prl.robots.HyQ2Max(prl.simulators.Bullet(render=False), fixed_base=fixed_base)
     rbdl_ = RBDL(os.path.dirname(os.path.abspath(__file__)) + '/../robots/urdfs/hyq2max/hyq2max.urdf',
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     print_attr("Num of joints: {}", 'num_joints')
     print_attr("Num of links: {}", 'num_links')
 
-    print(robot.get_link_names([-1] + range(robot.num_links)))
+    print(robot.get_link_names([-1] + list(range(robot.num_links))))
     print(rbdl_.get_link_names(range(rbdl_.num_links)))
 
     print("Num fixed links: {}".format(robot.num_links - robot.num_actuated_joints))
