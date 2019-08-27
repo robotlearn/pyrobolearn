@@ -53,11 +53,11 @@ class CartesianTask(JointVelocityTask):
             model (ModelInterface): model interface.
             distal_link (int, str): distal link id or name.
             base_link (int, str, None): base link id or name. If None, it will be the world.
-            local_position (np.array[3]): local position on the distal link.
-            x_desired (np.array[7], None): desired cartesian pose of distal link wrt the base.
-            dx_desired (np.array[6], None): desired cartesian velocity of distal link wrt the base.
-            kp (float, np.array[6,6]): stiffness gain.
-            weight (float, np.array[6,6]): weight scalar or matrix associated to the task.
+            local_position (np.array[float[3]]): local position on the distal link.
+            x_desired (np.array[float[7]], None): desired cartesian pose of distal link wrt the base.
+            dx_desired (np.array[float[6]], None): desired cartesian velocity of distal link wrt the base.
+            kp (float, np.array[float[6,6]]): stiffness gain.
+            weight (float, np.array[float[6,6]]): weight scalar or matrix associated to the task.
             constraints (list of Constraint): list of constraints associated with the task.
         """
         super(CartesianTask, self).__init__(model=model, weight=weight, constraints=constraints)
@@ -91,6 +91,10 @@ class CartesianTask(JointVelocityTask):
             x_d = np.array([0.]*6 + [1.])
         if not isinstance(x_d, np.ndarray):
             raise TypeError("Expecting the given desired pose to be a np.array, instead got: {}".format(type(x_d)))
+        if len(x_d) == 3:  # only position is provided
+            x_d = np.concatenate((x_d, np.array([0., 0., 0., 1.])))
+        elif len(x_d) == 4:  # only orientation is provided
+            x_d = np.concatenate((np.zeros(3), x_d))
         if len(x_d) != 7:
             raise ValueError("Expecting the given desired pose array to be of length 7 (3 for the position, and 4 "
                              "for the orientation expressed as a quaternion [x,y,z,w]), instead got a length of: "
@@ -109,7 +113,9 @@ class CartesianTask(JointVelocityTask):
             dx_d = np.zeros(6)
         if not isinstance(dx_d, np.ndarray):
             raise TypeError("Expecting the given desired velocity to be a np.array, instead got: {}".format(type(dx_d)))
-        if len(dx_d) != 7:
+        if len(dx_d) == 3:  # assume that it is the linear velocity
+            dx_d = np.concatenate((dx_d, np.zeros(3)))
+        if len(dx_d) != 6:
             raise ValueError("Expecting the given desired velocity array to be of length 6 (3 for the linear and 3 "
                              "for the angular part), instead got a length of: {}".format(len(dx_d)))
         self._dx_d = dx_d
@@ -138,9 +144,9 @@ class CartesianTask(JointVelocityTask):
         """Set the desired references.
 
         Args:
-            x_des (np.array[7], None): desired cartesian pose (position and quaternion [x,y,z,w]) of distal link wrt
-                the base.
-            dx_des (np.array[6], None): desired cartesian velocity of distal link wrt the base.
+            x_des (np.array[float[7]], None): desired cartesian pose (position and quaternion [x,y,z,w]) of distal
+              link wrt the base.
+            dx_des (np.array[float[6]], None): desired cartesian velocity of distal link wrt the base.
         """
         self.x_desired = x_des
         self.dx_desired = dx_des
@@ -149,8 +155,8 @@ class CartesianTask(JointVelocityTask):
         """Return the desired references.
 
         Returns:
-            np.array[7]: desired cartesian pose (position and quaternion [x,y,z,w]) of distal link wrt the base.
-            np.array[6]: desired cartesian velocity of distal link wrt the base.
+            np.array[float[7]]: desired cartesian pose (position and quaternion [x,y,z,w]) of distal link wrt the base.
+            np.array[float[6]]: desired cartesian velocity of distal link wrt the base.
         """
         return self.x_desired, self.dx_desired
 
@@ -158,7 +164,7 @@ class CartesianTask(JointVelocityTask):
         """
         Update the task by computing the A matrix and b vector that will be used by the task solver.
         """
-        x = self.model.get_link_pose_wrt(self.distal_link, self.base_link)
+        x = self.model.get_pose(self.distal_link, self.base_link)
         self._A = self.model.get_jacobian(self.distal_link, self.base_link, self.local_position)  # shape: (6,N)
 
         # compute position/orientation error

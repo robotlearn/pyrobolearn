@@ -1507,7 +1507,7 @@ class Robot(ControllableBody):
         while the q index goes from 0 to the number of links associated with actuated joints.
 
         Args:
-            link (str, int, list[str,int], None): if str, it will get the link id associated to the given name.
+            link (str, int, list[str/int], None): if str, it will get the link id associated to the given name.
                 If int, it will get the link id associated to the given q index. If it is a list of str and/or int,
                 it will get the corresponding link ids. If None, it will return all the link ids (associated to
                 actuated joints).
@@ -1795,14 +1795,15 @@ class Robot(ControllableBody):
             return pos.reshape(-1)  # 1D array
         return pos  # 2D array
 
-    def get_link_positions(self, link_ids=None, wrt_link_id=None, flatten=True):
+    def get_link_positions(self, link_ids=None, wrt_link_id=-1, flatten=True):
         r"""
         Return the link CoM position wrt the position of another link. By default, it is the base.
 
         Args:
             link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the position of all links
-                associated to actuated joints.
-            wrt_link_id (int, int[N], None): the other link id(s). If None, returns the position wrt to the base.
+              associated to actuated joints.
+            wrt_link_id (int, int[N], None): the other link id(s). If -1, returns the position wrt to the base. If
+              None, return the link position wrt to the world (which is the same as calling `get_link_world_positions`).
             flatten (bool): if True, it will return a 1D array instead of a 2D array
 
         Returns:
@@ -1811,12 +1812,14 @@ class Robot(ControllableBody):
             if multiple links:
                 np.array[float[N*3]], np.array[float[N,3]]: CoM position of each link
         """
+        if wrt_link_id is None:
+            return self.get_link_world_positions(link_ids=link_ids, flatten=flatten)
         p1 = self.get_link_world_positions(link_ids, flatten=False)
-        p0 = self.get_base_position() if wrt_link_id is None or wrt_link_id == -1 \
-                else self.get_link_world_positions(wrt_link_id, flatten=False)
+        p0 = self.get_base_position() if wrt_link_id == -1 else \
+            self.get_link_world_positions(wrt_link_id, flatten=False)
 
         # p^0 = o^0_1 + R^0_1 p^1
-        # Notation: ^i = expressed in frame i, _j = point j, o^i_j = origin position of point j in frame i
+        # Notation: ^i = expressed in frame i, _j = frame j, o^i_j = origin position of frame j expressed in frame i
         # TODO: should I express it in the world coordinate frame or in the wrt_link frame??
         p = (p1 - p0)
         if flatten:
@@ -1829,7 +1832,7 @@ class Robot(ControllableBody):
 
         Args:
             link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the orientation of all
-                links associated to actuated joints.
+              links associated to actuated joints.
             flatten (bool): if True, it will return a 1D array of float numbers instead of an array of quaternion
 
         Returns:
@@ -1839,22 +1842,33 @@ class Robot(ControllableBody):
                 np.array[float[N*4]], np.array[float[N,4]]: CoM orientation of each link [x,y,z,w]
         """
         if isinstance(link_ids, int):
+            if link_ids == -1:
+                return self.get_base_orientation()
             return self.sim.get_link_state(self.id, link_ids)[1]
         if link_ids is None:
             link_ids = self.joints
-        orientation = np.asarray([self.sim.get_link_state(self.id, link)[1] for link in link_ids])
+
+        orientation = []
+        for link_id in link_ids:
+            if link_id == -1:
+                orientation.append(self.get_base_orientation())
+            else:
+                orientation.append(np.asarray(self.sim.get_link_state(self.id, link_id)[1]))
+        orientation = np.asarray(orientation)
+
         if flatten:
             return orientation.reshape(-1)
         return orientation  # 2D array
 
-    def get_link_orientations(self, link_ids=None, wrt_link_id=None, flatten=True):
+    def get_link_orientations(self, link_ids=None, wrt_link_id=-1, flatten=True):
         r"""
         Return the link CoM orientation wrt the orientation of another link. By default, it is the base.
 
         Args:
             link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the orientation of all
-                links associated to actuated joints.
-            wrt_link_id (int, int[N], None): the other link id(s). If None, returns the orientation wrt to the base.
+              links associated to actuated joints.
+            wrt_link_id (int, int[N], None): the other link id(s). If -1, returns the orientation wrt to the base.
+              If None, this is equivalent to calling `get_link_world_orientations`.
             flatten (bool): if True, it will return a 1D array instead of a 2D array
 
         Returns:
@@ -1863,8 +1877,10 @@ class Robot(ControllableBody):
             if multiple links:
                 np.array[float[N*4]], np.array[float[N,4]]: CoM orientation of each link [x,y,z,w]
         """
+        if wrt_link_id is None:
+            return self.get_link_world_orientations(link_ids=link_ids, flatten=flatten)
         q1 = self.get_link_world_orientations(link_ids)
-        if wrt_link_id is None or wrt_link_id == -1:
+        if wrt_link_id == -1:
             q0 = get_quaternion_inverse(self.get_base_orientation())
         else:
             if isinstance(wrt_link_id, int):
@@ -1887,7 +1903,7 @@ class Robot(ControllableBody):
 
         Args:
             link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the pose of all links
-                associated to actuated joints.
+              associated to actuated joints.
             flatten (bool): if True, it will return a 1D array of float numbers instead of a 2D array of shape [N,7].
 
         Returns:
@@ -1899,6 +1915,36 @@ class Robot(ControllableBody):
         # get positions and orientations
         positions = self.get_link_world_positions(link_ids=link_ids, flatten=False)  # (N,3)
         orientations = self.get_link_world_orientations(link_ids=link_ids, flatten=False)  # (N,4)
+
+        # concatenate to form the pose
+        poses = np.hstack((positions, orientations))  # (N,7)
+
+        # check if we need to flatten the 2D array
+        if flatten:
+            return poses.reshape(-1)  # (N*7,)
+        return poses  # (N,7)
+
+    def get_link_poses(self, link_ids=None, wrt_link_ids=-1, flatten=True):
+        r"""
+        Return the CoM pose (position and orientation (expressed as a quaternion [x,y,z,w] in the Cartesian world
+        space) of the given link(s).
+
+        Args:
+            link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the pose of all links
+              associated to actuated joints.
+            wrt_link_ids (int, int[N], None): the other link id(s). If -1, returns the pose wrt to the base.
+              If None, this is equivalent to calling `get_link_world_poses`.
+            flatten (bool): if True, it will return a 1D array of float numbers instead of a 2D array of shape [N,7].
+
+        Returns:
+            if 1 link:
+                np.array[float[7]]: Cartesian pose of the link CoM
+            if multiple links:
+                np.array[float[N*7]], np.array[float[N,7]]: CoM pose of each link
+        """
+        # get positions and orientations
+        positions = self.get_link_positions(link_ids=link_ids, wrt_link_id=wrt_link_ids, flatten=False)  # (N,3)
+        orientations = self.get_link_orientations(link_ids=link_ids, wrt_link_id=wrt_link_ids, flatten=False)  # (N,4)
 
         # concatenate to form the pose
         poses = np.hstack((positions, orientations))  # (N,7)
@@ -1961,6 +2007,77 @@ class Robot(ControllableBody):
         Return the linear and angular velocities (expressed in the Cartesian world space coordinates) for the given
         link(s).
 
+        From [1], let's consider the coordinate transformation of a point P from Frame 1 to Frame 0, given by:
+
+        .. math:: p^0 = o^0_1 + R^0_1 p^1
+
+        where :math:`p^i` denotes the point expressed in Frame :math:`i`, :math:`o^0_1` is the position of the origin
+        of Frame 1 expressed in Frame 0, and :math:`R^0_1` is the rotation matrix from Frame 0 to Frame 1.
+
+        Differentiating that expressions gives:
+
+        .. math:: \dot{p}^0 = \dot{o}^0_1 + R^0_1 \dot{p}^1 + \dot{R}^0_1 p^1.
+
+        If :math:`p^1` is fixed, then :math:`\dot{p}^1 = 0`, and we can rewrite it as:
+
+        .. math:: \dot{p}^0 = \dot{o}^0_1 + \dot{S}(\omega^0_1) R^0_1 p^1,
+
+        where we used the fact that :math:`\dot{R}^0_1 = \dot{S}(\omega^0_1) R^0_1`, where :math:`\omega^0_1` is the
+        angular velocity of Frame 1 measured in Frame 0, and :math:`S(.)` is the skew-symmetric matrix of the given
+        vector. By rewriting :math:`R^0_1 p^1 = r^0_1`, we have the well-known velocity composition rule:
+
+        .. math:: \dot{p}^0 = \dot{o}^0_1 + \omega^0_1 \times r^0_1.
+
+        In recursive form, in a kinematic chain, the position of Frame :math:`i` with respect to the position of Frame
+        :math:`i-1` is given by:
+
+        .. math:: p_i = p_{i-1} + R_{i-1} r^{i-1}_{i-1, i}.
+
+        where :math:`p_i, p_{i-1}, R_{i-1}` are expressed in the world inertial frame, and the superscript :math:`^0`
+        has been dropped to ease the reading.
+        Differentiating this above expression gives us the expression of the linear velocity of Link :math:`i` as a
+        function of the translational and rotational velocities of Link :math:`i-1`:
+
+        .. math::
+
+            \dot{p}_i &= \dot{p}_{i-1} + R_{i-1}\dot{r}^{i-1}_{i-1, i} + \omega_{i-1} \times R_{i-1} r^{i-1}_{i-1,i} \\
+                      &= \dot{p}_{i-1} + v_{i-1, i} + \omega_{i-1} \times r_{i-1,i}
+
+        where :math:`v_{i-1,i}` is the velocity of the origin of Frame :math:`i` with respect to the origin of Frame
+        :math:`i-1` expressed in the world coordinate frame.
+
+        The angular velocity of Link :math:`i` on the other hand is given by:
+
+        .. math:: \omega_{i} = \omega_{i-1} + \omega_{i-1,i}.
+
+        This can rewritten in compact form, using the geometric Jacobian as:
+
+        .. math:: v = [\dot{p}^\top \omega^\top]^\top = J(q) \dot{q}.
+
+
+        From [2], if we assume that each joint allows only 1 DoF so that the joint velocity :math:`v_{Ji}` can be
+        described as:
+
+        .. math:: v_{Ji} = s_i \dot{q}_i
+
+        where :math:`s_i \in \mathbb{R}^6` is the axis vector for joint :math:`i`, and :math:`\dot{q}_i \in \mathbb{R}`
+        is its velocity variable.
+
+        The recursive relation for the velocities between the various bodies/links is given by:
+
+        .. math:: v_i = v_{i-1} + s_i \dot{q}_i,   (v_0 = 0),
+
+        which can be rewritten as:
+
+        .. math:: v_i = \sum_{j=1}^i s_j \dot{q}_j.
+
+        Using the Jacobian, this can be further expressed as:
+
+        .. math:: v_i = [s_1 s_2 \cdots s_i 0 \cdots 0] [\dot{q}_1 \cdots \dot{q}_N]^\top = J_i \dot{q},
+
+        where :math:`J_i \in \mathbb{R}^{6 \times N}` is body Jacobian for body :math:`i`, and :math:`\dot{q}` is the
+        joint-space velocity vector.
+
         Args:
             link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the linear and angular
                 velocities of all links associated to actuated joints.
@@ -1971,6 +2088,10 @@ class Robot(ControllableBody):
                 np.array[float[6]]: linear and angular velocity of the link in the Cartesian world space
             if multiple links:
                 np.array[float[N*6]], np.array[float[N,6]]: linear and angular velocity of each link
+
+        References:
+            - [1] "Robotics: Modelling, Planning and Control" (chap 3.1.1 and 3.1.2), Siciliano et al., 2010
+            - [2] "Rigid Body Dynamics Algorithms" (chap 2.11), Featherstone, 2008
         """
         # check if cached
         if 'link_vel' in self._state:
@@ -1996,7 +2117,7 @@ class Robot(ControllableBody):
             return velocities.reshape(-1)  # 1d array
         return velocities  # 2D array
 
-    def get_spatial_link_world_velocities(self, link_ids=None, flatten=False):
+    def get_link_world_spatial_velocities(self, link_ids=None, flatten=False):
         r"""
         Return the spatial link world velocities which is the concatenation of the angular and linear velocities.
         The difference with :func:`~get_link_world_velocities` is that this one returns the concatenation of the
@@ -2028,7 +2149,7 @@ class Robot(ControllableBody):
         return velocities  # 2D array
 
     # alias
-    get_link_twist = get_spatial_link_world_velocities
+    get_link_velocity_twists = get_link_world_spatial_velocities
 
     def get_link_linear_velocities(self, link_ids=None, wrt_link_id=None, flatten=True):
         r"""
@@ -2174,6 +2295,7 @@ class Robot(ControllableBody):
 
         References:
             - [1] "Rigid Body Dynamics Algorithms" (chap 2.11), Featherstone, 2008
+            - [2] "Robotics: Modelling, Planning and Control" (chap 7.5.1), Siciliano et al., 2010
         """
         # check if cached
         if 'link_acc' in self._state:
@@ -2285,7 +2407,7 @@ class Robot(ControllableBody):
             return accelerations.reshape(-1)
         return accelerations
 
-    def get_spatial_link_world_accelerations(self, link_ids=None, flatten=True):
+    def get_link_world_spatial_accelerations(self, link_ids=None, flatten=True):
         r"""
         Return the spatial link world accelerations which is the concatenation of the angular and linear accelerations.
         The difference with :func:`~get_link_world_accelerations` is that this one returns the concatenation of the
@@ -2350,6 +2472,9 @@ class Robot(ControllableBody):
             return accelerations.reshape(-1)  # 1d array
 
         return accelerations  # 2D array
+
+    # alias
+    get_link_acceleration_twists = get_link_world_spatial_accelerations
 
     def get_link_contacts(self, link_ids):
         """
@@ -2558,7 +2683,10 @@ class Robot(ControllableBody):
 
         # specify point on the link
         if local_position is None:
-            local_position = self.sim.get_link_state(self.id, link_id)[2]  # Link CoM position in the link frame
+            if link_id == -1:  # base link
+                local_position = (0., 0., 0.)
+            else:
+                local_position = self.sim.get_link_state(self.id, link_id)[2]  # Link CoM position in the link frame
 
         # calculate full jacobian
         return self.sim.calculate_jacobian(self.id, link_id, local_position=local_position, q=q, dq=dq, des_ddq=dq)
@@ -2631,6 +2759,77 @@ class Robot(ControllableBody):
         """
         jacobian = self.get_jacobian(link_id=link_id, q=q, local_position=local_position)
         return np.vstack((jacobian[3:], jacobian[:3]))
+
+    def express_jacobian_in_frame(self, jacobian, link_id=-1):
+        r"""
+        Express the given jacobian in another link frame.
+
+        From [1], the Jacobian matrix depends on the frame in which the link velocity is expressed. If we need to
+        express the Jacobian in a different Frame :math:`j`, it is enough to know the relative rotation matrix
+        :math:`R^j = R^j_0 = (R^0_j)^{-1}`. Indeed, the velocities in the two different frames :math:`0` and :math:`j`
+        is  expressed by:
+
+        .. math::
+
+            [\dot{p}^j_e \omega^j_e] =
+                \left[ \begin{array}{cc} R^j & 0 \\ 0 & R^j \end{array} \right] [\dot{p}^0_e \omega^0_e]
+
+        and thus using :math:`v = J(q) \dot{q}`, we have:
+
+        .. math:: J^j(q) = \left[ \begin{array}{cc} R^j & 0 \\ 0 & R^j \end{array} \right] J(q),
+
+        where :math:`J^j` denotes the geometric Jacobian in Frame :math:`j` (which is assumed to be time invariant,
+        see [1]).
+
+        Args:
+            jacobian (np.array[float[6,N]]): jacobian matrix taken in the world frame.
+            link_id (int): link frame id to express the jacobian in.
+
+        Returns:
+            np.array[float[6,N]], np.array[float[6,6+N]]: full geometric (linear and angular) Jacobian matrix. The
+                number of columns depends if the base is fixed or floating.
+
+        References:
+            - [1] "Robotics: Modelling, Planning and Control" (chap 3.1.3), Siciliano et al., 2010
+        """
+        orientation = self.get_link_world_orientations(link_ids=link_id)
+        rot = get_matrix_from_quaternion(orientation).T
+        rot = np.vstack((np.hstack((rot, np.zeros((3, 3)))),
+                         np.hstack((np.zeros((3, 3)), rot))))
+        return rot.dot(jacobian)
+
+    def get_relative_jacobian(self, link_id, wrt_link_id=-1, q=None, local_position=None):
+        r"""
+        Return the relative jacobian with respect to the specified link frame expressed in that last frame. This is
+        different from `get_jacobian` which returns the full geometric Jacobian with respect to the world.
+
+        Assuming two link frames 1 and 2, we can compute the jacobians :math:`J^0_{0,1}` and :math:`J^0_{0,2}`. The
+        relative jacobian (expressed in the first link frame) is given by:
+
+        .. math::
+
+            J^1_{1,2} = \left[ \begin{array}{cc} R^1_0 & 0 \\ 0 & R^1_0 \end{array} \right] (J^0_{0,2} - J^0_{0,1})
+
+        Args:
+            link_id (int): link id.
+            wrt_link_id (int, None): the base link from which we want to represent the Jacobian in.
+            q (np.array[float[N]], None): joint positions of size N, where N is the number of DoFs. If None, it will
+                compute q based on the current joint positions.
+            local_position (None, np.array[float[3]]): the point on the specified link to compute the Jacobian (in link
+                local coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+
+        Returns:
+            np.array[float[6,N]], np.array[float[6,6+N]]: full geometric (linear and angular) Jacobian matrix. The
+                number of columns depends if the base is fixed or floating.
+
+        References:
+            - [1] "Robotics: Modelling, Planning and Control" (chap 3.1.[1-3]), Siciliano et al., 2010
+            - [2] "Rigid Body Dynamics Algorithms", Featherstone, 2008
+        """
+        jac_2 = self.get_jacobian(link_id=link_id, q=q, local_position=local_position)
+        jac_1 = self.get_jacobian(link_id=wrt_link_id, q=q)
+        jac_12 = jac_2 - jac_1
+        return self.express_jacobian_in_frame(jac_12, link_id=wrt_link_id)
 
     @staticmethod
     def get_jacobian_derivative_rpy_to_angular_velocity(rpy_angle):

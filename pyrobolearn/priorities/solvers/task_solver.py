@@ -36,6 +36,7 @@ class TaskSolver(object):
 
         Args:
             task (Task): Priority tasks.
+            solver (Optimizer, None): inner solver/optimizer that is used to solve the tasks.
         """
         self.task = task
         self.solver = solver
@@ -79,14 +80,12 @@ class TaskSolver(object):
         self.task.update()
 
     def solve(self):
-        """Solve the priority task."""
-        if self.task.tasks:
-            for soft_task in self.task.tasks:
-                As = np.vstack([np.dot(np.sqrt(task.weight), task.A) for task in soft_task])
-                bs = np.vstack([np.dot(np.sqrt(task.weight), task.b) for task in soft_task])
-                # x = self.solver.optimize(P=As.T.dot(As), q=-bs.T.dot(), G=, h=, A=, b=)
-        else:
-            pass
+        """Solve the priority task.
+
+        Returns:
+            np.array[float[N]]: the optimized variables.
+        """
+        pass
 
     #############
     # Operators #
