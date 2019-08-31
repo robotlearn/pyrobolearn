@@ -184,12 +184,15 @@ class RobotModelInterface(ModelInterface):
 
         Returns:
             if full:
-                np.array[float[6,N]]: CoM Jacobian (concatenation of the angular and linear Jacobian, where N is the
+                np.array[float[6,N]]: CoM Jacobian (concatenation of the linear and angular Jacobian, where N is the
                   number of DoFs)
             else:
                 np.array[float[3,N]]: CoM Jacobian (only the linear part)
         """
-        return self.model.get_center_of_mass_jacobian()
+        jac = self.model.get_center_of_mass_jacobian()
+        if full:
+            return jac
+        return jac[:3]
 
     def get_gravity(self):
         """
@@ -218,7 +221,7 @@ class RobotModelInterface(ModelInterface):
         """
         return self.model.get_link_names(self.model.joints)
 
-    def get_jacobian(self, link, wrt_link=None, point=(0., 0., 0.)):
+    def get_jacobian(self, link, wrt_link=None, frame=None, point=(0., 0., 0.)):
         r"""
         Get the 6D Jacobian for a point on a link, that when multiplied with :math:`\dot{q}` gives a 6D vector that
         has the angular velocity as the first three entries and the linear velocity as the last three entries.
@@ -234,6 +237,8 @@ class RobotModelInterface(ModelInterface):
             link (int): unique link id.
             wrt_link (int, str, None): unique link id, or name. If specified, it will take the relative jacobian. If
               None, the jacobian will be taken with respect to the world frame.
+            frame (int, str, None): unique link id, or name. If specified, it will express the final jacobian in that
+              specified frame.
             point (np.array[float[3]], None): the point on the specified link to compute the Jacobian (in link local
               coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
 
@@ -242,17 +247,21 @@ class RobotModelInterface(ModelInterface):
         """
         link = self.get_link_id(link)
         wrt_link = None if wrt_link is None else self.get_link_id(wrt_link)
+        frame = None if frame is None else self.get_link_id(frame)
 
         # if the jacobian is already cached, return it
-        if ('J', link, wrt_link, tuple(point)) in self._states:
-            return self._states[('J', link, point)]
+        if ('J', link, wrt_link, frame, tuple(point)) in self._states:
+            return self._states[('J', link, wrt_link, frame, tuple(point))]
 
         # get the jacobian, cache it, and return it
         if wrt_link is None:
             jacobian = self.model.get_jacobian(link_id=link, local_position=point)
         else:
             jacobian = self.model.get_relative_jacobian(link_id=link, wrt_link_id=wrt_link, local_position=point)
-        self._states[('J', link, wrt_link, tuple(point))] = jacobian
+        if frame is not None:
+            jacobian = self.model.express_jacobian_in_frame(jacobian, link_id=frame)
+
+        self._states[('J', link, wrt_link, frame, tuple(point))] = jacobian
         return jacobian
 
     def get_pose(self, link, wrt_link=None, point=(0., 0., 0.)):  # TODO: use point
@@ -478,7 +487,17 @@ class RobotModelInterface(ModelInterface):
         link = self.get_link_id(link)
         return self.model.get_link_world_accelerations(link)
 
-    def update(self, q=None, dq=None, ddq=None):
+    def get_centroidal_momentum_matrix(self):
+        r"""
+        Return the centroidal momentum matrix.
+
+        Returns:
+            np.array[float[6,6+N]]: the centroidal momentum matrix :math:`A_G`
+        """
+        return self.model.get_centroidal_momentum_matrix()
+
+    def update(self, q=None, dq=None, ddq=None, update_model=False):
         """Update: move to the next step."""
         self._states = dict()
-        self.model.step()
+        if update_model:
+            self.model.step()

@@ -109,9 +109,10 @@ References:
 """
 
 import numpy as np
+import copy
 
 from pyrobolearn.priorities.models import ModelInterface
-from pyrobolearn.priorities.constraints.constraint import Constraint
+from pyrobolearn.priorities.constraints.constraint import Constraint, NullConstraint
 
 
 __author__ = "Brian Delhaisse"
@@ -152,7 +153,9 @@ class Task(object):
                 have to be weighted together.
             model (ModelInterface, None): robotic model interface associated to the task.
             weight (float, np.array[float[M,M]]): weight scalar or matrix associated to the task.
-            constraints (list[Constraint]): list of constraints associated to the task.
+            constraints (list[Constraint]): list of constraints associated to the task. If it is a single task, it can
+              only contains one constraint. If we have a stack of tasks, the list should have the same size as the
+              number of hard tasks. If not, it will append `NullConstraint`.
         """
         # set and check each given parameter
         self.tasks = stack_of_tasks
@@ -168,10 +171,12 @@ class Task(object):
         # define task matrix and vector
         if self.is_single_task():
             # set the number of variables to optimize
-            # self._x_size = self.model.num_dofs
-            self._A = np.identity(1)  # None
-            self._b = np.zeros(1)  # None
-            self._c = np.zeros(1)  # None
+            x_size = self.x_size
+            if x_size == 0:
+                x_size = 1
+            self._A = np.identity(x_size)  # None
+            self._b = np.zeros(x_size)  # None
+            self._c = np.zeros(x_size)  # None
 
     ##############
     # Properties #
@@ -214,6 +219,8 @@ class Task(object):
     @property
     def model(self):
         """Return the model interface."""
+        if self.is_stack_of_tasks():
+            return self.tasks[0][0].model
         return self._model
 
     @model.setter
@@ -256,6 +263,13 @@ class Task(object):
         return len(self.tasks)
 
     @property
+    def constraint(self):
+        """Return the single constraint if single task, otherwise return the list of constraints."""
+        if len(self._constraints) > 0 and self.is_single_task():
+            return self._constraints[0]
+        return self._constraints
+
+    @property
     def constraints(self):
         """Return the constraints."""
         return self._constraints
@@ -278,6 +292,21 @@ class Task(object):
                 raise TypeError("The {}th given constraint is not an instance of `Constraint`, instead got: "
                                 "{}".format(i, type(constraint)))
 
+        if not isinstance(constraints, list):
+            raise TypeError("Expecting a list of Constraints.")
+
+        # make the number of hard task match the number of constraints
+        if self.is_stack_of_tasks():
+            if len(self.tasks) > len(constraints):
+                constraints = constraints + [NullConstraint() for _ in range(len(self.tasks) - len(constraints))]
+            elif len(self.tasks) < len(constraints):
+                constraints = constraints[:len(self.tasks)]
+        else:  # single task
+            if len(constraints) == 0:  # create dummy constraint
+                constraints = [NullConstraint()]
+            elif len(constraints) > 1:  # keep first constraint
+                constraints = constraints[:1]
+
         # set the constraints associated with the task
         self._constraints = constraints
 
@@ -286,7 +315,7 @@ class Task(object):
         """Return the number of variables being optimized."""
         # return self._x_size
         if self.model is not None:
-            return self.model.num_dofs
+            return self.model.num_actuated_joints
         return 0
 
     @property
@@ -314,6 +343,19 @@ class Task(object):
         return self._A
 
     @property
+    def As(self):
+        r"""Return the A matrices from :math:`||Ax - b||^2` used in QP, for each task.
+
+        Warnings: this does not concatenate the A matrices.
+
+        Returns:
+            list[list[np.array[float[M,N]]]]: the A matrices (for each task in the stack of tasks).
+        """
+        if self.is_stack_of_tasks():
+            return [[soft_task.A for soft_task in hard_task] for hard_task in self.tasks]
+        return [[self._A]]
+
+    @property
     def b(self):
         r"""Return the b vector from :math:`||Ax - b||^2` used in QP.
 
@@ -325,35 +367,117 @@ class Task(object):
         return self._b
 
     @property
+    def bs(self):
+        r"""Return the b vectors from :math:`||Ax - b||^2` used in QP, for each task.
+
+        Warnings: this does not concatenate the b vectors.
+
+        Returns:
+            list[list[np.array[float[M]]]]: the b vectors (for each task in the stack of tasks).
+        """
+        if self.is_stack_of_tasks():
+            return [[soft_task.b for soft_task in hard_task] for hard_task in self.tasks]
+        return [[self._b]]
+
+    @property
     def c(self):
-        r"""Return the c vector from :math:`||Ax - b||^2 + c^\top x` used in QP."""
+        r"""Return the c vector from :math:`||Ax - b||^2 + c^\top x` used in QP.
+
+        Returns:
+            np.array[float[M]]: c vector.
+        """
         if self.is_stack_of_tasks():  # if not a single task
             return [np.concatenate([soft_task.c for soft_task in hard_task]) for hard_task in self.tasks]
         return self._c
 
     @property
+    def cs(self):
+        r"""Return the c vectors from :math:`||Ax - b||^2 + c^\top x` used in QP, for each task.
+
+        Warnings: this does not concatenate the c vectors.
+
+        Returns:
+            list[list[np.array[float[M]]]]: the c vectors (for each task in the stack of tasks).
+        """
+        if self.is_stack_of_tasks():
+            return [[soft_task.c for soft_task in hard_task] for hard_task in self.tasks]
+        return [[self._c]]
+
+    @property
     def W(self):
         r"""Return the weights."""
         if self.is_stack_of_tasks():  # if not a single task
-            return [np.concatenate([soft_task.W for soft_task in hard_task]) for hard_task in self.tasks]
+            return [[soft_task.W for soft_task in hard_task] for hard_task in self.tasks]
         return self.weight
+
+    @property
+    def Ws(self):
+        r"""Return the weights for each task.
+
+        Warnings: this does not concatenate the weight matrices/scalars.
+
+        Returns:
+            list[list[np.array[float[M,M]]]], list[list[float]]: the weights (for each task in the stack of tasks).
+        """
+        if self.is_stack_of_tasks():  # if not a single task
+            return [[soft_task.W for soft_task in hard_task] for hard_task in self.tasks]
+        return [[self.weight]]
 
     @property
     def Q(self):
         r"""Return the Q matrix :math:`Q = A^\top W A` used in :math:`\frac{1}{2} x^T Q x + p^T x` for QP."""
         if self.is_stack_of_tasks():  # if not a single task
-            return [np.concatenate([soft_task.Q for soft_task in hard_task]) for hard_task in self.tasks]
+            Qs = []
+            for hard_task in self.tasks:
+                Q_ = np.concatenate([np.dot(np.sqrt(soft_task.weight), soft_task.A) for soft_task in hard_task])
+                Qs.append(Q_.T.dot(Q_))
+            return Qs
         return self._A.T.dot(self.weight).dot(self._A)
+
+    @property
+    def Qs(self):
+        r"""Return the Q matrices :math:`Q = A^\top W A` used in :math:`\frac{1}{2} x^T Q x + p^T x` for QP, for each
+        task.
+
+        Warnings: this does not concatenate the Q matrices.
+
+        Returns:
+            list[list[np.array[float[M,M]]]]: Q matrices (for each task in the stack of tasks).
+        """
+        if self.is_stack_of_tasks():  # if not a single task
+            return [[soft_task.Q for soft_task in hard_task] for hard_task in self.tasks]
+        return [[self._A.T.dot(self.weight).dot(self._A)]]
 
     @property
     def p(self):
         r"""Return the p vector :math:`p = (c - 2 A^\top W b)` used in :math:`\frac{1}{2} x^T Q x + p^T x`
         for QP."""
         if self.is_stack_of_tasks():  # if not a single task
-            return [np.concatenate([soft_task.p for soft_task in hard_task]) for hard_task in self.tasks]
-        return self.c - self._A.T.dot(self.weight).dot(self._b)
+            ps = []
+            for hard_task in self.tasks:
+                AW = np.concatenate([np.dot(soft_task.A.T, soft_task.weight) for soft_task in hard_task], axis=1)
+                b = np.concatenate([soft_task.b for soft_task in hard_task])
+                c = hard_task[0].c
+                print(c.shape)
+                print(b.shape)
+                print(AW.shape)
+                ps.append(c - 2 * AW.dot(b))
+            return ps
+        return self._c - 2 * self._A.T.dot(self.weight).dot(self._b)
 
-    # TODO: constraints
+    @property
+    def ps(self):
+        r"""Return the p vectors :math:`p = (c - 2 A^\top W b)` used in :math:`\frac{1}{2} x^T Q x + p^T x`
+        for QP, for each task.
+
+        Warnings: this does not concatenate the p vectors.
+
+        Returns:
+            list[list[np.array[float[M]]]]: the p vectors (for each task in the stack of tasks).
+        """
+        if self.is_stack_of_tasks():  # if not a single task
+            return [[soft_task.p for soft_task in hard_task] for hard_task in self.tasks]
+        return [[self._c - self._A.T.dot(self.weight).dot(self._b)]]
 
     @property
     def lower_bound(self):
@@ -362,7 +486,11 @@ class Task(object):
         Returns:
             np.array[float[N]]: lower bound.
         """
-        results = [constraint.lower_bound for constraint in self.constraints]
+        results = []
+        for constraint in self.constraints:
+            b = constraint.lower_bound
+            if b is not None:
+                results.append(b)
         if len(results) == 1:
             return results[0]
         return results
@@ -374,7 +502,11 @@ class Task(object):
         Returns:
             np.array[float[N]]: upper bound.
         """
-        results = [constraint.upper_bound for constraint in self.constraints]
+        results = []
+        for constraint in self.constraints:
+            b = constraint.upper_bound
+            if b is not None:
+                results.append(b)
         if len(results) == 1:
             return results[0]
         return results
@@ -386,7 +518,11 @@ class Task(object):
         Returns:
             np.array[float[N,N]]: equality constraint matrix.
         """
-        results = [constraint.A_eq for constraint in self.constraints]
+        results = []
+        for constraint in self.constraints:
+            A = constraint.A_eq
+            if A is not None:
+                results.append(A)
         if len(results) == 1:
             return results[0]
         return results
@@ -398,7 +534,11 @@ class Task(object):
         Returns:
             np.array[float[N]]: equality constraint vector.
         """
-        results = [constraint.b_eq for constraint in self.constraints]
+        results = []
+        for constraint in self.constraints:
+            b = constraint.b_eq
+            if b is not None:
+                results.append(b)
         if len(results) == 1:
             return results[0]
         return results
@@ -410,7 +550,11 @@ class Task(object):
         Returns:
             np.array[float[N,N]]: inequality constraint matrix.
         """
-        results = [constraint.A_ineq for constraint in self.constraints]
+        results = []
+        for constraint in self.constraints:
+            A = constraint.A_ineq
+            if A is not None:
+                results.append(A)
         if len(results) == 1:
             return results[0]
         return results
@@ -422,7 +566,11 @@ class Task(object):
         Returns:
             np.array[float[N]]: inequality constraint lower bound vector.
         """
-        results = [constraint.b_lower_bound for constraint in self.constraints]
+        results = []
+        for constraint in self.constraints:
+            b = constraint.b_lower_bound
+            if b is not None:
+                results.append(b)
         if len(results) == 1:
             return results[0]
         return results
@@ -434,7 +582,11 @@ class Task(object):
         Returns:
             np.array[float[N]]: inequality constraint upper bound vector.
         """
-        results = [constraint.b_upper_bound for constraint in self.constraints]
+        results = []
+        for constraint in self.constraints:
+            b = constraint.b_upper_bound
+            if b is not None:
+                results.append(b)
         if len(results) == 1:
             return results[0]
         return results
@@ -444,11 +596,15 @@ class Task(object):
         r"""Return the inequality constraint matrix :math:`G` used in inequality constraints :math:`Gx \leq h` in QP.
 
         Returns:
-            np.array[float[N,N]]: inequality constraint matrix.
+            list[np.array[float[N,N]]]: list of inequality constraint matrix.
         """
-        results = [constraint.G for constraint in self.constraints]
-        if len(results) == 1:
-            return results[0]
+        results = []
+        for constraint in self.constraints:
+            G = constraint.G
+            if G is not None:
+                results.append(G)
+        # if len(results) == 1:
+        #     return results[0]
         return results
 
     @property
@@ -456,11 +612,15 @@ class Task(object):
         r"""Return the inequality constraint vector :math:`h` used in inequality constraints :math:`Gx \leq h` in QP.
 
         Returns:
-            np.array[float[N]]: inequality constraint vector.
+            list[np.array[float[N]]]: list of inequality constraint vector.
         """
-        results = [constraint.h for constraint in self.constraints]
-        if len(results) == 1:
-            return results[0]
+        results = []
+        for constraint in self.constraints:
+            h = constraint.h
+            if h is not None:
+                results.append(h)
+        # if len(results) == 1:
+        #     return results[0]
         return results
 
     @property
@@ -468,11 +628,15 @@ class Task(object):
         r"""Return the equality constraint matrix :math:`F` used in equality constraints :math:`Fx = k` in QP.
 
         Returns:
-            np.array[float[N,N]]: equality constraint matrix.
+            list[np.array[float[N,N]]]: list of equality constraint matrix.
         """
-        results = [constraint.F for constraint in self.constraints]
-        if len(results) == 1:
-            return results[0]
+        results = []
+        for constraint in self.constraints:
+            F = constraint.F
+            if F is not None:
+                results.append(F)
+        # if len(results) == 1:
+        #     return results[0]
         return results
 
     @property
@@ -480,11 +644,15 @@ class Task(object):
         r"""Return the equality constraint vector :math:`c` used in equality constraints :math:`Fx = k` in QP.
 
         Returns:
-            np.array[float[N]]: equality constraint vector.
+            list[np.array[float[N]]]: list of equality constraint vector.
         """
-        results = [constraint.k for constraint in self.constraints]
-        if len(results) == 1:
-            return results[0]
+        results = []
+        for constraint in self.constraints:
+            k = constraint.k
+            if k is not None:
+                results.append(k)
+        # if len(results) == 1:
+        #     return results[0]
         return results
 
     ##################
@@ -543,11 +711,16 @@ class Task(object):
         if not self.is_stack_of_tasks():
             raise ValueError("The current task is not a stack of tasks... This method can not be called for a "
                              "particular task, but only for the `Task` instance.")
-        if not task.is_stack_of_tasks():
-            task = [task]
-        for t in task:
-            self.tasks.append(t)
-            self.constraints.append(t.constraints)
+
+        constraints = task.constraints
+        if task.is_stack_of_tasks():
+            task = task.tasks
+        else:
+            task = [[task]]
+
+        for hard_task, constraint in zip(task, constraints):
+            self.tasks.append(hard_task)
+            self.constraints.append(constraint)
 
     def add_soft_task(self, task):
         """Add the given soft task.
@@ -561,7 +734,21 @@ class Task(object):
         if not self.is_stack_of_tasks():
             raise ValueError("The current task is not a stack of tasks... This method can not be called for a "
                              "particular task, but only for the `Task` instance.")
-        pass
+
+        if task.is_stack_of_tasks():
+            for i, hard_task in enumerate(task.tasks):
+                if i == 0:
+                    self._constraints[-1] = self._constraints[-1] + task.constraints[0]  # combine constraint
+                else:
+                    self.tasks.append([])  # add new layer in the stack
+                    self._constraints.append(task.constraints[i])  # add new constraint
+
+                # add each soft task in current layer
+                for soft_task in hard_task:
+                    self.tasks[-1].append(soft_task)
+        else:  # task is single task
+            self.tasks[-1].append(task)
+            self._constraints[-1] = self._constraints[-1] + task.constraint
 
     def get_num_tasks(self):
         """Return the total number of tasks."""
@@ -625,9 +812,28 @@ class Task(object):
             x (np.array[float[N]]): joint variables that are being optimized.
 
         Returns:
-            float: loss value
+            if single task:
+                float: loss value
+            else:
+                list[float]: loss values for each layer in the stack.
         """
-        return np.sum((self._A.dot(x) - self._b) ** 2)
+        if self.is_stack_of_tasks():
+            losses = []
+            # ||Ax - b||_{W}^2 + c^\top x = x^\top A^\top W A x - (2 b^\top W A - c^\top) x + b^\top W b
+            for hard_A, hard_b, hard_c, hard_W in zip(self.As, self.bs, self.cs, self.Ws):
+                loss = 0
+                for A, b, c, W in zip(hard_A, hard_b, hard_c, hard_W):
+                    Ax = A.dot(x)
+                    WAx = np.dot(W, Ax)
+                    loss += Ax.T.dot(WAx) - 2 * b.T.dot(WAx) + c.T.dot(x) + b.T.dot(W).dot(b)
+                losses.append(loss)
+            return losses
+
+        # ||Ax - b||_{W}^2 + c^\top x = x^\top A^\top W A x - (2 b^\top W A - c^\top) x + b^\top W b
+        A, b, c, W = self._A, self._b, self._c, self._weight
+        Ax = A.dot(x)
+        WAx = np.dot(W, Ax)
+        return Ax.T.dot(WAx) - 2 * b.T.dot(WAx) + c.T.dot(x) + b.T.dot(W).dot(b)
 
     def _update(self):
         """Update the task.
@@ -637,21 +843,54 @@ class Task(object):
         """
         pass
 
-    def update(self):
+    def update(self, update_model=False):
         """
         Compute the A matrix and b vector that will be used by the task solver.
+
+        Args:
+            update_model (bool): if True, it will update the model before updating each task.
         """
-        # if stack of tasks, update each task
-        if self.is_stack_of_tasks():
+        # update model if specified
+        if update_model:
+            self.model.update()
+
+        # update tasks
+        if self.is_stack_of_tasks():  # if stack of tasks, update each task
             for hard_task in self.tasks:
                 for soft_task in hard_task:
-                    soft_task.update()
+                    soft_task.update(update_model=False)
         else:  # if one task, update it
             self._update()
 
         # update the constraints
         for constraint in self.constraints:
             constraint.update()
+
+    def lookfor(self, class_type):
+        """
+        Look for the specified task class type/name in the stack of tasks, and returns it.
+
+        Args:
+            class_type (type, str): class type or name
+
+        Returns:
+            Task, None: the corresponding instance of the `Task` class. None if it was not found.
+        """
+        # if string, lowercase it
+        if isinstance(class_type, str):
+            class_type = class_type.lower()
+
+        # if stack of tasks
+        if self.is_stack_of_tasks():
+            for hard_task in self.tasks:
+                for soft_task in hard_task:
+                    if soft_task.__class__ == class_type or soft_task.__class__.__name__.lower() == class_type:
+                        return soft_task
+
+        # else, if single task
+        else:
+            if self.__class__ == class_type or self.__class__.__name__.lower() == class_type:
+                return self
 
     #############
     # Operators #
@@ -681,7 +920,7 @@ class Task(object):
         """Update the tasks."""
         return self.update()
 
-    def __add__(self, other):  # TODO: check when other has some tasks
+    def __add__(self, other):
         """Add a soft priority task.
 
         Examples:
@@ -697,23 +936,41 @@ class Task(object):
 
             # copy current stack of tasks
             tasks = list(self.tasks)
+            constraints = list(self.constraints)
 
             # if other = stack of tasks, combine each level of tasks
             if other.is_stack_of_tasks():
                 for i in range(len(other.tasks)):
                     if i < len(tasks):
                         tasks[i] = tasks[i] + other.tasks[i]
+                        constraints[i] = constraints[i] + other.constraints[i]
                     else:
                         tasks.append(other.tasks[i])
+                        constraints.append(other.constraints[i])
             else:  # else, just append the given other task to the last level
-                tasks[len(tasks) - 1].append(other)
+                tasks[-1].append(other)
+                constraints[-1] = constraints[-1] + other.constraint
         else:
             if other.is_stack_of_tasks():
                 tasks = list(other.tasks)
-                tasks[len(tasks) - 1].append(self)
-            else:
+                constraints = list(other.constraints)
+                tasks[-1].append(self)
+                constraints[-1] = constraints[-1] + self.constraint
+            else:  # both are single tasks
                 tasks = [[self, other]]
-        return Task(stack_of_tasks=tasks)
+                constraints = self.constraints + other.constraints
+        return Task(stack_of_tasks=tasks, constraints=constraints)
+
+    def __truediv__(self, other):
+        """Append a hard priority task to the stack of tasks.
+
+        Examples:
+            task1 = Task(weight=2)
+            task2 = Task(weight=3)
+            task = task1 / task2
+            print(task)
+        """
+        return self.__div__(other)
 
     def __div__(self, other):
         """Append a hard priority task to the stack of tasks.
@@ -757,20 +1014,31 @@ class Task(object):
         if not isinstance(other, Constraint):
             raise TypeError("Expecting 'other' to be an instance of Constraint, instead got: {}".format(type(other)))
 
-        # if we have a stack of tasks, insert the constraint for all tasks
-        if self.is_stack_of_tasks():
-            for hard_task in self.tasks:
-                if isinstance(hard_task, list):
-                    for soft_task in hard_task:
-                        soft_task << other
-                else:
-                    hard_task << other
-        else:  # if we have one task, append the constraint
-            self.constraints.append(other)
+        # add constraint
+        for i, constraint in enumerate(self.constraints):
+            self.constraints[i] = constraint + other
+
+        # # if we have a stack of tasks, insert the constraint for all tasks
+        # if self.is_stack_of_tasks():
+        #     for hard_task in self.tasks:
+        #         if isinstance(hard_task, list):
+        #             for soft_task in hard_task:
+        #                 soft_task << other
+        #         else:
+        #             hard_task << other
+        # else:  # if we have one task, append the constraint
+        #     self.constraints.append(other)
 
     def __mul__(self, other):
-        """Multiply the task by a relative weight scalar or matrix."""
+        """Multiply the task by a relative weight scalar or matrix.
+
+        Warnings: this is an inplace operation!!
+        """
+        # task = copy.copy(self)
+        # task.weight = other * task.weight
+        # return task
         self.weight = other
+        return self
 
     def __rmul__(self, other):
         """Multiply the task by a relative weight"""
@@ -836,7 +1104,11 @@ class JointTorqueTask(Task):
 
 # Tests
 if __name__ == '__main__':
-    model = ModelInterface()
+    import pyrobolearn as prl
+
+    sim = prl.simulators.Bullet(render=False)
+    robot = prl.robots.KukaIIWA(sim)
+    model = prl.priorities.models.RobotModelInterface(robot)
     task1 = Task(model=model, weight=2)
     task2 = Task(model=model, weight=3)
     task = Task(stack_of_tasks=[[task1, task2], [task1]])
@@ -844,7 +1116,11 @@ if __name__ == '__main__':
 
     print(task2 == task[0, 1])
 
-    task = 1./2 * task1 + 1./3 * task2
+    task3 = 1./2 * task1
+    print(task1.weight)
+    print(task3.weight)
+
+    task = 1./2 * task1 + 1./4 * task2
     task = task / task1
 
     print(task)

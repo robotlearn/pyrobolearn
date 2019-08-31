@@ -29,7 +29,8 @@ __status__ = "Development"
 class InteractionTask(JointVelocityTask):
     r"""Interaction Task
 
-    From [1], "The Interaction class implements an Admittance based force control using the admittance law:
+    From the documentation of the framework of [1], "The Interaction class implements an Admittance based force
+    control using the admittance law:
 
     .. math::
 
@@ -44,8 +45,11 @@ class InteractionTask(JointVelocityTask):
     Warnings: the :math:`w_d` is the desired wrench that the robot has to exert on the environment, so the measured
     wrench :math:`w` is the wrench produced by the robot on the environment (and not the opposite)!"
 
+
+    The implementation of this class is inspired by [1] (which is licensed under the LGPLv2).
+
     References:
-        - [1] OpenSoT framework
+        - [1] "OpenSoT: A whole-body control library for the compliant humanoid robot COMAN", Rocchi et al., 2015
     """
 
     def __init__(self, model, distal_link, base_link=-1, desired_wrench=0., weight=1., constraints=[]):
@@ -56,8 +60,8 @@ class InteractionTask(JointVelocityTask):
             model (ModelInterface): model interface.
             distal_link (int, str): distal link id or name.
             base_link (int, str, None): base link id or name. If None, it will be the base root link.
-            desired_wrench (float, np.array[6]): desired wrench.
-            weight (float, np.array[6,6]): weight scalar or matrix associated to the task.
+            desired_wrench (float, np.array[float[6]]): desired wrench.
+            weight (float, np.array[float[6,6]]): weight scalar or matrix associated to the task.
             constraints (list of Constraint): list of constraints associated with the task.
         """
         super(InteractionTask, self).__init__(model=model, weight=weight, constraints=constraints)
@@ -67,7 +71,7 @@ class InteractionTask(JointVelocityTask):
 
         raise NotImplementedError("This class has not been implemented yet.")
 
-    def update(self):
+    def _update(self):
         """
         Update the task by computing the A matrix and b vector that will be used by the task solver.
         """

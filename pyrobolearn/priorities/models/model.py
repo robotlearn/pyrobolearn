@@ -71,6 +71,11 @@ class ModelInterface(object):
         """Return the number of degrees of freedom."""
         raise NotImplementedError
 
+    @property
+    def num_actuated_joints(self):
+        """Return the number of actuated joints."""
+        raise NotImplementedError
+
     ###########
     # Methods #
     ###########
@@ -212,7 +217,7 @@ class ModelInterface(object):
         """
         pass
 
-    def get_jacobian(self, link, wrt_link=None, point=(0., 0., 0.)):
+    def get_jacobian(self, link, wrt_link=None, frame=None, point=(0., 0., 0.)):
         r"""
         Get the 6D Jacobian for a point on a link, that when multiplied with :math:`\dot{q}` gives a 6D vector that
         has the angular velocity as the first three entries and the linear velocity as the last three entries.
@@ -225,6 +230,8 @@ class ModelInterface(object):
             link (int, str): unique link id, or name.
             wrt_link (int, str, None): unique link id, or name. If specified, it will take the relative jacobian. If
               None, the jacobian will be taken with respect to the world frame.
+            frame (int, str, None): unique link id, or name. If specified, it will express the final jacobian in that
+              specified frame.
             point (np.array[float[3]]): position of the point in link's local frame.
 
         Returns:
@@ -398,6 +405,15 @@ class ModelInterface(object):
 
         Returns:
             np.array[float[3]]: The cartesian acceleration of the point in global frame
+        """
+        pass
+
+    def get_centroidal_momentum_matrix(self):
+        r"""
+        Return the centroidal momentum matrix.
+
+        Returns:
+            np.array[float[6,6+N]]: the centroidal momentum matrix :math:`A_G`
         """
         pass
 

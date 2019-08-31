@@ -52,8 +52,8 @@ class JointPositionLimitsConstraint(BoundConstraint, JointVelocityConstraint):
         self.dt = dt
 
         bounds = self.model.get_joint_bounds()
-        self.lower_bound = bounds[0]
-        self.upper_bound = bounds[1]
+        self._lower_bound = bounds[0]
+        self._upper_bound = bounds[1]
 
     def update(self):
         r"""

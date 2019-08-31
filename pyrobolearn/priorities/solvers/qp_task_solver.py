@@ -126,7 +126,7 @@ class QPTaskSolver(TaskSolver):
     The QP task solver uses QP to solve a task or stack of tasks.
     """
 
-    def __init__(self, task, method='quadprog'):
+    def __init__(self, task, method='quadprog', epsilon=1.e-8):
         """
         Initialize the task solver.
 
@@ -134,9 +134,12 @@ class QPTaskSolver(TaskSolver):
             task (Task): Priority tasks.
             method (str): QP method/library to use. Select between ['cvxopt', 'cvxpy', 'ecos', 'gurobi', 'mosek',
               'osqp', 'qpoases', 'quadprog']
+            epsilon (float): this small amount is added to the diagonal elements of the quadratic matrix such that it
+              is positive definite.
         """
         solver = QP(method=method)
         super(QPTaskSolver, self).__init__(task, solver)
+        self.epsilon = epsilon
 
     ##############
     # Properties #
@@ -163,7 +166,7 @@ class QPTaskSolver(TaskSolver):
         """Update the priority task; compute the matrices and vectors to be used later in the `solve` method."""
         self.task.update()
 
-    def solve(self, x0=None):
+    def solve(self, x0=None, update=False):
         """Solve the priority task.
 
         Args:
@@ -172,12 +175,15 @@ class QPTaskSolver(TaskSolver):
         Returns:
             np.array[float[N]]: the optimized variables.
         """
+        # update if necessary
+        if update:
+            self.update()
+
         # get task objectives and constraints
         # objectives
         As = self.task.A
-        bs = self.task.b
-        cs = self.task.c
-        Ws = self.task.W
+        Qs = self.task.Q
+        ps = self.task.p
         # constraints
         Gs = self.task.G
         hs = self.task.h
@@ -186,23 +192,41 @@ class QPTaskSolver(TaskSolver):
 
         # if not a stack of tasks, just transform the task objectives/constraints into lists
         if not self.task.is_stack_of_tasks():
-            As, bs, cs, Ws = [As], [bs], [cs], [Ws]
-            Gs, hs, Fs, ks = [Gs], [hs], [Fs], [ks]
+            As, Qs, ps = [As], [Qs], [ps]
 
         # solve
         x_opt, x_opts, x_projs = x0, [], []
         for i in range(len(As)):
-            var = As[i].T.dot(Ws[i])
-            Q = var.dot(As[i])
-            p = cs[i] - var.dot(bs[i])
-            G = np.concatenate(Gs[:i+1])
-            h = np.concatenate(hs[:i+1])
-            F = np.concatenate(Fs[:i+1] + As[:i])
-            k = np.concatenate(ks[:i+1] + x_projs[:i])
+            # objectives
+            Q = Qs[i]
+            p = ps[i]
+
+            # constraints
+            G = Gs[:i+1]
+            G = np.concatenate(G) if len(G) > 0 else None
+            h = hs[:i+1]
+            h = np.concatenate(h) if len(h) > 0 else None
+            F = Fs[:i+1] + As[:i]
+            F = np.concatenate(F) if len(F) > 0 else None
+            k = ks[:i+1] + x_projs[:i]
+            k = np.concatenate(k) if len(k) > 0 else None
+
+            # make sure that Q is PD
+            diag_Q = np.einsum('ii->i', Q)
+            diag_Q += self.epsilon
+            # print("evals(Q): ", np.linalg.eigvals(Q))
+
+            # print("Q: ", Q.shape)
+            # print("p: ", p.shape)
+            # print("G: ", G.shape)
+            # print("h: ", h.shape)
+            # print("F: ", F.shape)
+            # print("k: ", k.shape)
 
             # solve (by starting from previous optimized solution)
             x_opt = self.solver.optimize(Q=Q, p=p, x0=x_opt, G=G, h=h, A=F, b=k)
             x_opts.append(x_opt)
+            # print("Loss: {}".format(self.task.loss(x_opt)))
 
             # project best solution (will be used later in the stack for constraints)
             if i < len(As) - 1:

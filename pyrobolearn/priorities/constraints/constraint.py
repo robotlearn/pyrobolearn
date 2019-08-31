@@ -168,6 +168,15 @@ class Constraint(object):
         self.constraints = constraints
         self.model = model
 
+        # variables to be set in the corresponding child classes
+        self._lower_bound = None
+        self._upper_bound = None
+        self._A_eq = None
+        self._b_eq = None
+        self._A_ineq = None
+        self._b_lower_bound = None
+        self._b_upper_bound = None
+
     ##############
     # Properties #
     ##############
@@ -195,26 +204,28 @@ class Constraint(object):
         if constraints is None:
             constraints = dict()
         elif isinstance(constraints, dict):
-            constraints = list(constraints.values())
+            equality_constraints = constraints.get(EqualityConstraint, [])
+            inequality_constraints = constraints.get(InequalityConstraint, [])
+            constraints = equality_constraints + inequality_constraints
         elif not isinstance(constraints, (list, tuple)):
             constraints = [constraints]
 
         constraint_dict = dict()
         for i, constraint in enumerate(constraints):
-            # if not isinstance(constraint, Constraint):
-            #     raise TypeError("Expecting the given {}th constraint to be an instance of `Constraint`, instead "
-            #                     "got: {}".format(i, type(constraint)))
             if isinstance(constraint, EqualityConstraint):
                 constraint_dict.setdefault(EqualityConstraint, []).append(constraint)
             elif isinstance(constraint, InequalityConstraint):
-                constraint_dict.setdefault(InequalityConstraint, dict())
-                d = constraint_dict[InequalityConstraint]
+                constraint_dict.setdefault(InequalityConstraint, []).append(constraint)
                 if isinstance(constraint, BoundConstraint):
-                    d.setdefault(BoundConstraint, []).append(constraint)
+                    constraint_dict.setdefault(BoundConstraint, []).append(constraint)
                 elif isinstance(constraint, UnilateralConstraint):
-                    d.setdefault(UnilateralConstraint, []).append(constraint)
+                    constraint_dict.setdefault(UnilateralConstraint, []).append(constraint)
+                    if isinstance(constraint, LowerUnilateralConstraint):
+                        constraint_dict.setdefault(LowerUnilateralConstraint, []).append(constraint)
+                    elif isinstance(constraint, UpperUnilateralConstraint):
+                        constraint_dict.setdefault(UpperUnilateralConstraint, []).append(constraint)
                 elif isinstance(constraint, BilateralConstraint):
-                    d.setdefault(BilateralConstraint, []).append(constraint)
+                    constraint_dict.setdefault(BilateralConstraint, []).append(constraint)
                 else:
                     raise TypeError("Expecting the {}th inequality constraint to be an instance of `BoundConstraint`,"
                                     " `UnilateralConstraint`, `BilateralConstraint`, but got: "
@@ -222,6 +233,7 @@ class Constraint(object):
             else:
                 raise TypeError("Expecting the {}th constraint to be an instance of `EqualityConstraint` or "
                                 "`InequalityConstraint`, but got: {}".format(i, type(constraint)))
+
         self._constraints = constraint_dict
 
     @property
@@ -232,9 +244,9 @@ class Constraint(object):
             np.array[float[N]]: lower bound.
         """
         if self.constraints:
-            constraints = self.constraints.get(InequalityConstraint, {}).get(BoundConstraint, [])
+            constraints = self.constraints.get(BoundConstraint, [])
             return [constraint.lower_bound for constraint in constraints]
-        return self._get_lower_bound()
+        return self._lower_bound
 
     @property
     def upper_bound(self):
@@ -244,9 +256,9 @@ class Constraint(object):
             np.array[float[N]]: upper bound.
         """
         if self.constraints:
-            constraints = self.constraints.get(InequalityConstraint, {}).get(BoundConstraint, [])
+            constraints = self.constraints.get(BoundConstraint, [])
             return [constraint.lower_bound for constraint in constraints]
-        return self._get_upper_bound()
+        return self._upper_bound
 
     @property
     def A_eq(self):
@@ -258,7 +270,7 @@ class Constraint(object):
         if self.constraints:
             constraints = self.constraints.get(EqualityConstraint, [])
             return [constraint.A_eq for constraint in constraints]
-        return self._get_equality_matrix()
+        return self._A_eq
 
     @property
     def b_eq(self):
@@ -269,8 +281,8 @@ class Constraint(object):
         """
         if self.constraints:
             constraints = self.constraints.get(EqualityConstraint, [])
-            return [constraint.A_eq for constraint in constraints]
-        return self._get_equality_matrix()
+            return [constraint.b_eq for constraint in constraints]
+        return self._b_eq
 
     @property
     def A_ineq(self):
@@ -279,6 +291,10 @@ class Constraint(object):
         Returns:
             np.array[float[N,N]]: inequality constraint matrix.
         """
+        if self.constraints:
+            unilateral_constraints = self.constraints.get(UnilateralConstraint, [])
+            bilateral_constraints = self.constraints.get(BilateralConstraint, [])
+            return [constraint.A_ineq for constraint in unilateral_constraints + bilateral_constraints]
         return self._A_ineq
 
     @property
@@ -288,6 +304,10 @@ class Constraint(object):
         Returns:
             np.array[float[N]]: inequality constraint lower bound vector.
         """
+        if self.constraints:
+            unilateral_constraints = self.constraints.get(LowerUnilateralConstraint, [])
+            bilateral_constraints = self.constraints.get(BilateralConstraint, [])
+            return [constraint.b_lower_bound for constraint in unilateral_constraints + bilateral_constraints]
         return self._b_lower_bound
 
     @property
@@ -297,6 +317,10 @@ class Constraint(object):
         Returns:
             np.array[float[N]]: inequality constraint upper bound vector.
         """
+        if self.constraints:
+            unilateral_constraints = self.constraints.get(UpperUnilateralConstraint, [])
+            bilateral_constraints = self.constraints.get(BilateralConstraint, [])
+            return [constraint.b_upper_bound for constraint in unilateral_constraints + bilateral_constraints]
         return self._b_upper_bound
 
     @property
@@ -306,10 +330,36 @@ class Constraint(object):
         Returns:
             np.array[float[N,N]]: inequality constraint matrix.
         """
-        # TODO: improve this
-        G_lb = [np.identity(len(lb_)) for lb_ in self.lower_bound]
-        G_ub = [np.identity(len(ub_)) for ub_ in self.upper_bound]
-        return np.concatenate((G_lb + G_ub,))
+        if self.constraints:
+            results = []
+            bound_constraints = self.constraints.get(BoundConstraint, [])
+            for constraint in bound_constraints:
+                x_size = len(constraint.lower_bound)
+                results.append(-np.identity(x_size))
+                results.append(np.identity(x_size))
+            bilateral_constraints = self.constraints.get(BilateralConstraint, [])
+            for constraint in bilateral_constraints:
+                results.append(-constraint.A_ineq)
+                results.append(constraint.A_ineq)
+            lower_unilateral_constraints = self.constraints.get(LowerUnilateralConstraint, [])
+            for constraint in lower_unilateral_constraints:
+                results.append(-constraint.A_ineq)
+            upper_unilateral_constraints = self.constraints.get(UpperUnilateralConstraint, [])
+            for constraint in upper_unilateral_constraints:
+                results.append(constraint.A_ineq)
+
+            if results:
+                return np.concatenate(results)
+        else:
+            if isinstance(self, BoundConstraint):
+                x_size = len(self._lower_bound)
+                return np.concatenate((-np.identity(x_size), np.identity(x_size)))
+            elif isinstance(self, BilateralConstraint):
+                return np.concatenate((-self._A_ineq, self._A_ineq))
+            elif isinstance(self, LowerUnilateralConstraint):
+                return -self._A_ineq
+            elif isinstance(self, UpperUnilateralConstraint):
+                return self._A_ineq
 
     @property
     def h(self):
@@ -318,11 +368,34 @@ class Constraint(object):
         Returns:
             np.array[float[N]]: inequality constraint vector.
         """
-        lb = self.lower_bound
-        ub = self.upper_bound
-        b_lb = self.b_lower_bound
-        b_ub = self.b_upper_bound
-        return np.concatenate(-lb, ub, -b_lb, b_ub)
+        if self.constraints:
+            results = []
+            bound_constraints = self.constraints.get(BoundConstraint, [])
+            for constraint in bound_constraints:
+                results.append(-constraint.lower_bound)
+                results.append(constraint.upper_bound)
+            bilateral_constraints = self.constraints.get(BilateralConstraint, [])
+            for constraint in bilateral_constraints:
+                results.append(-constraint.b_lower_bound)
+                results.append(constraint.b_upper_bound)
+            lower_unilateral_constraints = self.constraints.get(LowerUnilateralConstraint, [])
+            for constraint in lower_unilateral_constraints:
+                results.append(-constraint.b_lower_bound)
+            upper_unilateral_constraints = self.constraints.get(UpperUnilateralConstraint, [])
+            for constraint in upper_unilateral_constraints:
+                results.append(constraint.b_upper_bound)
+
+            if results:
+                return np.concatenate(results)
+        else:
+            if isinstance(self, BoundConstraint):
+                return np.concatenate((-self._lower_bound, self._upper_bound))
+            elif isinstance(self, BilateralConstraint):
+                return np.concatenate((-self._b_lower_bound, self._upper_bound))
+            elif isinstance(self, LowerUnilateralConstraint):
+                return -self._b_lower_bound
+            elif isinstance(self, UpperUnilateralConstraint):
+                return self._b_upper_bound
 
     @property
     def F(self):
@@ -363,7 +436,8 @@ class Constraint(object):
     #
     # @staticmethod
     # def is_unilateral_constraint():
-    #     r"""Return True if it is a unilateral constraint: math:`b_l \leq A_{ineq} x` xor :math:`A_{ineq} x \leq b_u`."""
+    #     r"""Return True if it is a unilateral constraint: math:`b_l \leq A_{ineq} x` xor :math:`A_{ineq} x
+    #     \leq b_u`."""
     #     return False
     #
     # @staticmethod
@@ -402,13 +476,16 @@ class Constraint(object):
             self.constraints.setdefault(EqualityConstraint, []).append(constraint)
         elif isinstance(constraint, InequalityConstraint):
             self.constraints.setdefault(InequalityConstraint, dict())
-            d = self.constraints[InequalityConstraint]
             if isinstance(constraint, BoundConstraint):
-                d.setdefault(BoundConstraint, []).append(constraint)
+                self.constraints.setdefault(BoundConstraint, []).append(constraint)
             elif isinstance(constraint, UnilateralConstraint):
-                d.setdefault(UnilateralConstraint, []).append(constraint)
+                self.constraints.setdefault(UnilateralConstraint, []).append(constraint)
+                if isinstance(constraint, LowerUnilateralConstraint):
+                    self.constraints.setdefault(LowerUnilateralConstraint, []).append(constraint)
+                elif isinstance(constraint, UpperUnilateralConstraint):
+                    self.constraints.setdefault(UpperUnilateralConstraint, []).append(constraint)
             elif isinstance(constraint, BilateralConstraint):
-                d.setdefault(BilateralConstraint, []).append(constraint)
+                self.constraints.setdefault(BilateralConstraint, []).append(constraint)
             else:
                 raise TypeError("Expecting the inequality constraint to be an instance of `BoundConstraint`, "
                                 "`UnilateralConstraint`, `BilateralConstraint`, but got: {}".format(type(constraint)))
@@ -423,27 +500,6 @@ class Constraint(object):
             x (np.array[float[N]]): current optimization variables values.
         """
         pass
-
-    def _get_lower_bound(self):
-        return []
-
-    def _get_upper_bound(self):
-        return []
-
-    def _get_equality_matrix(self):
-        return []
-
-    def _get_equality_vector(self):
-        return []
-
-    def _get_inequality_matrix(self):
-        return []
-
-    def _get_inequality_lower_bound(self):
-        return []
-
-    def _get_inequality_upper_bound(self):
-        return []
 
     #############
     # Operators #
@@ -502,6 +558,14 @@ class Constraint(object):
         # TODO: finish to implement this
 
         return Constraint()
+
+
+class NullConstraint(Constraint):
+    r"""Null constraint.
+
+    This is a dummy constraint which is used to specify that no constraints are used.
+    """
+    pass
 
 
 class EqualityConstraint(Constraint):
