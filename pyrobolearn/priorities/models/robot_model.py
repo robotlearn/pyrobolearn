@@ -68,12 +68,12 @@ class RobotModelInterface(ModelInterface):
         - If fixed base, this is equal to the number of actuated joints.
         - If floating base, this is equal to the number of actuated joints + 6 DoFs for the base.
         """
-        return self.robot.num_dofs
+        return self.model.num_dofs
     
     @property
     def num_actuated_joints(self):
         """Return the number of actuated joints."""
-        return self.robot.num_actuated_joints
+        return self.model.num_actuated_joints
 
     ###########
     # Methods #
@@ -120,6 +120,27 @@ class RobotModelInterface(ModelInterface):
         """
         return -1
 
+    def get_joint_limits(self):
+        r"""
+        Return the joint limits.
+
+        Returns:
+            np.array[float[N]]: lower joint position limits.
+            np.array[float[N]]: upper joint position limits.
+        """
+        return self.model.get_joint_limits()
+    
+    def get_joint_velocity_limits(self):
+        r"""
+        Return the joint velocity limits.
+
+        Returns:
+            np.array[float[N]]: lower joint velocity limits.
+            np.array[float[N]]: upper joint velocity limits.
+        """
+        dq = self.model.get_joint_max_velocities()
+        return -dq, dq
+
     def get_joint_positions(self):
         """
         Get the joint positions.
@@ -127,7 +148,7 @@ class RobotModelInterface(ModelInterface):
         Returns:
             np.array[float[N]]: the joint positions.
         """
-        return self.robot.get_joint_positions()
+        return self.model.get_joint_positions()
 
     def get_joint_velocities(self):
         """
@@ -136,7 +157,7 @@ class RobotModelInterface(ModelInterface):
         Returns:
             np.array[float[N]]: the joint positions.
         """
-        return self.robot.get_joint_velocities()
+        return self.model.get_joint_velocities()
 
     def get_joint_accelerations(self):
         """
@@ -145,7 +166,7 @@ class RobotModelInterface(ModelInterface):
         Returns:
             np.array[float[N]]: the joint positions.
         """
-        return self.robot.get_joint_accelerations()
+        return self.model.get_joint_accelerations()
 
     def get_com_position(self):
         """
@@ -266,11 +287,11 @@ class RobotModelInterface(ModelInterface):
 
     def get_pose(self, link, wrt_link=None, point=(0., 0., 0.)):  # TODO: use point
         """
-        Return the pose of the specified link.
+        Return the pose of the specified link with respect to another link.
 
         Args:
             link (int, str): unique link id, or name.
-            wrt_link (int, str, None): the other link id, or name. If None, returns the position wrt to the world, and
+            wrt_link (int, str, None): the other link id, or name. If None, returns the pose wrt to the world, and
               if -1 wrt to the base.
             point (np.array[float[3]]): position of the point in link's local frame.
 
@@ -281,6 +302,40 @@ class RobotModelInterface(ModelInterface):
         if wrt_link is None:
             return self.model.get_link_world_poses(link)
         return self.model.get_link_poses(link, self.get_link_id(wrt_link))
+
+    def get_position(self, link, wrt_link=None):  # TODO: use point
+        """
+        Return the position of the specified link with respect to another link.
+
+        Args:
+            link (int, str): unique link id, or name.
+            wrt_link (int, str, None): the other link id, or name. If None, returns the position wrt to the world,
+              and if -1 wrt to the base.
+
+        Returns:
+            np.array[float[3]]: position
+        """
+        link = self.get_link_id(link)
+        if wrt_link is None:
+            return self.model.get_link_world_positions(link)
+        return self.model.get_link_positions(link, wrt_link_id=self.get_link_id(wrt_link))
+
+    def get_orientation(self, link, wrt_link=None):  # TODO: use point
+        """
+        Return the orientation of the specified link with respect to another link.
+
+        Args:
+            link (int, str): unique link id, or name.
+            wrt_link (int, str, None): the other link id, or name. If None, returns the orientation wrt to the world,
+              and if -1 wrt to the base.
+
+        Returns:
+            np.array[float[4]]: orientation (expressed as a quaternion [x,y,z,w])
+        """
+        link = self.get_link_id(link)
+        if wrt_link is None:
+            return self.model.get_link_world_orientations(link)
+        return self.model.get_link_orientations(link, wrt_link_id=self.get_link_id(wrt_link))
 
     def get_velocity_twist(self, link, point=(0., 0., 0.)):  # TODO: use point
         r"""
@@ -417,6 +472,17 @@ class RobotModelInterface(ModelInterface):
         # return \dot{J}(q) \dot{q} = \dot{v} - J(q) \ddot{q}
         return acc - jacobian.dot(ddq)
 
+    def compute_com_JdotQdot(self):
+        r"""
+        Compute :math:`\dot{J}_{CoM}(q) \dot{q}` from the centroidal momentum matrix.
+
+        Returns:
+            np.array[float[6]]: the matrix multiplication of the first derivative of the CoM Jacobian with the joint
+              velocities.
+        """
+        A_G, dA_G_dq = self.get_centroidal_dynamics()
+        return dA_G_dq / self.get_mass()
+
     def compute_relative_JdotQdot(self, target_link, base_link):
         r"""
         Compute the relative :math:`\dot{J}(q) \dot{q}`, which appears in
@@ -495,6 +561,17 @@ class RobotModelInterface(ModelInterface):
             np.array[float[6,6+N]]: the centroidal momentum matrix :math:`A_G`
         """
         return self.model.get_centroidal_momentum_matrix()
+
+    def get_centroidal_dynamics(self):
+        r"""
+        Return the centroidal momentum matrix :math:`A_G` and its derivative multiplied by the joint velocities
+        :math:`\dot{A}_G \dot{q}`.
+
+        Returns:
+            np.array[float[6,6+N]]: the centroidal momentum matrix :math:`A_G`
+            np.array[float[6]]: the centroidal dynamics velocity-dependent bias vector :math:`\dot{A}_G \dot{q}`
+        """
+        return self.model.get_centroidal_dynamics()
 
     def update(self, q=None, dq=None, ddq=None, update_model=False):
         """Update: move to the next step."""

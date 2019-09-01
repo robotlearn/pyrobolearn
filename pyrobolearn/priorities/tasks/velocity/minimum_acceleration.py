@@ -3,13 +3,12 @@ r"""Provide the minimum acceleration task.
 
 The minimum acceleration task tries to minimize the change in velocity, that is, it minimizes:
 
-.. math:: || \dot{q}_t - \dot{q}_{t-1} ||^2
+.. math:: || \dot{q} - \dot{q}_t ||^2
 
-where :math:`\dot{q}_t` are the current joint velocities being optimized, and :math:`\dot{q}_{t-1}` are the
-previous joint velocities.
+where :math:`\dot{q}` are the joint velocities being optimized, and :math:`\dot{q}_t` are the current joint velocities.
 
 This is equivalent to the QP objective function :math:`||Ax - b||^2`, by setting :math:`A = I`, :math:`x = \dot{q}`,
-and :math:`b = \dot{q}_{t-1}`.
+and :math:`b = \dot{q}_t`.
 
 
 The implementation of this class is inspired by [1] (which is licensed under the LGPLv2).
@@ -38,13 +37,13 @@ class MinAccelerationTask(JointVelocityTask):
 
     The minimum acceleration task tries to minimize the change in velocity, that is, it minimizes:
 
-    .. math:: || \dot{q}_t - \dot{q}_{t-1} ||^2
+    .. math:: || \dot{q} - \dot{q}_t ||^2
 
-    where :math:`\dot{q}_t` are the current joint velocities being optimized, and :math:`\dot{q}_{t-1}` are the
-    previous joint velocities.
+    where :math:`\dot{q}` are the joint velocities being optimized, and :math:`\dot{q}_t` are the current joint
+    velocities.
 
-    This is equivalent to the QP objective function :math:`||Ax - b||^2`, by setting :math:`A = I`, :math:`x = \dot{q}`,
-    and :math:`b = \dot{q}_{t-1}`.
+    This is equivalent to the QP objective function :math:`||Ax - b||^2`, by setting :math:`A = I`,
+    :math:`x = \dot{q}`, and :math:`b = \dot{q}_t`.
 
 
     The implementation of this class is inspired by [1] (which is licensed under the LGPLv2).

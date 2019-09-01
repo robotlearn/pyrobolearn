@@ -28,7 +28,7 @@ __status__ = "Development"
 class ManipulabilityTask(JointVelocityTask):
     r"""Manipulability Task
 
-    The manipulability task implements a tasks that tries to maximize the manipulability measure given in [1]:
+    The manipulability task implements a task that tries to maximize the manipulability measure given in [1]:
 
     .. math:: w(q) = \sqrt{ \det( J(q) W J(q)^\top ) }
 

@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 r"""Provide the cartesian (velocity) task.
 
-The cartesian task tries to impose a desired pose (position and orientation) of a distal link with respect to a
-base link or the world frame. The minimization problem is given by:
+The cartesian task tries to impose a desired pose (position and orientation) and velocity of a distal link with
+respect to a base link or the world frame. The minimization problem is given by:
 
 .. math:: || ^bJ_d(q) \dot{q} - (K_p e + \dot{x}_d) ||^2
 
 where :math:`^bJ_d(q) \in \mathbb{R}^{6 \times N}` is the Jacobian taken from the base to the distal link,
 :math:`\dot{q}` are the joint velocities being optimized, :math:`K_p` is the stiffness gain,
 :math:`e \in \mathbb{R}^{6}` is the error which is the concatenation of the position error given by
-:math:`e_{p} = (x_d - x)` (with :math:`x_d` being the desired pose, and :math:`x` the current pose), and the
+:math:`e_{p} = (x_d - x)` (with :math:`x_d` being the desired position, and :math:`x` the current position), and the
 orientation error given by (if expressed as quaternions :math:`o = {s, v}` where :math:`s` is the real scalar part,
 and :math:`v` is the vector part) :math:`e_{o} = s v_d - s_d v - v_d \cross v`, and :math:`\dot{x}_d` is the
 desired cartesian velocity for the distal link with respect to the base link.
@@ -48,21 +48,26 @@ __status__ = "Development"
 class CartesianTask(JointVelocityTask):
     r"""Cartesian (velocity) Task
 
-    The cartesian task tries to impose a desired pose (position and orientation) of a distal link with respect to a
-    base link or the world frame. The minimization problem is given by:
+    The cartesian task tries to impose a desired pose (position and orientation) and velocity of a distal link with
+    respect to a base link or the world frame. The minimization problem is given by:
 
     .. math:: || ^bJ_d(q) \dot{q} - (K_p e + \dot{x}_d) ||^2
 
     where :math:`^bJ_d(q) \in \mathbb{R}^{6 \times N}` is the Jacobian taken from the base to the distal link,
     :math:`\dot{q}` are the joint velocities being optimized, :math:`K_p` is the stiffness gain,
     :math:`e \in \mathbb{R}^{6}` is the error which is the concatenation of the position error given by
-    :math:`e_{p} = (x_d - x)` (with :math:`x_d` being the desired pose, and :math:`x` the current pose), and the
-    orientation error given by (if expressed as quaternions :math:`o = {s, v}` where :math:`s` is the real scalar part,
-    and :math:`v` is the vector part) :math:`e_{o} = s v_d - s_d v - v_d \cross v`, and :math:`\dot{x}_d` is the
+    :math:`e_{p} = (x_d - x)` (with :math:`x_d` being the desired position, and :math:`x` the current position), and
+    the orientation error given by (if expressed as quaternions :math:`o = {s, v}` where :math:`s` is the real scalar
+    part, and :math:`v` is the vector part) :math:`e_{o} = s v_d - s_d v - v_d \cross v`, and :math:`\dot{x}_d` is the
     desired cartesian velocity for the distal link with respect to the base link.
 
     This is equivalent to the QP objective function :math:`||Ax - b||^2`, by setting :math:`A = ^bJ_d(q)`,
     :math:`x = \dot{q}`, and :math:`b = K_p e + \dot{x}_d`.
+
+    Important notes:
+
+    - You don't have to specify the whole pose, you can also only specify the position or orientation.
+    - You can also only specify the cartesian velocities without providing the cartesian position or orientation.
 
     The implementation of this class is inspired by [1] (which is licensed under the LGPLv2).
 
@@ -91,7 +96,7 @@ class CartesianTask(JointVelocityTask):
               If None, it will be set to zero.
             kp_position (float, np.array[float[3,3]]): position stiffness gain.
             kp_orientation (float, np.array[float[3,3]]): orientation stiffness gain.
-            weight (float, np.array[float[6,6]]): weight scalar or matrix associated to the task.
+            weight (float, np.array[float[6,6]], np.array[float[3,3]]): weight scalar or matrix associated to the task.
             constraints (list[Constraint]): list of constraints associated with the task.
         """
         super(CartesianTask, self).__init__(model=model, weight=weight, constraints=constraints)
@@ -304,6 +309,7 @@ class CartesianTask(JointVelocityTask):
 
     def get_desired_references(self):
         """Return the desired references.
+
         Returns:
             np.array[float[7]]: desired cartesian pose (position and quaternion [x,y,z,w]) of distal link wrt the base.
             np.array[float[6]]: desired cartesian velocity of distal link wrt the base.

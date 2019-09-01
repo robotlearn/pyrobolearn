@@ -161,9 +161,9 @@ class Constraint(object):
         Initialize the Constraint.
 
         Args:
-            constraints (list[Constraint], None): inner constraints. By providing a list of constraints, they can be
-                combined easily.
             model (ModelInterface): robotic model interface.
+            constraints (list[Constraint], None): inner constraints. By providing a list of constraints, they can be
+              combined easily.
         """
         self.constraints = constraints
         self.model = model
@@ -193,6 +193,14 @@ class Constraint(object):
             raise TypeError("Expecting the given 'model' to be an instance of `ModelInterface`, instead got: "
                             "{}".format(model))
         self._model = model
+
+    @property
+    def x_size(self):
+        """Return the number of variables being optimized."""
+        # return self._x_size
+        if self.model is not None:
+            return self.model.num_actuated_joints
+        return 0
 
     @property
     def constraints(self):
@@ -492,14 +500,19 @@ class Constraint(object):
         else:
             raise TypeError("The given type of constraint is not currently supported.")
 
+    def _update(self):
+        """Update the constraint variables. This has to be implemented in the child classes."""
+        pass
+
     def update(self):
         r"""
         Update the various constraint matrices and vectors: :math:`A_{eq}, b_{eq}, A_{ineq}, b_l, b_u, ...`.
-
-        Args:
-            x (np.array[float[N]]): current optimization variables values.
         """
-        pass
+        if self.constraints:
+            for constraint in self.constraints:
+                constraint.update()
+        else:
+            self._update()
 
     #############
     # Operators #
@@ -512,14 +525,11 @@ class Constraint(object):
         """Return a string describing the class."""
         return self.__class__.__name__
 
-    def __call__(self, x):
+    def __call__(self):
         """
-        Update the constraint (i.e. update the various constraint matrices and vectors.
-
-        Args:
-            x (np.array[float[N]]): current optimization variable values.
+        Update the constraint (i.e. update the various constraint matrices and vectors).
         """
-        return self.update(x)
+        return self.update()
 
     def __len__(self):
         """
@@ -625,4 +635,14 @@ class JointAccelerationConstraint(DynamicConstraint):
 
 class JointEffortConstraint(DynamicConstraint):
     r"""Joint effort constraint."""
+    pass
+
+
+class JointTorqueConstraint(DynamicConstraint):
+    r"""Joint torque constraint."""
+    pass
+
+
+class JointForceConstraint(DynamicConstraint):
+    r"""Joint Force constraint."""
     pass

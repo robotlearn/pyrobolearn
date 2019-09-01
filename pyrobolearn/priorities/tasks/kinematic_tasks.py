@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """Provide the various kinematic tasks (i.e. objective functions) used in QP.
 
+DEPRECATED.
+
 References:
     [1] "Quadratic Programming in Python" (https://scaron.info/blog/quadratic-programming-in-python.html), Caron, 2017
     [2] "OpenSoT: A whole-body control library for the compliant humanoid robot COMAN", Rocchi et al., 2015

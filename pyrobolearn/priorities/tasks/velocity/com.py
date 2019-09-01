@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 r"""Provide the center of mass velocity task.
 
-The CoM task tries to impose a desired position of the CoM with respect to the world frame.
+The CoM task tries to impose a desired position and (linear) velocity of the CoM with respect to the world frame.
 
 .. math:: ||J_{CoM} \dot{q} - (K_p (x_d - x) + \dot{x}_d)||^2
 
@@ -39,7 +39,7 @@ __status__ = "Development"
 class CoMTask(JointVelocityTask):
     r"""Center of Mass Velocity Task
 
-    The CoM task tries to impose a desired position of the CoM with respect to the world frame.
+    The CoM task tries to impose a desired position and (linear) velocity of the CoM with respect to the world frame.
 
     .. math:: ||J_{CoM} \dot{q} - (K_p (x_d - x) + \dot{x}_d)||^2
 
@@ -49,6 +49,8 @@ class CoMTask(JointVelocityTask):
 
     This is equivalent to the QP objective function :math:`||Ax - b||^2`, by setting :math:`A=J_{CoM}`,
     :math:`x=\dot{q}`, and :math:`b = K_p (x_d - x) + \dot{x}_d`.
+
+    Note that you can only specify the center of mass linear velocity if you wish.
 
     The implementation of this class is inspired by [1] (which is licensed under the LGPLv2).
 

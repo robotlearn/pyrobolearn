@@ -147,6 +147,8 @@ class PosturalTask(JointVelocityTask):
     @kp.setter
     def kp(self, kp):
         """Set the stiffness gain."""
+        if kp is None:
+            kp = 1.
         if not isinstance(kp, (float, int, np.ndarray)):
             raise TypeError("Expecting the given stiffness gain kp to be an int, float, np.array, instead got: "
                             "{}".format(type(kp)))

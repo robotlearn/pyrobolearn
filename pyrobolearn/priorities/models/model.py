@@ -119,6 +119,26 @@ class ModelInterface(object):
         """
         pass
 
+    def get_joint_limits(self):
+        r"""
+        Return the joint limits.
+
+        Returns:
+            np.array[float[N]]: lower joint position limits.
+            np.array[float[N]]: upper joint position limits.
+        """
+        pass
+
+    def get_joint_velocity_limits(self):
+        r"""
+        Return the joint velocity limits.
+
+        Returns:
+            np.array[float[N]]: lower joint velocity limits.
+            np.array[float[N]]: upper joint velocity limits.
+        """
+        pass
+
     def get_joint_positions(self):
         """
         Get the joint positions.
@@ -239,15 +259,46 @@ class ModelInterface(object):
         """
         pass
 
-    def get_pose(self, link):
+    def get_pose(self, link, wrt_link=None, point=(0., 0., 0.)):
         """
-        Return the pose of the specified link.
+        Return the pose of the specified link with respect to another link.
 
         Args:
             link (int, str): unique link id, or name.
+            wrt_link (int, str, None): the other link id, or name. If None, returns the pose wrt to the world, and
+              if -1 wrt to the base.
+            point (np.array[float[3]]): position of the point in link's local frame.
 
         Returns:
             np.array[float[7]]: pose (position and quaternion expressed as [x,y,z,w])
+        """
+        pass
+
+    def get_position(self, link, wrt_link=None):
+        """
+        Return the position of the specified link with respect to another link.
+
+        Args:
+            link (int, str): unique link id, or name.
+            wrt_link (int, str, None): the other link id, or name. If None, returns the position wrt to the world,
+              and if -1 wrt to the base.
+
+        Returns:
+            np.array[float[3]]: position
+        """
+        pass
+
+    def get_orientation(self, link, wrt_link=None):
+        """
+        Return the orientation of the specified link with respect to another link.
+
+        Args:
+            link (int, str): unique link id, or name.
+            wrt_link (int, str, None): the other link id, or name. If None, returns the orientation wrt to the world,
+              and if -1 wrt to the base.
+
+        Returns:
+            np.array[float[4]]: orientation (expressed as a quaternion [x,y,z,w])
         """
         pass
 
