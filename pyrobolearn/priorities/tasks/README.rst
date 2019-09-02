@@ -104,6 +104,15 @@ the identity matrix and :math:`b=0` is the zero/null vector).
 
 Tasks include cartesian CoM tracking, cartesian end-effector position tracking, postural positioning, and others.
 
+
+Tasks are separated into 4 folders (velocity, acceleration, torque, and cartesian force); one for each optimization 
+variable vector that is being optimized. Note that different type of tasks can be combined together; for instance, 
+we can combine acceleration tasks with force tasks. This will create an optimization variable vector 
+:math:`x = [\ddot{q}^\top, F^\top]^\top` which can then be used with the joint space dynamic equation 
+:math:`\tau = H \ddot{q} + C(q,\dot{q})\dot{q} + g(q) - J^\top F` to get the equivalent joint torques to be applied 
+on the robot. 
+
+
 References:
     .. [1] `Quadratic Programming in Python <https://scaron.info/blog/quadratic-programming-in-python.html>`_, Caron, 2017
     .. [2] "OpenSoT: A whole-body control library for the compliant humanoid robot COMAN", Rocchi et al., 2015

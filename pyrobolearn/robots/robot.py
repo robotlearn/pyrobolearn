@@ -4281,9 +4281,12 @@ class Robot(ControllableBody):
         # compute centroidal momentum matrix and the dot product between the derivative of this centroidal momentum
         # matrix with the generalized velocities vector
         A_G = X_iG_T.dot(Psi_1.T).dot(U_1).dot(H)  # shape = (6,n+6)
-        A_Gd_dq = X_iG_T.dot(Psi_1.T).dot(U_1).dot(C_dq)  # shape = (6,)
+        dA_G_dq = X_iG_T.dot(Psi_1.T).dot(U_1).dot(C_dq)  # shape = (6,)
 
-        return A_G, A_Gd_dq
+        return A_G, dA_G_dq
+
+    def get_centroidal_momentum_matrix(self, q=None, dq=None, inertia=None):
+        return self.get_centroidal_dynamics(q=q, dq=dq, inertia=inertia)[0]
 
     def get_centroidal_momentum(self, q=None, dq=None, inertia=None):
         r"""

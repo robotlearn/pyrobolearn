@@ -26,7 +26,7 @@ __status__ = "Development"
 class JointLimitsConstraint(BoundConstraint, JointTorqueConstraint):
     r"""Joint Limits constraint.
 
-    This provides bounds/limits on the joint torques:
+    This provides bounds/limits on the joint torques (based on a PD control feedback law):
 
     .. math::  k_p (q_{lb} - q) - k_d \dot{q} \leq \tau \leq k_p (q_{ub} - q) - k_d \dot{q}
 

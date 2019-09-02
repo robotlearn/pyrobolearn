@@ -10,6 +10,7 @@ References:
 """
 
 import numpy as np
+from scipy.linalg import block_diag
 import quaternion
 # from pyquaternion import Quaternion  # TODO: check API at http://kieranwynn.github.io/pyquaternion
 import sympy
@@ -43,6 +44,19 @@ def min_angle_difference(q1, q2):
     if diff > np.pi:
         diff = 2 * np.pi - diff
     return diff
+
+
+def get_adjoint_from_rotation(rotation_matrix):
+    r"""
+    Get the adjoint matrix from a rotation matrix.
+
+    Args:
+        rotation_matrix (np.array[float[3,3]]): rotation matrix.
+
+    Returns:
+        np.array[float[6,6]]: adjoint matrix.
+    """
+    return block_diag(rotation_matrix, rotation_matrix)
 
 
 def get_homogeneous_transform(position, orientation):

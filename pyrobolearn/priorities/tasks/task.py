@@ -111,6 +111,7 @@ References:
 import numpy as np
 import copy
 
+import pyrobolearn as prl
 from pyrobolearn.priorities.models import ModelInterface
 from pyrobolearn.priorities.constraints.constraint import Constraint, NullConstraint
 
@@ -124,9 +125,6 @@ __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
-
-# TODO: take into account constraints
-# TODO: take into account hard priority tasks
 
 class Task(object):
     r"""Task (abstract) class.
@@ -162,6 +160,9 @@ class Task(object):
         self.model = model
         self.weight = weight
         self.constraints = constraints
+
+        # if the task is enabled or not. A disabled task is the same as setting the weight to 0.
+        self._enabled = True
 
         # check that the task is a valid task or a stack o tasks
         if self.model is None and not self.is_stack_of_tasks():
@@ -205,8 +206,12 @@ class Task(object):
                 # go through each soft task in the hard task
                 for j, soft_task in enumerate(hard_task):
                     if not isinstance(soft_task, Task):
-                        raise TypeError("The given task positioned at ({}, {}) is not an instance of `Task`, but: "
-                                        "{}".format(i, j, type(soft_task)))
+                        if isinstance(soft_task, Constraint):
+                            # if constraint (must be an equality constraint), try to convert it into a task
+                            tasks[i][j] = prl.priorities.tasks.TaskFromConstraint(soft_task)
+                        else:
+                            raise TypeError("The given task positioned at ({}, {}) is not an instance of `Task`, "
+                                            "but: {}".format(i, j, type(soft_task)))
             else:   # if not, check that the hard task is an instance of Task
                 if not isinstance(hard_task, Task):
                     raise TypeError("Expecting the {}th hard task to be an instance of `Task` or a list of `Task`, "
@@ -458,9 +463,6 @@ class Task(object):
                 AW = np.concatenate([np.dot(soft_task.A.T, soft_task.weight) for soft_task in hard_task], axis=1)
                 b = np.concatenate([soft_task.b for soft_task in hard_task])
                 c = hard_task[0].c
-                print(c.shape)
-                print(b.shape)
-                print(AW.shape)
                 ps.append(c - 2 * AW.dot(b))
             return ps
         return self._c - 2 * self._A.T.dot(self.weight).dot(self._b)
@@ -655,6 +657,11 @@ class Task(object):
         #     return results[0]
         return results
 
+    @property
+    def enabled(self):
+        """Return if the task is enabled or not."""
+        return self._enabled
+
     ##################
     # Static Methods #
     ##################
@@ -699,6 +706,19 @@ class Task(object):
         """Return True if the current task is a single task."""
         return self.model is not None and not self.is_stack_of_tasks()
 
+    def enable(self, enable=True):
+        """Enable the single task, or each task if stack of tasks."""
+        if self.is_stack_of_tasks():
+            for hard_task in self.tasks:
+                for soft_task in hard_task:
+                    soft_task.enable(enable=enable)
+        else:
+            self._enabled = enable
+
+    def disable(self, disable=True):
+        """Disable the single task, or each task if stack of tasks."""
+        self.enable(not disable)
+
     def add_hard_task(self, task):
         """Add the given hard task.
 
@@ -714,11 +734,14 @@ class Task(object):
 
         constraints = task.constraints
         if task.is_stack_of_tasks():
-            task = task.tasks
+            tasks = task.tasks
         else:
-            task = [[task]]
+            if isinstance(task, Constraint):
+                # if given task is a constraint (must be an equality constraint), try to convert it into a task
+                task = prl.priorities.tasks.TaskFromConstraint(task)
+            tasks = [[task]]
 
-        for hard_task, constraint in zip(task, constraints):
+        for hard_task, constraint in zip(tasks, constraints):
             self.tasks.append(hard_task)
             self.constraints.append(constraint)
 
@@ -747,6 +770,9 @@ class Task(object):
                 for soft_task in hard_task:
                     self.tasks[-1].append(soft_task)
         else:  # task is single task
+            if isinstance(task, Constraint):
+                # if given task is a constraint (must be an equality constraint), try to convert it into a task
+                task = prl.priorities.tasks.TaskFromConstraint(task)
             self.tasks[-1].append(task)
             self._constraints[-1] = self._constraints[-1] + task.constraint
 
@@ -1104,7 +1130,6 @@ class JointTorqueTask(Task):
 
 # Tests
 if __name__ == '__main__':
-    import pyrobolearn as prl
 
     sim = prl.simulators.Bullet(render=False)
     robot = prl.robots.KukaIIWA(sim)

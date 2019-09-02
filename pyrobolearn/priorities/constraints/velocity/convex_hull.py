@@ -10,7 +10,7 @@ References:
 
 import numpy as np
 
-from pyrobolearn.priorities.constraints.constraint import Constraint
+from pyrobolearn.priorities.constraints.constraint import UnilateralConstraint, JointVelocityConstraint
 
 
 __author__ = "Brian Delhaisse"
@@ -23,7 +23,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class ConvexHullConstraint(Constraint):
+class ConvexHullConstraint(UnilateralConstraint, JointVelocityConstraint):
     r"""Convex Hull constraint.
 
     """

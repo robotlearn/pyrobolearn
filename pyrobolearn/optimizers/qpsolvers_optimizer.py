@@ -140,13 +140,13 @@ class QP(Optimizer):
     # Methods #
     ###########
 
-    def optimize(self, P, q, x0=None, G=None, h=None, A=None, b=None):
+    def optimize(self, Q, p, x0=None, G=None, h=None, A=None, b=None):
         r"""
         Optimize the given quadratic problem.
 
         .. math::
 
-            \min_{x \in \mathbb{R}^N} \frac{1}{2} x^T P x + q^T x
+            \min_{x \in \mathbb{R}^N} \frac{1}{2} x^T Q x + p^T x
 
         subject to
 
@@ -156,9 +156,9 @@ class QP(Optimizer):
             Ax = b
 
         Args:
-            P (np.array[N,N]): matrix used in the QP objective function where `N` is the size of the vector `x` being
+            Q (np.array[N,N]): matrix used in the QP objective function where `N` is the size of the vector `x` being
                 optimized.
-            q (np.array[N]): vector used in the QP objective function where `N` is the size of the vector `x` being
+            p (np.array[N]): vector used in the QP objective function where `N` is the size of the vector `x` being
                 optimized.
             G (np.array[M,N]): matrix used in the inequality constraint, where `M` is the number of inequalities, and
                 `N` is the size of the vector `x` being optimized. Note that if you have lower and upper bounds for
@@ -174,4 +174,4 @@ class QP(Optimizer):
         Returns:
             np.array: QP solution
         """
-        return qpsolvers.solve_qp(P, q, G, h, A, b, solver=self.method, initvals=x0, sym_proj=self.sym_proj)
+        return qpsolvers.solve_qp(Q, p, G, h, A, b, solver=self.method, initvals=x0, sym_proj=self.sym_proj)

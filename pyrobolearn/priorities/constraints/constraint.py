@@ -111,6 +111,7 @@ References:
 
 import numpy as np
 
+import pyrobolearn as prl
 from pyrobolearn.priorities.models import ModelInterface
 
 
@@ -167,6 +168,10 @@ class Constraint(object):
         """
         self.constraints = constraints
         self.model = model
+
+        # if the constraint is enabled or not, by default it is. This allows to dynamically enable and disable
+        # constraints.
+        self._enabled = True
 
         # variables to be set in the corresponding child classes
         self._lower_bound = None
@@ -238,6 +243,9 @@ class Constraint(object):
                     raise TypeError("Expecting the {}th inequality constraint to be an instance of `BoundConstraint`,"
                                     " `UnilateralConstraint`, `BilateralConstraint`, but got: "
                                     "{}".format(i, type(constraint)))
+            elif isinstance(constraint, prl.priorities.tasks.Task):
+                constraint = prl.priorities.constraints.ConstraintFromTask(constraint)
+                constraint_dict.setdefault(EqualityConstraint, []).append(constraint)
             else:
                 raise TypeError("Expecting the {}th constraint to be an instance of `EqualityConstraint` or "
                                 "`InequalityConstraint`, but got: {}".format(i, type(constraint)))
@@ -253,7 +261,7 @@ class Constraint(object):
         """
         if self.constraints:
             constraints = self.constraints.get(BoundConstraint, [])
-            return [constraint.lower_bound for constraint in constraints]
+            return [constraint.lower_bound for constraint in constraints if constraint.enabled]
         return self._lower_bound
 
     @property
@@ -265,7 +273,7 @@ class Constraint(object):
         """
         if self.constraints:
             constraints = self.constraints.get(BoundConstraint, [])
-            return [constraint.lower_bound for constraint in constraints]
+            return [constraint.lower_bound for constraint in constraints if constraint.enabled]
         return self._upper_bound
 
     @property
@@ -277,7 +285,7 @@ class Constraint(object):
         """
         if self.constraints:
             constraints = self.constraints.get(EqualityConstraint, [])
-            return [constraint.A_eq for constraint in constraints]
+            return [constraint.A_eq for constraint in constraints if constraint.enabled]
         return self._A_eq
 
     @property
@@ -289,7 +297,7 @@ class Constraint(object):
         """
         if self.constraints:
             constraints = self.constraints.get(EqualityConstraint, [])
-            return [constraint.b_eq for constraint in constraints]
+            return [constraint.b_eq for constraint in constraints if constraint.enabled]
         return self._b_eq
 
     @property
@@ -302,7 +310,8 @@ class Constraint(object):
         if self.constraints:
             unilateral_constraints = self.constraints.get(UnilateralConstraint, [])
             bilateral_constraints = self.constraints.get(BilateralConstraint, [])
-            return [constraint.A_ineq for constraint in unilateral_constraints + bilateral_constraints]
+            constraints = unilateral_constraints + bilateral_constraints
+            return [constraint.A_ineq for constraint in constraints if constraint.enabled]
         return self._A_ineq
 
     @property
@@ -315,7 +324,8 @@ class Constraint(object):
         if self.constraints:
             unilateral_constraints = self.constraints.get(LowerUnilateralConstraint, [])
             bilateral_constraints = self.constraints.get(BilateralConstraint, [])
-            return [constraint.b_lower_bound for constraint in unilateral_constraints + bilateral_constraints]
+            constraints = unilateral_constraints + bilateral_constraints
+            return [constraint.b_lower_bound for constraint in constraints if constraint.enabled]
         return self._b_lower_bound
 
     @property
@@ -328,7 +338,8 @@ class Constraint(object):
         if self.constraints:
             unilateral_constraints = self.constraints.get(UpperUnilateralConstraint, [])
             bilateral_constraints = self.constraints.get(BilateralConstraint, [])
-            return [constraint.b_upper_bound for constraint in unilateral_constraints + bilateral_constraints]
+            constraints = unilateral_constraints + bilateral_constraints
+            return [constraint.b_upper_bound for constraint in constraints if constraint.enabled]
         return self._b_upper_bound
 
     @property
@@ -342,31 +353,35 @@ class Constraint(object):
             results = []
             bound_constraints = self.constraints.get(BoundConstraint, [])
             for constraint in bound_constraints:
-                x_size = len(constraint.lower_bound)
-                results.append(-np.identity(x_size))
-                results.append(np.identity(x_size))
+                if constraint.enabled:
+                    x_size = len(constraint.lower_bound)
+                    results.append(-np.identity(x_size))
+                    results.append(np.identity(x_size))
             bilateral_constraints = self.constraints.get(BilateralConstraint, [])
             for constraint in bilateral_constraints:
-                results.append(-constraint.A_ineq)
-                results.append(constraint.A_ineq)
+                if constraint.enabled:
+                    results.append(-constraint.A_ineq)
+                    results.append(constraint.A_ineq)
             lower_unilateral_constraints = self.constraints.get(LowerUnilateralConstraint, [])
             for constraint in lower_unilateral_constraints:
-                results.append(-constraint.A_ineq)
+                if constraint.enabled:
+                    results.append(-constraint.A_ineq)
             upper_unilateral_constraints = self.constraints.get(UpperUnilateralConstraint, [])
             for constraint in upper_unilateral_constraints:
-                results.append(constraint.A_ineq)
+                if constraint.enabled:
+                    results.append(constraint.A_ineq)
 
             if results:
                 return np.concatenate(results)
         else:
-            if isinstance(self, BoundConstraint):
+            if isinstance(self, BoundConstraint) and self.enabled:
                 x_size = len(self._lower_bound)
                 return np.concatenate((-np.identity(x_size), np.identity(x_size)))
-            elif isinstance(self, BilateralConstraint):
+            elif isinstance(self, BilateralConstraint) and self.enabled:
                 return np.concatenate((-self._A_ineq, self._A_ineq))
-            elif isinstance(self, LowerUnilateralConstraint):
+            elif isinstance(self, LowerUnilateralConstraint) and self.enabled:
                 return -self._A_ineq
-            elif isinstance(self, UpperUnilateralConstraint):
+            elif isinstance(self, UpperUnilateralConstraint) and self.enabled:
                 return self._A_ineq
 
     @property
@@ -380,29 +395,33 @@ class Constraint(object):
             results = []
             bound_constraints = self.constraints.get(BoundConstraint, [])
             for constraint in bound_constraints:
-                results.append(-constraint.lower_bound)
-                results.append(constraint.upper_bound)
+                if constraint.enabled:
+                    results.append(-constraint.lower_bound)
+                    results.append(constraint.upper_bound)
             bilateral_constraints = self.constraints.get(BilateralConstraint, [])
             for constraint in bilateral_constraints:
-                results.append(-constraint.b_lower_bound)
-                results.append(constraint.b_upper_bound)
+                if constraint.enabled:
+                    results.append(-constraint.b_lower_bound)
+                    results.append(constraint.b_upper_bound)
             lower_unilateral_constraints = self.constraints.get(LowerUnilateralConstraint, [])
             for constraint in lower_unilateral_constraints:
-                results.append(-constraint.b_lower_bound)
+                if constraint.enabled:
+                    results.append(-constraint.b_lower_bound)
             upper_unilateral_constraints = self.constraints.get(UpperUnilateralConstraint, [])
             for constraint in upper_unilateral_constraints:
-                results.append(constraint.b_upper_bound)
+                if constraint.enabled:
+                    results.append(constraint.b_upper_bound)
 
             if results:
                 return np.concatenate(results)
         else:
-            if isinstance(self, BoundConstraint):
+            if isinstance(self, BoundConstraint) and self.enabled:
                 return np.concatenate((-self._lower_bound, self._upper_bound))
-            elif isinstance(self, BilateralConstraint):
+            elif isinstance(self, BilateralConstraint) and self.enabled:
                 return np.concatenate((-self._b_lower_bound, self._upper_bound))
-            elif isinstance(self, LowerUnilateralConstraint):
+            elif isinstance(self, LowerUnilateralConstraint) and self.enabled:
                 return -self._b_lower_bound
-            elif isinstance(self, UpperUnilateralConstraint):
+            elif isinstance(self, UpperUnilateralConstraint) and self.enabled:
                 return self._b_upper_bound
 
     @property
@@ -422,6 +441,11 @@ class Constraint(object):
             np.array[float[N]]: equality constraint vector.
         """
         return self.b_eq
+
+    @property
+    def enabled(self):
+        """Return if the task is enabled or not."""
+        return self._enabled
 
     ##################
     # Static methods #
@@ -457,6 +481,18 @@ class Constraint(object):
     # Methods #
     ###########
 
+    def enable(self, enable=True):
+        """Enable the single constraint, or each inner constraint."""
+        if not self.is_single_constraint():
+            for constraint in self.constraints:
+                constraint.enable(enable=enable)
+        else:
+            self._enabled = enable
+
+    def disable(self, disable=True):
+        """Disable the single constraint, or each inner constraint."""
+        self.enable(not disable)
+
     def has_constraints(self):
         """Return True if it has inner constraints."""
         return len(self.constraints) > 0
@@ -477,7 +513,7 @@ class Constraint(object):
             raise TypeError("Expecting the given 'constraint' to be an instance of `Constraint` but got instead: "
                             "{}".format(type(constraint)))
         if not constraint.is_single_constraint():
-            raise ValueError("Expecting to append a single constraint, but the given constraint as a list of "
+            raise ValueError("Expecting to append a single constraint, but the given constraint has a list of "
                              "inner constraints")
 
         if isinstance(constraint, EqualityConstraint):
@@ -497,6 +533,9 @@ class Constraint(object):
             else:
                 raise TypeError("Expecting the inequality constraint to be an instance of `BoundConstraint`, "
                                 "`UnilateralConstraint`, `BilateralConstraint`, but got: {}".format(type(constraint)))
+        elif isinstance(constraint, prl.priorities.tasks.Task):
+            constraint = prl.priorities.constraints.ConstraintFromTask(constraint)
+            self.constraints.setdefault(EqualityConstraint, []).append(constraint)
         else:
             raise TypeError("The given type of constraint is not currently supported.")
 
@@ -643,6 +682,6 @@ class JointTorqueConstraint(DynamicConstraint):
     pass
 
 
-class JointForceConstraint(DynamicConstraint):
-    r"""Joint Force constraint."""
+class ForceConstraint(DynamicConstraint):
+    r"""Force constraint."""
     pass

@@ -26,6 +26,8 @@ __status__ = "Development"
 class WrenchTask(Task):
     r"""Wrench Task
 
+    The wrench task
+
     """
 
     def __init__(self, model, constraints=[]):

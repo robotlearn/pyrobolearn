@@ -253,8 +253,8 @@ class LeggedRobot(Robot):
 
         .. math::
 
-            d_x^{-} \leq \frac{n^i_y}{f^i_z} \leq d_x^{+} \\
-            d_y^{-} \leq -\frac{n^i_x}{f^i_z} \leq d_y^{+}
+            d_x^{-} \leq -\frac{n^i_y}{f^i_z} \leq d_x^{+} \\
+            d_y^{-} \leq \frac{n^i_x}{f^i_z} \leq d_y^{+}
 
         which ensures the stability of the foot/ground contact. The :math:`(d_x^{-}, d_x^{+})` and
         :math:`(d_y^{-}, d_y^{+})` defines the size of the sole in the x and y directions respectively. Basically,
