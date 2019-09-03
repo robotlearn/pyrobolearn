@@ -15,7 +15,7 @@ References:
     [1] Gazebo: http://gazebosim.org/
 """
 
-# TODO
+# TODO: create Gazebo wrapper or use ROS to communicate...
 
 from pyrobolearn.simulators.simulator import Simulator
 
@@ -36,6 +36,14 @@ class Gazebo(Simulator):
         [1] Gazebo: http://gazebosim.org/
     """
 
-    def __init__(self, render=True):
+    def __init__(self, render=True, num_instances=1, **kwargs):
+        r"""
+        Initialize the Gazebo Simulator.
+
+        Args:
+            render (bool): if True, it will open the GUI, otherwise, it will just run the server.
+            num_instances (int): number of simulator instances.
+            **kwargs (dict): optional arguments (this is not used here).
+        """
         super(Gazebo, self).__init__(render=render)
         raise NotImplementedError

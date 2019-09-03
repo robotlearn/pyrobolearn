@@ -182,7 +182,15 @@ class Simulator(object):
     URDF_USE_SELF_COLLISION_EXCLUDE_PARENT = 16
     URDF_USE_SELF_COLLISION_INCLUDE_PARENT = 8192
 
-    def __init__(self, render=True, **kwargs):
+    def __init__(self, render=True, num_instances=1, **kwargs):
+        r"""
+        Initialize the Simulator.
+
+        Args:
+            render (bool): if True, it will open the GUI, otherwise, it will just run the server.
+            num_instances (int): number of simulator instances.
+            **kwargs (dict): optional arguments (this is not used here).
+        """
         self._render = render
         self.real_time = False
         self.kwargs = kwargs
@@ -560,9 +568,10 @@ class Simulator(object):
 
         Args:
             filename (str): a relative or absolute path to the URDF file on the file system of the physics server.
-            position (vec3): create the base of the object at the specified position in world space coordinates [x,y,z]
-            orientation (quat): create the base of the object at the specified orientation as world space quaternion
-                [x,y,z,w]
+            position (np.array[float[3]]): create the base of the object at the specified position in world space
+              coordinates [x,y,z].
+            orientation (np.array[float[4]]): create the base of the object at the specified orientation as world
+              space quaternion [x,y,z,w].
             use_fixed_base (bool): force the base of the loaded object to be static
             scale (float): scale factor to the URDF model.
 

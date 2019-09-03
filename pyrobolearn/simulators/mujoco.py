@@ -209,16 +209,17 @@ class Mujoco(Simulator):
         - [3] DeepMind Control Suite: https://github.com/deepmind/dm_control/tree/master/dm_control/mujoco
     """
 
-    def __init__(self, render=True, load_at_the_end=False):
+    def __init__(self, render=True, num_instances=1, load_at_the_end=False):
         """
         Initialize the MuJoCo simulator.
 
         Args:
             render (bool): if True, it will open the GUI, otherwise, it will just run the server (i.e. in a headless
-                mode, i.e. without a GUI).
+              mode, i.e. without a GUI).
+            num_instances (int): number of simulator instances.
             load_at_the_end (bool): if True, it will load at the end all the models that have been "loaded" in the
-                simulator. The reason is that the MuJoCo simulator does not allow to load dynamically models into the
-                world.
+              simulator. The reason is that the MuJoCo simulator does not allow to load dynamically models into the
+              world.
         """
         super(Mujoco, self).__init__(render=render)
 
@@ -562,9 +563,10 @@ class Mujoco(Simulator):
 
         Args:
             filename (str): a relative or absolute path to the URDF file on the file system of the physics server.
-            position (vec3): create the base of the object at the specified position in world space coordinates [x,y,z]
-            orientation (quat): create the base of the object at the specified orientation as world space quaternion
-                [x,y,z,w]
+            position (np.array[float[3]]): create the base of the object at the specified position in world space
+              coordinates [x,y,z].
+            orientation (np.array[float[4]]): create the base of the object at the specified orientation as world
+              space quaternion [x,y,z,w].
             use_fixed_base (bool): force the base of the loaded object to be static
             scale (float): scale factor to the URDF model.
 

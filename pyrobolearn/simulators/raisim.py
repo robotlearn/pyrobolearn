@@ -41,6 +41,7 @@ except ImportError as e:
 from pyrobolearn.simulators.simulator import Simulator
 from pyrobolearn.utils.decorator import keyboard_interrupt
 
+
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2019, PyRoboLearn"
 __credits__ = ["RaiSim (ETHz, Hwangbo, Kang, Lee)", "Brian Delhaisse (raisimpy + PRL)"]
@@ -68,7 +69,15 @@ class Raisim(Simulator):
         - [6] RaiSimPy - A Python wrapper for Raisim: https://github.com/robotlearn/raisimpy
     """
 
-    def __init__(self, render=True, **kwargs):
+    def __init__(self, render=True, num_instances=1, **kwargs):
+        """
+        Initialize the Raisim simulator.
+
+        Args:
+            render (bool): if True, it will open the GUI, otherwise, it will just run the server.
+            num_instances (int): number of simulator instances.
+            **kwargs (dict): optional arguments (this is not used here).
+        """
         super(Raisim, self).__init__(render, **kwargs)
 
         # create world
@@ -487,9 +496,10 @@ class Raisim(Simulator):
 
         Args:
             filename (str): a relative or absolute path to the URDF file on the file system of the physics server.
-            position (vec3): create the base of the object at the specified position in world space coordinates [x,y,z]
-            orientation (quat): create the base of the object at the specified orientation as world space quaternion
-                [x,y,z,w]
+            position (np.array[float[3]]): create the base of the object at the specified position in world space
+              coordinates [x,y,z].
+            orientation (np.array[float[4]]): create the base of the object at the specified orientation as world
+              space quaternion [x,y,z,w].
             use_fixed_base (bool): force the base of the loaded object to be static
             scale (float): scale factor to the URDF model.
 

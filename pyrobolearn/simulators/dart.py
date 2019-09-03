@@ -95,7 +95,15 @@ class Dart(Simulator):
         - [2] PEP8: https://www.python.org/dev/peps/pep-0008/
     """
 
-    def __init__(self, render=True, dt=0.001, **kwargs):
+    def __init__(self, render=True, num_instances=1, dt=0.001, **kwargs):
+        """
+        Initialize the Dart simulator.
+
+        Args:
+            render (bool): if True, it will open the GUI, otherwise, it will just run the server.
+            num_instances (int): number of simulator instances.
+            **kwargs (dict): optional arguments (this is not used here).
+        """
         super(Dart, self).__init__(render, **kwargs)
 
         # dart = {'collision': ['BulletCollisionDetector', 'BulletCollisionGroup', 'CollisionDetector',
@@ -521,9 +529,10 @@ class Dart(Simulator):
 
         Args:
             filename (str): a relative or absolute path to the URDF file on the file system of the physics server.
-            position (vec3): create the base of the object at the specified position in world space coordinates [x,y,z]
-            orientation (quat): create the base of the object at the specified orientation as world space quaternion
-                [x,y,z,w]
+            position (np.array[float[3]]): create the base of the object at the specified position in world space
+              coordinates [x,y,z].
+            orientation (np.array[float[4]]): create the base of the object at the specified orientation as world
+              space quaternion [x,y,z,w].
             use_fixed_base (bool): force the base of the loaded object to be static
             scale (float): scale factor to the URDF model.
 

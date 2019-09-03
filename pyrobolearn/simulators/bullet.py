@@ -3,7 +3,7 @@
 
 This is the main interface that communicates with the PyBullet simulator [1]. By defining this interface, it allows to
 decouple the PyRoboLearn framework from the simulator. It also converts some data types to the ones required by
-PyBullet. For instance, some methods in PyBullet do not accepts numpy arrays but only lists. The interface provided
+PyBullet. For instance, some methods in PyBullet do not accept numpy arrays but only lists. The interface provided
 here makes the necessary conversions.
 
 The signature of each method defined here are inspired by [1,2] but in accordance with the PEP8 style guide [3].
@@ -80,12 +80,13 @@ class Bullet(Simulator):
             Erwin Coumans and Yunfei Bai, 2017/2018
     """
 
-    def __init__(self, render=True, **kwargs):
+    def __init__(self, render=True, num_instances=1, **kwargs):
         """
-        Initialize PyBullet simulator.
+        Initialize the PyBullet simulator.
 
         Args:
             render (bool): if True, it will open the GUI, otherwise, it will just run the server.
+            num_instances (int): number of simulator instances.
             **kwargs (dict): optional arguments (this is not used here).
         """
         super(Bullet, self).__init__(render=render, **kwargs)
@@ -746,9 +747,10 @@ class Bullet(Simulator):
 
         Args:
             filename (str): a relative or absolute path to the URDF file on the file system of the physics server.
-            position (vec3): create the base of the object at the specified position in world space coordinates [x,y,z]
-            orientation (quat): create the base of the object at the specified orientation as world space quaternion
-                [x,y,z,w]
+            position (np.array[float[3]]): create the base of the object at the specified position in world space
+              coordinates [x,y,z].
+            orientation (np.array[float[4]]): create the base of the object at the specified orientation as world
+              space quaternion [x,y,z,w].
             use_maximal_coordinates (int): Experimental. By default, the joints in the URDF file are created using the
                 reduced coordinate method: the joints are simulated using the Featherstone Articulated Body algorithm
                 (btMultiBody in Bullet 2.x). The useMaximalCoordinates option will create a 6 degree of freedom rigid
