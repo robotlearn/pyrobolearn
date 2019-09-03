@@ -8,6 +8,8 @@ References:
     - [1] "OpenSoT: A whole-body control library for the compliant humanoid robot COMAN", Rocchi et al., 2015
 """
 
+# TODO: finish to implement this.
+
 import numpy as np
 
 from pyrobolearn.priorities.tasks import JointVelocityTask

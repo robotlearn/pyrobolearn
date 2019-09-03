@@ -91,7 +91,7 @@ from . import algos
 # import experiments
 
 # import priority tasks
-# from . import priorities
+from . import priorities
 
 
 # Meta-information about the package

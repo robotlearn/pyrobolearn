@@ -164,6 +164,12 @@ class FrictionPyramidConstraint(UpperUnilateralConstraint, ForceConstraint):
                             "{}".format(type(contacts)))
         self._contacts = contacts
 
+        # enable / disable the constraint based on the number of contact links
+        if len(contacts) == 0:
+            self.disable()
+        else:
+            self.enable()
+
     ###########
     # Methods #
     ###########
@@ -172,8 +178,8 @@ class FrictionPyramidConstraint(UpperUnilateralConstraint, ForceConstraint):
         """Update the lower unilateral inequality matrix and vector."""
         self._A_ineq = np.zeros(4 * len(self.contacts), 6 * len(self.contacts))
         for i, contact in enumerate(self.contacts):
-            rot = get_matrix_from_quaternion(self.model.get_orientation(self._link)).T
+            rot = get_matrix_from_quaternion(self.model.get_orientation(contact)).T
             rot = block_diag((rot, rot))
-            self._A_ineq[i*4:(i+1)*4, i*6:(i+1)*6] = self._friction_matrix.dot()
+            self._A_ineq[i*4:(i+1)*4, i*6:(i+1)*6] = self._friction_matrix.dot(rot)
 
         self._b_upper_bound = np.zeros(4 * len(self.contacts))

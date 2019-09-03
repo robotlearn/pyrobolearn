@@ -861,19 +861,23 @@ class Task(object):
         WAx = np.dot(W, Ax)
         return Ax.T.dot(WAx) - 2 * b.T.dot(WAx) + c.T.dot(x) + b.T.dot(W).dot(b)
 
-    def _update(self):
+    def _update(self, x=None):
         """Update the task.
 
         Compute the A matrix and b vector that will be used by the task solver. This has to be implemented in the
         child classes.
+
+        Args:
+            x (np.array[float], None): variables that are being optimized.
         """
         pass
 
-    def update(self, update_model=False):
+    def update(self, x=None, update_model=False):
         """
         Compute the A matrix and b vector that will be used by the task solver.
 
         Args:
+            x (np.array[float], None): variables that are being optimized.
             update_model (bool): if True, it will update the model before updating each task.
         """
         # update model if specified
@@ -884,9 +888,10 @@ class Task(object):
         if self.is_stack_of_tasks():  # if stack of tasks, update each task
             for hard_task in self.tasks:
                 for soft_task in hard_task:
-                    soft_task.update(update_model=False)
+                    soft_task.update(x=x, update_model=False)
         else:  # if one task, update it
-            self._update()
+            if self._enabled:  # update only if enabled
+                self._update(x=x)
 
         # update the constraints
         for constraint in self.constraints:
@@ -1096,7 +1101,7 @@ class KinematicTask(Task):
     pass
 
 
-class JointVelocityTask(Task):
+class JointVelocityTask(KinematicTask):
     r"""Joint Velocity Task
 
     Joint velocity tasks are tasks that optimize joint velocities :math:`\dot{q}`.
@@ -1112,7 +1117,7 @@ class DynamicTask(Task):
     pass
 
 
-class JointAccelerationTask(Task):
+class JointAccelerationTask(DynamicTask):
     r"""Joint Acceleration Task
 
     Joint acceleration tasks are tasks that optimize joint accelerations :math:`\ddot{q}`.
@@ -1120,10 +1125,21 @@ class JointAccelerationTask(Task):
     pass
 
 
-class JointTorqueTask(Task):
+class JointTorqueTask(DynamicTask):
     r"""Joint Torque Task
 
     Joint torque tasks are tasks that optimize joint torques :math:`\tau`.
+    """
+    pass
+
+
+class ForceTask(DynamicTask):
+    r"""Force Task
+
+    Force tasks are tasks that optimize the cartesian forces (wrenches) :math:`F`. They can be used for instance to
+    optimize the contact wrenches. By optimizing these ones with the joint accelerations :math:`\ddot{q}`, the
+    necessary torques :math:`\tau` to apply to the robot can be computed using the joint space dynamic equation of
+    motion: :math:`\tau = H \ddot{q} + C(q,\dot{q})\dot{q} + g(q) - J^\top F`.
     """
     pass
 

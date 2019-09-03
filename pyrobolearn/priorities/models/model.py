@@ -302,6 +302,22 @@ class ModelInterface(object):
         """
         pass
 
+    def get_velocity(self, link, wrt_link=None, point=(0., 0., 0.)):
+        r"""
+        Compute the linear and angular velocity of a link, given by :math:`v = [\dot{p}, \omega]`.
+
+        Args:
+            link (int, str): unique link id, or name.
+            wrt_link (int, str, None): the other link id, or name. If None, returns the velocities wrt to the world,
+              and if -1 wrt to the base.
+            point (np.array[float[3]]): position of the point in link's local frame.
+
+        Returns:
+            np.array[float[6]]: The resulting 6D velocity vector where the first three elements are the linear
+                velocity and the last three are the angular velocity expressed in the global world reference frame.
+        """
+        pass
+
     def get_velocity_twist(self, link):
         r"""
         Compute the angular and linear velocity of a link, given by :math:`v = [\omega, \dot{p}]`.

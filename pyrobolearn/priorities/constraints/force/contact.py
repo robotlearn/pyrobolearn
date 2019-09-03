@@ -91,6 +91,12 @@ class ContactConstraint(LowerUnilateralConstraint, ForceConstraint):
                             "{}".format(type(contacts)))
         self._contacts = contacts
 
+        # enable / disable the constraint based on the number of contact links
+        if len(contacts) == 0:
+            self.disable()
+        else:
+            self.enable()
+
     ###########
     # Methods #
     ###########

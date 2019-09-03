@@ -491,14 +491,14 @@ class CartesianAccelerationTask(JointAccelerationTask):
         """
         return self.x_desired, self.dx_desired, self.ddx_desired
 
-    def _update(self):
+    def _update(self, x=None):
         """
         Update the task by computing the A matrix and b vector that will be used by the task solver.
         """
         x = self.model.get_pose(link=self.distal_link, wrt_link=self.base_link)
         self._A = self.model.get_jacobian(link=self.distal_link, wrt_link=self.base_link,
                                           point=self.local_position)  # shape: (6,N)
-        vel = self.model.get_velocity(link=self.distal_link)
+        vel = self.model.get_velocity(link=self.distal_link, wrt_link=self.base_link)
         jdotqdot = self.model.compute_JdotQdot(link=self.distal_link)
         # b = - \dot{J} \dot{q} + (a_d + K_d (v_d - v) + K_p e)
         b = -jdotqdot + self.desired_acceleration

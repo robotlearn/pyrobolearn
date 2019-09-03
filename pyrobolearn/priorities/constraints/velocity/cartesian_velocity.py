@@ -67,9 +67,9 @@ class CartesianVelocityConstraint(BilateralConstraint, JointVelocityConstraint):
             linear_velocity_bounds (tuple[2 * np.array[float[3]]], np.array[float[3]], None): If tuple, it is the
               lower and upper bounds on the linear velocity. If np.array, then the lower and upper bound would be set
               to (-linear_velocity_bounds, linear_velocity_bounds). If None, it will not be considered.
-            angular_velocity_bounds (tuple[2 * np.array[float[3]]], np.array[float[3]], None): If tuple, it is the lower and
-              upper bounds on the angular velocity. If np.array, then the lower and upper bound would be set to
-              (-angular_velocity_bounds, angular_velocity_bounds). If None, it will not be considered.
+            angular_velocity_bounds (tuple[2 * np.array[float[3]]], np.array[float[3]], None): If tuple, it is the
+              lower and upper bounds on the angular velocity. If np.array, then the lower and upper bound would be set
+              to (-angular_velocity_bounds, angular_velocity_bounds). If None, it will not be considered.
         """
         super(CartesianVelocityConstraint, self).__init__(model)
 

@@ -245,7 +245,7 @@ class PosturalAccelerationTask(JointAccelerationTask):
         """
         return self.x_desired, self.dx_desired, self.ddx_desired
 
-    def _update(self):
+    def _update(self, x=None):
         """
         Update the task by computing the A matrix and b vector that will be used by the task solver.
         """

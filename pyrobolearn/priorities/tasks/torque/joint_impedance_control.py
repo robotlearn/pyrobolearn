@@ -1,11 +1,26 @@
 #!/usr/bin/env python
 r"""Provide the joint impedance control task.
 
+The joint impedance control task minimizes the specified torques given as a PD control from the desired joint
+positions and velocities. That it, it minimizes:
+
+.. math:: || \tau - (K_p (q_d - q) + K_d (\dot{q}_d - \dot{q})) ||^2
+
+where :math:`\tau` are the torques being optimized, :math:`K_p` and :math:`K_d` are the stiffness and damping
+gains respectively, :math:`q` and :math:`\dot{q}` are the joint positions and velocities, and the subscript
+:math:`d` means 'desired'.
+
+The above formulation is equivalent to the QP objective function :math:`||Ax - b||^2`, by setting
+:math:`A = I` (where :math:`I` is the identity matrix), :math:`x = \tau`, and
+:math:`b = K_p (q_d - q) + K_d (\dot{q}_d - \dot{q})`.
+
+From [1], "note that "if used in the null-space, it realizes the null-space stiffness as described in [2]".
 
 The implementation of this class is inspired by [1] (which is licensed under the LGPLv2).
 
 References:
     - [1] "OpenSoT: A whole-body control library for the compliant humanoid robot COMAN", Rocchi et al., 2015
+    - [2] "Cartesian Impedance Control of Redundant and Flexible-Joint Robots", Ott, 2008
 """
 
 import numpy as np
@@ -39,13 +54,14 @@ class JointImpedanceControlTask(JointTorqueTask):
     :math:`A = I` (where :math:`I` is the identity matrix), :math:`x = \tau`, and
     :math:`b = K_p (q_d - q) + K_d (\dot{q}_d - \dot{q})`.
 
-    From [1], "if used in the null-space, it realizes the null-space stiffness as described in [1]".
+    From [1], "if used in the null-space, it realizes the null-space stiffness as described in [3]".
 
     .. seealso:: `tasks/velocity/postural.py`
 
     References:
         - [1] OpenSoT framework
-        - [2] "Cartesian Impedance Control of Redundant and Flexible-Joint Robots", Ott, 2008
+        - [2] "OpenSoT: A whole-body control library for the compliant humanoid robot COMAN", Rocchi et al., 2015
+        - [3] "Cartesian Impedance Control of Redundant and Flexible-Joint Robots", Ott, 2008
     """
 
     def __init__(self, model, q_desired=None, dq_desired=None, kp=1., kd=1., weight=1., constraints=[]):
@@ -54,14 +70,14 @@ class JointImpedanceControlTask(JointTorqueTask):
 
         Args:
             model (ModelInterface): model interface.
-            q_desired (np.array[N], None): desired joint positions, where :math:`N` is the number of DoFs. If None,
-                it will be set to 0.
-            dq_desired (np.array[N], None): desired joint velocities, where :math:`N` is the number of DoFs. If None,
-                it will be set to 0.
-            kp (float, np.array[N,N]): stiffness gain.
-            kd (float, np.array[N,N]): damping gain.
-            weight (float, np.array[N,N]): weight scalar or matrix associated to the task.
-            constraints (list of Constraint): list of constraints associated with the task.
+            q_desired (np.array[float[N]], None): desired joint positions, where :math:`N` is the number of DoFs. If 
+              None, it will be set to 0.
+            dq_desired (np.array[float[N]], None): desired joint velocities, where :math:`N` is the number of DoFs. If 
+              None, it will be set to 0.
+            kp (float, np.array[float[N,N]]): stiffness gain.
+            kd (float, np.array[float[N,N]]): damping gain.
+            weight (float, np.array[float[N,N]]): weight scalar or matrix associated to the task.
+            constraints (list[Constraint]): list of constraints associated with the task.
         """
         super(JointImpedanceControlTask, self).__init__(model=model, weight=weight, constraints=constraints)
 
@@ -70,8 +86,8 @@ class JointImpedanceControlTask(JointTorqueTask):
         self.kd = kd
 
         # define desired references
-        self.x_desired = q_desired
-        self.dx_desired = dq_desired
+        self.q_desired = q_desired
+        self.dq_desired = dq_desired
 
         # first update
         self.update()
@@ -81,6 +97,44 @@ class JointImpedanceControlTask(JointTorqueTask):
     ##############
 
     @property
+    def q_desired(self):
+        """Get the desired joint positions."""
+        return self._q_d
+
+    @q_desired.setter
+    def q_desired(self, q_d):
+        """Set the desired joint positions."""
+        if q_d is None:
+            q_d = np.zeros(self.x_size)
+        elif not isinstance(q_d, (np.ndarray, list, tuple)):
+            raise TypeError("Expecting the given desired joint positions to be an instance of np.array, instead got: "
+                            "{}".format(type(q_d)))
+        q_d = np.asarray(q_d)
+        if len(q_d) != self.x_size:
+            raise ValueError("Expecting the length of the given desired joint positions (={}) to be the same as the "
+                             "number of DoFs (={})".format(len(q_d), self.x_size))
+        self._q_d = q_d
+
+    @property
+    def dq_desired(self):
+        """Get the desired joint velocities."""
+        return self._dq_d
+
+    @dq_desired.setter
+    def dq_desired(self, dq_d):
+        """Set the desired joint velocities."""
+        if dq_d is None:
+            dq_d = np.zeros(self.x_size)
+        elif not isinstance(dq_d, (np.ndarray, list, tuple)):
+            raise TypeError("Expecting the given desired joint velocities to be an instance of np.array, instead got: "
+                            "{}".format(type(dq_d)))
+        dq_d = np.asarray(dq_d)
+        if len(dq_d) != self.x_size:
+            raise ValueError("Expecting the length of the given desired joint velocities (={}) to be the same as the "
+                             "number of DoFs (={})".format(len(dq_d), self.x_size))
+        self._dq_d = dq_d
+
+    @property
     def x_desired(self):
         """Get the desired joint positions."""
         return self._q_d
@@ -88,15 +142,7 @@ class JointImpedanceControlTask(JointTorqueTask):
     @x_desired.setter
     def x_desired(self, q_d):
         """Set the desired joint positions."""
-        if q_d is None:
-            q_d = np.zeros(self.x_size)
-        if not isinstance(q_d, np.ndarray):
-            raise TypeError("Expecting the given desired joint positions to be an instance of np.array, instead got: "
-                            "{}".format(type(q_d)))
-        if len(q_d) != self.x_size:
-            raise ValueError("Expecting the length of the given desired joint positions (={}) to be the same as the "
-                             "number of DoFs (={})".format(len(q_d), self.x_size))
-        self._q_d = q_d
+        self.q_desired = q_d
 
     @property
     def dx_desired(self):
@@ -106,15 +152,7 @@ class JointImpedanceControlTask(JointTorqueTask):
     @dx_desired.setter
     def dx_desired(self, dq_d):
         """Set the desired joint velocities."""
-        if dq_d is None:
-            dq_d = np.zeros(self.x_size)
-        if not isinstance(dq_d, np.ndarray):
-            raise TypeError("Expecting the given desired joint velocities to be an instance of np.array, instead got: "
-                            "{}".format(type(dq_d)))
-        if len(dq_d) != self.x_size:
-            raise ValueError("Expecting the length of the given desired joint velocities (={}) to be the same as the "
-                             "number of DoFs (={})".format(len(dq_d), self.x_size))
-        self._dq_d = dq_d
+        self.dq_desired = dq_d
 
     @property
     def kp(self):
@@ -156,10 +194,10 @@ class JointImpedanceControlTask(JointTorqueTask):
         """Set the desired references.
 
         Args:
-            x_des (np.array[N], None): desired joint positions, where :math:`N` is the number of DoFs. If None,
-                it will be set to 0.
-            dx_des (np.array[N], None): desired joint velocities, where :math:`N` is the number of DoFs. If None,
-                it will be set to 0.
+            x_des (np.array[float[N]], None): desired joint positions, where :math:`N` is the number of DoFs. If None,
+              it will be set to 0.
+            dx_des (np.array[float[N]], None): desired joint velocities, where :math:`N` is the number of DoFs. If None,
+              it will be set to 0.
         """
         self.x_desired = x_des
         self.dx_desired = dx_des
@@ -168,12 +206,12 @@ class JointImpedanceControlTask(JointTorqueTask):
         """Return the desired references.
 
         Returns:
-            np.array[N]: desired joint positions.
-            np.array[N]: desired joint velocities.
+            np.array[float[N]]: desired joint positions.
+            np.array[float[N]]: desired joint velocities.
         """
         return self.x_desired, self.dx_desired
 
-    def _update(self):
+    def _update(self, x=None):
         """
         Update the task by computing the A matrix and b vector that will be used by the task solver.
         """

@@ -1,4 +1,9 @@
+#!/usr/bin/env python
+"""Inverse kinematics with the Kuka robot where the goal is to follow a moving sphere.
 
+The inverse kinematics is performed using priority tasks and constraints, which are optimized using Quadratic
+Programming (QP).
+"""
 
 import numpy as np
 import time
@@ -53,7 +58,6 @@ for t in prl.count():
     cartesian_task.desired_position = sphere.position
     task.update(update_model=True)
 
-    q = robot.get_joint_positions()
     start = time.time()
     dq = solver.solve()
     end = time.time()
@@ -64,6 +68,7 @@ for t in prl.count():
         times = []
 
     # set joint positions
+    q = robot.get_joint_positions()
     q = q[q_idx] + dq * sim.dt
     robot.set_joint_positions(q, joint_ids=joint_ids)
 

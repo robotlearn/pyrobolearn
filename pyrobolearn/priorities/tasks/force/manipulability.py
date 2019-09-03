@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 r"""Provide the force manipulability task.
 
-References:
-    - [1] "OpenSoT: A whole-body control library for the compliant humanoid robot COMAN", Rocchi et al., 2015
+ The manipulability task implements a tasks that tries to maximize the force manipulability measure given in [1]:
+
+.. math:: w(q) = \sqrt( \det( (J(q) W J(q)^\top)^{-1} ) )
+
+where :math:`W` is a constant weight matrix, :math:`q` are the joint positions, and :math:`J(q)` is the jacobian.
+The gradient of :math:`w` is then computed and projected using the gradient projection method [2].
 """
 
 import numpy as np
 
-from pyrobolearn.priorities.tasks import Task
+from pyrobolearn.priorities.tasks import ForceTask
 
 
 __author__ = "Brian Delhaisse"
@@ -20,7 +24,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class ForceManipulabilityTask(Task):
+class ForceManipulabilityTask(ForceTask):
     r"""Force Manipulability Task
 
     The manipulability task implements a tasks that tries to maximize the force manipulability measure given in [1]:
@@ -35,12 +39,13 @@ class ForceManipulabilityTask(Task):
         - [2] "OpenSoT: A whole-body control library for the compliant humanoid robot COMAN", Rocchi et al., 2015
     """
 
-    def __init__(self, model, constraints=[]):
+    def __init__(self, model, weight=1., constraints=[]):
         """
         Initialize the task.
 
         Args:
             model (ModelInterface): model interface.
-            constraints (list of Constraint): list of constraints associated with the task.
+            weight (float, np.array[float[6,6]], np.array[float[3,3]]): weight scalar or matrix associated to the task.
+            constraints (list[Constraint]): list of constraints associated with the task.
         """
-        super(ForceManipulabilityTask, self).__init__(model=model, constraints=constraints)
+        super(ForceManipulabilityTask, self).__init__(model=model, weight=weight, constraints=constraints)

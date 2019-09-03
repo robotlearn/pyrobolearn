@@ -81,7 +81,7 @@ class ContactAccelerationTask(JointAccelerationTask):
               square matrix). You can specify only the diagonal elements if you wish. If None, by default it will be
               set to the identity matrix.
             weight (float, np.array[float[6,6]]): weight scalar or matrix associated to the task.
-            constraints (list of Constraint): list of constraints associated with the task.
+            constraints (list[Constraint]): list of constraints associated with the task.
         """
         super(ContactAccelerationTask, self).__init__(model=model, weight=weight, constraints=constraints)
 
@@ -133,7 +133,7 @@ class ContactAccelerationTask(JointAccelerationTask):
     # Methods #
     ###########
 
-    def _update(self):
+    def _update(self, x=None):
         """
         Update the task by computing the A matrix and b vector that will be used by the task solver.
         """

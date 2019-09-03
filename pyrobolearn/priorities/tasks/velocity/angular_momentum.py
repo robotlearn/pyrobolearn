@@ -206,7 +206,7 @@ class AngularMomentumTask(JointVelocityTask):
         """
         return self.x_desired
 
-    def _update(self):
+    def _update(self, x=None):
         """
         Update the task by computing the A matrix and b vector that will be used by the task solver.
         """

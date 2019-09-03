@@ -551,7 +551,8 @@ class Constraint(object):
             for constraint in self.constraints:
                 constraint.update()
         else:
-            self._update()
+            if self._enabled:  # update only if enabled
+                self._update()
 
     #############
     # Operators #

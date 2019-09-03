@@ -1,8 +1,6 @@
 Priority Tasks
 ==============
 
-THIS IS UNDER CONSTRUCTION
-
 In this folder, you will find the code for priority "tasks". The "tasks" defined here are different from the tasks 
 defined in the ``pyrobolearn/tasks`` folder which defines robot learning tasks. The tasks defined here can be more seen
 as "constraints"; for instance, the constraint for the robot to maintain its balance (i.e. have its center of mass 

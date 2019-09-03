@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 r"""Provide the dynamic feasibility constraint.
 
-The equality joint acceleration constraint is given by:
+The equality dynamic feasibility constraint is given by:
 
 .. math:: H(q) \ddot{q} + N(q, \dot{q}) = \sum_i J_i^T F_i
 
