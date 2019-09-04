@@ -463,6 +463,10 @@ class Task(object):
                 AW = np.concatenate([np.dot(soft_task.A.T, soft_task.weight) for soft_task in hard_task], axis=1)
                 b = np.concatenate([soft_task.b for soft_task in hard_task])
                 c = hard_task[0].c
+                print(hard_task)
+                print(c.shape)
+                print(AW.shape)
+                print(b.shape)
                 ps.append(c - 2 * AW.dot(b))
             return ps
         return self._c - 2 * self._A.T.dot(self.weight).dot(self._b)

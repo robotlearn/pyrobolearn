@@ -130,5 +130,5 @@ class ContactTask(JointVelocityTask):
         Update the task by computing the A matrix and b vector that will be used by the task solver.
         """
         # get jacobian expressed in the distal link frame
-        jacobian = self.model.get_jacobian(link=self.distal_link, frame=self.distal_link)
+        jacobian = self.model.get_jacobian(link=self.distal_link, frame=self.distal_link)  # shape: (6,N)
         self._A = np.dot(self.contact_matrix, jacobian)

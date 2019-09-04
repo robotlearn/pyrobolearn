@@ -124,8 +124,7 @@ class ModelInterface(object):
         Return the joint limits.
 
         Returns:
-            np.array[float[N]]: lower joint position limits.
-            np.array[float[N]]: upper joint position limits.
+            np.array[float[2, N]]: lower and upper joint position limits.
         """
         pass
 
@@ -134,8 +133,7 @@ class ModelInterface(object):
         Return the joint velocity limits.
 
         Returns:
-            np.array[float[N]]: lower joint velocity limits.
-            np.array[float[N]]: upper joint velocity limits.
+            np.array[float[2, N]]: lower and upper joint velocity limits.
         """
         pass
 
@@ -255,7 +253,7 @@ class ModelInterface(object):
             point (np.array[float[3]]): position of the point in link's local frame.
 
         Returns:
-            np.array[float[6,N]]: 6D Jacobian (=concatenation of the angular and linear Jacobian).
+            np.array[float[6,N]]: 6D Jacobian (=concatenation of the linear and angular Jacobian).
         """
         pass
 
@@ -481,6 +479,26 @@ class ModelInterface(object):
 
         Returns:
             np.array[float[6,6+N]]: the centroidal momentum matrix :math:`A_G`
+        """
+        pass
+
+    def get_centroidal_momentum(self):
+        r"""
+        Return the centroidal momentum vector :math:`h_G = A_G \dot{q} \in \mathbb{R}^6`
+
+        Returns:
+            np.array[float[6]]: centroidal momentum vector.
+        """
+        pass
+
+    def get_centroidal_dynamics(self):
+        r"""
+        Return the centroidal momentum matrix :math:`A_G` and its derivative multiplied by the joint velocities
+        :math:`\dot{A}_G \dot{q}`.
+
+        Returns:
+            np.array[float[6,6+N]]: the centroidal momentum matrix :math:`A_G`
+            np.array[float[6]]: the centroidal dynamics velocity-dependent bias vector :math:`\dot{A}_G \dot{q}`
         """
         pass
 

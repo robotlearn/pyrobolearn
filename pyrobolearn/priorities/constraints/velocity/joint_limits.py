@@ -78,7 +78,8 @@ class JointPositionLimitsConstraint(BoundConstraint, JointVelocityConstraint):
 
         # set variables
         if q_lower_bound is None or q_upper_bound is None:
-            q_lb, q_ub = self.model.get_joint_limits()
+            limits = self.model.get_joint_limits()
+            q_lb, q_ub = limits[:, 0], limits[:, 1]
             if q_lower_bound is None:
                 q_lower_bound = q_lb
             if q_upper_bound is None:
@@ -128,7 +129,7 @@ class JointPositionLimitsConstraint(BoundConstraint, JointVelocityConstraint):
                             "{}".format(q_lb))
         if len(q_lb) != self.x_size:
             raise ValueError("Expecting the length of the lower joint position limits (={}) to be the same length as "
-                             "the number of variables being optimized =({}).".format(len(q_lb), self.x_size))
+                             "the number of variables being optimized (={}).".format(len(q_lb), self.x_size))
         self._q_lb = q_lb
 
     @property

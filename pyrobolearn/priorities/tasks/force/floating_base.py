@@ -11,6 +11,9 @@ concatenated jacobians, and :math:`\tau` are the torques applied on the floating
 
 Note that this task assumes the robot has a floating base.
 
+The above formulation is equivalent to the QP objective function :math:`||Ax - b||^2`, by setting
+:math:`A = J(q)[:,:6]^\top`, :math:`x = w`, and :math:`b = \tau`.
+
 The implementation of this class is inspired by [1] (which is licensed under the LGPLv2).
 
 References:
@@ -44,6 +47,9 @@ class FloatingBaseForceTask(ForceTask):
     concatenated jacobians, and :math:`\tau` are the torques applied on the floating base.
 
     Note that this task assumes the robot has a floating base.
+
+    The above formulation is equivalent to the QP objective function :math:`||Ax - b||^2`, by setting
+    :math:`A = J(q)[:,:6]^\top`, :math:`x = w`, and :math:`b = \tau`.
 
     The implementation of this class is inspired by [1] (which is licensed under the LGPLv2).
 

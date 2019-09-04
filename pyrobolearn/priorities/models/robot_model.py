@@ -125,8 +125,7 @@ class RobotModelInterface(ModelInterface):
         Return the joint limits.
 
         Returns:
-            np.array[float[N]]: lower joint position limits.
-            np.array[float[N]]: upper joint position limits.
+            np.array[float[2, N]]: lower and upper joint position limits.
         """
         return self.model.get_joint_limits()
     
@@ -135,8 +134,7 @@ class RobotModelInterface(ModelInterface):
         Return the joint velocity limits.
 
         Returns:
-            np.array[float[N]]: lower joint velocity limits.
-            np.array[float[N]]: upper joint velocity limits.
+            np.array[float[2, N]]: lower and upper joint velocity limits.
         """
         dq = self.model.get_joint_max_velocities()
         return -dq, dq
@@ -580,6 +578,15 @@ class RobotModelInterface(ModelInterface):
             np.array[float[6,6+N]]: the centroidal momentum matrix :math:`A_G`
         """
         return self.model.get_centroidal_momentum_matrix()
+
+    def get_centroidal_momentum(self):
+        r"""
+        Return the centroidal momentum vector :math:`h_G = A_G \dot{q} \in \mathbb{R}^6`
+
+        Returns:
+            np.array[float[6]]: centroidal momentum vector.
+        """
+        return self.model.get_centroidal_momentum()
 
     def get_centroidal_dynamics(self):
         r"""
