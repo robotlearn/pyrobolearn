@@ -535,11 +535,11 @@ class LQR(object):
 if __name__ == "__main__":
     import numpy as np
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import World
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = World(sim)

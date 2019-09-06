@@ -408,13 +408,13 @@ class BridgeMouseKeyboardWorld(Bridge):
 
 # Tests
 if __name__ == '__main__':
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
     import time
     from itertools import count
 
     # create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # sim.configure_debug_visualizer(p.COV_ENABLE_GUI, 0)
     # sim.configure_debug_visualizer(p.COV_ENABLE_RENDERING, 0)

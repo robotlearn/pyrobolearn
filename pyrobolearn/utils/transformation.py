@@ -502,6 +502,8 @@ def get_rpy_from_quaternion(q, convention='xyzw'):
         np.array[float[3]], np.array[float[N,3]]: roll-pitch-yaw angles.
     """
     multiple_quaternions = True
+    if isinstance(q, (np.ndarray, list, tuple)):
+        q = np.asarray(q)
     if isinstance(q, quaternion.quaternion) or (isinstance(q, np.ndarray) and len(q.shape) == 1):
         multiple_quaternions = False
         q = np.array([q])  # (1,4)

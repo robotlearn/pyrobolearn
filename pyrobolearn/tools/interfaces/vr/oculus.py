@@ -310,14 +310,14 @@ class OculusInterface(VRInterface):
 
 # Test
 if __name__ == "__main__":
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
     import time
     import numpy as np
     from itertools import count
 
     # create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

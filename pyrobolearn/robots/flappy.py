@@ -406,10 +406,10 @@ class Flappy(FlappingWingUAV):
         right_rot_damping_moment = np.array([0, self.right_wing.rotational_damping_moment, 0])
 
         # apply aero force and moment on wing
-        # self.apply_external_force(left_normal_force, link_id=1, position=left_cop, frame=BulletSim.LINK_FRAME)
-        # self.apply_external_force(right_normal_force, link_id=3, position=right_cop, frame=BulletSim.LINK_FRAME)
-        # self.apply_external_torque(left_rot_damping_moment, link_id=1, frame=BulletSim.LINK_FRAME)
-        # self.apply_external_torque(right_rot_damping_moment, link_id=3, frame=BulletSim.LINK_FRAME)
+        # self.apply_external_force(left_normal_force, link_id=1, position=left_cop, frame=Bullet.LINK_FRAME)
+        # self.apply_external_force(right_normal_force, link_id=3, position=right_cop, frame=Bullet.LINK_FRAME)
+        # self.apply_external_torque(left_rot_damping_moment, link_id=1, frame=Bullet.LINK_FRAME)
+        # self.apply_external_torque(right_rot_damping_moment, link_id=3, frame=Bullet.LINK_FRAME)
 
         # save
         self.prev_t = t
@@ -420,11 +420,11 @@ class Flappy(FlappingWingUAV):
 if __name__ == "__main__":
     import time
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

@@ -11,6 +11,9 @@ Parts of the documentation for the methods have been copied-pasted from [2-5] fo
 
 RaiSim is distributed under the End-User License Agreement (EULA) [8], and officially works on Ubuntu 16.04 and 18.04.
 
+- Supported Python versions: Python 2.7 and 3.5
+- Python wrappers: Pybind11 [10]
+
 Dependencies in PRL:
 * `pyrobolearn.simulators.simulator.Simulator`
 
@@ -24,9 +27,14 @@ References:
     - [7] PEP8: https://www.python.org/dev/peps/pep-0008/
     - [8] RaiSim license: https://github.com/leggedrobotics/raisimLib/blob/master/LICENSE.md
     - [9] RaiSimPy - A Python wrapper for Raisim: https://github.com/robotlearn/raisimpy
+    - [10] Pybind11: https://pybind11.readthedocs.io/en/stable/
+        - Cython, pybind11, cffi – which tool should you choose?:
+          http://blog.behnel.de/posts/cython-pybind11-cffi-which-tool-to-choose.html
 """
 
 import os
+import time
+from collections import OrderedDict
 import numpy as np
 
 
@@ -95,6 +103,10 @@ class Raisim(Simulator):
 
         if self._render:
             self._init_visualization()
+
+        # keep track of the loaded bodies
+        self._bodies = OrderedDict()  # {body_id: Body}
+        self._body_cnt = 0  # 0 is for the world
 
     ##############
     # Properties #
@@ -298,10 +310,13 @@ class Raisim(Simulator):
             light = vis.get_light()
             light.set_diffuse_color(1, 1, 1)
             light.set_cast_shadows(True)
-            light.set_direction(normalize([-3., -3., -0.5]))
-            vis.set_camera_speed(300)
+            # light.set_direction(normalize([-3., -3., -0.5]))
+            vis.get_light_node().set_position(3, 3, 3)
 
             # load textures
+            vis.add_resource_directory(vis.get_resource_dir() + "/material/gravel")
+            vis.load_material("gravel.material")
+
             vis.add_resource_directory(vis.get_resource_dir() + "/material/checkerboard")
             vis.load_material("checkerboard.material")
 
@@ -316,7 +331,7 @@ class Raisim(Simulator):
             # size of contact points and contact forces
             vis.set_contact_visual_object_size(0.03, 0.6)
             # speed of camera motion in freelook mode
-            vis.get_camera_man().set_top_speed(5)
+            vis.get_camera_man().set_top_speed(10)
 
         # these methods must be called before initApp
         vis = raisim.OgreVis.get()
@@ -331,6 +346,12 @@ class Raisim(Simulator):
 
         # set visualizer
         self.visualizer = vis
+
+        # camera
+        camera = self.visualizer.get_camera_man().get_camera()
+        camera.set_position(8, -12, 6)
+        camera.pitch(1.2)
+        camera.yaw(0.6, raisim.ogre.Node.TransformSpace.TS_WORLD)
 
     #############
     # Simulator #
@@ -376,6 +397,9 @@ class Raisim(Simulator):
 
             # update visualization counter
             self.visualization_cnt += 1
+
+        if sleep_time:
+            time.sleep(sleep_time)
 
     def is_rendering(self):
         """Return True if the simulator is in the render mode."""
@@ -433,11 +457,11 @@ class Raisim(Simulator):
 
     def pause(self):
         """Pause the simulator if in real-time."""
-        pass
+        raisim.gui.manual_stepping = True
 
     def unpause(self):
         """Unpause the simulator if in real-time."""
-        pass
+        raisim.gui.manual_stepping = False
 
     def get_physics_properties(self):
         """Get the physics engine parameters."""
@@ -491,7 +515,7 @@ class Raisim(Simulator):
     # Loading URDFs, SDFs, MJCFs, meshes #
     ######################################
 
-    def load_urdf(self, filename, position, orientation, use_fixed_base=0, scale=1.0, *args, **kwargs):
+    def load_urdf(self, filename, position, orientation=None, use_fixed_base=0, scale=1.0, *args, **kwargs):
         """Load a URDF file in the simulator.
 
         Args:
@@ -506,7 +530,31 @@ class Raisim(Simulator):
         Returns:
             int (non-negative): unique id associated to the load model.
         """
-        pass
+        # load body
+        body = self.world.add_articulated_system(filename)
+
+        # set the position and orientation
+        body.set_base_position(position)
+        if orientation is not None:
+            body.set_base_orientation(orientation)
+
+        # set initial gains
+        num_dof = body.get_dof()
+        body.set_control_mode(raisim.ControlMode.PD_PLUS_FEEDFORWARD_TORQUE)
+        joint_p_gain, joint_d_gain = np.zeros(num_dof), np.zeros(num_dof)
+        joint_p_gain[-num_dof+6:] = 200.
+        joint_d_gain[-num_dof+6:] = 10.
+        body.set_pd_gains(joint_p_gain, joint_d_gain)
+
+        # increment body counter and remember the body
+        self._body_cnt += 1
+        self._bodies[self._body_cnt] = body
+
+        # if we need to render create visual shape
+        if self._render:
+            self.visualizer.create_graphical_object(body, name="body_" + str(self._body_cnt))
+
+        return self._body_cnt
 
     def load_sdf(self, filename, scaling=1., *args, **kwargs):
         """Load a SDF file in the simulator.
@@ -557,6 +605,106 @@ class Raisim(Simulator):
     ##########
     # Bodies #
     ##########
+
+    def create_primitive_object(self, shape_type, position, mass, orientation=(0., 0., 0., 1.), radius=0.5,
+                                half_extents=(.5, .5, .5), height=1., filename=None, mesh_scale=(1., 1., 1.),
+                                plane_normal=(0., 0., 1.), rgba_color=None, specular_color=None, frame_position=None,
+                                frame_orientation=None, vertices=None, indices=None, uvs=None, normals=None, flags=-1):
+        """Create a primitive object in the simulator. This is basically the combination of `create_visual_shape`,
+        `create_collision_shape`, and `create_body`.
+
+        Args:
+            shape_type (int): type of shape; GEOM_SPHERE (=2), GEOM_BOX (=3), GEOM_CAPSULE (=7), GEOM_CYLINDER (=4),
+                GEOM_PLANE (=6), GEOM_MESH (=5)
+            position (np.array[float[3]]): Cartesian world position of the base
+            mass (float): mass of the base, in kg (if using SI units)
+            orientation (np.array[float[4]]): Orientation of base as quaternion [x,y,z,w]
+            radius (float): only for GEOM_SPHERE, GEOM_CAPSULE, GEOM_CYLINDER
+            half_extents (np.array[float[3]], list/tuple of 3 floats): only for GEOM_BOX.
+            height (float): only for GEOM_CAPSULE, GEOM_CYLINDER (height = length).
+            filename (str): Filename for GEOM_MESH, currently only Wavefront .obj. Will create convex hulls for each
+                object (marked as 'o') in the .obj file.
+            mesh_scale (np.array[float[3]], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
+            plane_normal (np.array[float[3]], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
+            rgba_color (list/tuple of 4 floats): color components for red, green, blue and alpha, each in range [0..1].
+            specular_color (list/tuple of 3 floats): specular reflection color, red, green, blue components in range
+                [0..1]
+            frame_position (np.array[float[3]]): translational offset of the visual and collision shape with respect
+              to the link frame.
+            frame_orientation (np.array[float[4]]): rotational offset (quaternion x,y,z,w) of the visual and collision
+              shape with respect to the link frame.
+            vertices (list[np.array[float[3]]]): Instead of creating a mesh from obj file, you can provide vertices,
+              indices, uvs and normals
+            indices (list[int]): triangle indices, should be a multiple of 3.
+            uvs (list of np.array[2]): uv texture coordinates for vertices. Use `changeVisualShape` to choose the
+              texture image. The number of uvs should be equal to number of vertices.
+            normals (list[np.array[float[3]]]): vertex normals, number should be equal to number of vertices.
+            flags (int): unused / to be decided
+
+        Returns:
+            int: non-negative unique id for primitive object, or -1 for failure
+        """
+        material = "white"
+        if rgba_color is not None:
+            rgb = rgba_color[:3]
+            if rgb == (1, 0, 0):
+                material = "red"
+            elif rgb == (0, 1, 0):
+                material = "green"
+            elif rgb == (0, 0, 1):
+                material = "blue"
+            elif rgb == (1, 1, 1):
+                material = "white"
+            else:
+                print("Material not defined for the given color")
+
+        if shape_type == self.GEOM_BOX:
+            x, y, z = half_extents
+            body = self.world.add_box(2*x, 2*y, 2*z, mass=mass, material=material)
+        elif shape_type == self.GEOM_SPHERE:
+            body = self.world.add_sphere(radius=radius, mass=mass, material=material)
+        elif shape_type == self.GEOM_CAPSULE:
+            body = self.world.add_capsule(radius=radius, height=height, mass=mass, material=material)
+        elif shape_type == self.GEOM_CYLINDER:
+            body = self.world.add_cylinder(radius=radius, height=height, mass=mass, material=material)
+        elif shape_type == self.GEOM_CONE:
+            body = self.world.add_cone(radius=radius, height=height, mass=mass, material=material)
+        # elif shape_type == self.GEOM_MESH:
+            # body = self.world.add_mesh(file_name=filename, mass=mass)
+        else:
+            raise NotImplementedError("Primitive object not defined for the given shape type.")
+
+        # set the position and orientation
+        body.set_position(position)
+        if orientation is not None:
+            body.set_orientation(orientation)
+
+        # increment body counter and remember the body
+        self._body_cnt += 1
+        self._bodies[self._body_cnt] = body
+
+        # if we need to render create visual shape
+        if self._render:
+            self.visualizer.create_graphical_object(body, name="body_" + str(self._body_cnt), material=material)
+
+        return self._body_cnt
+
+    def load_floor(self, dimension=20):
+        """Load a floor in the simulator.
+
+        Args:
+            dimension (float): dimension of the floor.
+
+        Returns:
+            int: non-negative unique id for the floor, or -1 for failure.
+        """
+        ground = self.world.add_ground()
+        if self._render:
+            self.visualizer.create_graphical_object(ground, dimension=dimension, name="floor",
+                                                    material="checkerboard_green")
+        self._body_cnt += 1
+        self._bodies[self._body_cnt] = ground
+        return self._body_cnt
 
     def create_body(self, visual_shape_id=-1, collision_shape_id=-1, mass=0., position=(0., 0., 0.),
                     orientation=(0., 0., 0., 1.), *args, **kwargs):
@@ -731,15 +879,21 @@ if __name__ == '__main__':
     from itertools import count
 
     sim = Raisim(render=True)
-
     print("Gravity: {}".format(sim.get_gravity()))
 
-    # create box
+    # load floor
+    floor = sim.load_floor(dimension=20)
 
-    # create visual sphere
+    # create box
+    box = sim.create_primitive_object(sim.GEOM_BOX, position=(0, 0, 2), mass=1, rgba_color=(1, 0, 0, 1))
+    sphere = sim.create_primitive_object(sim.GEOM_SPHERE, position=(2, 0, 2), mass=1, rgba_color=(0, 1, 0, 1))
+    capsule = sim.create_primitive_object(sim.GEOM_CAPSULE, position=(0, -2, 2), mass=1, rgba_color=(0, 0, 1, 1))
+    cylinder = sim.create_primitive_object(sim.GEOM_CYLINDER, position=(0, 2, 2), mass=1)
 
     # load robot
+    path = os.path.dirname(os.path.abspath(__file__)) + '/../robots/urdfs/anymal/anymal.urdf'
+    robot = sim.load_urdf(path, position=(3, -3, 2))
 
     # perform step
     for t in count():
-        sim.step()
+        sim.step(sleep_time=sim.dt)

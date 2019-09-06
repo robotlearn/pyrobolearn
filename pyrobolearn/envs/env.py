@@ -575,11 +575,11 @@ class GymEnv(gym.Env):
 
 # Tests
 if __name__ == '__main__':
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     import time
 
     # create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

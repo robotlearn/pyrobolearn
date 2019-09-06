@@ -9,6 +9,10 @@ here makes the necessary conversions.
 The signature of each method defined here are inspired by [1,2] but in accordance with the PEP8 style guide [3].
 Parts of the documentation for the methods have been copied-pasted from [2] for completeness purposes.
 
+- Supported Python versions: Python 2.7 and 3.*
+- Python wrappers: manually written by Erwin Coumans (see
+  https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/pybullet.c)
+
 Dependencies in PRL:
 * `pyrobolearn.simulators.simulator.Simulator`
 
@@ -89,6 +93,12 @@ class Bullet(Simulator):
             num_instances (int): number of simulator instances.
             **kwargs (dict): optional arguments (this is not used here).
         """
+        # try to import the pybullet library
+        # normally that should be done outside the class but because it might have some conflicts with other libraries
+        # import pybullet
+        # import pybullet_data
+        # from pybullet_envs.bullet.bullet_client import BulletClient
+
         super(Bullet, self).__init__(render=render, **kwargs)
 
         # parse the kwargs
@@ -129,6 +139,9 @@ class Bullet(Simulator):
         # define default timestep
         self.default_timestep = 1. / 240
         self.dt = self.default_timestep
+
+        # by default, set gravity
+        self.set_gravity()
 
         # go through the global variables / attributes defined in pybullet and set them here
         # this includes for instance: JOINT_REVOLUTE, POSITION_CONTROL, etc.
@@ -950,6 +963,17 @@ class Bullet(Simulator):
     # Bodies #
     ##########
 
+    def load_floor(self, dimension=20):
+        """Load a floor in the simulator.
+
+        Args:
+            dimension (float): dimension of the floor.
+
+        Returns:
+            int: non-negative unique id for the floor, or -1 for failure.
+        """
+        return self.load_urdf('plane.urdf', position=[0., 0., 0.], use_fixed_base=True, scale=dimension/20.)
+
     # TODO: add the other arguments
     def create_body(self, visual_shape_id=-1, collision_shape_id=-1, mass=0., position=(0., 0., 0.),
                     orientation=(0., 0., 0., 1.), *args, **kwargs):
@@ -1624,7 +1648,7 @@ class Bullet(Simulator):
             for joint_id in joint_ids:
                 self.sim.enableJointForceTorqueSensor(body_id, joint_id, int(enable))
 
-    def set_joint_motor_control(self, body_id, joint_ids, control_mode=pybullet.POSITION_CONTROL, positions=None,
+    def set_joint_motor_control(self, body_id, joint_ids, control_mode=Simulator.POSITION_CONTROL, positions=None,
                                 velocities=None, forces=None, kp=None, kd=None, max_velocity=None):
         r"""
         Set the joint motor control.

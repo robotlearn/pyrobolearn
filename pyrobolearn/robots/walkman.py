@@ -102,11 +102,11 @@ class Walkman(BipedRobot, BiManipulator):
 if __name__ == "__main__":
     # Imports
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # Create world
     world = BasicWorld(sim)

@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Import robots and world
-from pyrobolearn.simulators import BulletSim
+from pyrobolearn.simulators import Bullet
 from pyrobolearn.worlds import BasicWorld
 from pyrobolearn.robots import KukaIIWA
 
@@ -29,7 +29,7 @@ num_basis = 20
 rate = 30
 
 # Create simulator
-sim = BulletSim()
+sim = Bullet()
 
 # create world
 world = BasicWorld(sim)

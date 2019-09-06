@@ -19,6 +19,9 @@ It can be used with Python2.7 and Python3.5.
 We selected to use ``dartpy`` instead of ``pydart`` as this last one is no more under active development, and
 ``dartpy`` is the official release.
 
+- Supported Python versions: Python 3.*
+- Python wrappers: pybind11 [4]
+
 Dependencies in PRL:
 * `pyrobolearn.simulators.simulator.Simulator`
 
@@ -34,6 +37,9 @@ References:
         - source code: https://pydart2.readthedocs.io/en/latest/
         - documentation: https://pydart2.readthedocs.io/en/latest/
     - [3] PEP8: https://www.python.org/dev/peps/pep-0008/
+    - [4] Pybind11: https://pybind11.readthedocs.io/en/stable/
+        - Cython, pybind11, cffi – which tool should you choose?:
+          http://blog.behnel.de/posts/cython-pybind11-cffi-which-tool-to-choose.html
 """
 
 # import standard libraries
@@ -52,12 +58,12 @@ except ImportError as e:
 # import PRL simulator
 from pyrobolearn.simulators.simulator import Simulator
 from pyrobolearn.utils.parsers.robots import URDFParser, MuJoCoParser, SDFParser, SkelParser
-from pyrobolearn.utils.transformation import get_quaternion_from_matrix
+from pyrobolearn.utils.transformation import get_quaternion_from_matrix, get_rpy_from_quaternion
 
 # check Python version
 import sys
 if sys.version_info[0] < 3:
-    raise RuntimeError("You must use Python 3 with the MuJoCo simulator.")
+    raise RuntimeError("You must use Python 3 with the Dart simulator.")
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -75,7 +81,7 @@ class Dart(Simulator):
     This is a wrapper around the ``dartpy`` API [1] (which is itself a Python wrapper around DART [1]).
 
     With DART, we first have to create a world, then spawn a skeleton (a `Skeleton` is a structure that consists of
-    `BodyNode` which are connected by `Joint`.
+    `BodyNode` which are connected by `Joint`).
 
     Warnings: by default, in DART, the world frame axis are defined with x pointing forward, y pointing upward, and
     z pointing on the right. To be consistent with the other simulators, we change this to be x pointing forward,
@@ -276,11 +282,16 @@ class Dart(Simulator):
         self._urdf_parser = dart.utils.DartLoader()
 
         # set time step
-        self.dt = self.world.getTimeStep()
+        self.dt = self.get_time_step()
 
         # main camera in the simulator
         self._camera = None
         self.viewer = None
+        self._frame_cnt = 0      # frame counter
+        self._frame_ticks = 15   # number of ticks to sleep before next acquisition
+
+        # set the gravity
+        self.set_gravity()
 
         # if we need to render
         if render:
@@ -289,16 +300,18 @@ class Dart(Simulator):
         # keep track of visual and collision shapes
         self.visual_shapes = {}  # {visual_id: Visual}
         self.collision_shapes = {}  # {collision_id: Collision}
-        self.bodies = OrderedDict()  # {body_id: Body}
+        self._bodies = OrderedDict()  # {body_id: Body}
         self.textures = {}  # {texture_id: Texture}
         self.constraints = OrderedDict()  # {constraint_id: Constraint}
 
         # create counters
         self._visual_cnt = 0
         self._collision_cnt = 0
-        self._body_cnt = 1  # 0 is for the world
+        self._body_cnt = 0  # 0 is for the world
         self._texture_cnt = 0
         self._constraint_cnt = 0
+
+        self._floor_id = None
 
     ##############
     # Properties #
@@ -376,6 +389,11 @@ class Dart(Simulator):
             sleep_time (float): time to sleep after performing one step in the simulation.
         """
         self.world.step()
+        if self._render:
+            if self._frame_cnt % self._frame_ticks == 0:
+                self.viewer.frame()
+                self._frame_cnt = 0
+            self._frame_cnt += 1
 
     def is_rendering(self):
         """Return True if the simulator is in the render mode."""
@@ -397,11 +415,19 @@ class Dart(Simulator):
             enable (bool): If True, it will render the simulator by enabling the GUI.
         """
         self._render = enable
-        self.viewer = dart.gui.osg.Viewer()
-        # gui_node = dart.gui.osg.WorldNode(self.world)
-        gui_node = dart.gui.osg.RealTimeWorldNode(self.world)
-        self.viewer.addWorldNode(gui_node)
-        self.viewer.run()  # TODO: call self.viewer.frame() instead (need to update the python wrapper)
+        if self._render:
+            if self.viewer is None:
+                self.viewer = dart.gui.osg.Viewer()
+                gui_node = dart.gui.osg.WorldNode(self.world)
+                self.viewer.addWorldNode(gui_node)
+                self.viewer.setUpViewInWindow(0, 0, 640, 480)
+                self.viewer.setCameraHomePosition([8., -8., 4.], [0, 0, -0.25], [0, 0, 0.5])
+                self._frame_cnt = 0
+                # self.viewer.run()  # TODO: call self.viewer.frame() instead (need to update the python wrapper)
+        else:
+            # TODO: close the viewer before setting it to None
+            del self.viewer
+            self.viewer = None
 
     def hide(self):
         """Hide the GUI."""
@@ -541,6 +567,14 @@ class Dart(Simulator):
         """
         skeleton = self._urdf_parser.parseSkeleton(filename)
         self.world.addSkeleton(skeleton)
+        rpy = get_rpy_from_quaternion(orientation) if orientation is not None else None
+        for i in range(6):
+            if i < 3:
+                if rpy is not None:
+                    skeleton.setPosition(index=i, position=rpy[i])
+            else:
+                if position is not None:
+                    skeleton.setPosition(index=i, position=position[i-3])
         return self.world.getNumSkeletons() - 1
 
     def load_sdf(self, filename, scaling=1., *args, **kwargs):
@@ -642,6 +676,139 @@ class Dart(Simulator):
     ##########
     # Bodies #
     ##########
+
+    def create_primitive_object(self, shape_type, position, mass, orientation=(0., 0., 0., 1.), radius=0.5,
+                                half_extents=(.5, .5, .5), height=1., filename=None, mesh_scale=(1., 1., 1.),
+                                plane_normal=(0., 0., 1.), rgba_color=None, specular_color=None, frame_position=None,
+                                frame_orientation=None, vertices=None, indices=None, uvs=None, normals=None, flags=-1):
+        """Create a primitive object in the simulator. This is basically the combination of `create_visual_shape`,
+        `create_collision_shape`, and `create_body`.
+
+        Args:
+            shape_type (int): type of shape; GEOM_SPHERE (=2), GEOM_BOX (=3), GEOM_CAPSULE (=7), GEOM_CYLINDER (=4),
+                GEOM_PLANE (=6), GEOM_MESH (=5)
+            position (np.array[float[3]]): Cartesian world position of the base
+            mass (float): mass of the base, in kg (if using SI units)
+            orientation (np.array[float[4]]): Orientation of base as quaternion [x,y,z,w]
+            radius (float): only for GEOM_SPHERE, GEOM_CAPSULE, GEOM_CYLINDER
+            half_extents (np.array[float[3]], list/tuple of 3 floats): only for GEOM_BOX.
+            height (float): only for GEOM_CAPSULE, GEOM_CYLINDER (height = length).
+            filename (str): Filename for GEOM_MESH, currently only Wavefront .obj. Will create convex hulls for each
+                object (marked as 'o') in the .obj file.
+            mesh_scale (np.array[float[3]], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
+            plane_normal (np.array[float[3]], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
+            rgba_color (list/tuple of 4 floats): color components for red, green, blue and alpha, each in range [0..1].
+            specular_color (list/tuple of 3 floats): specular reflection color, red, green, blue components in range
+                [0..1]
+            frame_position (np.array[float[3]]): translational offset of the visual and collision shape with respect
+              to the link frame.
+            frame_orientation (np.array[float[4]]): rotational offset (quaternion x,y,z,w) of the visual and collision
+              shape with respect to the link frame.
+            vertices (list[np.array[float[3]]]): Instead of creating a mesh from obj file, you can provide vertices,
+              indices, uvs and normals
+            indices (list[int]): triangle indices, should be a multiple of 3.
+            uvs (list of np.array[2]): uv texture coordinates for vertices. Use `changeVisualShape` to choose the
+              texture image. The number of uvs should be equal to number of vertices.
+            normals (list[np.array[float[3]]]): vertex normals, number should be equal to number of vertices.
+            flags (int): unused / to be decided
+
+        Returns:
+            int: non-negative unique id for primitive object, or -1 for failure
+        """
+        # increment body counter
+        self._body_cnt += 1
+
+        # create new skeleton
+        skeleton = dart.dynamics.Skeleton(name="body_" + str(self._body_cnt))
+
+        # create shape based on given primitive
+        if shape_type == self.GEOM_BOX:
+            shape = dart.dynamics.BoxShape(size=2*np.asarray(half_extents))
+        elif shape_type == self.GEOM_SPHERE:
+            shape = dart.dynamics.SphereShape(radius=radius)
+        elif shape_type == self.GEOM_CAPSULE:
+            shape = dart.dynamics.CapsuleShape(radius=radius, height=height)
+        elif shape_type == self.GEOM_CYLINDER:
+            shape = dart.dynamics.CylinderShape(radius=radius, height=height)
+        elif shape_type == self.GEOM_ELLIPSOID:
+            shape = dart.dynamics.EllipsoidShape(diameters=np.asarray(half_extents))
+        elif shape_type == self.GEOM_CONE:
+            shape = dart.dynamics.ConeShape(radius=radius, height=height)
+        # elif shape_type == self.GEOM_ARROW:
+        #     shape = dart.dynamics.ArrowShape(tail=, head=)
+        # elif shape_type == self.GEOM_MESH:
+        #     shape = dart.dynamics.MeshShape(scale=, mesh=, uri=)
+        else:
+            raise NotImplementedError("Primitive object not defined for the given shape type.")
+
+        # create body node and free joint
+        # if self._floor_id is not None:
+        #     floor = self.world.getSkeleton(index=self._floor_id).getBodyNode(index=0)
+        #     joint, body = skeleton.createFreeJointAndBodyNodePair()  # parent=floor)
+        # else:
+        #     joint, body = skeleton.createFreeJointAndBodyNodePair()
+        if mass == 0:
+            joint, body = skeleton.createWeldJointAndBodyNodePair()
+        else:
+            joint, body = skeleton.createFreeJointAndBodyNodePair()
+
+        # set the dynamics properties
+        if mass != 0:
+            body.setMass(mass=mass)
+            # body.setMomentOfInertia(shape.computeInertia(mass=1))
+        body.setCollidable(True)
+
+        # set the shape to the body node
+        shape_node = body.createShapeNode(shape)
+
+        # create visual aspect
+        visual_aspect = shape_node.createVisualAspect()
+        rgba_color = (1, 1, 1, 1) if rgba_color is None else rgba_color
+        visual_aspect.setColor(rgba_color)
+
+        # create collision aspect (to enable collisions)
+        collision_aspect = shape_node.createCollisionAspect()
+
+        # create dynamics aspect (for friction and restitution)
+        dynamics_aspect = shape_node.createDynamicsAspect()
+
+        # set the position and orientation
+        if mass != 0:
+            orientation = get_rpy_from_quaternion(orientation) if orientation is not None else None
+            for i in range(6):
+                if i < 3:
+                    if orientation is not None:
+                        joint.setPosition(index=i, position=orientation[i])
+                else:
+                    joint.setPosition(index=i, position=position[i-3])
+
+        # # increment body counter and remember the body
+        # self._body_cnt += 1
+        # self._bodies[self._body_cnt] = skeleton
+        # return self._body_cnt
+
+        # add skeleton to the world
+        self.world.addSkeleton(skeleton)
+
+        # return skeleton index in the world
+        return self.world.getNumSkeletons() - 1
+
+    def load_floor(self, dimension=20):
+        """Load a floor in the simulator.
+
+        Args:
+            dimension (float): dimension of the floor.
+
+        Returns:
+            int: non-negative unique id for the floor, or -1 for failure.
+        """
+        # ground = self._urdf_parser.parseSkeleton("dart://sample/urdf/KR5/ground.urdf")
+        # self.world.addSkeleton(ground)
+        # return self.world.getNumSkeletons() - 1
+        dim = dimension/2.
+        self._floor_id = self.create_primitive_object(shape_type=self.GEOM_BOX, position=(0, 0, 0), mass=0,
+                                                      half_extents=(dim, dim, 0.01))
+        return self._floor_id
 
     def create_body(self, visual_shape_id=-1, collision_shape_id=-1, mass=0., position=(0., 0., 0.),
                     orientation=(0., 0., 0., 1.), *args, **kwargs):

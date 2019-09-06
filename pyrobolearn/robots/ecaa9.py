@@ -137,11 +137,11 @@ class ECAA9(UUVRobot):
 # Test
 if __name__ == "__main__":
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)
@@ -163,7 +163,7 @@ if __name__ == "__main__":
         pos = robot.get_base_position()
         # apply force in the simulation
         robot.apply_external_force(force=fb, link_id=-1, position=pos+robot.center_buoyancy,
-                                   frame=BulletSim.WORLD_FRAME)
+                                   frame=Bullet.WORLD_FRAME)
         # robot.update_joint_slider()
         # robot.set_joint_velocities([10], [4])
         # step in simulation

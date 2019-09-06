@@ -77,7 +77,7 @@ class Policy(object):
     Example::
 
         # create simulator
-        simulator = BulletSim(render=True)
+        simulator = Bullet(render=True)
 
         # create world
         world = BasicWorld(simulator)

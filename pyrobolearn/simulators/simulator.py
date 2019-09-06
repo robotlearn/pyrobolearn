@@ -113,6 +113,8 @@ class Simulator(object):
     GEOM_CAPSULE = 7
     GEOM_CONE = 8        # NEW
     GEOM_ELLIPSOID = 9   # NEW
+    GEOM_HEIGHTMAP = 10  # NEW
+    GEOM_ARROW = 11      # NEW
 
     GUI = 1
     GUI_MAIN_THREAD = 8
@@ -667,6 +669,70 @@ class Simulator(object):
         return []
 
     # bodies
+
+    def create_primitive_object(self, shape_type, position, mass, orientation=(0., 0., 0., 1.), radius=0.5,
+                                half_extents=(.5, .5, .5), height=1., filename=None, mesh_scale=(1., 1., 1.),
+                                plane_normal=(0., 0., 1.), rgba_color=None, specular_color=None, frame_position=None,
+                                frame_orientation=None, vertices=None, indices=None, uvs=None, normals=None, flags=-1):
+        """Create a primitive object in the simulator. This is basically the combination of `create_visual_shape`,
+        `create_collision_shape`, and `create_body`.
+
+        Args:
+            shape_type (int): type of shape; GEOM_SPHERE (=2), GEOM_BOX (=3), GEOM_CAPSULE (=7), GEOM_CYLINDER (=4),
+                GEOM_PLANE (=6), GEOM_MESH (=5)
+            position (np.array[float[3]]): Cartesian world position of the base
+            mass (float): mass of the base, in kg (if using SI units)
+            orientation (np.array[float[4]]): Orientation of base as quaternion [x,y,z,w]
+            radius (float): only for GEOM_SPHERE, GEOM_CAPSULE, GEOM_CYLINDER
+            half_extents (np.array[float[3]], list/tuple of 3 floats): only for GEOM_BOX.
+            height (float): only for GEOM_CAPSULE, GEOM_CYLINDER (height = length).
+            filename (str): Filename for GEOM_MESH, currently only Wavefront .obj. Will create convex hulls for each
+                object (marked as 'o') in the .obj file.
+            mesh_scale (np.array[float[3]], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
+            plane_normal (np.array[float[3]], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
+            rgba_color (list/tuple of 4 floats): color components for red, green, blue and alpha, each in range [0..1].
+            specular_color (list/tuple of 3 floats): specular reflection color, red, green, blue components in range
+                [0..1]
+            frame_position (np.array[float[3]]): translational offset of the visual and collision shape with respect
+              to the link frame.
+            frame_orientation (np.array[float[4]]): rotational offset (quaternion x,y,z,w) of the visual and collision
+              shape with respect to the link frame.
+            vertices (list[np.array[float[3]]]): Instead of creating a mesh from obj file, you can provide vertices,
+              indices, uvs and normals
+            indices (list[int]): triangle indices, should be a multiple of 3.
+            uvs (list of np.array[2]): uv texture coordinates for vertices. Use `changeVisualShape` to choose the
+              texture image. The number of uvs should be equal to number of vertices.
+            normals (list[np.array[float[3]]]): vertex normals, number should be equal to number of vertices.
+            flags (int): unused / to be decided
+
+        Returns:
+            int: non-negative unique id for primitive object, or -1 for failure
+        """
+        visual_shape = self.create_visual_shape(shape_type=shape_type, radius=radius, half_extents=half_extents,
+                                                length=height, filename=filename, mesh_scale=mesh_scale,
+                                                plane_normal=plane_normal, flags=flags, rgba_color=rgba_color,
+                                                specular_color=specular_color, visual_frame_position=frame_position,
+                                                vertices=vertices, indices=indices, uvs=uvs, normals=normals,
+                                                visual_frame_orientation=frame_orientation)
+        collision_shape = self.create_collision_shape(shape_type=shape_type, radius=radius, half_extents=half_extents,
+                                                      height=height, filename=filename, mesh_scale=mesh_scale,
+                                                      plane_normal=plane_normal, flags=flags,
+                                                      collision_frame_position=frame_position,
+                                                      collision_frame_orientation=frame_orientation)
+        body = self.create_body(visual_shape_id=visual_shape, collision_shape_id=collision_shape, mass=mass,
+                                position=position, orientation=orientation)
+        return body
+
+    def load_floor(self, dimension):
+        """Load a floor in the simulator.
+
+        Args:
+            dimension (float): dimension of the floor.
+
+        Returns:
+            int: non-negative unique id for the floor, or -1 for failure.
+        """
+        pass
 
     def create_body(self, visual_shape_id=-1, collision_shape_id=-1, mass=0., position=(0., 0., 0.),
                     orientation=(0., 0., 0., 1.), *args, **kwargs):

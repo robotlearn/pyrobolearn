@@ -1,21 +1,37 @@
 
+# load middlewares
+from . import middlewares
+
+
 # load all simulators
 
 # basic simulator
 from .simulator import Simulator
 
-# bullet simulator
+# Bullet simulator
 from .bullet import Bullet
-from .bullet import Bullet as BulletSim  # alias  # TODO: remove that alias
 
-# bullet ros simulator
+# Bullet ros simulator
 from .bullet_ros import BulletROS
 
-# dart simulator
+# Dart simulator
 # from .dart import Dart
 
 # MuJoCo simulator
 # from .mujoco import Mujoco
+
+# Raisim simulator
+# from .raisim import Raisim
+
+# Vrep simulator (note that there is a currently a problem when loading pybullet with pyrep)
+# from .vrep import VREP
+
+# Isaac simulator
+# from .isaac import Isaac
+
+# Gazebo simulator
+# from .gazebo import Gazebo
+
 
 # # PyBullet simulator
 # import pybullet
