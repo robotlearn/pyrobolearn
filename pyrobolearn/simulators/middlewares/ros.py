@@ -2,9 +2,8 @@
 """Define the ROS middleware API.
 
 Dependencies in PRL:
-* `pyrobolearn.simulators.simulator.Simulator`
+* `pyrobolearn.simulators.middlewares.middleware.MiddleWare`
 """
-
 
 # TODO
 import os
@@ -14,11 +13,11 @@ import signal
 import importlib
 import inspect
 
-from pyrobolearn.simulators.simulator import Simulator
+from pyrobolearn.simulators.middlewares.middleware import MiddleWare
 
 
 __author__ = "Brian Delhaisse"
-__copyright__ = "Copyright 2018, PyRoboLearn"
+__copyright__ = "Copyright 2019, PyRoboLearn"
 __credits__ = ["ROS (Willow Garage)", "Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
@@ -27,15 +26,25 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-# TODO: maybe I should inherit from MiddleWare instead of Simulator... Then we can give these MiddleWare to different
-#  simulators. Other communication middleware layer includes YARP, etc.
+class ROS(MiddleWare):
+    r"""ROS Interface middleware
 
-class ROS(Simulator):
-    r"""ROS Interface
+    This middleware can be given to the simulator which can then interact with robots.
     """
 
     def __init__(self, subscribe=False, publish=False, teleoperate=False, master_uri=11311, **kwargs):
-        super(ROS, self).__init__(render=False)
+        """
+        Initialize the ROS middleware.
+
+        Args:
+            subscribe (bool): if True, it will subscribe to the topics associated to the loaded robots, and will read
+              the values published on these topics.
+            publish (bool): if True, it will publish the given values to the topics associated to the loaded robots.
+            teleoperate (bool): if True, it will move the robot based on the received or sent values based on the 2
+              previous attributes :attr:`subscribe` and :attr:`publish`.
+            master_uri (int): ROS master URI.
+        """
+        super(ROS, self).__init__(subscribe=subscribe, publish=publish, teleoperate=teleoperate)
 
         # Environment variable
         self.env = os.environ.copy()

@@ -184,18 +184,21 @@ class Simulator(object):
     URDF_USE_SELF_COLLISION_EXCLUDE_PARENT = 16
     URDF_USE_SELF_COLLISION_INCLUDE_PARENT = 8192
 
-    def __init__(self, render=True, num_instances=1, **kwargs):
+    def __init__(self, render=True, num_instances=1, middleware=None, **kwargs):
         r"""
         Initialize the Simulator.
 
         Args:
             render (bool): if True, it will open the GUI, otherwise, it will just run the server.
             num_instances (int): number of simulator instances.
+            middleware (MiddleWare, None): middleware instance.
             **kwargs (dict): optional arguments (this is not used here).
         """
         self._render = render
         self.real_time = False
         self.kwargs = kwargs
+        self._num_instances = num_instances
+        self._middleware = middleware
 
         # main camera in the simulator
         self._camera = None
@@ -306,7 +309,7 @@ class Simulator(object):
     @staticmethod
     def has_middleware_communication_layer():
         """Return True if the simulator has a middleware communication layer (like ROS, YARP, etc)."""
-        return False
+        return self._middleware is not None
 
     @staticmethod
     def supports_dynamic_loading():

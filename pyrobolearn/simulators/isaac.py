@@ -61,16 +61,17 @@ class Isaac(Simulator):
         - [4] Slides: https://developer.download.nvidia.com/video/gputechconf/gtc/2019/presentation/s9918-isaac-gym.pdf
     """
 
-    def __init__(self, render=True, num_instances=1, **kwargs):
+    def __init__(self, render=True, num_instances=1, middleware=None, **kwargs):
         """
         Initialize Isaac gym simulator.
 
         Args:
             render (bool): if True, it will open the GUI, otherwise, it will just run the server.
             num_instances (int): number of simulator instances.
+            middleware (MiddleWare, None): middleware instance.
             **kwargs (dict): optional arguments (this is not used here).
         """
-        super(Isaac, self).__init__(render=render)
+        super(Isaac, self).__init__(render=render, num_instances=num_instances, middleware=middleware, **kwargs)
 
         # define variables
         self.gym = gymapi.acquire_gym()

@@ -33,7 +33,7 @@ def get_full_inertia(inertia):
             already to be the principal moments of inertia.
 
     Returns:
-        np.array[3,3]: full inertia matrix.
+        np.array[float[3,3]]: full inertia matrix.
     """
     # make sure inertia is a numpy array
     inertia = np.asarray(inertia)
@@ -359,7 +359,7 @@ def get_inertia_of_ellipsoid(mass, a, b, c, full=False):
         mass (float): mass of the ellipsoid.
         a (float): first semi-axis of the ellipsoid.
         b (float): second semi-axis of the ellipsoid.
-        c (float): thirs semi-axis of the ellipsoid.
+        c (float): third semi-axis of the ellipsoid.
         full (bool): if we should return the full inertia matrix, or just the diagonal elements.
 
     Returns:
@@ -378,15 +378,18 @@ def get_inertia_of_ellipsoid(mass, a, b, c, full=False):
     return inertia
 
 
-def get_inertia_of_mesh(filename, mass=None, density=1000, full=False):
+def get_inertia_of_mesh(mesh, mass=None, scale=1., density=1000, full=False):
     r"""
     Return the principal moments of the inertia matrix of a mesh.
 
     Warnings: the mesh has to be watertight.
 
     Args:
-        filename (str): path to the mesh file. Note that the mesh
+        mesh (str, trimesh.Trimesh): path to the mesh file, or a Trimesh instance. Note that the mesh has to be
+          watertight.
         mass (float, None): mass of the mesh (in kg). If None, it will use the density.
+        scale (float): scaling factor. If you have a mesh in meter but you want to scale it into centimeters, you need
+          to provide a scaling factor of 0.01.
         density (float): density of the mesh (in kg/m^3). By default, it uses the density of the water 1000kg / m^3.
         full (bool): if we should return the full inertia matrix, or just the diagonal elements.
 
@@ -397,7 +400,45 @@ def get_inertia_of_mesh(filename, mass=None, density=1000, full=False):
         else:
             np.array[float[3]]: principal moments of inertia.
     """
-    inertia = get_mesh_body_inertia(filename, mass=mass, density=density)
+    inertia = get_mesh_body_inertia(mesh, mass=mass, density=density, scale=scale)
     if full:
         return np.diag(inertia)
     return inertia
+
+
+def combine_inertias(coms, masses, inertias, rotations=None):
+    r"""
+    This combines the inertia matrices together to form the combined body frame inertia matrix relative to the
+    combined center of mass.
+    
+    Args:
+        coms (list[np.array[float[3]]): list of center of masses.
+        masses (list[float]): list of total body masses.
+        inertias (list[np.array[float[3,3]]]): list of body frame inertia matrices relative to their center of mass.
+        rotations (list[np.array[float[3,3]]]): list of rotation matrices where each rotation has to be applied on
+          the inertia matrix before translating it.
+
+    Returns:
+        float: total mass.
+        np.array[float[3]]: combined center of mass.
+        np.array[float[3,3]]: combined inertia matrix.
+    """
+    if len(coms) != len(masses) or len(coms) != len(inertias):
+        raise ValueError("The given lists do not have the same length: len(coms)={}, len(masses)={}, "
+                         "len(inertias)={}".format(len(coms), len(masses), len(inertias)))
+    if len(coms) == 0:
+        raise ValueError("Expecting the length of the provided parameters to be bigger than 0")
+    if rotations is not None and len(rotations) != len(coms):
+        raise ValueError("The given list of rotations do not have the same length (={}) as the other arguments (={})"
+                         ".".format(len(rotations), len(masses)))
+
+    total_mass = np.sum(masses)
+    new_com = np.sum([mass * com for mass, com in zip(masses, coms)], axis=0)
+    new_com /= total_mass
+    if rotations is None:
+        inertia = np.sum([translate_inertia_matrix(inertia, vector=new_com-com, mass=mass)
+                          for mass, com, inertia in zip(masses, coms, inertias)], axis=0)
+    else:
+        inertia = np.sum([translate_inertia_matrix(rotate_inertia_matrix(inertia, rot), vector=new_com-com, mass=mass)
+                          for mass, com, inertia, rot in zip(masses, coms, inertias, rotations)], axis=0)
+    return total_mass, new_com, inertia

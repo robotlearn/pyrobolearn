@@ -84,7 +84,7 @@ class Bullet(Simulator):
             Erwin Coumans and Yunfei Bai, 2017/2018
     """
 
-    def __init__(self, render=True, num_instances=1, **kwargs):
+    def __init__(self, render=True, num_instances=1, middleware=None, **kwargs):
         """
         Initialize the PyBullet simulator.
 
@@ -92,6 +92,7 @@ class Bullet(Simulator):
             render (bool): if True, it will open the GUI, otherwise, it will just run the server.
             num_instances (int): number of simulator instances.
             **kwargs (dict): optional arguments (this is not used here).
+            middleware (MiddleWare, None): middleware instance.
         """
         # try to import the pybullet library
         # normally that should be done outside the class but because it might have some conflicts with other libraries
@@ -99,7 +100,7 @@ class Bullet(Simulator):
         # import pybullet_data
         # from pybullet_envs.bullet.bullet_client import BulletClient
 
-        super(Bullet, self).__init__(render=render, **kwargs)
+        super(Bullet, self).__init__(render=render, num_instances=num_instances, middleware=middleware, **kwargs)
 
         # parse the kwargs
 

@@ -283,6 +283,17 @@ def get_mesh_body_inertia(mesh, mass=None, density=1000, scale=1.):
     """
     mesh = get_mesh(mesh)
 
+    # volume = mesh.volume  # in m^3  (in trimesh: mash.mass = mash.volume, i.e. density = 1)
+    # volume *= scale ** 3  # the scale is for each dimension
+    # inertia = mesh.moment_inertia * scale ** 2  # I ~ mr^2
+    #
+    # # the previous inertia is based on the assumption that mesh.mass = mesh.volume
+    # density = mass / volume  # density = new_mass / old_mass
+    # inertia *= density
+    #
+    # # com = mesh.center_mass * scale  # uniform density assumption
+    # # (mesh.center_mass is a bit different from mesh.centroid)
+
     mesh.apply_scale(scale)  # note: this is an inplace operation
     default_density = mesh.density
 

@@ -77,16 +77,17 @@ class Raisim(Simulator):
         - [6] RaiSimPy - A Python wrapper for Raisim: https://github.com/robotlearn/raisimpy
     """
 
-    def __init__(self, render=True, num_instances=1, **kwargs):
+    def __init__(self, render=True, num_instances=1, middleware=None, **kwargs):
         """
         Initialize the Raisim simulator.
 
         Args:
             render (bool): if True, it will open the GUI, otherwise, it will just run the server.
             num_instances (int): number of simulator instances.
+            middleware (MiddleWare, None): middleware instance.
             **kwargs (dict): optional arguments (this is not used here).
         """
-        super(Raisim, self).__init__(render, **kwargs)
+        super(Raisim, self).__init__(render=render, num_instances=num_instances, middleware=middleware, **kwargs)
 
         # create world
         self.world = raisim.World()

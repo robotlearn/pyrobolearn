@@ -66,7 +66,7 @@ if sys.version_info[0] < 3:
     raise RuntimeError("You must use Python 3 with the Dart simulator.")
 
 __author__ = "Brian Delhaisse"
-__copyright__ = "Copyright 2018, PyRoboLearn"
+__copyright__ = "Copyright 2019, PyRoboLearn"
 __credits__ = ["DART", "Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
@@ -101,16 +101,17 @@ class Dart(Simulator):
         - [2] PEP8: https://www.python.org/dev/peps/pep-0008/
     """
 
-    def __init__(self, render=True, num_instances=1, dt=0.001, **kwargs):
+    def __init__(self, render=True, num_instances=1, middleware=None, **kwargs):
         """
         Initialize the Dart simulator.
 
         Args:
             render (bool): if True, it will open the GUI, otherwise, it will just run the server.
             num_instances (int): number of simulator instances.
+            middleware (MiddleWare, None): middleware instance.
             **kwargs (dict): optional arguments (this is not used here).
         """
-        super(Dart, self).__init__(render, **kwargs)
+        super(Dart, self).__init__(render=render, num_instances=num_instances, middleware=middleware, **kwargs)
 
         # dart = {'collision': ['BulletCollisionDetector', 'BulletCollisionGroup', 'CollisionDetector',
         #                       'CollisionGroup', 'CollisionOption', 'CollisionResult', 'Contact',

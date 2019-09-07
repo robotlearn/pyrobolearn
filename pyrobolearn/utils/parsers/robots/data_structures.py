@@ -2,11 +2,15 @@
 """Provide the common data structures that are shared among the various parsers, generators, and converters.
 """
 
+import copy
 import numpy as np
+import trimesh
 from collections import OrderedDict, Iterable
 
 from pyrobolearn.utils.transformation import get_rpy_from_quaternion, get_quaternion_from_rpy, get_matrix_from_rpy, \
     get_rpy_from_matrix, get_matrix_from_axis_angle
+from pyrobolearn.utils.inertia import get_inertia_of_box, get_inertia_of_capsule, get_inertia_of_cylinder, \
+    get_inertia_of_ellipsoid, get_inertia_of_mesh, get_inertia_of_sphere, combine_inertias
 
 
 __author__ = "Brian Delhaisse"
@@ -22,31 +26,47 @@ __status__ = "Development"
 class Simulator(object):
     r"""Simulator data structure."""
 
-    def __init__(self, world=None, physics_engine=None, physics_properties=None):
+    def __init__(self, name=None, worlds=None, physics_engine=None, physics_properties=None):
         """
         Initialize the simulator data structure.
 
         Args:
-            world (World, None): world data structure instance.
+            name (str, None): name of the simulator.
+            worlds (list[World], None): world data structure instances.
             physics_engine (PhysicsEngine): physics engine instance.
             physics_properties (Physics): the physics properties (gravity, viscosity, friction, etc).
         """
-        self.world = world
+        self.worlds = worlds
         self.engine = physics_engine
         self.physics = physics_properties
 
     @property
-    def world(self):
-        """Return the world."""
-        return self._world
+    def worlds(self):
+        """Return the worlds."""
+        return self._worlds
 
-    @world.setter
-    def world(self, world):
-        """Set the world data structure instance."""
-        if world is not None and not isinstance(world, World):
-            raise TypeError("Expecting the world to be an instance of `World`, but got instead: "
-                            "{}".format(type(world)))
-        self._world = world
+    @worlds.setter
+    def worlds(self, worlds):
+        """Set the world data structure instances."""
+        if worlds is None:
+            worlds = []
+        elif isinstance(worlds, World):
+            worlds = [worlds]
+
+        if not isinstance(worlds, (list, tuple)):
+            raise TypeError("Expecting the given 'worlds' to be a list/tuple of `World` instances, but got instead:"
+                            " {}".format(type(worlds)))
+        for world in worlds:
+            if not isinstance(world, World):
+                raise TypeError("Expecting the world to be an instance of `World`, but got instead: "
+                                "{}".format(type(world)))
+        self._worlds = worlds
+
+    @property
+    def world(self):
+        """Return the first world."""
+        if len(self._worlds) > 0:
+            return self._worlds[0]
 
     @property
     def engine(self):
@@ -74,11 +94,26 @@ class Simulator(object):
                             "{}".format(type(physics)))
         self._physics = physics
 
+    def add_world(self, world):
+        r"""
+        Append a world to the list of worlds.
+
+        Args:
+            world (World): world instance.
+        """
+        if not isinstance(world, World):
+            raise TypeError("Expecting the given 'world' to be an instance of `World`, but got instead: "
+                            "{}".format(type(world)))
+        self.worlds.append(world)
+
 
 class PhysicsEngine(object):
     r"""Physics Engine properties.
 
     This include number of iterations, solver used, tolerance, timesteps, etc.
+
+    MuJoCo:
+    - solver: PGS, CG, Newton.
     """
 
     def __init__(self, timestep=None):
@@ -86,12 +121,24 @@ class PhysicsEngine(object):
         Initialize the Physics engine parameters.
 
         Args:
-            timestep (float, str): time step.
+            timestep (float, str): simulation time step in seconds.
         """
         self.timestep = timestep
         self.num_iterations = None
         self.solver = None
         self.tolerance = None
+
+    @property
+    def timestep(self):
+        """Return the simulation time step."""
+        return self._timestep
+
+    @timestep.setter
+    def timestep(self, timestep):
+        """Set the simulation time step."""
+        if timestep is not None:
+            timestep = float(timestep)
+        self._timestep = timestep
 
 
 class Frame(object):
@@ -172,12 +219,14 @@ class Frame(object):
     @property
     def quaternion(self):
         """Return the frame orientation expressed as a quaternion [x,y,z,w]."""
-        return get_quaternion_from_rpy(self.orientation)
+        if self._orientation is not None:
+            return get_quaternion_from_rpy(self.orientation)
 
     @property
     def rot(self):
         """Return the frame orientation expressed as a rotation matrix."""
-        return get_matrix_from_rpy(self.rpy)
+        if self._orientation is not None:
+            return get_matrix_from_rpy(self.rpy)
 
     @property
     def pose(self):
@@ -219,7 +268,7 @@ class Physics(object):
 
         Args:
             gravity (list/tuple/np.array[float[3]], str): gravity vector.
-            timestep (float, str): time step.
+            timestep (float, str): simulation time step in seconds.
         """
         # gravity depends on the world frame; the frame axis convention that we use.
         # By default, x points forward, y on the left, and z upward.
@@ -245,12 +294,12 @@ class Physics(object):
 
     @property
     def timestep(self):
-        """Return the time step."""
+        """Return the simulation time step."""
         return self._timestep
 
     @timestep.setter
     def timestep(self, timestep):
-        """Set the time step."""
+        """Set the simulation time step."""
         if timestep is not None:
             timestep = float(timestep)
         self._timestep = timestep
@@ -279,6 +328,18 @@ class World(object):
         self.trees = OrderedDict()  # {(unique) name: Tree}
         self.physics = None
         self.lights = OrderedDict()
+
+    @property
+    def name(self):
+        """Return the name."""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        """Set the name."""
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Expecting the given 'name' to be a string, instead got: {}".format(type(name)))
+        self._name = name
 
     @property
     def physics(self):
@@ -328,6 +389,18 @@ class Light(object):
         self.active = active
         self.frame = Frame(position=position, orientation=orientation)
         self.material = Material(color=ambient, diffuse=diffuse, specular=specular)
+
+    @property
+    def name(self):
+        """Return the name."""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        """Set the name."""
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Expecting the given 'name' to be a string, instead got: {}".format(type(name)))
+        self._name = name
 
     @property
     def shadows(self):
@@ -441,22 +514,116 @@ class Light(object):
         self.material.specular = specular
 
 
-class Tree(object):
-    r"""Tree data structure.
+class Floor(object):
+    r"""Floor data structure.
 
-    The tree data structure starts with a root element (=base link) and contains each bodies / joints. Each tree
-    represents a multi-body in the world. Its position / orientation is expressed in the world frame.
+    """
+
+    def __init__(self, name=None, dimensions=None, position=None, orientation=None):
+        """
+        Initialize the floor data structure.
+
+        Args:
+            name (str): name of the floor.
+            dimensions (list/tuple/np.array[float[:3]], str): dimensions of the floor. By default, the given arguments
+              are expected to be the (X/2, Y/2, space between cells).
+            position (list/tuple/np.array[float[3]], str): frame position in the world.
+            orientation (list/tuple/np.array[float[3/4/9]], np.array[float[3,3]], str): frame orientation in the world.
+        """
+        self.name = name
+        self.dimensions = dimensions
+        self.frame = Frame(position, orientation, dtype='world')
+
+    @property
+    def name(self):
+        """Return the name."""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        """Set the name."""
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Expecting the given 'name' to be a string, instead got: {}".format(type(name)))
+        self._name = name
+
+    @property
+    def dimensions(self):
+        """Return the dimensions of the floor."""
+        return self._dims
+
+    @dimensions.setter
+    def dimensions(self, dims):
+        if dims is not None:
+            if isinstance(dims, str):
+                dims = [float(p) for p in dims.split()]
+            dims = np.asarray(dims)
+            if len(dims) > 3:
+                raise ValueError("Expecting the given dims to have a length below 3, but got instead a length of: "
+                                 "{}".format(len(dims)))
+        self._dims = dims
+
+    @property
+    def position(self):
+        """Return the floor frame position."""
+        return self.frame.position
+
+    @position.setter
+    def position(self, position):
+        """Set the floor frame position."""
+        self.frame.position = position
+
+    @property
+    def orientation(self):
+        """Return the floor frame orientation."""
+        return self.frame.orientation
+
+    @orientation.setter
+    def orientation(self, orientation):
+        """Set the floor frame orientation expressed as RPY angles."""
+        self.frame.orientation = orientation
+
+    @property
+    def rpy(self):
+        """Return the floor frame orientation expressed as RPY angles."""
+        return self.frame.rpy
+
+    @property
+    def quaternion(self):
+        """Return the floor frame orientation expressed as a quaternion [x,y,z,w]."""
+        return self.frame.quaternion
+
+    @property
+    def rot(self):
+        """Return the floor frame orientation expressed as a rotation matrix."""
+        return self.frame.rot
+
+    @property
+    def pose(self):
+        """Return the floor frame pose."""
+        return self.frame.pose
+
+    @pose.setter
+    def pose(self, pose):
+        """Set the floor frame pose."""
+        self.frame.pose = pose
+
+
+class MultiBody(object):
+    r"""Multi-body / Tree data structure.
+
+    The multi-body / tree data structure starts with a root element (=base link) and contains each bodies / joints.
+    Each tree represents a multi-body in the world. Its position / orientation is expressed in the world frame.
     """
 
     def __init__(self, name=None, root=None, position=None, orientation=None):
         """
-        Initialize the Tree data structure.
+        Initialize the Multi-body / Tree data structure.
 
         Args:
             name (str): name of the tree.
-            root (root): root element in the tree.
-            position (list/tuple/np.array[float[3]], str): frame position.
-            orientation (list/tuple/np.array[float[3/4/9]], np.array[float[3,3]], str): frame orientation.
+            root (Body): root element in the tree.
+            position (list/tuple/np.array[float[3]], str): frame position in the world.
+            orientation (list/tuple/np.array[float[3/4/9]], np.array[float[3,3]], str): frame orientation in the world.
         """
         self.name = name
         self.root = root
@@ -464,6 +631,45 @@ class Tree(object):
         self.joints = OrderedDict()
         self.materials = {}
         self.frame = Frame(position, orientation, dtype='world')
+
+    @property
+    def name(self):
+        """Return the name."""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        """Set the name."""
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Expecting the given 'name' to be a string, instead got: {}".format(type(name)))
+        self._name = name
+
+    @property
+    def num_dofs(self):
+        """Return the total number of degrees of freedom."""
+        num_dofs = 0
+        for joint in self.joints:
+            num_dofs += joint.num_dofs
+        return num_dofs
+
+    @property
+    def root(self):
+        """Return the root body element."""
+        return self._root
+
+    @root.setter
+    def root(self, root):
+        """Set the root body element."""
+        if root is not None and not isinstance(root, Body):
+            raise TypeError("Expecting the given 'body' to be an instance of `Body`, but instead got: "
+                            "{}".format(type(root)))
+        self._root = root
+
+    @property
+    def static(self):
+        """Return if the root element in the tree is static or not."""
+        if self.root is not None:
+            return self.root.static
 
     @property
     def position(self):
@@ -511,10 +717,14 @@ class Tree(object):
         self.frame.pose = pose
 
 
+# alias
+Tree = MultiBody
+
+
 class Body(object):
     r"""Body / Link data structure."""
 
-    def __init__(self, body_id, name=None, inertial=None, visual=None, collision=None, static=False,
+    def __init__(self, body_id, name=None, inertials=None, visuals=None, collisions=None, static=False,
                  position=None, orientation=None, frame_type=None):
         """
         Initialize the Body / Link data structure.
@@ -522,16 +732,20 @@ class Body(object):
         Args:
             body_id (int): body unique id.
             name (str, None): body name.
-            inertial (Inertial, None): inertial component.
-            visual (Visual, None): visual shape.
-            collision (Collision, None): collision shape.
+            inertials (Inertial, list[Inertial], None): inertial components. Multiple inertial components can be
+              provided and by calling the `inertia` property they will be combined together to only form one inertial
+              component.
+            visuals (Visual, list[Visual], None): visual shapes. Multiple visual shape instances can be provided for a
+              specific body.
+            collisions (Collision, list[Collision], None): collision shapes. Multiple collision shape instances can
+              be provided for a specific body.
             static (bool): if the body is static in the world or not.
             position (list/tuple/np.array[float[3]], str): body frame position. If None, it will look at the visual
               and collision shapes. By default, if the visual shape is defined it will return its position.
             orientation (list/tuple/np.array[float[3/4/9]], np.array[float[3,3]], str): body frame orientation. If
               None, it will look at the collision shapes. By default, if the visual shape is defined it will return
               its orientation.
-            frame_type (str):
+            frame_type (str): frame type. It can be a {'world', 'body', 'joint', 'inertial'} frame.
         """
         self.id = int(body_id)
         self.name = name
@@ -541,51 +755,109 @@ class Body(object):
         self.parent_joints = OrderedDict()      # parent joints
 
         # set body properties
-        self.inertial = inertial
-        self.visual = visual
-        self.collision = collision
+        self.inertials = inertials
+        self.visuals = visuals
+        self.collisions = collisions
         self.static = static
 
-        self.frame = Frame(position=position, orientation=orientation)
+        self.frame = Frame(position=position, orientation=orientation, dtype=frame_type)
+
+    @property
+    def name(self):
+        """Return the name."""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        """Set the name."""
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Expecting the given 'name' to be a string, instead got: {}".format(type(name)))
+        self._name = name
+
+    @property
+    def inertials(self):
+        """Return the inertial components of the body."""
+        return self._inertial
+
+    @inertials.setter
+    def inertials(self, inertials):
+        """Set the inertial components of the body."""
+        if inertials is None:
+            inertials = []
+        elif isinstance(inertials, Inertial):
+            inertials = [inertials]
+        elif isinstance(inertials, (list, tuple)):
+            for i, inertial in enumerate(inertials):
+                if not isinstance(inertial, Inertial):
+                    raise TypeError("The {}th element in the given inertials is not an instance of `Inertial`, but: "
+                                    "{}".format(i, type(inertial)))
+        else:
+            raise TypeError("Expecting the given 'inertials' to be a list of `Inertial`, or an instance of "
+                            "`Inertial`, but got instead: {}".format(type(inertials)))
+        self._inertials = inertials
 
     @property
     def inertial(self):
         """Return the inertial component of the body."""
-        return self._inertial
+        if len(self.inertials) == 1:
+            return self.inertials[0]
+        return self.combine_inertials(self.inertials)
 
-    @inertial.setter
-    def inertial(self, inertial):
-        """Set the inertial component of the body."""
-        if inertial is not None and not isinstance(inertial, Inertial):
-            raise TypeError("Expecting inertial to be an instance of `Inertial`, but got instead: "
-                            "{}".format(type(inertial)))
-        self._inertial = inertial
+    @property
+    def visuals(self):
+        """Return the visual shapes of the body."""
+        return self._visuals
+
+    @visuals.setter
+    def visuals(self, visuals):
+        """Set the visual shapes of the body."""
+        if visuals is None:
+            visuals = []
+        elif isinstance(visuals, Visual):
+            visuals = [visuals]
+        elif isinstance(visuals, (list, tuple)):
+            for i, visual in enumerate(visuals):
+                if not isinstance(visual, Visual):
+                    raise TypeError("The {}th element in the given visuals is not an instance of `Visual`, but: "
+                                    "{}".format(i, type(visual)))
+        else:
+            raise TypeError("Expecting the given 'visuals' to be a list of `Visual`, or an instance of "
+                            "`Visual`, but got instead: {}".format(type(visuals)))
+        self._visuals = visuals
 
     @property
     def visual(self):
-        """Return the visual shape of the body."""
-        return self._visual
+        """Return the first visual shape of the body."""
+        if len(self._visuals) > 0:
+            return self._visuals[0]
 
-    @visual.setter
-    def visual(self, visual):
-        """Set the visual shape of the body."""
-        if visual is not None and not isinstance(visual, Visual):
-            raise TypeError("Expecting visual to be an instance of `Visual`, but got instead: "
-                            "{}".format(type(visual)))
-        self._visual = visual
+    @property
+    def collisions(self):
+        """Return the collision shapes of the body."""
+        return self._collisions
+
+    @collisions.setter
+    def collisions(self, collisions):
+        """Set the collision shape of the body."""
+        if collisions is None:
+            collisions = []
+        elif isinstance(collisions, Collision):
+            collisions = [collisions]
+        elif isinstance(collisions, (list, tuple)):
+            for i, collision in enumerate(collisions):
+                if not isinstance(collision, Collision):
+                    raise TypeError("The {}th element in the given collisions is not an instance of `Collision`, but: "
+                                    "{}".format(i, type(collision)))
+        else:
+            raise TypeError("Expecting the given 'collisions' to be a list of `Collision`, or an instance of "
+                            "`Collision`, but got instead: {}".format(type(collisions)))
+        self._collisions = collisions
 
     @property
     def collision(self):
-        """Return the collision shape of the body."""
-        return self._collision
-
-    @collision.setter
-    def collision(self, collision):
-        """Set the collision shape of the body."""
-        if collision is not None and not isinstance(collision, Collision):
-            raise TypeError("Expecting collision to be an instance of `Collision`, but got instead: "
-                            "{}".format(type(collision)))
-        self._collision = collision
+        """Return the first collision shape of the body."""
+        if len(self._collisions) > 0:
+            return self._collisions[0]
 
     @property
     def static(self):
@@ -596,6 +868,136 @@ class Body(object):
     def static(self, static):
         """Set if the body is static in the world or not."""
         self._static = bool(static)
+
+    @property
+    def position(self):
+        """Return the body frame position."""
+        if self.frame.position is not None:
+            return self.frame.position
+        if self.visual is not None and self.visual.position is not None:
+            return self.visual.position
+        if self.collision is not None:
+            return self.collision.position
+
+    @position.setter
+    def position(self, position):
+        """Set the body frame position."""
+        self.frame.position = position
+
+    @property
+    def orientation(self):
+        """Return the body frame orientation expressed as RPY angles."""
+        if self.frame.orientation is not None:
+            return self.frame.orientation
+        if self.visual is not None and self.visual.orientation is not None:
+            return self.visual.orientation
+        if self.collision is not None:
+            return self.collision.orientation
+
+    @orientation.setter
+    def orientation(self, orientation):
+        """Set the body frame orientation (which can be expressed as a rotation matrix, RPY angles. or a quaternion
+        [x,y,z,w]."""
+        self.frame.orientation = orientation
+
+    @property
+    def rpy(self):
+        """Return the body frame orientation expressed as RPY angles."""
+        if self.frame.orientation is not None:
+            return self.frame.rpy
+        if self.visual is not None and self.visual.orientation is not None:
+            return self.visual.rpy
+        if self.collision is not None:
+            return self.collision.rpy
+
+    @property
+    def quaternion(self):
+        """Return the body frame orientation expressed as a quaternion [x,y,z,w]."""
+        if self.frame.orientation is not None:
+            return self.frame.quaternion
+        if self.visual is not None and self.visual.orientation is not None:
+            return self.visual.quaternion
+        if self.collision is not None:
+            return self.collision.quaternion
+
+    @property
+    def rot(self):
+        """Return the body frame orientation expressed as a rotation matrix."""
+        if self.frame.orientation is not None:
+            return self.frame.rot
+        if self.visual is not None and self.visual.orientation is not None:
+            return self.visual.rot
+        if self.collision is not None:
+            return self.collision.rot
+
+    @property
+    def pose(self):
+        """Return the body frame pose."""
+        if self.frame.pose is not None:
+            return self.frame.pose
+        if self.visual is not None and self.visual.pose is not None:
+            return self.visual.pose
+        if self.collision is not None:
+            return self.collision.pose
+
+    @pose.setter
+    def pose(self, pose):
+        """Set the body frame pose."""
+        self.frame.pose = pose
+
+    def add_collision(self, collision):
+        """
+        Add a collision shape to the list of collision shapes.
+
+        Args:
+            collision (Collision): collision instance.
+        """
+        if not isinstance(collision, Collision):
+            raise TypeError("Expecting the given 'collision' to be an instance of `Collision`, but got instead: "
+                            "{}".format(type(collision)))
+        self.collisions.append(collision)
+
+    def add_visual(self, visual):
+        """
+        Add a visual shape to the list of visual shapes.
+
+        Args:
+            visual (Collision): visual instance.
+        """
+        if not isinstance(visual, Visual):
+            raise TypeError("Expecting the given 'visual' to be an instance of `Visual`, but got instead: "
+                            "{}".format(type(visual)))
+        self.visuals.append(visual)
+
+    def add_inertial(self, inertial):
+        """
+        Add an inertial element to the list of inertials.
+
+        Args:
+            inertial (Inertial): inertial element.
+        """
+        if not isinstance(inertial, Inertial):
+            raise TypeError("Expecting the given 'inertial' to be an instance of `Inertial`, but got instead: "
+                            "{}".format(type(inertial)))
+        self.inertials.append(inertial)
+
+    @staticmethod
+    def combine_inertials(inertials):
+        """
+        Combine the given inertial elements.
+
+        Args:
+            inertials (list[Inertial]): list of Inertial elements.
+
+        Returns:
+            Inertial: combined inertial element.
+        """
+        if len(inertials) == 0:
+            return None
+        inertial = copy.deepcopy(inertials[0])
+        for i in range(1, len(inertials)):
+            inertial += inertials[i]
+        return inertial
 
 
 class Joint(object):
@@ -655,10 +1057,22 @@ class Joint(object):
         self.damping = damping
         self.effort = effort
         self.velocity = velocity
-        self.num_dofs = None
+        self.num_dofs = 0
 
         self.init_position = None
         self.init_velocity = None
+
+    @property
+    def name(self):
+        """Return the name."""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        """Set the name."""
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Expecting the given 'name' to be a string, instead got: {}".format(type(name)))
+        self._name = name
 
     @property
     def dtype(self):
@@ -676,7 +1090,7 @@ class Joint(object):
             if dtype in {'fixed', 'weld'}:
                 dtype = 'fixed'
                 self.num_dofs = 0
-            elif dtype == 'hinge':
+            elif dtype in {'hinge', 'revolute'}:
                 dtype = 'revolute'
                 self.num_dofs = 1
             elif dtype in {'slide', 'prismatic'}:
@@ -867,24 +1281,56 @@ class Inertia(object):
     This class represents an inertia matrix.
     """
 
-    def __init__(self, ixx=1., iyy=1., izz=1., ixy=0., ixz=0., iyz=0.):
+    def __init__(self, ixx=1., iyy=1., izz=1., ixy=0., ixz=0., iyz=0., inertia=None):
         """
         Initialize the Inertia.
 
         Args:
             ixx (float, str): Ixx component of the inertia.
-            iyy (float, str): Iyy component of the inertia.:
-            izz (float, str): Izz component of the inertia.:
-            ixy (float, str): Ixy component of the inertia.:
-            ixz (float, str): Ixz component of the inertia.:
-            iyz (float, str): Iyz component of the inertia.:
+            iyy (float, str): Iyy component of the inertia.
+            izz (float, str): Izz component of the inertia.
+            ixy (float, str): Ixy component of the inertia.
+            ixz (float, str): Ixz component of the inertia.
+            iyz (float, str): Iyz component of the inertia.
+            inertia (list/np.array[float[3/6]], np.array[float[3,3]], str, None): inertia matrix. If specified, the
+              previous attributes won't be taken into account.
         """
-        self.ixx = ixx
-        self.iyy = iyy
-        self.izz = izz
-        self.ixy = ixy
-        self.ixz = ixz
-        self.iyz = iyz
+        if inertia is not None:
+            self.inertia = inertia
+        else:
+            self.ixx = ixx
+            self.iyy = iyy
+            self.izz = izz
+            self.ixy = ixy
+            self.ixz = ixz
+            self.iyz = iyz
+
+    @property
+    def inertia(self):
+        """Return the 6 components of the inertia [ixx, iyy, izz, ixy, ixz, iyz]."""
+        return np.array([self.ixx, self.iyy, self.izz, self.ixy, self.ixz, self.iyz])
+
+    @inertia.setter
+    def inertia(self, inertia):
+        """Set the inertia matrix."""
+        if isinstance(inertia, str):
+            inertia = [float(c) for c in inertia.split()]
+        elif not isinstance(inertia, (list, tuple, np.ndarray)):
+            raise TypeError("Expecting the given 'inertia' to be a tuple, list, np.array of 3/6/9 floats, but got "
+                            "instead: {}".format(type(inertia)))
+        inertia = np.asarray(inertia)
+        if inertia.ndim == 2:  # 3x3
+            inertia = inertia.reshape(-1)
+        if len(inertia) == 3:
+            self.ixx, self.iyy, self.izz = inertia
+        elif len(inertia) == 6:
+            self.ixx, self.iyy, self.izz, self.ixy, self.ixz, self.iyz = inertia
+        elif len(inertia) == 9:
+            I = inertia
+            self.ixx, self.iyy, self.izz, self.ixy, self.ixz, self.iyz = I[0], I[4], I[8], I[1], I[2], I[5]
+        else:
+            raise ValueError("Expecting the given 'inertia' to be have a length of 3, 6, or 9, but got instead a "
+                             "length of: {}".format(len(inertia)))
 
     @property
     def full_inertia(self):
@@ -910,8 +1356,13 @@ class Inertia(object):
 
     @property
     def principal_inertia(self):
-        """Return the principal moments of the inertia (np.array[float[3]]), and the direction of the principal axes
-        of the body (np.array[float[3,3]])."""
+        """
+        Return the principal moments of the inertia, and the direction of the principal axes of the body.
+
+        Returns:
+            np.array[float[3]]: principal moments of the inertia.
+            np.array[float[3,3]]: principal axes of the body.
+        """
         inertia = self.full_inertia
         evals, evecs = np.linalg.eigh(inertia)
         return evals, evecs
@@ -998,9 +1449,9 @@ class Inertia(object):
 
 
 class Inertial(object):
-    r"""Inertial parameters.
+    r"""Inertial properties.
 
-    The inertial tag groups the mass, inertia, and the body CoM position and orientation.
+    The inertial element groups the mass, inertia, and the body CoM position and orientation.
 
     Moments of inertia of popular shapes:
 
@@ -1018,7 +1469,7 @@ class Inertial(object):
       ``mesh.moment_inertia``.
     """
 
-    def __init__(self, mass=None, inertia=None, position=(0., 0., 0.), orientation=(0., 0., 0.)):
+    def __init__(self, mass=None, inertia=None, position=(0., 0., 0.), orientation=None):
         """
         Initialize the Inertial instance.
 
@@ -1026,8 +1477,8 @@ class Inertial(object):
             mass (float, str): mass value (in kg)
             inertia (str, list/tuple[float[3/6/9]], np.array[float[3/6/9]], np.array[float[3,3]], dict): inertia matrix
               represented in the body frame.
-            position (np.array[float[3]], str): position of the center of mass.
-            orientation (np.array[float[3]], str): rotation expressed as roll-pitch-yaw angles.
+            position (np.array[float[3]], str): position of the inertial frame (center of mass).
+            orientation (np.array[float[3]], str): orientation of the inertial frame expressed as roll-pitch-yaw angles.
         """
         self.mass = mass
         self.inertia = inertia
@@ -1083,14 +1534,20 @@ class Inertial(object):
 
     @property
     def principal_inertia(self):
-        """Return the principal moments of the inertia (np.array[float[3]]), and the direction of the principal axes
-        of the body (np.array[float[3,3]])."""
+        """
+        Return the principal moments of the inertia, and the direction of the principal axes of the body.
+
+        Returns:
+            np.array[float[3]]: principal moments of the inertia.
+            np.array[float[3,3]]: principal axes of the body.
+        """
         evals, evecs = self.inertia.principal_inertia
         return evals, self.rot.dot(evecs)
 
     @property
     def diagonal_inertia(self):
-        """Aligned inertia.
+        """
+        Return the aligned inertia = principal moments of inertia.
 
         Returns:
             np.array[float[3]]: principal moments of the inertia.
@@ -1151,6 +1608,180 @@ class Inertial(object):
     def pose(self, pose):
         """Set the inertial pose."""
         self.frame.pose = pose
+
+    @staticmethod
+    def compute_mass_from_density(shape, dimensions=None, density=1000, volume=None, mesh=None):
+        """
+        Compute the mass from the density and the shape type.
+
+        Args:
+            shape (str): shape type which can be selected from {'sphere', 'box', 'capsule', 'cylinder', 'ellipsoid',
+              'mesh'}.
+            dimensions (list[float[:3]]): shape dimensions, or scale factor if mesh. If the volume is not provided,
+              it will use the specified dimensions.
+            density (float): density (by default, it is the density of water ~ 1000kg/m^3).
+            volume (float, None): if provided, the returned mass will be the given density times the volume.
+            mesh (str, trimesh.Trimesh): mesh filename or mesh instance. Only valid if :attr:`shape` = 'mesh'.
+
+        Returns:
+            float, None: mass (in kg). Return None if the specified shape is not supported.
+        """
+        if volume is None:
+            volume = Inertial.compute_volume(shape=shape, dimensions=dimensions, mesh=mesh)
+        if volume is not None:
+            return density * volume
+
+    @staticmethod
+    def compute_volume(shape, dimensions, mesh=None):
+        """
+        Compute the volume given the shape type and its dimensions.
+
+        Args:
+            shape (str): shape type which can be selected from {'sphere', 'box', 'capsule', 'cylinder', 'ellipsoid',
+              'mesh'}.
+            dimensions (list[float[:3]]): shape dimensions, or scale factor if mesh.
+            mesh (str, trimesh.Trimesh): mesh filename or mesh instance. Only valid if :attr:`shape` = 'mesh'.
+
+        Returns:
+            float, None: total volume of the specified shape. Return None if the specified shape is not supported.
+        """
+        if shape == 'box':
+            w, h, d = dimensions  # width, height, depth
+            volume = w * h * d
+        elif shape == 'capsule':
+            r, h = dimensions  # radius, height
+            sphere_volume = 4. / 3 * np.pi * r ** 3
+            cylinder_volume = np.pi * r ** 2 * h
+            volume = sphere_volume + cylinder_volume
+        elif shape == 'cylinder':
+            r, h = dimensions  # radius, height
+            volume = np.pi * r ** 2 * h
+        elif shape == 'ellipsoid':
+            a, b, c = dimensions
+            volume = 4. / 3 * np.pi * a * b * c
+        elif shape == 'mesh':
+            if isinstance(dimensions, (list, tuple, np.ndarray)):
+                dimensions = dimensions[0]
+            scale = dimensions  # scale
+            if isinstance(mesh, str):
+                mesh = trimesh.load(mesh)
+            elif not isinstance(mesh, trimesh.Trimesh):
+                raise TypeError("Expecting the given 'mesh' to be an instance of `trimesh.Trimesh`, instead got: "
+                                "{}".format(type(mesh)))
+            mesh.apply_scale(scale)
+            volume = mesh.volume  # in m^3  (in trimesh: mash.mass = mash.volume, i.e. density = 1)
+            # volume *= scale ** 3  # the scale is for each dimension
+            mesh.apply_scale(1./scale)
+        elif shape == 'sphere':
+            if isinstance(dimensions, (list, tuple, np.ndarray)):
+                dimensions = dimensions[0]
+            r = dimensions  # radius
+            volume = 4. / 3 * np.pi * r ** 3
+        else:
+            volume = None
+        return volume
+
+    @staticmethod
+    def compute_inertia(shape, dimensions, mass=None, density=1000, mesh=None):
+        """
+        Compute the principal moments of inertia for the specified shape.
+
+        Args:
+            shape (str): shape type, can be selected from {}
+            dimensions (list[float[:3]]): dimensions of the shape.
+            mass (float, None): mass of the shape. If not provided, the density will be used.
+            density (float): density (by default, it is the density of water ~ 1000kg/m^3).
+            mesh (str, trimesh.Trimesh): mesh filename or mesh instance. Only valid if :attr:`shape` = 'mesh'.
+
+        Returns:
+            np.array[float[3]], None: principal moments of inertia. None if the specified shape is not supported.
+        """
+        # compute mass if necessary
+        if mass is None:
+            mass = Inertial.compute_mass_from_density(shape=shape, dimensions=dimensions, density=density, mesh=mesh)
+
+        # compute inertia
+        if shape == 'box':
+            inertia = get_inertia_of_box(mass, size=dimensions, full=False)
+        elif shape == 'capsule':
+            r, h = dimensions  # radius, height
+            inertia = get_inertia_of_capsule(mass, radius=r, height=h, full=False)
+        elif shape == 'cylinder':
+            r, h = dimensions  # radius, height
+            inertia = get_inertia_of_cylinder(mass, radius=r, height=h, full=False)
+        elif shape == 'ellipsoid':
+            a, b, c = dimensions
+            inertia = get_inertia_of_ellipsoid(mass, a=a, b=b, c=c, full=False)
+        elif shape == 'mesh':
+            if isinstance(dimensions, (list, tuple, np.ndarray)):
+                dimensions = dimensions[0]
+            scale = dimensions  # scale
+            inertia = get_inertia_of_mesh(mesh=mesh, mass=mass, scale=scale, full=False)
+        elif shape == 'sphere':
+            if isinstance(dimensions, (list, tuple, np.ndarray)):
+                dimensions = dimensions[0]
+            radius = dimensions
+            inertia = get_inertia_of_sphere(mass=mass, radius=radius, full=False)
+        else:
+            inertia = None
+        return inertia
+
+    def __add__(self, other):
+        """
+        Combine two Inertial elements together.
+
+        This is done in 3 steps:
+        1. find the combined CoM
+        2. find the moments of inertia of each object through that point using the parallel axis theorem [1]
+        3. combine the moments by adding the new tensors.
+
+        Args:
+            other (Inertial): other inertial elements.
+
+        Returns:
+            Inertial: the combined inertial element.
+
+        References:
+            - [1] Parallel axis theorem: https://en.wikipedia.org/wiki/Parallel_axis_theorem
+        """
+        # check the type
+        if not isinstance(other, Inertial):
+            raise TypeError("Expecting the given 'other' inertial element to be an instance of `Inertial` but got "
+                            "instead: {}".format(type(other)))
+
+        # check the attribute of each Inertial
+        m1, m2 = self.mass, other.mass
+        I1, I2 = self.inertia, other.inertia
+        p1, p2 = self.position, other.position
+        r1, r2 = self.rot, other.rot
+        if m1 is None or m2 is None:
+            raise ValueError("The mass is not specified for this inertial element or the other one.")
+        if I1 is None or I2 is None:
+            raise ValueError("The inertia is not specified for this inertial element or the other one.")
+        if p1 is None or p2 is None:
+            raise ValueError("The CoM position is not specified for this inertial element or the other one.")
+        if r1 is None or r2 is None:
+            rotations = None
+        else:
+            if r1 is None:
+                r1 = np.identity(3)
+            if r2 is None:
+                r2 = np.identity(3)
+            rotations = [r1, r2]
+
+        # combine inertial elements and return it
+        mass, com, inertia = combine_inertias(coms=[p1, p2], masses=[m1, m2], inertias=[I1, I2], rotations=rotations)
+        inertial = Inertial(mass=mass, inertia=inertia, position=com)
+        return inertial
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __iadd__(self, other):
+        inertial = self.__add__(other)
+        self.mass = inertial.mass
+        self.inertia = inertial.inertia
+        self.frame = Frame(position=inertial.position, orientation=inertial.orientation)
 
 
 class Geometry(object):  # Shape
@@ -1249,6 +1880,18 @@ class Visual(object):
         self.frame = Frame(position=position, orientation=orientation)
         self.material = Material(name=material_name, color=color, texture=texture, diffuse=diffuse, specular=specular,
                                  emissive=emissive)
+
+    @property
+    def name(self):
+        """Return the name."""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        """Set the name."""
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Expecting the given 'name' to be a string, instead got: {}".format(type(name)))
+        self._name = name
 
     @property
     def dtype(self):
@@ -1361,6 +2004,18 @@ class Collision(object):
         self.name = name
         self.geometry = Geometry(dtype=dtype, size=size, filename=filename)
         self.frame = Frame(position=position, orientation=orientation)
+
+    @property
+    def name(self):
+        """Return the name."""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        """Set the name."""
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Expecting the given 'name' to be a string, instead got: {}".format(type(name)))
+        self._name = name
 
     @property
     def dtype(self):
@@ -1478,6 +2133,18 @@ class Material(object):
         self.specular = specular
         self.emissive = emissive
 
+    @property
+    def name(self):
+        """Return the name."""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        """Set the name."""
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Expecting the given 'name' to be a string, instead got: {}".format(type(name)))
+        self._name = name
+
     @staticmethod
     def _check_color(color):
         """Check the given color (its type and length) and convert it to a tuple of float."""
@@ -1570,6 +2237,18 @@ class Sensor(object):
         self.sensors = sensors
 
     @property
+    def name(self):
+        """Return the name."""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        """Set the name."""
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Expecting the given 'name' to be a string, instead got: {}".format(type(name)))
+        self._name = name
+
+    @property
     def num_sensors(self):
         """Return the number of inner sensors."""
         return len(self.sensors)
@@ -1590,6 +2269,18 @@ class Actuator(object):  # Motor
         """
         self.name = name
         self.actuators = actuators
+
+    @property
+    def name(self):
+        """Return the name."""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        """Set the name."""
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Expecting the given 'name' to be a string, instead got: {}".format(type(name)))
+        self._name = name
 
     @property
     def num_actuators(self):
