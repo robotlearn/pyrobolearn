@@ -17,6 +17,9 @@ Warnings:
       different from the Python 2.
     - You might have several errors if you don't export the correct environment variables beforehand.
 
+- Supported Python versions: Python 3.*
+- Python wrappers: Cython [4]
+
 Dependencies in PRL:
 * `pyrobolearn.simulators.simulator.Simulator`
 
@@ -25,6 +28,9 @@ References:
         - Documentation: http://mujoco.org/book
     - [2] MuJoCo Python: https://github.com/openai/mujoco-py
     - [3] DeepMind Control Suite: https://github.com/deepmind/dm_control/tree/master/dm_control/mujoco
+    - [4] Cython: cython.org
+        - Cython, pybind11, cffi – which tool should you choose?:
+          http://blog.behnel.de/posts/cython-pybind11-cffi-which-tool-to-choose.html
 """
 
 # import standard libraries
@@ -60,9 +66,16 @@ except ImportError as e:
     raise ImportError(str(e) + "\nTry to install `MuJoCo` and `mujoco_py`!")
 
 
+# import glfw
+# GLFW: OpenGL library for creating windows, contexts and surfaces, receiving input and events. This is used in
+# mujoco_py
+import glfw
+
+
 # import pyrobolearn related functionalities
 from pyrobolearn.simulators.simulator import Simulator
 from pyrobolearn.utils.parsers.robots import URDFParser, MuJoCoParser, SDFParser
+import pyrobolearn.utils.parsers.robots.data_structures as struct
 
 
 # check Python version
@@ -81,56 +94,6 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Visual(object):
-    """Visual information."""
-
-    def __init__(self, visual_id, dtype="sphere", size=(0., 0., 0.), mesh=None, color=(0.5, 0.5, 0.5, 1),
-                 position=(0., 0., 0.), orientation=(0., 0., 0., 1.)):
-        """
-        Initialize the visual info class.
-
-        Args:
-            visual_id (int): unique visual id.
-            dtype (str): primitive type {"plane", "sphere", "box", "capsule", "ellipsoid", "cylinder", "mesh"}.
-            size (float, tuple of float, np.array[float]): size.
-            mesh (str): path to mesh.
-            color (tuple of 4 float): RGBA color. Each channel is between 0 and 1.
-            position (tuple of 3 float, np.array[float[3]]): position.
-            orientation (tuple of 4 float, np.array[float[4]]): quaternion (x,y,z,w)
-        """
-        self.id = visual_id
-        self.dtype = dtype
-        self.size = size
-        self.mesh = mesh
-        self.color = color
-        self.position = position
-        self.orientation = orientation
-
-
-class Collision(object):
-    """Collision information."""
-
-    def __init__(self, collision_id, dtype="sphere", size=(0., 0., 0.), mesh=None, position=(0., 0., 0.),
-                 orientation=(0., 0., 0., 1.)):
-        """
-        Initialize the collision info class.
-
-        Args:
-            collision_id (int): unique collision id.
-            dtype (str): primitive type {"plane", "sphere", "box", "capsule", "ellipsoid", "cylinder", "mesh"}.
-            size (float, tuple of float, np.array): size.
-            mesh (str, None): path to the mesh.
-            position (tuple of 3 float, np.array[float[3]]): position.
-            orientation (tuple of 4 float, np.array[float[4]]): quaternion (x,y,z,w)
-        """
-        self.id = collision_id
-        self.dtype = dtype
-        self.size = size
-        self.mesh = mesh
-        self.position = position
-        self.orientation = orientation
-
-
 class Texture(object):
     """Texture information"""
 
@@ -146,41 +109,57 @@ class Texture(object):
         self.material = material
 
 
-class Body(object):
-    """Body."""
+# class Body(object):
+#     """Body."""
+#
+#     def __init__(self, body_id, body_tag):
+#         """
+#         Initialize the Body.
+#
+#         Args:
+#             body_id (int): unique body id.
+#             body_tag (xml.etree.ElementTree.Element): body tag element in the xml file.
+#         """
+#         self.id = body_id
+#         if not isinstance(body_tag, ET.Element):
+#             raise TypeError("Expecting the given 'body_tag' to be an instance of `ET.Element`, but got instead: "
+#                             "{}".format(type(body_tag)))
+#         self.body = body_tag
+#
+#         self.q_start = 0  # starting index in the whole state
+#         self.q_end = 0    # end index in the whole state
+#         self.fixed_base = False
+#
+#         # list of inner bodies (=links)
+#         self.bodies = []
+#         self.joints = []
+#         self.joint = None
+#
+#     @property
+#     def name(self):
+#         """Return the body name."""
+#         return self.body.attrib.get("name")
 
-    def __init__(self, body_id, body):
+
+class MultiBody(object):
+    """MultiBody."""
+
+    def __init__(self, tree):
         """
-        Initialize the Body.
+        Initialize the MultiBody.
 
         Args:
-            body_id (int): unique body id.
-            body (xml.etree.ElementTree.Element): body tag in the xml file.
+            tree (Tree): tree / multi-body data structure.
         """
-        self.id = body_id
-        if not isinstance(body, ET.Element):
-            raise TypeError("Expecting the given 'body' to be an instance of `ET.Element`, but got instead: "
-                            "{}".format(type(body)))
-        self.body = body
+        if not isinstance(tree, struct.Tree):
+            raise TypeError("Expecting the given 'tree' to be an instance of `Tree`, but got instead: "
+                            "{}".format(type(tree)))
+        self.tree = tree
 
-        self.q_start = 0
-        self.q_end = 0
-        self.fixed_base = False
-
-        # list of inner bodies (=links)
-        self.bodies = []
-        self.joints = []
-        self.joint = None
-
-    @property
-    def name(self):
-        """Return the body name."""
-        return self.body.attrib.get("name")
-
-
-class Joint(object):
-    """Joint."""
-    pass
+        self.q_start = 0  # starting index in the whole state
+        self.q_end = 0  # end index in the whole state
+        static = self.tree.static
+        self.fixed_base = static if static is not None else False
 
 
 class Mujoco(Simulator):
@@ -203,13 +182,23 @@ class Mujoco(Simulator):
     we remember the current state of the world, and when asked to dynamically load an object we create a new world
     which is the old world + the new object. This can cause glitches on the GUI side.
 
+    There are few important concepts:
+
+    - model (mjModel, sim.model): model description and is constant. After giving it to the simulator, it can be
+      accessed from the simulator `sim.model`.
+    - sim (MjSim): the simulation instance. This takes as input the model.
+    - data (mjData, sim.data): contains all the dynamic variables and intermediate results.
+    - opt (mjOption, sim.opt): contains all options that affect the physics simulation.
+    - viewer (MjViewer): the viewer instance which allows to visualize the simulation. It uses the GLFW library.
+    - state (sim.get_state): snapshot of the simulator state (which includes time, qpos, qvel, act, and udd_state).
+
     References:
         - [1] MuJoCo: http://www.mujoco.org/
         - [2] MuJoCo Python: https://github.com/openai/mujoco-py
         - [3] DeepMind Control Suite: https://github.com/deepmind/dm_control/tree/master/dm_control/mujoco
     """
 
-    def __init__(self, render=True, num_instances=1, load_at_the_end=False):
+    def __init__(self, render=True, num_instances=1, update_dynamically=False, middleware=None, **kwargs):
         """
         Initialize the MuJoCo simulator.
 
@@ -217,54 +206,59 @@ class Mujoco(Simulator):
             render (bool): if True, it will open the GUI, otherwise, it will just run the server (i.e. in a headless
               mode, i.e. without a GUI).
             num_instances (int): number of simulator instances.
-            load_at_the_end (bool): if True, it will load at the end all the models that have been "loaded" in the
-              simulator. The reason is that the MuJoCo simulator does not allow to load dynamically models into the
-              world.
+            update_dynamically (bool): if True, it will load dynamically the models each time we add or remove a model
+              in the world. Otherwise, it will load the models when calling the `step()` method for the first time.
+              The reason for that parameter is because the MuJoCo simulator does not allow to load dynamically models
+              into the world.
+            middleware (MiddleWare, None): middleware instance.
         """
-        super(Mujoco, self).__init__(render=render)
+        super(Mujoco, self).__init__(render=render, num_instances=num_instances, middleware=middleware, **kwargs)
 
         # define variables
-        self.load_at_the_end = load_at_the_end
+        self._update_dynamically = update_dynamically
+        self._floor_id = None
         self.model = None
         self.sim = None
         self.viewer = None
-
-        # create dynamically an empty world (XML)
-
-        # path to the xml file
-        self.xml_path = os.path.dirname(os.path.abspath(__file__)) + '/prl_mujoco.xml'
-
-        # create root
-        self._root = ET.Element("mujoco")
-
-        # create worldbody
-        self._worldbody = ET.SubElement(self._root, 'worldbody')
-
-        # add a light
-        ET.SubElement(self._worldbody, "light", attrib={"diffuse": ".5 .5 .5", "pos": "0 0 3", "dir": "0 0 -1"})
-
-        # create model, simulator and viewer
-        # self.model = mujoco.load_model_from_path(self.xml_path)
-        # self.sim = mujoco.MjSim(self.model)
-        # self.viewer = mujoco.MjViewer(self.sim)
-
-        # define saving states
-        self.__simulator_saving_states = {}
+        self._parser = MuJoCoParser()  # main parser & generator that also contains the XML tags
 
         # keep track of visual and collision shapes
-        self.visual_shapes = {}             # {visual_id: Visual}
-        self.collision_shapes = {}          # {collision_id: Collision}
-        self.bodies = OrderedDict()         # {body_id: Body}
-        self.textures = {}                  # {texture_id: Texture}
-        self.constraints = OrderedDict()    # {constraint_id: Constraint}
+        self._visual_shapes = {}  # {visual_id: Visual}
+        self._collision_shapes = {}  # {collision_id: Collision}
+        self._bodies = OrderedDict()  # {body_id: Body}
+        self._textures = {}  # {texture_id: Texture}
+        self._constraints = OrderedDict()  # {constraint_id: Constraint}
 
         # create counters
         self._visual_cnt = 0
         self._collision_cnt = 0
-        self._body_cnt = 1              # 0 is for the world
+        self._body_cnt = 0  # 0 is for the world
         self._texture_cnt = 0
         self._constraint_cnt = 0
-        self.q_cnt = 0
+        self._q_cnt = 0
+
+        self.default_timestep = 0.002
+        self.dt = self.default_timestep
+
+        # each time we add or remove an object, the following variable is set to True. When calling the `step` method,
+        # it will reload the model in the simulator.
+        self._model_changed = False
+
+        # create dynamically an empty world (XML)
+        self._root = self._parser.root
+        self._worldbody = self._parser.worldbody
+
+        # add light
+        self._parser.add_element("light", self._worldbody,
+                                 attributes={"diffuse": ".5 .5 .5", "pos": "0 0 3", "dir": "0 0 -1"})
+        # add floor
+        self.load_floor()
+
+        # create model, simulator, and viewer
+        self._create_sim(render=render and update_dynamically)
+
+        # define saving states
+        self.__simulator_saving_states = {}
 
     ##############
     # Properties #
@@ -324,66 +318,36 @@ class Mujoco(Simulator):
     # Private #
     ###########
 
-    def _create_sim(self, path, render=False):
-        self.model = mujoco.load_model_from_path(path)
+    def _create_sim(self, render=False):
+        """
+        Instantiate the model, simulator, and viewer.
+
+        Args:
+            root (str, ET.Element, None): xml string containing the definition of the Mujoco file, or root XML element.
+              If None, it will take the root defined in the simulator.
+            render (bool): if we should render or not.
+        """
+        # create the model
+        # self.model = mujoco.load_model_from_path(path)
+        root = self._parser.get_string(pretty_format=False)
+        self.model = mujoco.load_model_from_xml(root)
+
+        # create the simulator from the model
         self.sim = mujoco.MjSim(self.model)
+
+        # if we need to render
         if render:
-            self.viewer = mujoco.MjViewer(self.sim)
+            # self.render(enable=False)  # to delete the previous viewer instance if defined
+            # self.render(enable=True)   # to instantiate the viewer
+            if self.viewer is None:
+                self.render(enable=True)
+            else:
+                print("Update the viewer's sim")
+                self.viewer.update_sim(self.sim)
 
-    #######
-    # XML #
-    #######
-
-    @staticmethod
-    def _parse(xml_path):
-        """
-        Parse the provided XML file.
-
-        Args:
-            xml_path (str): path to the MuJoCo xml file.
-
-        Returns:
-            xml.etree.ElementTree.Element: root element in the XML file.
-        """
-        tree = ET.parse(xml_path)
-        root = tree.getroot()  # 'mujoco'
-
-        # check bodies  # TODO
-
-        return root
-
-    @staticmethod
-    def _write_xml(root, filename):
-        """
-        Write an XML.
-
-        Args:
-            root (xml.etree.ElementTree.Element): root element of the tree in the XML file.
-            filename (str): path to the file to write the XML in.
-        """
-        xmlstr = minidom.parseString(ET.tostring(root)).toprettyxml(indent="   ")
-        with open(filename, "w") as f:
-            f.write(xmlstr)  # .encode('utf-8'))
-
-    @staticmethod
-    def _remove_xml(filename):
-        """
-        Remove the specified XML file.
-
-        Args:
-            filename (str): path to the XML file.
-        """
-        if os.path.exists(filename) and os.path.isfile(filename):
-            os.remove(filename)
-
-    @staticmethod
-    def does_file_exist(filename):
-        """Check if the given filename exists or not.
-
-        Args:
-            filename (str): path to the file.
-        """
-        return os.path.exists(filename) and os.path.isfile(filename)
+    #################
+    # utils methods #
+    #################
 
     @staticmethod
     def _convert_wxyz_to_xyzw(q):
@@ -394,12 +358,6 @@ class Mujoco(Simulator):
     def _convert_xyzw_to_wxyz(q):
         """Convert a quaternion in the (x,y,z,w) format to (w,x,y,z)."""
         return np.roll(q, shift=1)
-
-    def _load(self):
-        """Load the model from the XML path, and create the simulator."""
-        self._write_xml(self._root, self.xml_path)
-        self._create_sim(self.xml_path, render=False)
-        self._remove_xml(self.xml_path)
 
     ##############
     # Simulators #
@@ -414,9 +372,6 @@ class Mujoco(Simulator):
 
     def close(self):
         """Close the simulator."""
-        # remove the XML file
-        self._remove_xml(self.xml_path)
-
         # delete the simulator
         del self.sim
 
@@ -432,23 +387,24 @@ class Mujoco(Simulator):
             sleep_time (float): amount of time to sleep after performing one step in the simulation.
         """
         # if the simulator/model has not been created
-        if self.sim is None:
-            # if the xml file doesn't exist, create one
-            # if not self.does_file_exist(self.xml_path):
-            #     self._write_xml(self._root, self.xml_path)
-            # self._create_sim(self.xml_path, render=False)
-            self._load()
+        if self.sim is None or self._model_changed:
+            self._create_sim()
+            self._model_changed = False
 
         # computes forward kinematics in the simulator
         self.sim.forward()
 
         # advance the simulation
         self.sim.step()
+
+        # render if necessary
         if self.is_rendering():
             if self.viewer is None:
                 self.viewer = mujoco.MjViewer(self.sim)
             self.viewer.render()
-        time.sleep(sleep_time)
+
+        # sleep the specified amount of time
+        # time.sleep(sleep_time)
 
     def reset_scene_camera(self, camera=None):
         """
@@ -466,8 +422,16 @@ class Mujoco(Simulator):
             enable (bool): If True, it will render the simulator by enabling the GUI.
         """
         self._render = enable
-        if self.viewer is None:
-            self.viewer = mujoco.MjViewer(self.sim)
+        if enable:
+            # if the viewer has not been instantiated, instantiate it
+            if self.viewer is None:
+                self.viewer = mujoco.MjViewer(self.sim)
+        else:
+            # if the viewer has been set, close it
+            if self.viewer is not None:
+                glfw.set_window_should_close(self.viewer.window, True)
+                glfw.destroy_window(self.viewer.window)
+                self.viewer = None
 
     def get_time_step(self):
         """Get the time step in the simulator.
@@ -503,7 +467,7 @@ class Mujoco(Simulator):
         By default, there is no gravitational force enabled in the simulator.
 
         Args:
-            gravity (list, tuple of 3 floats): acceleration in the x, y, z directions.
+            gravity (list/tuple[float[3]]): acceleration in the x, y, z directions.
         """
         self.sim.model.opt.gravity = gravity
 
@@ -558,7 +522,7 @@ class Mujoco(Simulator):
     # Loading URDFs, SDFs, MJCFs, meshes #
     ######################################
 
-    def load_urdf(self, filename, position, orientation, use_fixed_base=0, scale=1.0, *args, **kwargs):
+    def load_urdf(self, filename, position, orientation=(0., 0., 0., 1.), use_fixed_base=0, scale=1.0, *args, **kwargs):
         """Load a URDF file in the simulator.
 
         Args:
@@ -575,13 +539,16 @@ class Mujoco(Simulator):
         """
         # parse URDF file
         urdf_parser = URDFParser(filename=filename)
-        mujoco_generator = MuJoCoParser()
+        tree = urdf_parser.tree
 
-        # generate XML element
-        element = mujoco_generator.generate(urdf_parser.tree)
+        # update position and orientation
+        tree.position = position
+        tree.orientation = orientation
 
-        # append element to worldbody
-        self._worldbody.append(element)
+        # add the parse tree to the MJCF parser/generator
+        self._parser.add_multibody(tree)
+
+        print(self._parser.get_string(pretty_format=True))
 
     def load_sdf(self, filename, scaling=1., *args, **kwargs):
         """Load a SDF file in the simulator.
@@ -670,6 +637,30 @@ class Mujoco(Simulator):
     # Bodies #
     ##########
 
+    def load_floor(self, dimension=20):
+        """Load a floor in the simulator.
+
+        Args:
+            dimension (float): dimension of the floor.
+
+        Returns:
+            int: non-negative unique id for the floor, or -1 for failure.
+        """
+        # if floor already loaded, remove it
+        if self._floor_id is not None:
+            floor = self._bodies.pop(self._floor_id)
+            self._worldbody.remove(floor)
+            self._model_changed = True
+
+        # create floor
+        dim = dimension/2.
+        floor = self._parser.add_element(name="geom", parent_element=self._worldbody,
+                                         attributes={"type": "plane", "size": str(dim) + " " + str(dim) + " 1."})
+        self._body_cnt += 1
+        self._bodies[self._body_cnt] = floor
+        self._floor_id = self._body_cnt
+        return self._floor_id
+
     def create_body(self, visual_shape_id=-1, collision_shape_id=-1, mass=0., position=(0., 0., 0.),
                     orientation=(0., 0., 0., 1.), *args, **kwargs):  # DONE
         """Create a body in the simulator.
@@ -690,94 +681,50 @@ class Mujoco(Simulator):
             raise ValueError("Expecting the visual shape or collision shape id to be specified.")
 
         # get the corresponding visual / collision object
-        visual = self.visual_shapes.get(visual_shape_id, None)
-        collision = self.collision_shapes.get(collision_shape_id, None)
+        visual = self._visual_shapes.get(visual_shape_id, None)
+        collision = self._collision_shapes.get(collision_shape_id, None)
 
-        # convert position and orientation as strings
-        pos = str(np.asarray(position))[1:-1]
-        quat = str(self._convert_xyzw_to_wxyz(np.asarray(orientation)))[1:-1]
-
-        # create <body> tag in xml
-        body = ET.SubElement(self._worldbody, "body", attrib={"name": "body_" + str(self._body_cnt),
-                                                              "pos": pos, "quat": quat})
-
-        # create <body/joint> tag in xml
-        joint = ET.SubElement(body, "joint", attrib={"type": "free"})
-
-        # create <body/geom> tag in xml
-        if visual is None:  # if no visual, use collision shape
-            geom = ET.SubElement(body, "geom", attrib={"type": collision.dtype,
-                                                       "size": str(np.asarray(collision.size).reshape(-1))[1:-1],
-                                                       "rgba": "0 0 0 0", "mass": str(mass)})  # transparent
-
-            # if primitive shape type is a mesh
-            if collision.dtype == "mesh":
-                # check <asset> tag in xml
-                asset = self._root.find("asset")
-
-                # if no <asset> tag, create one
-                if asset is None:
-                    asset = ET.SubElement(self._root, "asset")
-
-                # create mesh tag
-                mesh_name = "mesh_" + str(collision.id)
-                mesh = ET.SubElement(asset, "mesh", attrib={"name": mesh_name,
-                                                            "file": collision.mesh,
-                                                            "scale": str(np.asarray(collision.size)[1:-1])})
-
-                # set the mesh asset name
-                geom.attrib["mesh"] = mesh_name
-        else:
-            # if visual is given, use this one instead
-            geom = ET.SubElement(body, "geom", attrib={"type": visual.dtype,
-                                                       "size": str(np.asarray(visual.size).reshape(-1))[1:-1],
-                                                       "rgba": str(np.asarray(visual.color))[1:-1],
-                                                       "mass": str(mass)})
-
-            # if primitive shape type is a mesh
-            if visual.dtype == "mesh":
-                # check <asset> tag in xml
-                asset = self._root.find("asset")
-
-                # if no <asset> tag, create one
-                if asset is None:
-                    asset = ET.SubElement(self._root, "asset")
-
-                # create mesh tag
-                mesh_name = "mesh_" + str(visual.id)
-                mesh = ET.SubElement(asset, "mesh", attrib={"name": mesh_name,
-                                                            "file": visual.mesh,
-                                                            "scale": str(np.asarray(visual.size)[1:-1])})
-
-                # set the mesh asset name
-                geom.attrib["mesh"] = mesh_name
-
-            # if no collision shape
-            if collision is None:
-                geom.attrib["contype"] = "0"
-                geom.attrib["conaffinity"] = "0"
-
-        # create <body/inertial> tag in xml
-        # TODO: pos must be provided and corresponds to the inertial frame, try to use MuJoCo to compute it
-        # inertial = ET.SubElement(body, "inertial", attrib={"pos": pos, "mass": str(mass)})
-
-        # add body in self.bodies
-        body = Body(self._body_cnt, body=body)
-        if mass == 0:
-            body.fixed_base = True
-        else:
-            body.q_start = self.q_cnt
-            body.q_end = self.q_cnt + 7
-            self.q_cnt += 7
-        self.bodies[self._body_cnt] = body
-
-        # increment body counter
+        # create body data structure
         self._body_cnt += 1
+        static = (mass == 0)
+        inertial = struct.Inertial(mass=mass)
+        # name = "prl_body_" + str(self._body_cnt)  # parser will automatically prefix 'prl_' and suffix '_idx'
+        name = "body"
+        body = struct.Body(body_id=self._body_cnt, name=name, inertials=inertial, visuals=visual, collisions=collision,
+                           position=position, orientation=orientation, static=static)
 
-        self._load()
+        # if not static, add free joint to body
+        if not static:
+            # name = "prl_joint_" + str(self._body_cnt)  # parser will automatically prefix 'prl_' and suffix '_idx'
+            name = "joint"
+            joint = struct.Joint(joint_id=self._body_cnt, name=name, dtype='free', child=body)
+            body.add_parent_joint(joint)
+
+        # wrap body into multi-body data structure
+        tree = struct.Tree(name=body.name, root=body, position=body.position, orientation=body.orientation)
+
+        # save multi-body data structure
+        self._parser.add_multibody(tree)
+        body = MultiBody(tree)
+        self._bodies[self._body_cnt] = body
+
+        # set generalized coordinates counter
+        if not static:
+            body.q_start = self._q_cnt
+            body.q_end = self._q_cnt + 7
+            self._q_cnt += 7
+
+        # update mujoco model if necessary
+        if self._update_dynamically:
+            self._create_sim(render=self._render)
+        else:
+            # notify that the Mujoco model has changed (this will be checked in the `step` method)
+            self._model_changed = True
+
+        # print(self._parser.get_string(pretty_format=True))
 
         # return body id
-        return self._body_cnt - 1
+        return self._body_cnt
 
     def remove_body(self, body_id):  # DONE
         """Remove a particular body in the simulator.
@@ -786,16 +733,14 @@ class Mujoco(Simulator):
             body_id (int): unique body id.
         """
         # remove body from the bodies
-        body = self.bodies.pop(body_id)
+        body = self._bodies.pop(body_id)
 
         # remove it from the worldbody
         self._worldbody.remove(body)
 
-        # if the model / sim were loaded, reload them
+        # if the model / sim were loaded, notify that the Mujoco has changed
         if self.sim is not None and self.model is not None:
-            self._load()
-            if self.is_rendering() and self.viewer is not None:
-                self.viewer = mujoco.MjViewer(self.sim)
+            self._model_changed = True
 
     def num_bodies(self):  # DONE
         """Return the number of bodies present in the simulator.
@@ -803,7 +748,7 @@ class Mujoco(Simulator):
         Returns:
             int: number of bodies
         """
-        return len(self.bodies)
+        return len(self._bodies)
 
     def get_body_info(self, body_id):  # DONE
         """Get the specified body information.
@@ -816,7 +761,7 @@ class Mujoco(Simulator):
         Returns:
             str: base name
         """
-        return self.bodies[body_id].name
+        return self._bodies[body_id].name
 
     def get_body_id(self, index):  # DONE
         """
@@ -828,7 +773,7 @@ class Mujoco(Simulator):
         Returns:
             int: unique body id.
         """
-        return list(self.bodies.items())[index][0]
+        return list(self._bodies.items())[index][0]
 
     ###############
     # Constraints #
@@ -880,7 +825,7 @@ class Mujoco(Simulator):
                                                              "body1": None, "body2": None})
 
         # remember constraint
-        self.constraints[self._constraint_cnt] = constraint
+        self._constraints[self._constraint_cnt] = constraint
 
         # increment constraint counter
         self._constraint_cnt += 1
@@ -913,7 +858,7 @@ class Mujoco(Simulator):
         Returns:
             int: number of constraints created.
         """
-        return len(self.constraints)
+        return len(self._constraints)
 
     def get_constraint_id(self, index):
         """
@@ -925,7 +870,7 @@ class Mujoco(Simulator):
         Returns:
             int: constraint unique id.
         """
-        return list(self.constraints.items())[index][0]
+        return list(self._constraints.items())[index][0]
 
     def get_constraint_info(self, constraint_id):
         """
@@ -965,7 +910,7 @@ class Mujoco(Simulator):
         Returns:
             float: total mass of the robot [kg]
         """
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         mass = self.get_base_mass(body_id)
         for b in body.bodies:
             mass += sim.get_base_mass(b.id)
@@ -1036,7 +981,7 @@ class Mujoco(Simulator):
         # print(self.sim.data.body_xpos, q[body.q_start:body.q_start+3])
         # print(self.sim.data.body_xquat, q[body.q_start+3:body.q_end])
 
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         q = self.sim.data.qpos
         return q[body.q_start:body.q_start+3], self._convert_wxyz_to_xyzw(q[body.q_start+3:body.q_start+7])
 
@@ -1051,7 +996,7 @@ class Mujoco(Simulator):
             np.array[float[3]]: base position.
         """
         # return self.sim.data.body_xpos[body_id]
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         q = self.sim.data.qpos
         return q[body.q_start:body.q_start + 3]
 
@@ -1066,7 +1011,7 @@ class Mujoco(Simulator):
             np.array[float[4]]: base orientation in the form of a quaternion (x,y,z,w)
         """
         # return self._convert_wxyz_to_xyzw(self.sim.data.body_xquat[body_id])
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         q = self.sim.data.qpos
         return self._convert_wxyz_to_xyzw(q[body.q_start+3:body.q_start+7])
 
@@ -1083,7 +1028,7 @@ class Mujoco(Simulator):
             position (np.array[float[3]]): new base position.
             orientation (np.array[float[4]]): new base orientation (expressed as a quaternion [x,y,z,w])
         """
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         q = self.sim.data.qpos
         q[body.q_start:body.q_start + 3] = position
         q[body.q_start + 3:body.q_start + 7] = self._convert_xyzw_to_wxyz(orientation)
@@ -1098,7 +1043,7 @@ class Mujoco(Simulator):
         """
         # self.sim.data.body_xpos[body_id] = position
         # self.sim.forward()
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         q = self.sim.data.qpos
         q[body.q_start:body.q_start + 3] = position
 
@@ -1110,7 +1055,7 @@ class Mujoco(Simulator):
             body_id (int): unique object id.
             orientation (np.array[float[4]]): new base orientation (expressed as a quaternion [x,y,z,w])
         """
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         q = self.sim.data.qpos
         q[body.q_start+3:body.q_start+7] = self._convert_xyzw_to_wxyz(orientation)
 
@@ -1125,7 +1070,7 @@ class Mujoco(Simulator):
             np.array[float[3]]: linear velocity of the base in Cartesian world space coordinates
             np.array[float[3]]: angular velocity of the base in Cartesian world space coordinates
         """
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         dq = self.sim.data.qvel
         return dq[body.q_start:body.q_start+3], dq[body.q_start+3:body.q_start+6]
 
@@ -1139,7 +1084,7 @@ class Mujoco(Simulator):
         Returns:
             np.array[float[3]]: linear velocity of the base in Cartesian world space coordinates
         """
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         dq = self.sim.data.qvel
         return dq[body.q_start:body.q_start + 3]
 
@@ -1153,7 +1098,7 @@ class Mujoco(Simulator):
         Returns:
             np.array[float[3]]: angular velocity of the base in Cartesian world space coordinates
         """
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         dq = self.sim.data.qvel
         return dq[body.q_start+3:body.q_start+6]
 
@@ -1166,7 +1111,7 @@ class Mujoco(Simulator):
             linear_velocity (np.array[float[3]]): new linear velocity of the base.
             angular_velocity (np.array[float[3]]): new angular velocity of the base.
         """
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         dq = self.sim.data.qvel
         dq[body.q_start:body.q_start + 3] = linear_velocity
         dq[body.q_start + 3:body.q_start + 6] = angular_velocity
@@ -1179,7 +1124,7 @@ class Mujoco(Simulator):
             body_id (int): unique object id.
             linear_velocity (np.array[float[3]]): new linear velocity of the base
         """
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         dq = self.sim.data.qvel
         dq[body.q_start:body.q_start + 3] = linear_velocity
 
@@ -1191,7 +1136,7 @@ class Mujoco(Simulator):
             body_id (int): unique object id.
             angular_velocity (np.array[float[3]]): new angular velocity of the base
         """
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         dq = self.sim.data.qvel
         dq[body.q_start + 3:body.q_start + 6] = angular_velocity
 
@@ -1206,7 +1151,7 @@ class Mujoco(Simulator):
             np.array[float[3]]: linear acceleration [m/s^2]
             np.array[float[3]]: angular acceleration [rad/s^2]
         """
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         ddq = self.sim.data.qacc
         return ddq[body.q_start:body.q_start+3], ddq[body.q_start+3:body.q_start+6]
 
@@ -1253,7 +1198,7 @@ class Mujoco(Simulator):
         Returns:
             int: number of joints with the associated body id.
         """
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         return len(body.links)
 
     def num_actuated_joints(self, body_id):
@@ -1266,7 +1211,7 @@ class Mujoco(Simulator):
         Returns:
             int: number of actuated joints of the specified body.
         """
-        body = self.bodies[body_id]
+        body = self._bodies[body_id]
         return len(body.joints)
 
     #################
@@ -1312,13 +1257,13 @@ class Mujoco(Simulator):
             size = radius
             shape_type = "sphere"
         elif shape_type == self.GEOM_BOX:
-            size = half_extents
+            size = 2 * np.asarray(half_extents)
             shape_type = "box"
         elif shape_type == self.GEOM_CAPSULE:
-            size = (radius, length / 2.)
+            size = (radius, length)
             shape_type = "capsule"
         elif shape_type == self.GEOM_CYLINDER:
-            size = (radius, length / 2.)
+            size = (radius, length)
             shape_type = "cylinder"
         elif shape_type == self.GEOM_PLANE:
             size = (0., 0., 1.)  # (X half-size, Y half-size, spacing between square grid lines)
@@ -1334,15 +1279,13 @@ class Mujoco(Simulator):
             raise ValueError("Unknown visual shape type.")
 
         # create visual
-        self.visual_shapes[self._visual_cnt] = Visual(visual_id=self._visual_cnt, dtype=shape_type, size=size,
-                                                      mesh=filename, color=rgba_color, position=visual_frame_position,
-                                                      orientation=visual_frame_orientation)
+        visual = struct.Visual(dtype=shape_type, size=size, filename=filename, color=rgba_color,
+                               position=visual_frame_position, orientation=visual_frame_orientation)
 
-        # increment visual shape counter
+        # save visual and return visual counter
         self._visual_cnt += 1
-
-        # return visual shape id
-        return self._visual_cnt - 1
+        self._visual_shapes[self._visual_cnt] = visual
+        return self._visual_cnt
 
     def get_visual_shape_data(self, object_id, flags=-1):
         """
@@ -1412,7 +1355,7 @@ class Mujoco(Simulator):
                                                             "texture": "texture_" + str(self._texture_cnt)})
 
         # remember texture_id --> (texture, material)
-        self.textures[self._texture_cnt] = Texture(texture_id=self._texture_cnt, texture=texture, material=material)
+        self._textures[self._texture_cnt] = Texture(texture_id=self._texture_cnt, texture=texture, material=material)
 
         # increment texture counter
         self._texture_cnt += 1
@@ -1553,13 +1496,13 @@ class Mujoco(Simulator):
             size = radius
             shape_type = "sphere"
         elif shape_type == self.GEOM_BOX:
-            size = half_extents
+            size = 2 * np.asarray(half_extents)
             shape_type = "box"
         elif shape_type == self.GEOM_CAPSULE:
-            size = (radius, height / 2.)
+            size = (radius, height)
             shape_type = "capsule"
         elif shape_type == self.GEOM_CYLINDER:
-            size = (radius, height / 2.)
+            size = (radius, height)
             shape_type = "cylinder"
         elif shape_type == self.GEOM_PLANE:
             size = (0., 0., 1.)  # (X half-size, Y half-size, spacing between square grid lines)
@@ -1574,17 +1517,14 @@ class Mujoco(Simulator):
         else:
             raise ValueError("Unknown collision shape type.")
 
-        # create visual
-        self.collision_shapes[self._collision_cnt] = Collision(collision_id=self._collision_cnt, dtype=shape_type,
-                                                               size=size, mesh=filename,
-                                                               position=collision_frame_position,
-                                                               orientation=collision_frame_orientation)
+        # create collision
+        collision = struct.Collision(dtype=shape_type, size=size, filename=filename,
+                                     position=collision_frame_position, orientation=collision_frame_orientation)
 
-        # increment visual shape counter
+        # save collision and return collision counter
         self._collision_cnt += 1
-
-        # return collision shape id
-        return self._collision_cnt - 1
+        self._collision_shapes[self._collision_cnt] = collision
+        return self._collision_cnt
 
     def get_collision_shape_data(self, object_id, link_id=-1):
         """

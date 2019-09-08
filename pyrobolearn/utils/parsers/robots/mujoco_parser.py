@@ -10,6 +10,7 @@ References:
     - MuJoCo XML format: http://www.mujoco.org/book/XMLreference.html
 """
 
+import os
 import numpy as np
 import xml.etree.ElementTree as ET
 
@@ -28,7 +29,7 @@ except ImportError as e:
 
 from pyrobolearn.utils.parsers.robots.world_parser import WorldParser
 from pyrobolearn.utils.parsers.robots.data_structures import Simulator, World, Tree, Body, Joint, Inertial, \
-    Visual, Collision, Light
+    Visual, Collision, Light, Floor
 from pyrobolearn.utils.transformation import rotation_matrix_x, rotation_matrix_y, rotation_matrix_z
 
 
@@ -91,20 +92,53 @@ class MuJoCoParser(WorldParser):
         self.simulator = Simulator()
         self.compiler = dict()  # set options for the built-in parser and compiler
         self.options = dict()   # simulation options
-        self.defaults = dict()  # default values for the attributes when they are not specified
-        self.assets = dict()    # assets (textures, meshes, etc)
+
+        # default values for the attributes when they are not specified
+        # {default_type (str): {attribute_name (str): attribute_value (str)}}
+        self.defaults = dict()
+
+        # assets (textures, meshes, etc)
+        # {asset_type (str): {attribute_name (str): attribute_value (str)}}
+        self.assets = dict()
 
         # create root XML element
         self.create_root("mujoco")
+        # add compiler
+        self.add_element("compiler", self._root, attributes={'coordinate': 'local', 'angle': 'radian'})
+        # add worldbody
         self.worldbody = self.add_element(name="worldbody", parent_element=self.root)
 
         # set some counters
         self._world_cnt = 0
+        self._light_cnt = 0
         self._tree_cnt = 0
         self._body_cnt = 0
         self._joint_cnt = 0
+        self._material_cnt = 0  # material/asset counter
         # self._geom_cnt = 0
         # self._site_cnt = 0
+
+    #################
+    # Utils methods #
+    #################
+
+    @staticmethod
+    def _convert_wxyz_to_xyzw(q):
+        """Convert a quaternion in the (w,x,y,z) format to (x,y,z,w).
+
+        - Mujoco: (w,x,y,z)
+        - Bullet: (x,y,z,w)
+        """
+        return np.roll(q, shift=-1)
+
+    @staticmethod
+    def _convert_xyzw_to_wxyz(q):
+        """Convert a quaternion in the (x,y,z,w) format to (w,x,y,z).
+
+        - Mujoco: (w,x,y,z)
+        - Bullet: (x,y,z,w)
+        """
+        return np.roll(q, shift=1)
 
     ##########
     # Parser #
@@ -125,7 +159,8 @@ class MuJoCoParser(WorldParser):
 
         # quaternion
         if attrib.get('quat') is not None:
-            orientation = attrib.get('quat')
+            quat = attrib.get('quat')
+            orientation = self._convert_wxyz_to_xyzw([float(q) for q in quat.split()])
 
         # euler orientation
         elif attrib.get('euler') is not None:
@@ -170,6 +205,14 @@ class MuJoCoParser(WorldParser):
             orientation = np.array([x, y, z]).T
 
         return orientation
+
+    @staticmethod
+    def _set_attribute(element, name, value):
+        """
+        Set an attribute value to the given attribute name belonging to the given element.
+        """
+        if hasattr(element, name):
+            setattr(element, name, value)
 
     def parse(self, filename):
         """
@@ -379,7 +422,7 @@ class MuJoCoParser(WorldParser):
         Parse the asset tag if present, and update the 'assets' attribute of this class.
 
         Args:
-            parent_tag (ET.Element): parent XML element to check if it has a 'compiler' tag.
+            parent_tag (ET.Element): parent XML element to check if it has a 'asset' tag.
         """
         asset_tag = parent_tag.find('asset')
         if asset_tag is not None:
@@ -396,8 +439,8 @@ class MuJoCoParser(WorldParser):
         of this class, and add the world to the simulator.
 
         Args:
-            parent_tag (ET.Element): parent XML element to check if it has a 'compiler' tag.
-            update_world_attribute (bool): if we should
+            parent_tag (ET.Element): parent XML element to check if it has a 'worldbody' tag.
+            update_world_attribute (bool): if we should update the `world` attribute of this class.
         """
         worldbody_tag = parent_tag.find('worldbody')
         if worldbody_tag is not None:
@@ -405,7 +448,7 @@ class MuJoCoParser(WorldParser):
             # instantiate the world data structure
             name = parent_tag.attrib.get('model')
             if name is None:
-                name = 'prl_world_' + str(self._world_cnt)
+                name = '__prl_world_' + str(self._world_cnt)
                 self._world_cnt += 1
             world = World(name=name)
 
@@ -413,11 +456,7 @@ class MuJoCoParser(WorldParser):
             # light attributes: name, class, mode, target, directional, castshadow, active, pos, dir, attenuation,
             #                   cutoff, exponent, ambient, diffuse, specular
             for i, light_tag in enumerate(worldbody_tag.findall('light')):
-                attrib = light_tag.attrib
-                light = Light(name=attrib.get('name', 'light_' + str(i)), cast_shadows=attrib.get('castshadow'),
-                              position=attrib.get('pos'), direction=attrib.get('dir'), ambient=attrib.get('ambient'),
-                              diffuse=attrib.get('diffuse'), specular=attrib.get('specular'))
-
+                light = self._parse_light(light_tag)
                 world.lights[light.name] = light
 
             # check each (multi-)body
@@ -425,7 +464,7 @@ class MuJoCoParser(WorldParser):
                 # create tree
                 name = body_tag.attrib.get('name')
                 if name is None:
-                    name = 'prl_multibody_' + str(self._tree_cnt)
+                    name = '__prl_multibody_' + str(self._tree_cnt)
                     self._tree_cnt += 1
                 tree = Tree(name=name)
 
@@ -439,9 +478,29 @@ class MuJoCoParser(WorldParser):
             if update_world_attribute:
                 self.world = world
 
+    def _parse_light(self, light_tag):
+        """
+        Parse the given light tag and return the instance.
+
+        Args:
+            light_tag (ET.Element): light XML tag.
+
+        Returns:
+            Light: light data structure.
+        """
+        attrib = light_tag.attrib
+        name = attrib.get('name')
+        if name is None:
+            name = '__prl_light_' + str(self._light_cnt)
+            self._light_cnt += 1
+        light = Light(name=name, cast_shadows=attrib.get('castshadow'), position=attrib.get('pos'),
+                      direction=attrib.get('dir'), ambient=attrib.get('ambient'), diffuse=attrib.get('diffuse'),
+                      specular=attrib.get('specular'))
+        return light
+
     def _parse_body(self, tree, body_tag, parent_body=None):  # TODO: check with self.defaults
         """
-        Construct recursively the given tree, and return Body instance from a <body>.
+        Parse the given body tag, and construct recursively the given tree, and return Body instance from a <body>.
 
         Args:
             tree (Tree): tree data structure containing the model.
@@ -454,7 +513,7 @@ class MuJoCoParser(WorldParser):
         # create body
         name = body_tag.attrib.get('name')
         if name is None:
-            name = 'prl_body_' + str(self._body_cnt)
+            name = '__prl_body_' + str(self._body_cnt)
             self._body_cnt += 1
         body = Body(body_id=self._body_cnt, name=name)
 
@@ -470,7 +529,7 @@ class MuJoCoParser(WorldParser):
         #                  friction, mass, density, solmix, solref, solimp, margin, gap, fromto, pos, quat, axisangle,
         #                  xyaxes, zaxis, euler, hfield, mesh, fitscale, user
         for i, geom_tag in enumerate(body_tag.findall('geom')):
-            self._parse_geom(body=body, geom_tag=geom_tag, geom_idx=i)
+            self._parse_geom(body=body, geom_tag=geom_tag)
 
         # check sites: Sites are light geoms. They have the same appearance properties but cannot participate in
         # collisions and cannot be used to infer body masses.
@@ -515,7 +574,7 @@ class MuJoCoParser(WorldParser):
         # get joint name
         name = attrib.get('name')
         if name is None:
-            name = 'prl_joint_' + str(self._joint_cnt)
+            name = '__prl_joint_' + str(self._joint_cnt)
             self._joint_cnt += 1
 
         # create joint data structure
@@ -582,7 +641,7 @@ class MuJoCoParser(WorldParser):
             # add inertial element to body
             body.add_inertial(inertial)
 
-    def _parse_geom(self, body, geom_tag, geom_idx):
+    def _parse_geom(self, body, geom_tag):
         """
         Parse the geom tag if present, and set the visuals, and collisions to the given body. It can also set the
         inertial elements if it was not defined previously.
@@ -609,18 +668,15 @@ class MuJoCoParser(WorldParser):
         Args:
             body (Body): body data structure instance.
             geom_tag (ET.Element): geom XML field.
-            geom_idx (int): geom index.
         """
-        ##########
         # visual #
-        ##########
 
         attrib = geom_tag.attrib
         dtype = attrib.get('type')
         visual = Visual(name=attrib.get('name'), dtype=dtype, color=attrib.get('rgba'))
 
-        # get position and orientation
-        visual.pos = attrib.get('pos')
+        # set position and orientation
+        visual.position = attrib.get('pos')
         visual.orientation = self._get_orientation(attrib)
 
         # compute size (rescale them)
@@ -650,8 +706,10 @@ class MuJoCoParser(WorldParser):
                     size = None  # TODO
 
         # check texture
-        material = attrib.get('material')
-        if material in self.assets:
+        material_name = attrib.get('material')  # TODO
+        if 'material' in self.assets:  # and material in :
+            # material =
+            # visual.material =
             pass
 
         # check mesh
@@ -667,11 +725,9 @@ class MuJoCoParser(WorldParser):
                 # get the texture for the mesh
 
         # set visual to body
-        body.visuals = visual
+        body.add_visual(visual)
 
-        #############
         # collision #
-        #############
 
         if not (attrib.get('contype') == "0" and attrib.get('conaffinity') == "0"):
             # copy collision shape information from visual shape
@@ -679,11 +735,9 @@ class MuJoCoParser(WorldParser):
             collision.name = visual.name
             collision.frame = visual.frame
             collision.geometry = visual.geometry
-            body.collisions = collision
+            body.add_collision(collision)
 
-        ############
         # inertial #  just the mass
-        ############
 
         # if the <inertial> tag was not given, compute based on information in geom
         if body.inertial is None:
@@ -738,9 +792,7 @@ class MuJoCoParser(WorldParser):
             site_tag (ET.Element): site XML field.
             site_idx (int): site index.
         """
-        ##########
         # visual #
-        ##########
         pass
 
     def _parse_contact(self, parent_tag):
@@ -783,7 +835,56 @@ class MuJoCoParser(WorldParser):
     # Generator #
     #############
 
-    def generate(self, world=None):  # TODO: check texture and mesh format
+    def _update_attribute_dict(self, dictionary, element, name, key=None, slice=None, fct=None, required=False,
+                               *args, **kwargs):
+        """
+        Update the attribute dictionary given to an XML element.
+
+        Args:
+            dictionary (dict): attribute dictionary to update.
+            element (object): data structure to check if it has the given attribute name.
+            name (str): name of the attribute.
+            key (str): name of the key to add in the dictionary. If None, it will take be the same as the given
+              :attr:`name`.
+            slice (slice): slice to apply if the attribute is a list/tuple/np.array.
+            fct (callable): optional callable function to be applied on the given attribute before processing it.
+              This function has to return the processed attribute.
+            required (bool): if the attribute is required but was not present (i.e. it returned None), it will raise
+              a `RuntimeError`.
+            *args: list of arguments given to the provided function.
+            **kwargs: dictionary of arguments given to the provided function.
+        """
+        attribute = getattr(element, name, None)
+        if attribute is not None:
+            # if key is None, set it to given name
+            if key is None:
+                key = name
+
+            # if callable function is provided, call it on the attribute beforehand to process it
+            if fct is not None:
+                attribute = fct(attribute, *args, **kwargs)
+
+            if attribute is not None:  # this is for the returned attribute by the fct
+                # check attribute type and convert it to a string
+                if isinstance(attribute, str):
+                    dictionary[key] = attribute
+                elif isinstance(attribute, bool):
+                    dictionary[key] = 'true' if attribute else 'false'
+                elif isinstance(attribute, (list, tuple, np.ndarray)):
+                    attribute = np.asarray(attribute)
+                    if slice is not None:
+                        attribute = attribute[slice]
+                    dictionary[key] = str(attribute)[1:-1]
+                elif isinstance(attribute, (int, float)):
+                    dictionary[key] = str(attribute)
+                else:
+                    raise NotImplementedError("The given attribute type is not supported: {}".format(type(attribute)))
+
+        if attribute is None and required:
+            raise RuntimeError("The given attribute '{}' was required but it was not defined in the given element: "
+                               "{}".format(name, element))
+
+    def generate(self, world=None):
         """
         Generate the XML world from the `World` data structure.
 
@@ -797,125 +898,459 @@ class MuJoCoParser(WorldParser):
             world = self.world
 
         # create root element
-        root = ET.Element('mujoco', attrib={'model': world.name})
+        root = self.root
+        if root is None:
+            root = ET.Element('mujoco', attrib={'model': world.name})
 
-        # create compiler
+        # create <compiler>
+        self.generate_compiler(parent_tag=root)
+
+        # create <option>
+        self.generate_options(parent_tag=root, options=self.options)
+
+        # create <default>
+        self.generate_default(parent_tag=root, default=self.defaults)
 
         # create asset
+        self.generate_assets(parent_tag=root, assets=self.assets)
 
         # create world
-        worldbody_tag = ET.SubElement(root, 'worldbody')  # name = 'world'
+        self.generate_world(root, world)
 
-        # create models
-        for tree in world.trees:
+        return root
 
-            # create bodies
-            for i, body in enumerate(tree.bodies):
-                # create <body>
-                attrib = {}
-                if body.name is not None:
-                    attrib['name'] = body.name
-                if body.visual is not None:
-                    visual = body.visual
-                    if visual.position is not None:
-                        attrib['pos'] = str(np.asarray(visual.position))[1:-1]
-                    if visual.orientation is not None:
-                        attrib['quat'] = str(np.asarray(visual.quaternion))[1:-1]
-                body_tag = ET.SubElement(worldbody_tag, 'body', attrib=attrib)
+    def generate_compiler(self, parent_tag, compiler=None):
+        """
+        Generate the compiler tag based on the `compiler` attribute of this class.
 
-                # create <inertial>
-                if body.inertial is not None:
-                    inertial = body.inertial
-                    if inertial.inertia is not None:
-                        ET.SubElement(body_tag, 'inertial')
+        From the main documentation [2]: "This element is used to set options for the built-in parser and compiler.
+        After parsing and compilation it no longer has any effect. The settings here are global and apply to the
+        entire model.
 
-                # create <geom>
-                if body.visual is not None:
-                    visual = body.visual
-                    ET.SubElement(body_tag, 'geom')
-
-                    # if mesh, make sure it is a STL file
-                    if visual.dtype == 'mesh':
-                        filename = visual.filename
-                        extension = filename.split('.')[-1]
-                        if extension.lower() != 'stl':
-                            scene = pyassimp.load(filename)
-                            filename_without_extension = ''.join(filename.split('.')[:-1])
-                            new_filename = filename_without_extension + '.stl'
-                            pyassimp.export(scene, new_filename, file_type='stl')
-                            pyassimp.release(scene)
-
-                # create <joint>
-
-    def generate_body(self, parent_body, body):
-        r"""
-        Generate the body.
+        Attributes:
+            - boundmass (real, "0"): This attribute imposes a lower bound on the mass of each body except for the
+              world body. It can be used as a quick fix for poorly designed models that contain massless moving
+              bodies, such as the dummy bodies often used in URDF models to attach sensors. Note that in MuJoCo
+              there is no need to create dummy bodies.
+            - boundinertia (real, "0"): This attribute imposes a lower bound on the diagonal inertia components of
+              each body except for the world body.
+            - settotalmass (real, "-1"): If this value is positive, the compiler will scale the masses and inertias of
+              all bodies in the model, so that the total mass equals the value specified here. The world body has mass
+              0 and does not participate in any mass-related computations. This scaling is performed last, after all
+              other operations affecting the body mass and inertia.
+            - balanceinertia ([false, true], "false"): A valid diagonal inertia matrix must satisfy A+B>=C for all
+              permutations of the three diagonal elements. Some poorly designed models violate this constraint, which
+              will normally result in compile error. If this attribute is set to "true", the compiler will silently
+              set all three diagonal elements to their average value whenever the above condition is violated.
+            - etc
+        "
 
         Args:
-            parent_body (ET.Element): parent body XML element to which the given Body data structure will be added.
-            body (Body): Body data structure.
+            parent_tag (ET.Element): parent XML element.
+            compiler (dict): compiler dictionary. If None, it will take the one from this class.
+
+        Returns:
+            ET.Element: compiler XML tag.
+        """
+        # if compiler, create tag
+        if compiler:
+            return ET.SubElement(parent_tag, 'compiler', attrib=self.compiler)
+
+    def generate_options(self, parent_tag, options=None):  # TODO
+        """
+        Generate the option tag.
+
+        Args:
+            parent_tag (ET.Element): parent XML element.
+            options (dict): options dictionary.
+
+        Returns:
+            ET.Element: option XML tag.
+        """
+        if options:
+            attrib = {}
+            ET.SubElement(parent_tag, 'option', attrib=attrib)
+
+    def generate_default(self, parent_tag, default=None):  # TODO
+        """
+        Generate the default tag.
+
+        Args:
+            parent_tag (ET.Element): parent XML element.
+            default (dict): default dictionary. If None, it will take the one from this class.
+
+        Returns:
+            ET.Element: default tag
+        """
+        if default:
+            attrib = {}
+            ET.SubElement(parent_tag, 'asset', attrib=attrib)
+
+    def generate_assets(self, parent_tag, assets=None):  # TODO
+        """
+        Generate the asset tag based on the 'asset' attribute of this class.
+
+        Args:
+            parent_tag (ET.Element): parent XML element.
+            assets (dict): assets dictionary.
+        """
+        if assets:
+            attrib = {}
+            ET.SubElement(parent_tag, 'asset', attrib=attrib)
+
+    def generate_world(self, parent_tag, world=None):
+        """
+        Generate the worldbody tag based on the given `World` data structure.
+
+        Args:
+            parent_tag (ET.Element): parent XML element (which normally should be the root XML tag)
+            world (World): world data structure.
+        """
+        # check world argument
+        if world is None:
+            world = self.world
+        if world is None:
+            return
+        if not isinstance(world, World):
+            raise TypeError("Expecting the given 'world' to be an instance of `World`, but got instead: "
+                            "{}".format(type(world)))
+
+        # generate world #
+
+        # create worldbody
+        attrib = {}
+        self._update_attribute_dict(attrib, world, 'name')
+        self._update_attribute_dict(attrib, world, 'position', key='pos')
+        self._update_attribute_dict(attrib, world, 'quaternion', key='quat', fct=self._convert_xyzw_to_wxyz)
+        world_tag = parent_tag.find('worldbody')
+        if world_tag is None:
+            world_tag = ET.SubElement(parent_tag, 'worldbody', attrib=attrib)
+
+        # create lights
+        for light in world.lights:
+            self.generate_light(world_tag, light)
+
+        # create floor
+        if world.floor is not None:
+            self.generate_floor(world_tag, world.floor)
+
+        # create multi-bodies
+        for tree in world.trees:
+            self.generate_tree(world_tag, tree, root=parent_tag)
+
+        return world_tag
+
+    # alias
+    generate_worldbody = generate_world
+
+    def generate_light(self, parent_tag, light):
+        """
+        Generate the light tag based on the `Light` data structure.
+
+        Args:
+            parent_tag (ET.Element): parent XML element.
+            light (Light): light data structure structure.
+
+        Returns:
+            ET.Element: light XML element.
+        """
+        # check type
+        if not isinstance(light, Light):
+            raise TypeError("Expecting the given 'light' to be an instance of `Light`, but got instead: "
+                            "{}".format(type(light)))
+
+        # create <light>
+        attrib = {}
+        for name in ['name', 'castshadow', 'active']:
+            self._update_attribute_dict(attrib, light, name)
+        for name, key in zip(['position', 'direction'], ['pos', 'dir']):
+            self._update_attribute_dict(attrib, light, name, key=key)
+        for name in ['ambient', 'diffuse', 'specular']:
+            self._update_attribute_dict(attrib, light, name, slice=slice(3))
+
+        return ET.SubElement(parent_tag, 'light', attrib=attrib)
+
+    def generate_floor(self, parent_tag, floor, assets=None):
+        """
+        Generate the floor 'geom' tag based on the `Floor` data structure.
+
+        Args:
+            parent_tag (ET.Element): parent XML element.
+            floor (Floor): floor data structure structure.
+            assets (dict): asset dictionary. If None, it will take the assets defined in this class.
+
+        Returns:
+            ET.Element: floor XML element.
+        """
+        # check type
+        if not isinstance(floor, Floor):
+            raise TypeError("Expecting the given 'floor' to be an instance of `Floor`, but got instead: "
+                            "{}".format(type(floor)))
+
+        if assets is None:
+            assets = self.assets
+
+        # create <geom>
+        attrib = {'type': 'plane'}
+        for name in ['name', 'rgba']:
+            self._update_attribute_dict(attrib, floor, name)
+
+        # check size / dimensions
+        def check_size(size):
+            if size is not None:
+                if len(size) == 2:
+                    # concatenate the 3rd element for spacing between square grid lines
+                    size = np.concatenate((size, np.array([1.])))
+            return size
+
+        self._update_attribute_dict(attrib, floor, name='dimensions', key='size', fct=check_size)
+
+        # check material / texture
+        def check_texture(texture, material_name):
+            if texture is not None:
+                # check if material name in assets, if not, add it
+                if material_name is None:
+                    material_name = '__prl_material_' + str(self._material_cnt)
+                    self._material_cnt += 1
+                if material_name not in assets:
+                    assets[material_name] = {'texture': texture}
+
+                    # create new XML tag for that asset
+
+                    # check if asset tag already created, if not create one
+                    asset_tag = parent_tag.find('asset')
+                    if asset_tag is None:
+                        asset_tag = ET.SubElement(parent_tag, 'asset')
+
+                    # create texture tag
+                    texture_name = material_name + '_texture'
+                    ET.SubElement(asset_tag, 'texture', attrib={'name': texture_name, 'file': texture})
+
+                    # create material tag
+                    ET.SubElement(asset_tag, 'material', attrib={'name': material_name, 'texture': texture_name})
+
+            return texture
+
+        self._update_attribute_dict(attrib, floor, name='texture', key='material', fct=check_texture,
+                                    material_name=floor.material.name)
+
+        # create <geom> tag
+        return ET.SubElement(parent_tag, 'geom', attrib=attrib)
+
+    def generate_tree(self, parent_tag, tree, root=None):
+        """
+        Generate tree / multibody tag.
+
+        Args:
+            parent_tag (ET.Element): parent XML element.
+            tree (Tree): Tree / MultiBody data structure.
+            root (ET.Element, None): root XML element.
 
         Returns:
             ET.Element: body XML element.
         """
-        if not isinstance(parent_body, ET.Element):
-            raise TypeError("Expecting the given 'parent_body' to be an instance of `ET.Element`, but got instead: "
-                            "{}".format(type(parent_body)))
+        # check arguments
+        if not isinstance(parent_tag, ET.Element):
+            raise TypeError("Expecting the given 'parent_tag' to be an instance of `ET.Element`, but got instead: "
+                            "{}".format(type(parent_tag)))
+        if not isinstance(tree, Tree):
+            raise TypeError("Expecting the given 'tree' to be an instance of `Tree`, but got instead: "
+                            "{}".format(type(tree)))
+
+        # generate bodies (inertial, visual, collision) and joints in a recursive manner
+        body_tag = self.generate_body(parent_tag, body=tree.root, root=root)
+        return body_tag
+
+    @staticmethod
+    def _convert_mesh(filename):
+        """
+        Convert mesh (from any format) to an STL mesh format. This is because MuJoCo only accepts STL meshes.
+
+        Warnings: note that this method might create new STL files on your system as these files are not deleted here.
+
+        Args:
+            filename (str): path to the mesh file.
+
+        Returns:
+            str: filename with the correct extension (.stl)
+        """
+        # if mesh, make sure it is a STL file
+        extension = filename.split('.')[-1]
+        if extension.lower() != 'stl':
+            # create filename with the correction extension (STL)
+            filename_without_extension = ''.join(filename.split('.')[:-1])
+            new_filename = filename_without_extension + '.stl'
+
+            # if file do not already exists, convert it
+            if not os.path.isfile(new_filename):
+                scene = pyassimp.load(filename)
+                pyassimp.export(scene, new_filename, file_type='stl')
+                pyassimp.release(scene)
+
+            return new_filename
+        return filename
+
+    @staticmethod
+    def _generate_name(name, cnt):
+        """
+        Generate a new name. Even if a link, joint, and other components have a name. If we need to load them multiple
+        times, they will have the same and thus conflicts will arise. In order to avoid this, we will generate a new
+        unique name by prefixing 'prl_' and suffixing '_str(cnt)'.
+
+        Args:
+            name (str): original name.
+            cnt (int): counter number.
+
+        Returns:
+            str: new name.
+        """
+        if name is not None:
+            name = 'prl_' + name + '_' + str(cnt)
+        return name
+
+    def generate_body(self, parent_tag, body, root=None):
+        r"""
+        Generate the body.
+
+        Args:
+            parent_tag (ET.Element): parent body XML element to which the given Body data structure will be added.
+            body (Body): Body data structure.
+            root (ET.Element): root element. If None, it will take the root element given in this class.
+
+        Returns:
+            ET.Element: body XML element.
+        """
+        # check arguments
+        if not isinstance(parent_tag, ET.Element):
+            raise TypeError("Expecting the given 'parent_tag' to be an instance of `ET.Element`, but got instead: "
+                            "{}".format(type(parent_tag)))
         if not isinstance(body, Body):
             raise TypeError("Expecting the given 'body' to be an instance of `Body`, but got instead: "
                             "{}".format(type(body)))
+        if root is None:
+            root = self.root
 
-        body_tag = ET.SubElement(parent_body, "body", attrib={"name": "body_" + str(self._body_cnt),
-                                                              "pos": pos, "quat": quat})
+        # create <body> tag
+        attrib = {}
+        self._body_cnt += 1
+        self._update_attribute_dict(attrib, body, 'name', fct=self._generate_name, cnt=self._body_cnt)
+        self._update_attribute_dict(attrib, body, 'position', key='pos')
+        self._update_attribute_dict(attrib, body, 'quaternion', key='quat', fct=self._convert_xyzw_to_wxyz)
+        body_tag = ET.SubElement(parent_tag, "body", attrib=attrib)
 
-        # create <body/joint> tag in xml
+        # create <inertial> tag
+        inertial = body.inertial
+        inertial_tag = None
+        if inertial is not None:
+            attrib = {}
 
-        joint = ET.SubElement(body, "joint", attrib={"type": "free"})
+            def check_inertia(inertia):
+                if inertia is not None:
+                    inertia = inertia.inertia
+                return inertia
 
-        # create <body/geom> tag in xml
+            self._update_attribute_dict(attrib, inertial, 'inertia', key='fullinertia', fct=check_inertia)
+
+            # create the <inertial> tag only if inertia is given, otherwise specify mass in <geom>
+            if 'fullinertia' in attrib:
+
+                # check that the inertia is not 0 0 0 0 0 0
+                if not np.allclose(inertial.inertia.inertia, np.zeros(6)):
+                    self._update_attribute_dict(attrib, inertial, 'position', key='pos')
+                    self._update_attribute_dict(attrib, inertial, 'quaternion', key='quat',
+                                                fct=self._convert_xyzw_to_wxyz)
+                    self._update_attribute_dict(attrib, inertial, 'mass', required=True)
+                    inertial_tag = ET.SubElement(body_tag, 'inertial', attrib=attrib)
+
+        # create <geom> tags
+        # TODO: consider when multiple visual and collision shapes
+        visual = body.visual
+        collision = body.collision
         if visual is None:  # if no visual, use collision shape
-            geom = ET.SubElement(body, "geom", attrib={"type": collision.dtype,
-                                                       "size": str(np.asarray(collision.size).reshape(-1))[1:-1],
-                                                       "rgba": "0 0 0 0", "mass": str(mass)})  # transparent
+            if collision is not None:  # if collision shape is defined
+                attrib = {"rgba": "0 0 0 0"}  # transparent
+                self._update_attribute_dict(attrib, collision, 'name', fct=self._generate_name, cnt=self._body_cnt)
+                self._update_attribute_dict(attrib, collision, 'position', key='pos')
+                self._update_attribute_dict(attrib, collision, 'quaternion', key='quat', fct=self._convert_xyzw_to_wxyz)
+                self._update_attribute_dict(attrib, collision, 'dtype', key='type')
+                self._update_attribute_dict(attrib, collision, 'size')
 
-            # if primitive shape type is a mesh
-            if collision.dtype == "mesh":
-                # check <asset> tag in xml
-                asset = self._root.find("asset")
+                # check type and change size
+                if 'type' in attrib and 'size' in attrib:
+                    if collision.dtype == 'box':  # divide by 2 the dimensions
+                        attrib['size'] = str(np.asarray(collision.size) / 2.)[1:-1]
+                    elif collision.dtype == 'cylinder' or collision.dtype == 'capsule':  # divide by 2 the height
+                        radius, length = collision.size
+                        attrib['size'] = str(np.asarray([radius, length/2]))[1:-1]
+                    elif collision.dtype == 'mesh':  # set the scale
+                        attrib['fitscale'] = str(collision.size)
 
-                # if no <asset> tag, create one
-                if asset is None:
-                    asset = ET.SubElement(self._root, "asset")
+                if inertial is not None and inertial_tag is None:
+                    self._update_attribute_dict(attrib, inertial, 'mass', required=True)
 
-                # create mesh tag
-                mesh_name = "mesh_" + str(collision.id)
-                mesh = ET.SubElement(asset, "mesh", attrib={"name": mesh_name,
-                                                            "file": collision.mesh,
-                                                            "scale": str(np.asarray(collision.size)[1:-1])})
+                # create geom tag
+                geom = ET.SubElement(body_tag, "geom", attrib=attrib)
 
-                # set the mesh asset name
-                geom.attrib["mesh"] = mesh_name
+                # check if mesh in attrib
+                if collision.dtype == 'mesh':
+                    # check <asset> tag in xml
+                    asset_tag = root.find("asset")
+
+                    # if no <asset> tag, create one
+                    if asset_tag is None:
+                        asset_tag = ET.SubElement(root, "asset")
+
+                    # create mesh tag
+                    mesh_path = self._convert_mesh(collision.filename)  # convert to STL if necessary
+                    mesh_name = os.path.basename(mesh_path).split('.')[0]
+                    attrib = {'name': mesh_name, 'file': mesh_path}
+                    self._update_attribute_dict(attrib, collision, 'size', key='scale')
+                    ET.SubElement(asset_tag, "mesh", attrib=attrib)
+
+                    # set the mesh asset name
+                    geom.attrib["mesh"] = mesh_name
+
         else:
             # if visual is given, use this one instead
-            geom = ET.SubElement(body, "geom", attrib={"type": visual.dtype,
-                                                       "size": str(np.asarray(visual.size).reshape(-1))[1:-1],
-                                                       "rgba": str(np.asarray(visual.color))[1:-1],
-                                                       "mass": str(mass)})
+            attrib = {}
+
+            self._update_attribute_dict(attrib, visual, 'name', fct=self._generate_name, cnt=self._body_cnt)
+            self._update_attribute_dict(attrib, visual, 'position', key='pos')
+            self._update_attribute_dict(attrib, visual, 'quaternion', key='quat', fct=self._convert_xyzw_to_wxyz)
+            self._update_attribute_dict(attrib, visual, 'dtype', key='type')
+            self._update_attribute_dict(attrib, visual, 'size')
+            self._update_attribute_dict(attrib, visual, 'rgba')
+            if inertial is not None and inertial_tag is None:
+                self._update_attribute_dict(attrib, inertial, 'mass', required=True)
+
+            # check type and change size
+            if 'type' in attrib and 'size' in attrib:
+                if collision.dtype == 'box':  # divide by 2 the dimensions
+                    attrib['size'] = str(np.asarray(collision.size) / 2.)[1:-1]
+                elif collision.dtype == 'cylinder' or collision.dtype == 'capsule':  # divide by 2 the height
+                    radius, length = collision.size
+                    attrib['size'] = str(np.asarray([radius, length / 2]))[1:-1]
+                elif collision.dtype == 'mesh':  # set the scale
+                    attrib['fitscale'] = str(collision.size)
+
+            # create <geom> tag
+            geom = ET.SubElement(body_tag, "geom", attrib=attrib)
 
             # if primitive shape type is a mesh
             if visual.dtype == "mesh":
                 # check <asset> tag in xml
-                asset = self._root.find("asset")
+                asset_tag = root.find("asset")
 
                 # if no <asset> tag, create one
-                if asset is None:
-                    asset = ET.SubElement(self._root, "asset")
+                if asset_tag is None:
+                    asset_tag = ET.SubElement(root, "asset")
 
                 # create mesh tag
-                mesh_name = "mesh_" + str(visual.id)
-                mesh = ET.SubElement(asset, "mesh", attrib={"name": mesh_name,
-                                                            "file": visual.mesh,
-                                                            "scale": str(np.asarray(visual.size)[1:-1])})
+                mesh_path = self._convert_mesh(collision.filename)  # convert to STL if necessary
+                mesh_name = os.path.basename(mesh_path).split('.')[0]
+                attrib = {'name': mesh_name, 'file': mesh_path}
+                self._update_attribute_dict(attrib, collision, 'size', key='scale')
+                ET.SubElement(asset_tag, "mesh", attrib=attrib)
 
                 # set the mesh asset name
                 geom.attrib["mesh"] = mesh_name
@@ -925,7 +1360,68 @@ class MuJoCoParser(WorldParser):
                 geom.attrib["contype"] = "0"
                 geom.attrib["conaffinity"] = "0"
 
-    def add_tree(self, tree):
+        # create <joint>
+        for joint in body.parent_joints.values():  # parent_joints
+            print("Joint...")
+            self.generate_joint(body_tag, joint)
+
+        # create inner <body>
+        for body in body.bodies:
+            self.generate_body(body_tag, body, root=root)
+
+        return body_tag
+
+    def generate_joint(self, parent_tag, joint):
+        """
+        Generate the joint.
+
+        Args:
+            parent_tag (ET.Element): parent XML element.
+            joint (Joint): Joint data structure.
+
+        Returns:
+            ET.Element, None: joint XML element. None if it couldn't generate the joint, this can happen if for
+              instance, the joint type is not known.
+        """
+        # check type
+        if not isinstance(joint, Joint):
+            raise TypeError("Expecting the given 'joint' to be an instance of `Joint`, but got instead: "
+                            "{}".format(type(joint)))
+
+        # create <joint>
+        attrib = {}
+        self._joint_cnt += 1
+        self._update_attribute_dict(attrib, joint, 'name', fct=self._generate_name, cnt=self._joint_cnt)
+        for name in ['axis', 'damping']:
+            self._update_attribute_dict(attrib, joint, name)
+        for name, key in zip(['limits', 'friction', 'position'],
+                             ['range', 'frictionloss', 'pos']):
+            self._update_attribute_dict(attrib, joint, name, key=key)
+        if 'range' in attrib:
+            attrib['limited'] = 'true'
+
+        # check the joint type
+        def check_joint_type(dtype):
+            if dtype == 'revolute' or dtype == 'continuous':
+                return 'hinge'
+            if dtype == 'prismatic':
+                return 'slide'
+            if dtype == 'floating':
+                return 'free'
+            if dtype in {'ball', 'hinge', 'slide', 'ball'}:
+                return dtype
+            if dtype == 'fixed':
+                return None
+            print("WARNING: Unknown joint type during generation: {}".format(dtype))
+            return None
+
+        self._update_attribute_dict(attrib, joint, name='dtype', key='type', fct=check_joint_type)
+
+        # return if the joint type is known
+        if 'type' in attrib:
+            return ET.SubElement(parent_tag, "joint", attrib=attrib)
+
+    def add_multibody(self, tree):
         r"""
         Add the given tree / multi-body data structure.
 
@@ -943,4 +1439,8 @@ class MuJoCoParser(WorldParser):
                 raise TypeError("Expecting the given 'tree' to be an instance of `Tree` or `Body` but got "
                                 "instead: {}".format(type(tree)))
 
-        pass
+        # generate tree
+        return self.generate_tree(parent_tag=self.worldbody, tree=tree, root=self.root)
+
+    # alias
+    add_tree = add_multibody

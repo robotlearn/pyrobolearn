@@ -26,6 +26,7 @@ torchvision>=0.2.1
 pybullet>=2.4.1
 gym>=0.10.9
 # -e git+https://github.com/benelot/pybullet-gym#egg=pybullet-gym
+# mujoco-py<2.1,>=2.0
 
 # interfaces
 inputs>=0.5

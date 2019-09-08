@@ -1,4 +1,7 @@
 
+# import data structures
+from . import data_structures
+
 # import urdf parser
 from .urdf_parser import URDFParser
 

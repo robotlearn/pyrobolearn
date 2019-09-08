@@ -55,7 +55,7 @@ class URDFParser(RobotParser):
             raise RuntimeError("Expecting the first XML tag to be 'robot' but found instead: {}".format(root.tag))
 
         # build the tree
-        tree = Tree(name=root.attrib.get('name'))
+        tree = MultiBody(name=root.attrib.get('name'))
 
         # check materials
         for i, material_tag in enumerate(root.findall('material')):
@@ -80,19 +80,29 @@ class URDFParser(RobotParser):
         # check joints
         for i, joint_tag in enumerate(root.findall('joint')):
             # get joint instance from tag
-            joint = self._check_joint(joint_tag, idx=i)
+            joint = self._check_joint(joint_tag, idx=i, tree=tree)
 
             # add joint in trees
             tree.joints[joint.name] = joint
 
             # add joint in parent body
-            parent_body = tree.bodies[joint.parent]
+            parent_body = joint.parent
             parent_body.joints[joint.name] = joint
+
+            # add joint in child body
+            child_body = joint.child
+            child_body.parent_joints[joint.name] = joint
 
         # TODO: check sensor, plugins, transmission, etc
 
+        # set the root element
+        key = next(iter(tree.bodies))
+        tree.root = tree.bodies[key]
+
         # set the tree
         self.tree = tree
+
+        return tree
 
     @staticmethod
     def _check_body(tree, body_tag, idx):
@@ -100,7 +110,7 @@ class URDFParser(RobotParser):
         Return Body instance from a <link> tag.
 
         Args:
-            tree (Tree): Tree data structure.
+            tree (MultiBody): Tree data structure.
             body_tag (ET.Element): link XML element.
             idx (int): link index.
 
@@ -133,7 +143,7 @@ class URDFParser(RobotParser):
                                     for name in ['ixx', 'ixy', 'ixz', 'iyy', 'iyz', 'izz']}
 
             # set inertial to body
-            body.inertial = inertial
+            body.add_inertial(inertial)
 
         # check <visual> tag
         visual_tag = body_tag.find('visual')
@@ -185,7 +195,7 @@ class URDFParser(RobotParser):
                 visual.material = material
 
             # set visual to body
-            body.visual = visual
+            body.add_visual(visual)
 
         # check <collision> tag
         collision_tag = body_tag.find('collision')
@@ -220,18 +230,19 @@ class URDFParser(RobotParser):
                             collision.size = geometry_type_tag.attrib.get('scale')
 
             # set collision to body
-            body.collision = collision
+            body.add_collision(collision)
 
         return body
 
     @staticmethod
-    def _check_joint(joint_tag, idx):
+    def _check_joint(joint_tag, idx, tree):
         """
         Return Joint instance from a <joint> tag.
 
         Args:
             joint_tag (ET.Element): joint XML element.
             idx (int): joint index.
+            tree (Tree): tree data structure.
 
         Returns:
             Joint: joint data structure.
@@ -243,12 +254,12 @@ class URDFParser(RobotParser):
         parent_tag = joint_tag.find('parent')
         if parent_tag is None:
             raise RuntimeError("Expecting the joint '" + joint.name + "' to have a parent link/body")
-        joint.parent = parent_tag.attrib['link']
+        joint.parent = tree.bodies[parent_tag.attrib['link']]
 
         child_tag = joint_tag.find('child')
         if child_tag is None:
             raise RuntimeError("Expecting the joint '" + joint.name + "' to have a child link/body")
-        joint.child = child_tag.attrib['link']
+        joint.child = tree.bodies[child_tag.attrib['link']]
 
         # origin
         origin_tag = joint_tag.find('origin')
@@ -284,7 +295,7 @@ class URDFParser(RobotParser):
         Generate the XML tree from the `Tree` data structure.
 
         Args:
-            tree (Tree): Tree data structure.
+            tree (MultiBody): Tree data structure.
 
         Returns:
             ET.Element: root element in the XML file.

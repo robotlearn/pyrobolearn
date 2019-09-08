@@ -317,17 +317,23 @@ class World(object):
     (=root link/body) where each element is connected by joints.
     """
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, position=None, orientation=None):
         """
         Initialize the world data structure which contains the various bodies.
 
         Args:
-            name (str): name of the world.
+            name (str): name of the world. Useful if you have multiple world.
+            position (tuple/list of 3 float, np.array[float[3]]): position of the origin of the world wrt the simulator
+              reference frame. This is useful if you have multiple worlds.
+            orientation (list/tuple/np.array[float[3/4/9]], np.array[float[3,3]], str): world frame orientation wrt
+              the simulator reference frame. This is useful if you have multiple worlds.
         """
         self.name = name
         self.trees = OrderedDict()  # {(unique) name: Tree}
         self.physics = None
         self.lights = OrderedDict()
+        self.frame = Frame(position=position, orientation=orientation)
+        self.floor = None
 
     @property
     def name(self):
@@ -354,6 +360,77 @@ class World(object):
                             "{}".format(type(physics)))
         self._physics = physics
 
+    @property
+    def gravity(self):
+        """Return the gravity vector."""
+        if self._physics is not None:
+            return self._physics.gravity
+
+    @gravity.setter
+    def gravity(self, gravity):
+        """Set the gravity vector."""
+        if self._physics is None:
+            self._physics = Physics()
+        self._physics.gravity = gravity
+
+    @property
+    def floor(self):
+        """Return the floor."""
+        return self._floor
+
+    @floor.setter
+    def floor(self, floor):
+        """Set the floor."""
+        if floor is not None and not isinstance(floor, Floor):
+            raise TypeError("Expecting the given floor to be an instance of `Floor`, but got instead: "
+                            "{}".format(type(floor)))
+        self._floor = floor
+
+    @property
+    def position(self):
+        """Return the world frame position."""
+        return self.frame.position
+
+    @position.setter
+    def position(self, position):
+        """Set the world frame position."""
+        self.frame.position = position
+
+    @property
+    def orientation(self):
+        """Return the world frame orientation."""
+        return self.frame.orientation
+
+    @orientation.setter
+    def orientation(self, orientation):
+        """Set the world frame orientation expressed as RPY angles."""
+        self.frame.orientation = orientation
+
+    @property
+    def rpy(self):
+        """Return the world frame orientation expressed as RPY angles."""
+        return self.frame.rpy
+
+    @property
+    def quaternion(self):
+        """Return the world frame orientation expressed as RPY angles."""
+        return self.frame.quaternion
+
+    @property
+    def rot(self):
+        """Return the world frame orientation expressed as a rotation matrix."""
+        return self.frame.rot
+
+    @property
+    def pose(self):
+        """Return the world frame pose."""
+        return self.frame.pose
+
+    @pose.setter
+    def pose(self, pose):
+        """Set the world frame pose."""
+        self.frame.pose = pose
+
 
 class Light(object):
     r"""Light data structure.
@@ -369,7 +446,7 @@ class Light(object):
         Args:
             name (str): unique name for the light.
             dtype (str): type of light, select between {'point', 'directional', 'spot'}
-            cast_shadows (bool): if True, it will cast shadows.
+            cast_shadows (bool, str): if True, it will cast shadows.
             ambient (tuple[float[4]], np.array[float[4]]): ambient light (RGBA) color.
             diffuse (tuple[float[4]], np.array[float[4]]): diffuse light (RGBA) color.
             specular (tuple[float[4]], np.array[float[4]]): specular light (RGBA) color.
@@ -421,6 +498,26 @@ class Light(object):
                     enable = 1
             enable = bool(enable)
         self._shadows = enable
+
+    @property
+    def active(self):
+        """Return True if the light is active."""
+        return self._active
+
+    @active.setter
+    def active(self, enable):
+        """Set if the light is active or not."""
+        if enable is not None:
+            if isinstance(enable, str):
+                enable = enable.lower()
+                if len(enable) == 1:
+                    enable = int(enable)
+                elif enable == 'false':
+                    enable = 0
+                elif enable == 'true':
+                    enable = 1
+            enable = bool(enable)
+        self._active = enable
 
     @property
     def position(self):
@@ -519,20 +616,30 @@ class Floor(object):
 
     """
 
-    def __init__(self, name=None, dimensions=None, position=None, orientation=None):
+    def __init__(self, name=None, dimensions=None, position=None, orientation=None, friction=None, color=None,
+                 texture=None):
         """
         Initialize the floor data structure.
 
         Args:
             name (str): name of the floor.
             dimensions (list/tuple/np.array[float[:3]], str): dimensions of the floor. By default, the given arguments
-              are expected to be the (X/2, Y/2, space between cells).
+              are expected to be the (X/2, Y/2, space between square grid lines). If the first and second elements are
+              zero, it is expected to create an infinite floor.
             position (list/tuple/np.array[float[3]], str): frame position in the world.
             orientation (list/tuple/np.array[float[3/4/9]], np.array[float[3,3]], str): frame orientation in the world.
+            friction (list/tuple/np.array[float[:3]]): friction coefficients. By default, the first coefficient is
+              supposed to be the sliding friction, the 2nd one is the torsional friction, and the 3rd one is the
+              rolling friction.
+            color (list[float[:4]], str): RGB(A) ambient color.
+            texture (str): path to the texture.
         """
         self.name = name
         self.dimensions = dimensions
         self.frame = Frame(position, orientation, dtype='world')
+        if name is not None:
+            name = name + '_material'
+        self.material = Material(name=name, color=color, texture=texture)
 
     @property
     def name(self):
@@ -607,6 +714,26 @@ class Floor(object):
         """Set the floor frame pose."""
         self.frame.pose = pose
 
+    @property
+    def color(self):
+        """Return the ambient color."""
+        return self.material.color
+
+    @property
+    def rgb(self):
+        """Return the RGB ambient color."""
+        return self.material.rgb
+
+    @property
+    def rgba(self):
+        """Return the RGBA ambient color."""
+        return self.material.rgba
+
+    @property
+    def texture(self):
+        """Return the path to the texture."""
+        return self.material.texture
+
 
 class MultiBody(object):
     r"""Multi-body / Tree data structure.
@@ -680,6 +807,8 @@ class MultiBody(object):
     def position(self, position):
         """Set the tree frame position."""
         self.frame.position = position
+        if self.root is not None:
+            self.root.position = position
 
     @property
     def orientation(self):
@@ -690,6 +819,8 @@ class MultiBody(object):
     def orientation(self, orientation):
         """Set the tree frame orientation expressed as RPY angles."""
         self.frame.orientation = orientation
+        if self.root is not None:
+            self.root.orientation = orientation
 
     @property
     def rpy(self):
@@ -750,7 +881,6 @@ class Body(object):
         self.id = int(body_id)
         self.name = name
 
-        self.bodies = []                        # inner bodies / links
         self.joints = OrderedDict()             # child joints
         self.parent_joints = OrderedDict()      # parent joints
 
@@ -775,9 +905,18 @@ class Body(object):
         self._name = name
 
     @property
+    def bodies(self):
+        """Return the child (inner) bodies / links."""
+        bodies = []
+        for joint in self.joints.values():
+            if joint.child is not None:
+                bodies.append(joint.child)
+        return bodies
+
+    @property
     def inertials(self):
         """Return the inertial components of the body."""
-        return self._inertial
+        return self._inertials
 
     @inertials.setter
     def inertials(self, inertials):
@@ -802,6 +941,35 @@ class Body(object):
         if len(self.inertials) == 1:
             return self.inertials[0]
         return self.combine_inertials(self.inertials)
+
+    @property
+    def mass(self):
+        """Return the mass."""
+        if len(self._inertials) > 0:
+            if len(self._inertials) > 1:
+                print("WARNING: multiple inertial elements are defined, as such we return the mass of each one.")
+                return [inertial.mass for inertial in self._inertials]
+            return self.inertial.mass
+
+    @mass.setter
+    def mass(self, mass):
+        """Set the mass."""
+        if self._inertials:
+            if len(self._inertials) == 0:
+                inertial = Inertial(mass=mass)
+                self.add_inertial(inertial)
+            elif len(self._inertials) == 1:
+                self._inertials[0].mass = mass
+            else:
+                if not isinstance(mass, (list, tuple, np.ndarray)):
+                    raise ValueError("Expecting the mass to be a list/tuple/array of float, instead got: "
+                                     "{}".format(type(mass)))
+                if len(mass) != len(self._inertials):
+                    raise ValueError("Expecting the given mass to be a list of the same size as the number of "
+                                     "inertial elements in this class, instead got: len(mass) = {}, and "
+                                     "len(inertials) = {}".format(len(mass), len(self._inertials)))
+                for m, inertial in zip(mass, self._inertials):
+                    inertial.mass = m
 
     @property
     def visuals(self):
@@ -962,7 +1130,7 @@ class Body(object):
         Add a visual shape to the list of visual shapes.
 
         Args:
-            visual (Collision): visual instance.
+            visual (Visual): visual instance.
         """
         if not isinstance(visual, Visual):
             raise TypeError("Expecting the given 'visual' to be an instance of `Visual`, but got instead: "
@@ -999,6 +1167,30 @@ class Body(object):
             inertial += inertials[i]
         return inertial
 
+    def add_child_joint(self, joint):
+        """
+        Add child joint.
+
+        Args:
+            joint (Joint): joint instance.
+        """
+        if not isinstance(joint, Joint):
+            raise TypeError("Expecting the given 'joint' to be an instance of `Joint` but instead got: "
+                            "{}".format(type(joint)))
+        self.joints[joint.id] = joint
+
+    def add_parent_joint(self, joint):
+        """
+        Add parent joint.
+
+        Args:
+            joint (Joint): parent joint instance.
+        """
+        if not isinstance(joint, Joint):
+            raise TypeError("Expecting the given 'joint' to be an instance of `Joint` but instead got: "
+                            "{}".format(type(joint)))
+        self.parent_joints[joint.id] = joint
+
 
 class Joint(object):
     r"""Joint data structure.
@@ -1025,7 +1217,8 @@ class Joint(object):
     """
 
     def __init__(self, joint_id, name=None, dtype=None, limits=None, parent=None, child=None, axis=None,
-                 position=None, orientation=None, friction=None, damping=None, effort=None, velocity=None):
+                 position=None, orientation=None, friction=None, stiffness=None, damping=None, effort=None,
+                 velocity=None):
         """
         Initialize the Joint class.
 
@@ -1034,13 +1227,14 @@ class Joint(object):
             name (str): name of the joint.
             dtype (str): joint type which can be selected from: [fixed, floating/free, prismatic, revolute/hinge,
               continuous, gearbox, revolute2, ball, screw, universal, planar].
-            limits (tuple[float], str): joint position limits.
+            limits (tuple[float]], str): joint position limits.
             parent (Body, None): parent body/link that is connected to the joint.
             child (Body, None): child body/link that is connected to the joint.
             axis (tuple/list[float[3]], str): joint axis.
             position (list/tuple/np.array[float[3]], str): joint frame position.
             orientation (list/tuple/np.array[float[3/4/9]], np.array[float[3,3]], str): joint frame orientation.
-            friction (float, str): joint friction coefficient.
+            friction (float, str): joint friction loss due to dry friction.
+            stiffness (float, str): joint stiffness coefficient.
             damping (float, str): joint damping coefficient.
             effort (float, str): joint maximum allowed effort.
             velocity (float, str): joint maximum allowed velocity.
@@ -1122,6 +1316,32 @@ class Joint(object):
             if len(limits) != 2:
                 raise ValueError("Expecting 2 floats for the joint limits")
         self._limits = limits
+
+    @property
+    def parent(self):
+        """Return the parent body."""
+        return self._parent
+
+    @parent.setter
+    def parent(self, parent):
+        """Set the parent body."""
+        if parent is not None and not isinstance(parent, Body):
+            raise TypeError("Expecting the given 'parent' to be an instance of `Body` but got instead: "
+                            "{}".format(type(parent)))
+        self._parent = parent
+
+    @property
+    def child(self):
+        """Return the child body."""
+        return self._child
+
+    @child.setter
+    def child(self, child):
+        """Set the child body."""
+        if child is not None and not isinstance(child, Body):
+            raise TypeError("Expecting the given 'child' to be an instance of `Body` but got instead: "
+                            "{}".format(type(child)))
+        self._child = child
 
     @property
     def axis(self):
@@ -1419,7 +1639,7 @@ class Inertia(object):
     @ixy.setter
     def ixy(self, ixy):
         """Set the Ixy component of the inertia."""
-        if ixy is None:
+        if ixy is not None:
             ixy = float(ixy)
         self._ixy = ixy
 
@@ -1498,7 +1718,7 @@ class Inertial(object):
 
     @property
     def inertia(self):
-        """Return the inertia matrix."""
+        """Return the inertia instance."""
         return self._inertia
 
     @inertia.setter
@@ -1506,7 +1726,7 @@ class Inertial(object):
         """Set the inertia matrix."""
         if inertia is not None:
             if isinstance(inertia, str):
-                inertia = inertia.split()
+                inertia = Inertia(inertia=inertia)
             if isinstance(inertia, (list, tuple, np.ndarray)):
                 if isinstance(inertia, np.ndarray) and inertia.ndim == 2:
                     if inertia.shape != (3, 3):
@@ -1800,8 +2020,9 @@ class Geometry(object):  # Shape
     - cylinder: size = float[2] (radius and length/height)
     - capsule: size = float[2] (radius and length/height)
     - ellipsoid: size = float[3] (radius in X, Y, Z)
-    - mesh: size = scale = float[3] (scale in each direction), or size = scale = float (total scale factor)
-    - plane: size = float[2] (length in X and Y)
+    - mesh: size = scale = float[3] (scale in each direction), or usually size = scale = float (total scale factor)
+    - plane: size = float[2] (length in X and Y), if float[3] the third element represents the distance between the
+      lines on the plane grid.
     - sphere: size = float (radius)
     """
 
@@ -1810,7 +2031,8 @@ class Geometry(object):  # Shape
         Initialize the Geometry which is used for the `Visual` and `Collision` elements.
 
         Args:
-            dtype (str): primitive shape type.
+            dtype (str): primitive shape type, this can be selected from ['box', 'cylinder', 'capsule', 'cone',
+              'ellipsoid', 'mesh', 'plane', 'sphere', 'heightmap'].
             size (list[float[:3]], str): size/dimension of the shape.
             filename (str): path to the mesh file.
         """
@@ -1838,6 +2060,9 @@ class Geometry(object):  # Shape
             elif not isinstance(size, (float, int)):
                 raise TypeError("Expecting the size to be a float, int, list, tuple or np.ndarray")
         self._size = size
+
+    # alias
+    dimensions = size
 
     @property
     def format(self):
@@ -1932,6 +2157,26 @@ class Visual(object):
     def color(self, color):
         """Set the ambient color."""
         self.material.color = color
+
+    @property
+    def rgb(self):
+        """Return the RGB ambient color."""
+        return self.material.rgb
+
+    @property
+    def rgba(self):
+        """Return the RGBA ambient color."""
+        return self.material.rgba
+
+    @property
+    def texture(self):
+        """Return the path to the texture."""
+        return self.material.texture
+
+    @texture.setter
+    def texture(self, texture):
+        """Set the texture to the material."""
+        self.material.texture = texture
 
     @property
     def format(self):
@@ -2116,7 +2361,7 @@ class Material(object):
 
         Args:
             name (str): name of the material.
-            color (list[float], str): RGB(A) ambient color.
+            color (list[float[:4]], str): RGB(A) ambient color.
             texture (str): path to the texture.
             diffuse (list[float], str): diffuse color of an object; the color of an object under a pure white light.
             specular (list[float], str): specular color of an object; the color and intensity of a highlight from a
@@ -2145,19 +2390,32 @@ class Material(object):
             raise TypeError("Expecting the given 'name' to be a string, instead got: {}".format(type(name)))
         self._name = name
 
+    @property
+    def texture(self):
+        """Return the texture."""
+        return self._texture
+
+    @texture.setter
+    def texture(self, texture):
+        """Set the texture."""
+        if texture is not None and not isinstance(texture, str):
+            raise TypeError("Expecting the given 'texture' to be a string, instead got: {}".format(type(texture)))
+        self._texture = texture
+
     @staticmethod
     def _check_color(color):
         """Check the given color (its type and length) and convert it to a tuple of float."""
         if color is not None:
             if isinstance(color, str):  # e.g. '0.5 0.1 1. 1.'
-                color = (float(c) for c in color.split())
+                color = [float(c) for c in color.split()]
             if isinstance(color, (list, tuple)):
                 if len(color) < 3 or len(color) > 4:
                     raise ValueError("Expecting the color to be of length 3 (RGB) or 4 (RGBA), but got a length of: "
                                      "{}".format(len(color)))
                 color = tuple(color)
             else:
-                raise TypeError("Expecting the color to be a tuple or list of 3 or 4 float.")
+                raise TypeError("Expecting the color to be a tuple or list of 3 or 4 float, but got instead: "
+                                "type={}".format(type(color)))
         return color
 
     @property
@@ -2177,14 +2435,14 @@ class Material(object):
     def rgb(self):
         """Return the RGB ambient color."""
         if self.color is None:
-            return 0.5, 0.5, 0.5
+            return None  # 0.5, 0.5, 0.5
         return tuple(self.color[:3])
 
     @property
     def rgba(self):
         """Return the RGBA ambient color."""
         if self.color is None:
-            return 0.5, 0.5, 0.5, 1.
+            return None  # 0.5, 0.5, 0.5, 1.
         if len(self.color) == 3:
             return tuple(self.color) + (1.,)
         return tuple(self.color)
