@@ -11,12 +11,14 @@ References:
 """
 
 import os
+import copy
 import numpy as np
 import xml.etree.ElementTree as ET
 
 # import mesh converter (from .obj to .stl)
 try:
     import trimesh  # https://pypi.org/project/trimesh/
+    from trimesh.exchange.export import export_mesh
 
     # import pymesh    # rapid prototyping platform focused on geometry processing
     # doc: https://pymesh.readthedocs.io/en/latest/user_guide.html
@@ -30,7 +32,8 @@ except ImportError as e:
 from pyrobolearn.utils.parsers.robots.world_parser import WorldParser
 from pyrobolearn.utils.parsers.robots.data_structures import Simulator, World, Tree, Body, Joint, Inertial, \
     Visual, Collision, Light, Floor
-from pyrobolearn.utils.transformation import rotation_matrix_x, rotation_matrix_y, rotation_matrix_z
+from pyrobolearn.utils.transformation import rotation_matrix_x, rotation_matrix_y, rotation_matrix_z, \
+    get_inverse_homogeneous
 
 
 __author__ = "Brian Delhaisse"
@@ -105,6 +108,9 @@ class MuJoCoParser(WorldParser):
         self.create_root("mujoco")
         # add compiler
         self.add_element("compiler", self._root, attributes={'coordinate': 'local', 'angle': 'radian'})
+        # add size
+        self.nconmax = 200  # increase this if necessary (this depends on how many models are loaded)
+        self.add_element("size", self._root, attributes={"nconmax": str(self.nconmax)})
         # add worldbody
         self.worldbody = self.add_element(name="worldbody", parent_element=self.root)
 
@@ -117,6 +123,11 @@ class MuJoCoParser(WorldParser):
         self._material_cnt = 0  # material/asset counter
         # self._geom_cnt = 0
         # self._site_cnt = 0
+
+        # save homogenous matrices (for later)
+        self._h_bodies, self._h_joints, self._h_visuals, self._h_collisions, self._h_inertials = {}, {}, {}, {}, {}
+        self._assets_tmp = set([])
+        self._mesh_dirname = ''
 
     #################
     # Utils methods #
@@ -1157,12 +1168,52 @@ class MuJoCoParser(WorldParser):
             raise TypeError("Expecting the given 'tree' to be an instance of `Tree`, but got instead: "
                             "{}".format(type(tree)))
 
+        # update the body and joint positions because in MuJoCo "all elements in defined in the kinematic tree are
+        # expressed in local coordinates, relative to the parent body for bodies, and relative to the body that owns
+        # the element for geoms, joints, sites, cameras and lights", and a joint defined in a body connects that body
+        # with its parent body.
+
+        h_bodies, h_joints, h_visuals, h_collisions, h_inertials = {}, {}, {}, {}, {}
+        for i, body in enumerate(tree.bodies.values()):
+            print(body.name, body.homogeneous)
+            h_inv = get_inverse_homogeneous(body.homogeneous)  # get link/joint frame
+            for visual in body.visuals:  # because geom is described wrt body frame and not link/joint frame
+                h_visuals[visual] = h_inv.dot(visual.homogeneous)
+            for collision in body.collisions:  # because geom is described wrt body frame and not link/joint frame
+                h_collisions[collision] = h_inv.dot(collision.homogeneous)
+            for inertial in body.inertials:  # because inertial is described wrt body frame and not link/joint frame
+                h_inertials[inertial] = h_inv.dot(inertial.homogeneous)
+            for joint in body.joints.values():
+                if joint.child is not None:
+                    h_child = joint.child.homogeneous
+                    h = h_inv.dot(joint.homogeneous).dot(h_child)
+                    h_bodies[joint.child] = h  # because child body is described wrt parent body frame in MJC
+                    h_joints[joint] = get_inverse_homogeneous(h_child)  # because joint are wrt child body frame in MJC
+
+        self._h_bodies, self._h_joints = h_bodies, h_joints
+        self._h_visuals, self._h_collisions, self._h_inertials = h_visuals, h_collisions, h_inertials
+
+        # TODO: WARNING - this modify the given Tree!!!
+        for body, homogeneous in h_bodies.items():
+            body.homogeneous = homogeneous
+        for joint, homogeneous in h_joints.items():
+            joint.homogeneous = homogeneous
+        for visual, homogeneous in h_visuals.items():
+            visual.homogeneous = homogeneous
+        for collision, homogeneous in h_collisions.items():
+            collision.homogeneous = homogeneous
+        for inertial, homogeneous in h_inertials.items():
+            inertial.homogeneous = homogeneous
+
         # generate bodies (inertial, visual, collision) and joints in a recursive manner
         body_tag = self.generate_body(parent_tag, body=tree.root, root=root)
+
+        # empty the temporary assets
+        self._assets_tmp = set([])
+
         return body_tag
 
-    @staticmethod
-    def _convert_mesh(filename):
+    def _convert_mesh(self, filename):
         """
         Convert mesh (from any format) to an STL mesh format. This is because MuJoCo only accepts STL meshes.
 
@@ -1178,14 +1229,22 @@ class MuJoCoParser(WorldParser):
         extension = filename.split('.')[-1]
         if extension.lower() != 'stl':
             # create filename with the correction extension (STL)
-            filename_without_extension = ''.join(filename.split('.')[:-1])
-            new_filename = filename_without_extension + '.stl'
+            dirname = os.path.dirname(filename)
+            basename = os.path.basename(filename)
+            basename_without_extension = ''.join(basename.split('.')[:-1])
+            # filename_without_extension = dirname + basename_without_extension
+            # new_filename = filename_without_extension + '.stl'
+            new_filename = self._mesh_dirname + '/' + basename_without_extension + '.stl'
 
-            # if file do not already exists, convert it
+            # if file does not already exists, convert it
             if not os.path.isfile(new_filename):
-                scene = pyassimp.load(filename)
-                pyassimp.export(scene, new_filename, file_type='stl')
-                pyassimp.release(scene)
+
+                # # Arf, pyassimp export an ASCII STL, but Mujoco requires a binary STL --> use trimesh
+                # scene = pyassimp.load(filename)
+                # pyassimp.export(scene, new_filename, file_type='stl')
+                # pyassimp.release(scene)
+
+                export_mesh(trimesh.load(filename), new_filename)
 
             return new_filename
         return filename
@@ -1300,12 +1359,14 @@ class MuJoCoParser(WorldParser):
                     if asset_tag is None:
                         asset_tag = ET.SubElement(root, "asset")
 
-                    # create mesh tag
+                    # create <mesh> tag in <asset>
                     mesh_path = self._convert_mesh(collision.filename)  # convert to STL if necessary
                     mesh_name = os.path.basename(mesh_path).split('.')[0]
-                    attrib = {'name': mesh_name, 'file': mesh_path}
-                    self._update_attribute_dict(attrib, collision, 'size', key='scale')
-                    ET.SubElement(asset_tag, "mesh", attrib=attrib)
+                    if mesh_name not in self._assets_tmp:  # if the <mesh> doesn't already exists
+                        self._assets_tmp.add(mesh_name)
+                        attrib = {'name': mesh_name, 'file': mesh_path}
+                        self._update_attribute_dict(attrib, collision, 'size', key='scale')
+                        ET.SubElement(asset_tag, "mesh", attrib=attrib)
 
                     # set the mesh asset name
                     geom.attrib["mesh"] = mesh_name
@@ -1325,13 +1386,13 @@ class MuJoCoParser(WorldParser):
 
             # check type and change size
             if 'type' in attrib and 'size' in attrib:
-                if collision.dtype == 'box':  # divide by 2 the dimensions
-                    attrib['size'] = str(np.asarray(collision.size) / 2.)[1:-1]
-                elif collision.dtype == 'cylinder' or collision.dtype == 'capsule':  # divide by 2 the height
-                    radius, length = collision.size
+                if visual.dtype == 'box':  # divide by 2 the dimensions
+                    attrib['size'] = str(np.asarray(visual.size) / 2.)[1:-1]
+                elif visual.dtype == 'cylinder' or visual.dtype == 'capsule':  # divide by 2 the height
+                    radius, length = visual.size
                     attrib['size'] = str(np.asarray([radius, length / 2]))[1:-1]
-                elif collision.dtype == 'mesh':  # set the scale
-                    attrib['fitscale'] = str(collision.size)
+                elif visual.dtype == 'mesh':  # set the scale
+                    attrib['fitscale'] = str(visual.size)
 
             # create <geom> tag
             geom = ET.SubElement(body_tag, "geom", attrib=attrib)
@@ -1346,11 +1407,13 @@ class MuJoCoParser(WorldParser):
                     asset_tag = ET.SubElement(root, "asset")
 
                 # create mesh tag
-                mesh_path = self._convert_mesh(collision.filename)  # convert to STL if necessary
+                mesh_path = self._convert_mesh(visual.filename)  # convert to STL if necessary
                 mesh_name = os.path.basename(mesh_path).split('.')[0]
-                attrib = {'name': mesh_name, 'file': mesh_path}
-                self._update_attribute_dict(attrib, collision, 'size', key='scale')
-                ET.SubElement(asset_tag, "mesh", attrib=attrib)
+                if mesh_name not in self._assets_tmp:  # if the mesh doesn't already exists
+                    self._assets_tmp.add(mesh_name)
+                    attrib = {'name': mesh_name, 'file': mesh_path}
+                    self._update_attribute_dict(attrib, visual, 'size', key='scale')
+                    ET.SubElement(asset_tag, "mesh", attrib=attrib)
 
                 # set the mesh asset name
                 geom.attrib["mesh"] = mesh_name
@@ -1362,7 +1425,6 @@ class MuJoCoParser(WorldParser):
 
         # create <joint>
         for joint in body.parent_joints.values():  # parent_joints
-            print("Joint...")
             self.generate_joint(body_tag, joint)
 
         # create inner <body>
@@ -1421,13 +1483,14 @@ class MuJoCoParser(WorldParser):
         if 'type' in attrib:
             return ET.SubElement(parent_tag, "joint", attrib=attrib)
 
-    def add_multibody(self, tree):
+    def add_multibody(self, tree, mesh_directory_path=''):
         r"""
         Add the given tree / multi-body data structure.
 
         Args:
             tree (Tree, Body): multi-body data structure. If it is a body instance, it will automatically be
               wrapped in a Tree instance.
+            mesh_directory_path (str): path to the mesh directory to add the converted meshes.
 
         Returns:
             ET.Element: body XML element
@@ -1438,6 +1501,8 @@ class MuJoCoParser(WorldParser):
             else:
                 raise TypeError("Expecting the given 'tree' to be an instance of `Tree` or `Body` but got "
                                 "instead: {}".format(type(tree)))
+
+        self._mesh_dirname = mesh_directory_path if isinstance(mesh_directory_path, str) else ''
 
         # generate tree
         return self.generate_tree(parent_tag=self.worldbody, tree=tree, root=self.root)

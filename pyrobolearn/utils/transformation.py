@@ -95,6 +95,37 @@ def get_homogeneous_transform(position, orientation):
     return H
 
 
+def get_inverse_homogeneous(matrix):
+    r"""
+    Return the inverse of the homogeneous matrix.
+
+    If the homogeneous matrix is expressed as:
+
+    .. math::
+
+        H = [[R, p],
+             [zeros(3), 1]],
+
+    where :math:`R` is the 3x3 rotation matrix, :math:`p` is the 3x1 position vector. Then, the inverse homogeneous
+    matrix is given by:
+
+    .. math::
+
+        H^{-1} = [[R^\top, -R^\top p],
+                  [zeros(3), 1]].
+
+    Args:
+        matrix (np.array[float[4,4]]): homogeneous matrix to inverse.
+
+    Returns:
+        np.array[float[4,4]]: inverse homogeneous matrix.
+    """
+    R = matrix[:3, :3].T
+    p = -R.dot(matrix[:3, 3].reshape(-1, 1))
+    return np.vstack((np.hstack((R, p)),
+                      np.array([[0, 0, 0, 1]])))
+
+
 def homogeneous_to_pose(matrix):
     r"""
     Return a pose (7D vector: position + quaternion) from a homogeneous matrix.

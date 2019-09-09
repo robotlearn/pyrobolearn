@@ -255,6 +255,21 @@ class Frame(object):
             else:
                 raise TypeError("Expecting the pose to be a str, list, tuple or np.ndarray")
 
+    @property
+    def homogeneous(self):
+        """Return the homogeneous matrix based on the position and orientation. Note that if the orientation is
+        None it will be set to the identity matrix, and if the position is None, it will be set to the zero vector."""
+        R = self.rot if self._orientation is not None else np.identity(3)
+        p = self._position if self._position is not None else np.zeros(3)
+        return np.vstack((np.hstack((R, p.reshape(-1, 1))),
+                          np.array([[0, 0, 0, 1]])))
+
+    @homogeneous.setter
+    def homogeneous(self, matrix):
+        """Set the position and orientation of the frame based on the given homogeneous matrix."""
+        self.position = matrix[:3, 3]
+        self.orientation = matrix[:3, :3]
+
 
 class Physics(object):
     r"""Physical properties of the world.
@@ -431,6 +446,17 @@ class World(object):
         """Set the world frame pose."""
         self.frame.pose = pose
 
+    @property
+    def homogeneous(self):
+        """Return the frame homogeneous matrix. Note that if the orientation is None it will be set to the identity
+        matrix, and if the position is None, it will be set to the zero vector."""
+        return self.frame.homogeneous
+
+    @homogeneous.setter
+    def homogeneous(self, matrix):
+        """Set the given homogeneous matrix."""
+        self.frame.homogeneous = matrix
+
 
 class Light(object):
     r"""Light data structure.
@@ -558,6 +584,17 @@ class Light(object):
     def pose(self):
         """Return the light frame pose."""
         return self.frame.pose
+
+    @property
+    def homogeneous(self):
+        """Return the frame homogeneous matrix. Note that if the orientation is None it will be set to the identity
+        matrix, and if the position is None, it will be set to the zero vector."""
+        return self.frame.homogeneous
+
+    @homogeneous.setter
+    def homogeneous(self, matrix):
+        """Set the given homogeneous matrix."""
+        self.frame.homogeneous = matrix
 
     @pose.setter
     def pose(self, pose):
@@ -715,6 +752,17 @@ class Floor(object):
         self.frame.pose = pose
 
     @property
+    def homogeneous(self):
+        """Return the frame homogeneous matrix. Note that if the orientation is None it will be set to the identity
+        matrix, and if the position is None, it will be set to the zero vector."""
+        return self.frame.homogeneous
+
+    @homogeneous.setter
+    def homogeneous(self, matrix):
+        """Set the given homogeneous matrix."""
+        self.frame.homogeneous = matrix
+
+    @property
     def color(self):
         """Return the ambient color."""
         return self.material.color
@@ -782,7 +830,10 @@ class MultiBody(object):
     @property
     def root(self):
         """Return the root body element."""
-        return self._root
+        if self._root is not None:
+            return self._root
+        if len(self.bodies):
+            return next(iter(self.bodies))  # get first element
 
     @root.setter
     def root(self, root):
@@ -846,6 +897,17 @@ class MultiBody(object):
     def pose(self, pose):
         """Set the tree frame pose."""
         self.frame.pose = pose
+
+    @property
+    def homogeneous(self):
+        """Return the homogeneous matrix. Note that if the orientation is None it will be set to the identity
+        matrix, and if the position is None, it will be set to the zero vector."""
+        return self.frame.homogeneous
+
+    @homogeneous.setter
+    def homogeneous(self, matrix):
+        """Set the given homogeneous matrix."""
+        self.frame.homogeneous = matrix
 
 
 # alias
@@ -1113,6 +1175,17 @@ class Body(object):
         """Set the body frame pose."""
         self.frame.pose = pose
 
+    @property
+    def homogeneous(self):
+        """Return the homogeneous matrix. Note that if the orientation is None it will be set to the identity
+        matrix, and if the position is None, it will be set to the zero vector."""
+        return self.frame.homogeneous
+
+    @homogeneous.setter
+    def homogeneous(self, matrix):
+        """Set the given homogeneous matrix."""
+        self.frame.homogeneous = matrix
+
     def add_collision(self, collision):
         """
         Add a collision shape to the list of collision shapes.
@@ -1214,6 +1287,12 @@ class Joint(object):
     - SDF: ball, fixed, gearbox, prismatic, revolute, revolute2, screw, universal
     - Dart: ball, free (=floating), euler, prismatic, weld (=fixed), revolute, universal
     - MuJoCo: ball, free (=floating), hinge (=revolute), slide (=prismatic)
+
+    By default, we follow the convention expressed in URDF to describe the frames. That is, the child joint frame is
+    described with respect to the parent joint/link frame.
+
+    References:
+        - [1] http://wiki.ros.org/urdf/XML/joint
     """
 
     def __init__(self, joint_id, name=None, dtype=None, limits=None, parent=None, child=None, axis=None,
@@ -1403,6 +1482,17 @@ class Joint(object):
     def pose(self, pose):
         """Set the joint frame pose."""
         self.frame.pose = pose
+
+    @property
+    def homogeneous(self):
+        """Return the frame homogeneous matrix. Note that if the orientation is None it will be set to the identity
+        matrix, and if the position is None, it will be set to the zero vector."""
+        return self.frame.homogeneous
+
+    @homogeneous.setter
+    def homogeneous(self, matrix):
+        """Set the given homogeneous matrix."""
+        self.frame.homogeneous = matrix
 
     @property
     def friction(self):
@@ -1671,7 +1761,9 @@ class Inertia(object):
 class Inertial(object):
     r"""Inertial properties.
 
-    The inertial element groups the mass, inertia, and the body CoM position and orientation.
+    The inertial element groups the mass, inertia, and the body CoM position and orientation. By default, we follow
+    the convention expressed in URDF to describe the frames. That is, the inertial frame is described with respect to
+    the link frame.
 
     Moments of inertia of popular shapes:
 
@@ -1687,6 +1779,9 @@ class Inertial(object):
     - sphere: I = 2./5 * mass * radius**2 * np.ones(3)
     - mesh: use ``trimesh`` library, after loading the mesh, you can access the moments of inertia with
       ``mesh.moment_inertia``.
+
+    References:
+        - [1] http://wiki.ros.org/urdf/XML/link
     """
 
     def __init__(self, mass=None, inertia=None, position=(0., 0., 0.), orientation=None):
@@ -1828,6 +1923,17 @@ class Inertial(object):
     def pose(self, pose):
         """Set the inertial pose."""
         self.frame.pose = pose
+
+    @property
+    def homogeneous(self):
+        """Return the frame homogeneous matrix. Note that if the orientation is None it will be set to the identity
+        matrix, and if the position is None, it will be set to the zero vector."""
+        return self.frame.homogeneous
+
+    @homogeneous.setter
+    def homogeneous(self, matrix):
+        """Set the given homogeneous matrix."""
+        self.frame.homogeneous = matrix
 
     @staticmethod
     def compute_mass_from_density(shape, dimensions=None, density=1000, volume=None, mesh=None):
@@ -2076,7 +2182,14 @@ Shape = Geometry
 
 
 class Visual(object):
-    r"""visual parameters for body."""
+    r"""visual parameters for body.
+
+    By default, we follow the convention expressed in URDF to describe the frames. That is, the visual frame is
+    described with respect to the link frame.
+
+    References:
+        - [1] http://wiki.ros.org/urdf/XML/link
+    """
 
     def __init__(self, name=None, dtype=None, size=None, color=None, filename=None, position=None, orientation=None,
                  material_name=None, texture=None, diffuse=None, specular=None, emissive=None):
@@ -2230,9 +2343,27 @@ class Visual(object):
         """Set the visual frame pose."""
         self.frame.pose = pose
 
+    @property
+    def homogeneous(self):
+        """Return the frame homogeneous matrix. Note that if the orientation is None it will be set to the identity
+        matrix, and if the position is None, it will be set to the zero vector."""
+        return self.frame.homogeneous
+
+    @homogeneous.setter
+    def homogeneous(self, matrix):
+        """Set the given homogeneous matrix."""
+        self.frame.homogeneous = matrix
+
 
 class Collision(object):
-    r"""Collision parameters for body."""
+    r"""Collision parameters for body.
+
+    By default, we follow the convention expressed in URDF to describe the frames. That is, the collision frame is
+    described with respect to the link frame.
+
+    References:
+        - [1] http://wiki.ros.org/urdf/XML/link
+    """
 
     def __init__(self, name=None, dtype=None, size=None, filename=None, position=None, orientation=None):
         """
@@ -2343,6 +2474,17 @@ class Collision(object):
     def pose(self, pose):
         """Set the pose of the collision frame."""
         self.frame.pose = pose
+
+    @property
+    def homogeneous(self):
+        """Return the frame homogeneous matrix. Note that if the orientation is None it will be set to the identity
+        matrix, and if the position is None, it will be set to the zero vector."""
+        return self.frame.homogeneous
+
+    @homogeneous.setter
+    def homogeneous(self, matrix):
+        """Set the given homogeneous matrix."""
+        self.frame.homogeneous = matrix
 
 
 class Material(object):

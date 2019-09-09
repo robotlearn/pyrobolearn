@@ -2,11 +2,13 @@
 """Define the abstract Robot parser.
 """
 
+import os
+
 # import XML parser
 import xml.etree.ElementTree as ET
 from xml.dom import minidom  # to print in a pretty way the XML file
 
-from pyrobolearn.utils.parsers.robots.data_structures import Tree
+from pyrobolearn.utils.parsers.robots.data_structures import MultiBody
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2019, PyRoboLearn"
@@ -31,7 +33,9 @@ class RobotParser(object):
         self.root = None
         self.tree = None
         self.filename = filename
+        self.dirname = ''
         if filename is not None:
+            self.dirname = os.path.dirname(filename) + '/'
             self.parse(filename)
 
     @property
@@ -51,7 +55,7 @@ class RobotParser(object):
 
     @tree.setter
     def tree(self, tree):
-        if tree is not None and not isinstance(tree, Tree):
+        if tree is not None and not isinstance(tree, MultiBody):
             raise TypeError("Expecting the given tree to be an instance of `Tree`, but got instead: "
                             "{}".format(type(tree)))
         self._tree = tree
@@ -70,7 +74,7 @@ class RobotParser(object):
         Return the Tree containing all the elements.
 
         Returns:
-            Tree: tree data structure.
+            MultiBody: tree data structure.
         """
         return self.tree
 
@@ -79,7 +83,7 @@ class RobotParser(object):
         Generate the XML tree from the `Tree` data structure.
 
         Args:
-            tree (Tree): Tree data structure.
+            tree (MultiBody): Tree data structure.
 
         Returns:
             ET.Element: root element in the XML file.

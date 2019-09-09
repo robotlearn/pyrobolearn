@@ -537,6 +537,8 @@ class Mujoco(Simulator):
         Returns:
             int (non-negative): unique id associated to the load model.
         """
+        print(filename)
+        print(os.path.dirname(filename))
         # parse URDF file
         urdf_parser = URDFParser(filename=filename)
         tree = urdf_parser.tree
@@ -546,7 +548,7 @@ class Mujoco(Simulator):
         tree.orientation = orientation
 
         # add the parse tree to the MJCF parser/generator
-        self._parser.add_multibody(tree)
+        self._parser.add_multibody(tree, mesh_directory_path=os.path.dirname(os.path.abspath(__file__)) + '/meshes/')
 
         print(self._parser.get_string(pretty_format=True))
 
@@ -562,14 +564,13 @@ class Mujoco(Simulator):
         """
         # parse sdf file
         sdf_parser = SDFParser(filename=filename)
-        mujoco_generator = MuJoCoParser()
 
-        # generate XML elements
-        elements = [mujoco_generator.generate(tree) for tree in sdf_parser.world.trees]
+        for tree in sdf_parser.world.trees:
+            # # update the position and orientation
+            # tree.position = position
+            # tree.orientation = orientation
 
-        # append each element to worldbody
-        for element in elements:
-            self._worldbody.append(element)
+            self._parser.add_multibody(tree)
 
     def load_mjcf(self, filename, scaling=1., *args, **kwargs):
         """Load a Mujoco file in the simulator.
@@ -589,15 +590,17 @@ class Mujoco(Simulator):
         # self.model = mujoco.load_model_from_path(filename)
         # self.sim = mujoco.MjSim(self.model)
 
-        # parse MJCF file
-        parser = MuJoCoParser(filename=filename)
+        raise NotImplementedError
 
-        # generate XML elements
-        elements = [parser.generate(tree) for tree in parser.world.trees]
-
-        # append each element to worldbody
-        for element in elements:
-            self._worldbody.append(element)
+        # # parse MJCF file
+        # parser = MuJoCoParser(filename=filename)
+        #
+        # # generate XML elements
+        # elements = [parser.generate(tree) for tree in parser.world.trees]
+        #
+        # # append each element to worldbody
+        # for element in elements:
+        #     self._worldbody.append(element)
 
     def load_mesh(self, filename, position, orientation=(0, 0, 0, 1), mass=1., scale=(1., 1., 1.), color=None,
                   with_collision=True, flags=None, *args, **kwargs):

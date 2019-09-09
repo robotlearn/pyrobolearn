@@ -66,7 +66,7 @@ class URDFParser(RobotParser):
                 material.color = color_tag.attrib.get('rgba')
             texture_tag = material_tag.find('texture')
             if texture_tag is not None:
-                material.texture = texture_tag.attrib.get('filename')
+                material.texture = self.dirname + texture_tag.attrib.get('filename')
             tree.materials[material.name] = material
 
         # check bodies / links
@@ -104,8 +104,7 @@ class URDFParser(RobotParser):
 
         return tree
 
-    @staticmethod
-    def _check_body(tree, body_tag, idx):
+    def _check_body(self, tree, body_tag, idx):
         """
         Return Body instance from a <link> tag.
 
@@ -174,7 +173,7 @@ class URDFParser(RobotParser):
                         elif dtype == 'cylinder':
                             visual.size = (geometry_type_tag.attrib['radius'], geometry_type_tag.attrib['length'])
                         elif dtype == 'mesh':
-                            visual.filename = geometry_type_tag.attrib['filename']
+                            visual.filename = self.dirname + geometry_type_tag.attrib['filename']
                             visual.size = geometry_type_tag.attrib.get('scale')
 
             # material
@@ -189,7 +188,7 @@ class URDFParser(RobotParser):
                     if color is not None:
                         material.color = color.attrib['rgba']
                     elif texture is not None:
-                        material.texture = texture.attrib['filename']
+                        material.texture = self.dirname + texture.attrib['filename']
                 else:
                     material = tree.materials.get(name)
                 visual.material = material
@@ -226,7 +225,7 @@ class URDFParser(RobotParser):
                         elif dtype == 'cylinder':
                             collision.size = (geometry_type_tag.attrib['radius'], geometry_type_tag.attrib['length'])
                         elif dtype == 'mesh':
-                            collision.filename = geometry_type_tag.attrib['filename']
+                            collision.filename = self.dirname + geometry_type_tag.attrib['filename']
                             collision.size = geometry_type_tag.attrib.get('scale')
 
             # set collision to body
