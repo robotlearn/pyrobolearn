@@ -36,7 +36,7 @@ is the world frame). For more, see http://www.ros.org/wiki/xacro -->
     <origin rpy="0 0 0" xyz="0 0 0"/>
     <parent link="base_link"/>
     <child link="trunk"/>
-  </joint>
+  </joint-->
   <!-- Links -->
   <!-- Footprint link -->
   <!--link name="base_link">
@@ -45,7 +45,7 @@ is the world frame). For more, see http://www.ros.org/wiki/xacro -->
         <cylinder length="0.01" radius="0.01"/>
       </geometry>
     </visual>
-  </link>
+  </link-->
   <!-- ***********  MODEL COLORS *********** -->
   <material name="black">
     <color rgba="0.1 0.1 0.1 1"/>

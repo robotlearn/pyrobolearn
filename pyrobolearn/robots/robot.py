@@ -14,6 +14,7 @@ import os
 import time
 import copy
 import collections
+import xml.etree.ElementTree as ET
 # import rbdl
 import numpy as np
 # import quaternion
@@ -59,7 +60,7 @@ class Robot(ControllableBody):
     """
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1., visual_ticks=12,
-                 *args, **kwargs):
+                 parts=None, *args, **kwargs):
         """
         Initialize the robot.
 
@@ -71,6 +72,7 @@ class Robot(ControllableBody):
             fixed_base (bool, None): if True, the base of the robot will be fixed.
             scale (float): scaling factor.
             visual_ticks (int): the number of ticks to sleep before updating the visuals.
+            parts (list[Robot], None): robotic parts to assemble.  # TODO: this needs to be implemented
         """
         # check parameters
         if position is None:
@@ -1431,6 +1433,10 @@ class Robot(ControllableBody):
         Return the joint positions for the home position defined by the user. This method has to be overwritten in
         the child class.
         """
+        if 'home' in self._joint_configuration:
+            joint_ids, joint_values = self._joint_configuration['home']
+            if len(joint_ids) == self.num_actuated_joints:
+                return joint_values
         return np.zeros(self.num_actuated_joints)
 
     def set_home_joint_positions(self):
@@ -1476,7 +1482,7 @@ class Robot(ControllableBody):
         if name is None:
             return list(self._joint_configuration.keys())
         if name in self._joint_configuration:
-            item = self._joint_configuration[name]
+            item = self._joint_configuration[name]  # name.lower()
             if isinstance(item, str):  # the item is an alias
                 return self._joint_configuration[item]
             return item
@@ -1494,6 +1500,32 @@ class Robot(ControllableBody):
             bool: True if the robot has the specified joint configuration.
         """
         return name in self._joint_configuration
+
+    def load_joint_configurations(self, srdf):
+        """
+        Load the joint configurations that are defined in the given SRDF file.
+
+        Args:
+            srdf (str): path to the SRDF file which contains joint configurations with their corresponding name.
+        """
+        if isinstance(srdf, str) and os.path.isfile(srdf):
+            tree_xml = ET.parse(srdf)
+            root = tree_xml.getroot()
+
+            # parse <group_state> tags
+            for group_state_tag in root.findall('group_state'):
+                name = group_state_tag.attrib['name'].lower()
+
+                # parse each <joint>
+                joint_ids, joint_values = [], []
+                for joint_tag in group_state_tag.findall('joint'):
+                    values = [float(c) for c in joint_tag.attrib['value'].split()]
+                    values = values[0] if len(values) == 1 else np.array(values)
+                    joint_name = joint_tag.attrib['name']
+                    joint_ids.append(self.get_joint_ids(joint_name))
+                    joint_values.append(values)
+
+                self._joint_configuration[name] = [joint_ids, np.asarray(joint_values)]
 
     ##################################
     # Links (task/operational space) #
@@ -2643,7 +2675,7 @@ class Robot(ControllableBody):
         Returns:
             np.array[float[4,4]],4]: homogeneous matrix
         """
-        return get_homogeneous_transform(position, orientation)
+        return get_homogeneous_matrix(position, orientation)
 
     ##############
     # Kinematics #

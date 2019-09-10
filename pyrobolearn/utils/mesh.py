@@ -22,6 +22,7 @@ from xml.dom import minidom  # to print in a pretty way the XML file
 # import mesh related libraries
 try:
     import trimesh  # processing triangular meshes
+    from trimesh.exchange.export import export_mesh
     # import pymesh    # rapid prototyping platform focused on geometry processing
     import pyassimp  # library to import and export various 3d-model-formats
 except ImportError as e:
@@ -38,18 +39,25 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-def convert_mesh(from_filename, to_filename):
+def convert_mesh(from_filename, to_filename, library='pyassimp'):
     """
     Convert the given file containing the original mesh to the other specified format using the `pyassimp` library.
 
     Args:
         from_filename (str): filename of the mesh to convert.
         to_filename (str): filename of the converted mesh.
+        library (str): library to use to convert the meshes. Select between 'pyassimp' and 'trimesh'.
     """
-    scene = pyassimp.load(from_filename)
-    extension = to_filename.split('.')[-1]
-    pyassimp.export(scene, to_filename, file_type=extension)
-    pyassimp.release(scene)
+    if library == 'pyassimp':
+        scene = pyassimp.load(from_filename)
+        extension = to_filename.split('.')[-1]
+        pyassimp.export(scene, to_filename, file_type=extension)
+        pyassimp.release(scene)
+    elif library == 'trimesh':
+        export_mesh(trimesh.load(from_filename), to_filename)
+    else:
+        raise NotImplementedError("The given library '{}' is currently not supported, select between 'pyassimp' and "
+                                  "'trimesh'".format(library))
 
 
 def mesh_to_urdf(filename, name=None, mass=None, inertia=None, density=1000, visual=True, collision=True, scale=1.,

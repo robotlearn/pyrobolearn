@@ -96,7 +96,7 @@ The coordinate frame called gaze defines the head position and orientation. The 
 and to define the end effectors of the robot
 
 The coordinate frame called base_link is rigidly attached to the robot root body. It is recommended to choose the robot waist as its root body. The base_link can be attached to the root in any arbitrary position or orientation; for every hardware platform there will be a different place on the base that provides an obvious point of reference. Note that REP 103 [1] specifies a preferred orientation for frames. -->
-  <!--link name="base_link"> <!-- if you put mass/inertia to 0 for the base_link in pybullet then the robot will not be affected by gravity (i.e. it will float). Just removing the base_link fixes the problem.>
+  <!--link name="base_link"--> <!-- if you put mass/inertia to 0 for the base_link in pybullet then the robot will not be affected by gravity (i.e. it will float). Just removing the base_link fixes the problem.>
     <inertial>
       <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
       <mass value="0.0000001"/>

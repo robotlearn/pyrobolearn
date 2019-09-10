@@ -43,6 +43,9 @@ class URDFParser(RobotParser):
 
         Args:
             filename (str): path to the URDF XML file.
+
+        Returns:
+            MultiBody: multi-body / tree data structure representing the elements in the URDF file.
         """
         # load and parse the XML file
         tree_xml = ET.parse(filename)
@@ -72,7 +75,7 @@ class URDFParser(RobotParser):
         # check bodies / links
         for i, body_tag in enumerate(root.findall('link')):
             # get body instance from tag
-            body = self._check_body(tree, body_tag, idx=i)
+            body = self._parse_body(tree, body_tag, idx=i)
 
             # add body to tree
             tree.bodies[body.name] = body
@@ -80,7 +83,7 @@ class URDFParser(RobotParser):
         # check joints
         for i, joint_tag in enumerate(root.findall('joint')):
             # get joint instance from tag
-            joint = self._check_joint(joint_tag, idx=i, tree=tree)
+            joint = self._parse_joint(joint_tag, idx=i, tree=tree)
 
             # add joint in trees
             tree.joints[joint.name] = joint
@@ -104,7 +107,7 @@ class URDFParser(RobotParser):
 
         return tree
 
-    def _check_body(self, tree, body_tag, idx):
+    def _parse_body(self, tree, body_tag, idx):
         """
         Return Body instance from a <link> tag.
 
@@ -144,97 +147,99 @@ class URDFParser(RobotParser):
             # set inertial to body
             body.add_inertial(inertial)
 
-        # check <visual> tag
-        visual_tag = body_tag.find('visual')
-        if visual_tag is not None:
-            visual = Visual()
+        # check <visual> tag(s)
+        # visual_tag = body_tag.find('visual')
+        for visual_tag in body_tag.findall('visual'):
+            if visual_tag is not None:
+                visual = Visual()
 
-            # name
-            visual.name = visual_tag.attrib.get('name')
+                # name
+                visual.name = visual_tag.attrib.get('name')
 
-            # origin
-            origin_tag = visual_tag.find('origin')
-            if origin_tag is not None:
-                visual.position = origin_tag.attrib.get('xyz')
-                visual.orientation = origin_tag.attrib.get('rpy')
+                # origin
+                origin_tag = visual_tag.find('origin')
+                if origin_tag is not None:
+                    visual.position = origin_tag.attrib.get('xyz')
+                    visual.orientation = origin_tag.attrib.get('rpy')
 
-            # geometry
-            geometry_tag = visual_tag.find('geometry')
-            if geometry_tag is not None:
-                for geometry_type in {'box', 'mesh', 'cylinder', 'sphere'}:
-                    geometry_type_tag = geometry_tag.find(geometry_type)
-                    if geometry_type_tag is not None:
-                        dtype = geometry_type
-                        visual.dtype = dtype
-                        if dtype == 'box':
-                            visual.size = geometry_type_tag.attrib['size']
-                        elif dtype == 'sphere':
-                            visual.size = geometry_type_tag.attrib['radius']
-                        elif dtype == 'cylinder':
-                            visual.size = (geometry_type_tag.attrib['radius'], geometry_type_tag.attrib['length'])
-                        elif dtype == 'mesh':
-                            visual.filename = self.dirname + geometry_type_tag.attrib['filename']
-                            visual.size = geometry_type_tag.attrib.get('scale')
+                # geometry
+                geometry_tag = visual_tag.find('geometry')
+                if geometry_tag is not None:
+                    for geometry_type in {'box', 'mesh', 'cylinder', 'sphere'}:
+                        geometry_type_tag = geometry_tag.find(geometry_type)
+                        if geometry_type_tag is not None:
+                            dtype = geometry_type
+                            visual.dtype = dtype
+                            if dtype == 'box':
+                                visual.size = geometry_type_tag.attrib['size']
+                            elif dtype == 'sphere':
+                                visual.size = geometry_type_tag.attrib['radius']
+                            elif dtype == 'cylinder':
+                                visual.size = (geometry_type_tag.attrib['radius'], geometry_type_tag.attrib['length'])
+                            elif dtype == 'mesh':
+                                visual.filename = self.dirname + geometry_type_tag.attrib['filename']
+                                visual.size = geometry_type_tag.attrib.get('scale')
 
-            # material
-            material_tag = visual_tag.find('material')
-            if material_tag is not None:
-                material = Material()
-                name = material_tag.attrib.get('name')
-                color = material_tag.find('color')
-                texture = material_tag.find('texture')
-                if color is not None or texture is not None:
-                    material.name = name
-                    if color is not None:
-                        material.color = color.attrib['rgba']
-                    elif texture is not None:
-                        material.texture = self.dirname + texture.attrib['filename']
-                else:
-                    material = tree.materials.get(name)
-                visual.material = material
+                # material
+                material_tag = visual_tag.find('material')
+                if material_tag is not None:
+                    material = Material()
+                    name = material_tag.attrib.get('name')
+                    color = material_tag.find('color')
+                    texture = material_tag.find('texture')
+                    if color is not None or texture is not None:
+                        material.name = name
+                        if color is not None:
+                            material.color = color.attrib['rgba']
+                        elif texture is not None:
+                            material.texture = self.dirname + texture.attrib['filename']
+                    else:
+                        material = tree.materials.get(name)
+                    visual.material = material
 
-            # set visual to body
-            body.add_visual(visual)
+                # set visual to body
+                body.add_visual(visual)
 
-        # check <collision> tag
-        collision_tag = body_tag.find('collision')
-        if collision_tag is not None:
-            collision = Collision()
+        # check <collision> tag(s)
+        # collision_tag = body_tag.find('collision')
+        for collision_tag in body_tag.findall('collision'):
+            if collision_tag is not None:
+                collision = Collision()
 
-            # name
-            collision.name = collision_tag.attrib.get('name')
+                # name
+                collision.name = collision_tag.attrib.get('name')
 
-            # origin
-            origin_tag = collision_tag.find('origin')
-            if origin_tag is not None:
-                collision.position = origin_tag.attrib.get('xyz')
-                collision.orientation = origin_tag.attrib.get('rpy')
+                # origin
+                origin_tag = collision_tag.find('origin')
+                if origin_tag is not None:
+                    collision.position = origin_tag.attrib.get('xyz')
+                    collision.orientation = origin_tag.attrib.get('rpy')
 
-            # geometry
-            geometry_tag = collision_tag.find('geometry')
-            if geometry_tag is not None:
-                for geometry_type in {'box', 'mesh', 'cylinder', 'sphere'}:
-                    geometry_type_tag = geometry_tag.find(geometry_type)
-                    if geometry_type_tag is not None:
-                        dtype = geometry_type
-                        collision.dtype = dtype
-                        if dtype == 'box':
-                            collision.size = geometry_type_tag.attrib['size']
-                        elif dtype == 'sphere':
-                            collision.size = geometry_type_tag.attrib['radius']
-                        elif dtype == 'cylinder':
-                            collision.size = (geometry_type_tag.attrib['radius'], geometry_type_tag.attrib['length'])
-                        elif dtype == 'mesh':
-                            collision.filename = self.dirname + geometry_type_tag.attrib['filename']
-                            collision.size = geometry_type_tag.attrib.get('scale')
+                # geometry
+                geometry_tag = collision_tag.find('geometry')
+                if geometry_tag is not None:
+                    for geometry_type in {'box', 'mesh', 'cylinder', 'sphere'}:
+                        geometry_type_tag = geometry_tag.find(geometry_type)
+                        if geometry_type_tag is not None:
+                            dtype = geometry_type
+                            collision.dtype = dtype
+                            if dtype == 'box':
+                                collision.size = geometry_type_tag.attrib['size']
+                            elif dtype == 'sphere':
+                                collision.size = geometry_type_tag.attrib['radius']
+                            elif dtype == 'cylinder':
+                                collision.size = (geometry_type_tag.attrib['radius'], geometry_type_tag.attrib['length'])
+                            elif dtype == 'mesh':
+                                collision.filename = self.dirname + geometry_type_tag.attrib['filename']
+                                collision.size = geometry_type_tag.attrib.get('scale')
 
-            # set collision to body
-            body.add_collision(collision)
+                # set collision to body
+                body.add_collision(collision)
 
         return body
 
     @staticmethod
-    def _check_joint(joint_tag, idx, tree):
+    def _parse_joint(joint_tag, idx, tree):
         """
         Return Joint instance from a <joint> tag.
 
@@ -385,38 +390,40 @@ class URDFParser(RobotParser):
                         inertia['iyz'] = str(I.iyz)
                     ET.SubElement(inertial_tag, 'inertia', attrib=inertia)
 
-            # create <visual> tag
-            visual = link.visual
-            if visual is not None:
-                # create visual tag with name
-                visual_tag = set_name(link_tag, 'visual', visual)
+            # create <visual> tags
+            # visual = link.visual
+            for visual in link.visuals:
+                if visual is not None:
+                    # create visual tag with name
+                    visual_tag = set_name(link_tag, 'visual', visual)
 
-                # <origin>
-                set_origin(visual_tag, visual)
+                    # <origin>
+                    set_origin(visual_tag, visual)
 
-                # <geometry>
-                set_geometry(visual_tag, visual)
+                    # <geometry>
+                    set_geometry(visual_tag, visual)
 
-                # <material>
-                if visual.material is not None:
-                    material = visual.material
-                    material_tag = ET.SubElement(visual_tag, 'material', attrib={'name': material.name})
-                    if material.color is not None:
-                        ET.SubElement(material_tag, 'color', attrib={'rgba': str(np.asarray(material.rgba))[1:-1]})
-                    if material.texture is not None:
-                        ET.SubElement(material_tag, 'texture', attrib={'filename': material.texture})
+                    # <material>
+                    if visual.material is not None:
+                        material = visual.material
+                        material_tag = ET.SubElement(visual_tag, 'material', attrib={'name': material.name})
+                        if material.color is not None:
+                            ET.SubElement(material_tag, 'color', attrib={'rgba': str(np.asarray(material.rgba))[1:-1]})
+                        if material.texture is not None:
+                            ET.SubElement(material_tag, 'texture', attrib={'filename': material.texture})
 
-            # create <collision> tag
-            collision = link.collision
-            if collision is not None:
-                # create collision tag with name
-                collision_tag = set_name(link_tag, 'collision', collision)
+            # create <collision> tags
+            # collision = link.collision
+            for collision in link.collisions:
+                if collision is not None:
+                    # create collision tag with name
+                    collision_tag = set_name(link_tag, 'collision', collision)
 
-                # <origin>
-                set_origin(collision_tag, collision)
+                    # <origin>
+                    set_origin(collision_tag, collision)
 
-                # <geometry>
-                set_geometry(collision_tag, collision)
+                    # <geometry>
+                    set_geometry(collision_tag, collision)
 
         def set_name_and_type(parent_tag, tag, item):
             kwargs = {}

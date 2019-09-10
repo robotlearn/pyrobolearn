@@ -421,7 +421,7 @@ class Dart(Simulator):
                 self.viewer = dart.gui.osg.Viewer()
                 gui_node = dart.gui.osg.WorldNode(self.world)
                 self.viewer.addWorldNode(gui_node)
-                self.viewer.setUpViewInWindow(0, 0, 640, 480)
+                self.viewer.setUpViewInWindow(0, 0, 1280, 960)
                 self.viewer.setCameraHomePosition([8., -8., 4.], [0, 0, -0.25], [0, 0, 0.5])
                 self._frame_cnt = 0
                 # self.viewer.run()  # TODO: call self.viewer.frame() instead (need to update the python wrapper)

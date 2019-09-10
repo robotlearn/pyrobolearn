@@ -76,6 +76,7 @@ import glfw
 from pyrobolearn.simulators.simulator import Simulator
 from pyrobolearn.utils.parsers.robots import URDFParser, MuJoCoParser, SDFParser
 import pyrobolearn.utils.parsers.robots.data_structures as struct
+from pyrobolearn.utils.transformation import get_homogeneous_matrix
 
 
 # check Python version
@@ -141,25 +142,46 @@ class Texture(object):
 #         return self.body.attrib.get("name")
 
 
-class MultiBody(object):
-    """MultiBody."""
+class Body(object):
+    """Body."""
 
-    def __init__(self, tree):
+    def __init__(self, body_id, body_tag, body=None, fixed_base=False):
         """
         Initialize the MultiBody.
 
         Args:
-            tree (Tree): tree / multi-body data structure.
+            body_id (int): unique body id in the Mujoco model.
+            body_tag (ET.Element): body tag element in the XML file.
+            body (MultiBody, None): multibody data structure.
+            fixed_base (bool): if True, the body is fixed in the world.
         """
-        if not isinstance(tree, struct.Tree):
-            raise TypeError("Expecting the given 'tree' to be an instance of `Tree`, but got instead: "
-                            "{}".format(type(tree)))
-        self.tree = tree
+        self.id = body_id
+        self.tag = body_tag
 
         self.q_start = 0  # starting index in the whole state
         self.q_end = 0  # end index in the whole state
-        static = self.tree.static
-        self.fixed_base = static if static is not None else False
+        self.fixed_base = fixed_base
+
+        if body is not None:
+            self.num_bodies = body.num_bodies  # number of links
+            self.num_joints = body.num_joints  # number of joints (including fixed joints)
+            self.num_actuated_joints = body.num_actuated_joints  # number of actuated joints
+
+    @property
+    def num_dofs(self):
+        """Return the number of DoFs."""
+        return self.q_end - self.q_start
+
+    @property
+    def name(self):
+        """Return the body name."""
+        # note that we remove the generated prefix and suffix by the parser/generator
+        return '_'.join(self.tag_name.split('_')[1:-1])
+
+    @property
+    def tag_name(self):
+        """Return the body tag name."""
+        return self.tag.attrib.get("name")
 
 
 class Mujoco(Simulator):
@@ -232,10 +254,14 @@ class Mujoco(Simulator):
         # create counters
         self._visual_cnt = 0
         self._collision_cnt = 0
-        self._body_cnt = 0  # 0 is for the world
+        self._body_cnt = 0  # 0 is for the world floor
         self._texture_cnt = 0
         self._constraint_cnt = 0
+
+        # counters for Mujoco
         self._q_cnt = 0
+        self._link_cnt = 0
+        self._mjc_body_id = 0
 
         self.default_timestep = 0.002
         self.dt = self.default_timestep
@@ -250,7 +276,8 @@ class Mujoco(Simulator):
 
         # add light
         self._parser.add_element("light", self._worldbody,
-                                 attributes={"diffuse": ".5 .5 .5", "pos": "0 0 3", "dir": "0 0 -1"})
+                                 attributes={"diffuse": "0.5 0.5 0.5", "pos": "0 0 3", "directional": "true",
+                                             "dir": "0 0 -1"})
         # add floor
         self.load_floor()
 
@@ -259,6 +286,9 @@ class Mujoco(Simulator):
 
         # define saving states
         self.__simulator_saving_states = {}
+
+        # define directory mesh path (to write the converted mesh files as Mujoco only accepts STL)
+        self.mesh_directory_path = os.path.dirname(os.path.abspath(__file__)) + '/meshes/'
 
     ##############
     # Properties #
@@ -441,7 +471,7 @@ class Mujoco(Simulator):
         """
         return self.sim.model.opt.timestep
 
-    def set_time_step(self, time_step):
+    def set_time_step(self, time_step):  # TODO: modify the option tag
         """Set the specified time step in the simulator.
 
         "Warning: in many cases it is best to leave the timeStep to default, which is 240Hz. Several parameters are
@@ -455,13 +485,16 @@ class Mujoco(Simulator):
         Args:
             time_step (float): Each time you call 'step' the time step will proceed with 'time_step'.
         """
-        self.sim.model.opt.timestep = time_step
+        # self.sim.model.opt.timestep = time_step
+        time_step = self._parser.convert_attribute_to_string(time_step)
+        self._parser.option_tag.attrib.setdefault('timestep', time_step)
+        self._update_sim()
 
     def get_gravity(self):
         """Return the gravity set in the simulator."""
         return self.sim.model.opt.gravity
 
-    def set_gravity(self, gravity=(0, 0, -9.81)):
+    def set_gravity(self, gravity=(0, 0, -9.81)):  # TODO: modify the option tag
         """Set the gravity in the simulator with the given acceleration.
 
         By default, there is no gravitational force enabled in the simulator.
@@ -469,7 +502,10 @@ class Mujoco(Simulator):
         Args:
             gravity (list/tuple[float[3]]): acceleration in the x, y, z directions.
         """
-        self.sim.model.opt.gravity = gravity
+        # self.sim.model.opt.gravity = gravity
+        gravity = self._parser.convert_attribute_to_string(gravity)
+        self._parser.option_tag.attrib.setdefault('gravity', gravity)
+        self._update_sim()
 
     def save(self, filename=None, *args, **kwargs):
         """
@@ -537,22 +573,28 @@ class Mujoco(Simulator):
         Returns:
             int (non-negative): unique id associated to the load model.
         """
-        print(filename)
-        print(os.path.dirname(filename))
         # parse URDF file
         urdf_parser = URDFParser(filename=filename)
         tree = urdf_parser.tree
 
-        # update position and orientation
-        tree.position = position
-        tree.orientation = orientation
+        # update tree position and orientation
+        position = np.zeros(3) if position is None else np.asarray(position)
+        orientation = np.array([0., 0., 0., 1.]) if orientation is None else np.asarray(orientation)
+        h = get_homogeneous_matrix(position, orientation)
+        tree.homogeneous = h.dot(tree.homogeneous)
 
-        # add the parse tree to the MJCF parser/generator
-        self._parser.add_multibody(tree, mesh_directory_path=os.path.dirname(os.path.abspath(__file__)) + '/meshes/')
+        # update tree base if it is static or not
+        tree.static = use_fixed_base
+        # if not static, add free joint to body
+        if not use_fixed_base:
+            name, body = "joint", tree.root
+            joint = struct.Joint(joint_id=-1, name=name, dtype='free', child=body)
+            body.add_parent_joint(joint)
+            tree.add_joint(joint, idx=0)
 
-        print(self._parser.get_string(pretty_format=True))
+        return self._create_body(tree, fixed_base=use_fixed_base, verbose=1)
 
-    def load_sdf(self, filename, scaling=1., *args, **kwargs):
+    def load_sdf(self, filename, scaling=1., *args, **kwargs):  # TODO
         """Load a SDF file in the simulator.
 
         Args:
@@ -562,15 +604,17 @@ class Mujoco(Simulator):
         Returns:
             list(int): list of object unique id for each object loaded
         """
-        # parse sdf file
-        sdf_parser = SDFParser(filename=filename)
+        raise NotImplementedError
 
-        for tree in sdf_parser.world.trees:
-            # # update the position and orientation
-            # tree.position = position
-            # tree.orientation = orientation
-
-            self._parser.add_multibody(tree)
+        # # parse sdf file
+        # sdf_parser = SDFParser(filename=filename)
+        #
+        # for tree in sdf_parser.world.trees:
+        #     # # update the position and orientation
+        #     # tree.position = position
+        #     # tree.orientation = orientation
+        #
+        #     self._parser.add_multibody(tree)
 
     def load_mjcf(self, filename, scaling=1., *args, **kwargs):
         """Load a Mujoco file in the simulator.
@@ -623,6 +667,7 @@ class Mujoco(Simulator):
             int: unique id of the mesh in the world
         """
         # convert file '.obj' to '.stl' as MuJoCo only supports STL formats.
+        filename = self._parser.convert_mesh(filename, mesh_dirname=self.mesh_directory_path)
 
         # try to look for textures and colors in the '.mtl' file
 
@@ -652,17 +697,82 @@ class Mujoco(Simulator):
         # if floor already loaded, remove it
         if self._floor_id is not None:
             floor = self._bodies.pop(self._floor_id)
-            self._worldbody.remove(floor)
+            self._worldbody.remove(floor.tag)
             self._model_changed = True
 
         # create floor
         dim = dimension/2.
         floor = self._parser.add_element(name="geom", parent_element=self._worldbody,
                                          attributes={"type": "plane", "size": str(dim) + " " + str(dim) + " 1."})
-        self._body_cnt += 1
-        self._bodies[self._body_cnt] = floor
-        self._floor_id = self._body_cnt
+
+        body = Body(body_id=0, body_tag=floor, fixed_base=True)  # 0 is only for the floor
+        self._bodies[0] = body  # the floor is always the first body in the ordered dict
+        self._floor_id = 0
+
+        # update mujoco model if necessary
+        self._update_sim()
+
         return self._floor_id
+
+    def _update_sim(self):
+        # update mujoco model if necessary
+        if self._update_dynamically:
+            self._create_sim(render=self._render)
+        else:
+            # notify that the Mujoco model has changed (this will be checked in the `step` method)
+            self._model_changed = True
+
+    def _create_body(self, tree, body_id=None, fixed_base=False, verbose=1):
+        """
+        Create inner body in the simulator; given the tree data structure, it generates all the XML tags using
+        the inner parser/generator, wraps the returned tree XML tag to a Body structure, sets its attributes (such as
+        its q indices), update the simulator if necessary and return the unique body id.
+
+        Args:
+            tree (struct.MultiBody): the tree / multi-body data structure.
+            body_id (int, None): unique body id to save the wrapped body.
+            fixed_base (bool): if the base of the multibody/tree is fixed or not.
+            verbose (bool, int): if True, it will print the current Mujoco XML file that we have which is useful for
+              debug. If int, it represents the level of verbosity.
+
+        Returns:
+            int: unique body id.
+        """
+        # check body id
+        if body_id is None:
+            self._body_cnt += 1
+            body_id = self._body_cnt
+
+        # create tree tag
+        tree_tag = self._parser.add_multibody(tree, mesh_directory_path=self.mesh_directory_path)
+
+        # save body
+        self._mjc_body_id += 1
+        body = Body(body_id=self._mjc_body_id, body_tag=tree_tag, body=tree, fixed_base=fixed_base)
+        self._bodies[body_id] = body
+        num_dofs = tree.num_dofs
+
+        if verbose > 0:
+            print("\nNum DoFs: {}".format(tree.num_dofs))
+            print("Num links/bodies: {}".format(tree.num_bodies))
+            print("Num joints: {}".format(tree.num_joints))
+            print("Num actuated joints: {}\n".format(tree.num_actuated_joints))
+
+        # set generalized coordinates counter
+        body.q_start = self._q_cnt
+        num_dofs = num_dofs if fixed_base else num_dofs + 7
+        self._q_cnt += num_dofs
+        body.q_end = self._q_cnt
+
+        # update mujoco model if necessary
+        self._update_sim()
+
+        # if verbose, print current xml file
+        if verbose > 1:
+            print(self._parser.get_string(pretty_format=True))
+
+        # return body id
+        return body_id
 
     def create_body(self, visual_shape_id=-1, collision_shape_id=-1, mass=0., position=(0., 0., 0.),
                     orientation=(0., 0., 0., 1.), *args, **kwargs):  # DONE
@@ -705,29 +815,11 @@ class Mujoco(Simulator):
 
         # wrap body into multi-body data structure
         tree = struct.Tree(name=body.name, root=body, position=body.position, orientation=body.orientation)
-
-        # save multi-body data structure
-        self._parser.add_multibody(tree)
-        body = MultiBody(tree)
-        self._bodies[self._body_cnt] = body
-
-        # set generalized coordinates counter
+        tree.add_body(body)
         if not static:
-            body.q_start = self._q_cnt
-            body.q_end = self._q_cnt + 7
-            self._q_cnt += 7
+            tree.add_joint(joint)
 
-        # update mujoco model if necessary
-        if self._update_dynamically:
-            self._create_sim(render=self._render)
-        else:
-            # notify that the Mujoco model has changed (this will be checked in the `step` method)
-            self._model_changed = True
-
-        # print(self._parser.get_string(pretty_format=True))
-
-        # return body id
-        return self._body_cnt
+        return self._create_body(tree, body_id=self._body_cnt, fixed_base=static, verbose=1)
 
     def remove_body(self, body_id):  # DONE
         """Remove a particular body in the simulator.
@@ -736,14 +828,28 @@ class Mujoco(Simulator):
             body_id (int): unique body id.
         """
         # remove body from the bodies
+        # This is an O(N) operation because I have to modify the id, q_start, and q_end of the bodies that appears
+        # after the given body
+        body_to_remove = self._bodies[body_id]
+        found, num_dofs = False, 0
+        for body in self._bodies:
+            if body_to_remove == body:
+                found = True
+                num_dofs = body.num_dofs
+            if found:  # for the bodies after body_to_remove, shift their id and q_start/q_end to the left
+                body.id -= 1  # shift id to the left
+                body.q_start -= num_dofs
+                body.q_end -= num_dofs
+                self._q_cnt = body.q_end
+
         body = self._bodies.pop(body_id)
+        self._mjc_body_id -= 1
 
         # remove it from the worldbody
-        self._worldbody.remove(body)
+        self._worldbody.remove(body.tag)
 
         # if the model / sim were loaded, notify that the Mujoco has changed
-        if self.sim is not None and self.model is not None:
-            self._model_changed = True
+        self._update_sim()
 
     def num_bodies(self):  # DONE
         """Return the number of bodies present in the simulator.
@@ -764,7 +870,8 @@ class Mujoco(Simulator):
         Returns:
             str: base name
         """
-        return self._bodies[body_id].name
+        # return self._bodies[body_id].name
+        return self.get_base_name(body_id)
 
     def get_body_id(self, index):  # DONE
         """
@@ -776,7 +883,8 @@ class Mujoco(Simulator):
         Returns:
             int: unique body id.
         """
-        return list(self._bodies.items())[index][0]
+        # O(N)
+        return list(self._bodies.keys())[index][0]
 
     ###############
     # Constraints #
@@ -937,7 +1045,8 @@ class Mujoco(Simulator):
         Returns:
             str: base name
         """
-        return self.sim.model.body_id2name(box2)
+        body_id = self._bodies[body_id].id
+        return self.sim.model.body_id2name(body_id)
 
     def get_center_of_mass_position(self, body_id, link_ids=None):  # TODO
         """

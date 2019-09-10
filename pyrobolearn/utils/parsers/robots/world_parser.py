@@ -6,7 +6,7 @@
 import xml.etree.ElementTree as ET
 from xml.dom import minidom  # to print in a pretty way the XML file
 
-from pyrobolearn.utils.parsers.robots.data_structures import World, Tree
+# from pyrobolearn.utils.parsers.robots.data_structures import World, Tree
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2019, PyRoboLearn"
@@ -215,8 +215,7 @@ class WorldParser(object):
         Returns:
             ET.Element: the new created element.
         """
-        element = ET.SubElement(parent_element, name, attrib=attributes)
-        return element
+        return ET.SubElement(parent_element, name, attrib=attributes)
 
     @staticmethod
     def remove_element(element, parent_element):

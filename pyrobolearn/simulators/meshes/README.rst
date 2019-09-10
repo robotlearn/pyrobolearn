@@ -1,0 +1,1 @@
+This folder contains generated meshes when using some simulators that requires a specific format. You can remove them.

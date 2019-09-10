@@ -106,13 +106,20 @@ class MuJoCoParser(WorldParser):
 
         # create root XML element
         self.create_root("mujoco")
-        # add compiler
-        self.add_element("compiler", self._root, attributes={'coordinate': 'local', 'angle': 'radian'})
-        # add size
+
+        # add <compiler>
+        self.compiler_tag = self.add_element("compiler", self._root,
+                                             attributes={'coordinate': 'local', 'angle': 'radian'})
+
+        # add <size>
         self.nconmax = 200  # increase this if necessary (this depends on how many models are loaded)
-        self.add_element("size", self._root, attributes={"nconmax": str(self.nconmax)})
-        # add worldbody
-        self.worldbody = self.add_element(name="worldbody", parent_element=self.root)
+        self.size_tag = self.add_element("size", self._root, attributes={"nconmax": str(self.nconmax)})
+
+        # add <option>
+        self.option_tag = self.add_element("option", self._root, attributes={"timestep": str(0.002)})
+
+        # add <worldbody>
+        self.worldbody = self.add_element("worldbody", parent_element=self.root)
 
         # set some counters
         self._world_cnt = 0
@@ -846,6 +853,31 @@ class MuJoCoParser(WorldParser):
     # Generator #
     #############
 
+    def convert_attribute_to_string(self, attribute, slice=None):
+        """
+        Convert the attribute to a string to be set in the attribute dictionary of an XML tag.
+
+        Args:
+            attribute (str, bool, list, tuple, np.ndarray, int, float): attribute to convert.
+            slice (slice, None): slice to apply if the attribute is a list/tuple/np.array.
+
+        Returns:
+            str: converted attribute.
+        """
+        if isinstance(attribute, str):
+            return attribute
+        elif isinstance(attribute, bool):
+            return 'true' if attribute else 'false'
+        elif isinstance(attribute, (list, tuple, np.ndarray)):
+            attribute = np.asarray(attribute)
+            if slice is not None:
+                attribute = attribute[slice]
+            return str(attribute)[1:-1]
+        elif isinstance(attribute, (int, float)):
+            return str(attribute)
+        else:
+            raise NotImplementedError("The given attribute type is not supported: {}".format(type(attribute)))
+
     def _update_attribute_dict(self, dictionary, element, name, key=None, slice=None, fct=None, required=False,
                                *args, **kwargs):
         """
@@ -874,6 +906,10 @@ class MuJoCoParser(WorldParser):
             # if callable function is provided, call it on the attribute beforehand to process it
             if fct is not None:
                 attribute = fct(attribute, *args, **kwargs)
+
+            # check attribute type and convert it to a string
+            if attribute is not None:
+                dictionary[key] = self.convert_attribute_to_string(attribute, slice=slice)
 
             if attribute is not None:  # this is for the returned attribute by the fct
                 # check attribute type and convert it to a string
@@ -1158,7 +1194,7 @@ class MuJoCoParser(WorldParser):
             root (ET.Element, None): root XML element.
 
         Returns:
-            ET.Element: body XML element.
+            ET.Element: tree root XML element.
         """
         # check arguments
         if not isinstance(parent_tag, ET.Element):
@@ -1175,8 +1211,11 @@ class MuJoCoParser(WorldParser):
 
         h_bodies, h_joints, h_visuals, h_collisions, h_inertials = {}, {}, {}, {}, {}
         for i, body in enumerate(tree.bodies.values()):
-            print(body.name, body.homogeneous)
-            h_inv = get_inverse_homogeneous(body.homogeneous)  # get link/joint frame
+            # print(body.name, body.homogeneous)
+            if i == 0:  # root
+                h_inv = np.identity(4)
+            else:
+                h_inv = get_inverse_homogeneous(body.homogeneous)  # get link/joint frame
             for visual in body.visuals:  # because geom is described wrt body frame and not link/joint frame
                 h_visuals[visual] = h_inv.dot(visual.homogeneous)
             for collision in body.collisions:  # because geom is described wrt body frame and not link/joint frame
@@ -1184,6 +1223,7 @@ class MuJoCoParser(WorldParser):
             for inertial in body.inertials:  # because inertial is described wrt body frame and not link/joint frame
                 h_inertials[inertial] = h_inv.dot(inertial.homogeneous)
             for joint in body.joints.values():
+                # print(joint.name, joint.homogeneous)
                 if joint.child is not None:
                     h_child = joint.child.homogeneous
                     h = h_inv.dot(joint.homogeneous).dot(h_child)
@@ -1206,14 +1246,14 @@ class MuJoCoParser(WorldParser):
             inertial.homogeneous = homogeneous
 
         # generate bodies (inertial, visual, collision) and joints in a recursive manner
-        body_tag = self.generate_body(parent_tag, body=tree.root, root=root)
+        tree_root_tag = self.generate_body(parent_tag, body=tree.root, root=root)
 
         # empty the temporary assets
         self._assets_tmp = set([])
 
-        return body_tag
+        return tree_root_tag
 
-    def _convert_mesh(self, filename):
+    def convert_mesh(self, filename, mesh_dirname=None):
         """
         Convert mesh (from any format) to an STL mesh format. This is because MuJoCo only accepts STL meshes.
 
@@ -1221,6 +1261,7 @@ class MuJoCoParser(WorldParser):
 
         Args:
             filename (str): path to the mesh file.
+            mesh_dirname (str, None): path to the mesh directory to write the new mesh if not a STL file.
 
         Returns:
             str: filename with the correct extension (.stl)
@@ -1228,13 +1269,16 @@ class MuJoCoParser(WorldParser):
         # if mesh, make sure it is a STL file
         extension = filename.split('.')[-1]
         if extension.lower() != 'stl':
+            if mesh_dirname is None:
+                mesh_dirname = self._mesh_dirname
+
             # create filename with the correction extension (STL)
-            dirname = os.path.dirname(filename)
             basename = os.path.basename(filename)
             basename_without_extension = ''.join(basename.split('.')[:-1])
+            # dirname = os.path.dirname(filename)
             # filename_without_extension = dirname + basename_without_extension
             # new_filename = filename_without_extension + '.stl'
-            new_filename = self._mesh_dirname + '/' + basename_without_extension + '.stl'
+            new_filename = mesh_dirname + '/' + basename_without_extension + '.stl'
 
             # if file does not already exists, convert it
             if not os.path.isfile(new_filename):
@@ -1322,36 +1366,85 @@ class MuJoCoParser(WorldParser):
                     inertial_tag = ET.SubElement(body_tag, 'inertial', attrib=attrib)
 
         # create <geom> tags
-        # TODO: consider when multiple visual and collision shapes
         visual = body.visual
         collision = body.collision
         if visual is None:  # if no visual, use collision shape
             if collision is not None:  # if collision shape is defined
-                attrib = {"rgba": "0 0 0 0"}  # transparent
-                self._update_attribute_dict(attrib, collision, 'name', fct=self._generate_name, cnt=self._body_cnt)
-                self._update_attribute_dict(attrib, collision, 'position', key='pos')
-                self._update_attribute_dict(attrib, collision, 'quaternion', key='quat', fct=self._convert_xyzw_to_wxyz)
-                self._update_attribute_dict(attrib, collision, 'dtype', key='type')
-                self._update_attribute_dict(attrib, collision, 'size')
+                for collision in body.collisions:
+                    attrib = {"rgba": "0 0 0 0"}  # transparent
+                    self._update_attribute_dict(attrib, collision, 'name', fct=self._generate_name, cnt=self._body_cnt)
+                    self._update_attribute_dict(attrib, collision, 'position', key='pos')
+                    self._update_attribute_dict(attrib, collision, 'quaternion', key='quat',
+                                                fct=self._convert_xyzw_to_wxyz)
+                    self._update_attribute_dict(attrib, collision, 'dtype', key='type')
+                    self._update_attribute_dict(attrib, collision, 'size')
 
-                # check type and change size
-                if 'type' in attrib and 'size' in attrib:
-                    if collision.dtype == 'box':  # divide by 2 the dimensions
-                        attrib['size'] = str(np.asarray(collision.size) / 2.)[1:-1]
-                    elif collision.dtype == 'cylinder' or collision.dtype == 'capsule':  # divide by 2 the height
-                        radius, length = collision.size
-                        attrib['size'] = str(np.asarray([radius, length/2]))[1:-1]
-                    elif collision.dtype == 'mesh':  # set the scale
-                        attrib['fitscale'] = str(collision.size)
+                    # check type and change size
+                    if 'type' in attrib and 'size' in attrib:
+                        if collision.dtype == 'box':  # divide by 2 the dimensions
+                            attrib['size'] = str(np.asarray(collision.size) / 2.)[1:-1]
+                        elif collision.dtype == 'cylinder' or collision.dtype == 'capsule':  # divide by 2 the height
+                            radius, length = collision.size
+                            attrib['size'] = str(np.asarray([radius, length/2]))[1:-1]
+                        elif collision.dtype == 'mesh':  # set the scale
+                            attrib['fitscale'] = str(collision.size)
 
+                    if inertial is not None and inertial_tag is None:
+                        self._update_attribute_dict(attrib, inertial, 'mass', required=True)
+
+                    # create geom tag
+                    geom = ET.SubElement(body_tag, "geom", attrib=attrib)
+
+                    # check if mesh in attrib
+                    if collision.dtype == 'mesh':
+                        # check <asset> tag in xml
+                        asset_tag = root.find("asset")
+
+                        # if no <asset> tag, create one
+                        if asset_tag is None:
+                            asset_tag = ET.SubElement(root, "asset")
+
+                        # create <mesh> tag in <asset>
+                        mesh_path = self.convert_mesh(collision.filename, self._mesh_dirname)  # convert to STL
+                        mesh_name = os.path.basename(mesh_path).split('.')[0]
+                        if mesh_name not in self._assets_tmp:  # if the <mesh> doesn't already exists
+                            self._assets_tmp.add(mesh_name)
+                            attrib = {'name': mesh_name, 'file': mesh_path}
+                            self._update_attribute_dict(attrib, collision, 'size', key='scale')
+                            ET.SubElement(asset_tag, "mesh", attrib=attrib)
+
+                        # set the mesh asset name
+                        geom.attrib["mesh"] = mesh_name
+
+        else:
+            # if visual is given, use this one instead
+            for visual in body.visuals:
+                attrib = {}
+
+                self._update_attribute_dict(attrib, visual, 'name', fct=self._generate_name, cnt=self._body_cnt)
+                self._update_attribute_dict(attrib, visual, 'position', key='pos')
+                self._update_attribute_dict(attrib, visual, 'quaternion', key='quat', fct=self._convert_xyzw_to_wxyz)
+                self._update_attribute_dict(attrib, visual, 'dtype', key='type')
+                self._update_attribute_dict(attrib, visual, 'size')
+                self._update_attribute_dict(attrib, visual, 'rgba')
                 if inertial is not None and inertial_tag is None:
                     self._update_attribute_dict(attrib, inertial, 'mass', required=True)
 
-                # create geom tag
+                # check type and change size
+                if 'type' in attrib and 'size' in attrib:
+                    if visual.dtype == 'box':  # divide by 2 the dimensions
+                        attrib['size'] = str(np.asarray(visual.size) / 2.)[1:-1]
+                    elif visual.dtype == 'cylinder' or visual.dtype == 'capsule':  # divide by 2 the height
+                        radius, length = visual.size
+                        attrib['size'] = str(np.asarray([radius, length / 2]))[1:-1]
+                    elif visual.dtype == 'mesh':  # set the scale
+                        attrib['fitscale'] = str(visual.size)
+
+                # create <geom> tag
                 geom = ET.SubElement(body_tag, "geom", attrib=attrib)
 
-                # check if mesh in attrib
-                if collision.dtype == 'mesh':
+                # if primitive shape type is a mesh
+                if visual.dtype == "mesh":
                     # check <asset> tag in xml
                     asset_tag = root.find("asset")
 
@@ -1359,69 +1452,22 @@ class MuJoCoParser(WorldParser):
                     if asset_tag is None:
                         asset_tag = ET.SubElement(root, "asset")
 
-                    # create <mesh> tag in <asset>
-                    mesh_path = self._convert_mesh(collision.filename)  # convert to STL if necessary
+                    # create mesh tag
+                    mesh_path = self.convert_mesh(visual.filename, self._mesh_dirname)  # convert to STL if necessary
                     mesh_name = os.path.basename(mesh_path).split('.')[0]
-                    if mesh_name not in self._assets_tmp:  # if the <mesh> doesn't already exists
+                    if mesh_name not in self._assets_tmp:  # if the mesh doesn't already exists
                         self._assets_tmp.add(mesh_name)
                         attrib = {'name': mesh_name, 'file': mesh_path}
-                        self._update_attribute_dict(attrib, collision, 'size', key='scale')
+                        self._update_attribute_dict(attrib, visual, 'size', key='scale')
                         ET.SubElement(asset_tag, "mesh", attrib=attrib)
 
                     # set the mesh asset name
                     geom.attrib["mesh"] = mesh_name
 
-        else:
-            # if visual is given, use this one instead
-            attrib = {}
-
-            self._update_attribute_dict(attrib, visual, 'name', fct=self._generate_name, cnt=self._body_cnt)
-            self._update_attribute_dict(attrib, visual, 'position', key='pos')
-            self._update_attribute_dict(attrib, visual, 'quaternion', key='quat', fct=self._convert_xyzw_to_wxyz)
-            self._update_attribute_dict(attrib, visual, 'dtype', key='type')
-            self._update_attribute_dict(attrib, visual, 'size')
-            self._update_attribute_dict(attrib, visual, 'rgba')
-            if inertial is not None and inertial_tag is None:
-                self._update_attribute_dict(attrib, inertial, 'mass', required=True)
-
-            # check type and change size
-            if 'type' in attrib and 'size' in attrib:
-                if visual.dtype == 'box':  # divide by 2 the dimensions
-                    attrib['size'] = str(np.asarray(visual.size) / 2.)[1:-1]
-                elif visual.dtype == 'cylinder' or visual.dtype == 'capsule':  # divide by 2 the height
-                    radius, length = visual.size
-                    attrib['size'] = str(np.asarray([radius, length / 2]))[1:-1]
-                elif visual.dtype == 'mesh':  # set the scale
-                    attrib['fitscale'] = str(visual.size)
-
-            # create <geom> tag
-            geom = ET.SubElement(body_tag, "geom", attrib=attrib)
-
-            # if primitive shape type is a mesh
-            if visual.dtype == "mesh":
-                # check <asset> tag in xml
-                asset_tag = root.find("asset")
-
-                # if no <asset> tag, create one
-                if asset_tag is None:
-                    asset_tag = ET.SubElement(root, "asset")
-
-                # create mesh tag
-                mesh_path = self._convert_mesh(visual.filename)  # convert to STL if necessary
-                mesh_name = os.path.basename(mesh_path).split('.')[0]
-                if mesh_name not in self._assets_tmp:  # if the mesh doesn't already exists
-                    self._assets_tmp.add(mesh_name)
-                    attrib = {'name': mesh_name, 'file': mesh_path}
-                    self._update_attribute_dict(attrib, visual, 'size', key='scale')
-                    ET.SubElement(asset_tag, "mesh", attrib=attrib)
-
-                # set the mesh asset name
-                geom.attrib["mesh"] = mesh_name
-
-            # if no collision shape
-            if collision is None:
-                geom.attrib["contype"] = "0"
-                geom.attrib["conaffinity"] = "0"
+                # if no collision shape
+                if collision is None:
+                    geom.attrib["contype"] = "0"
+                    geom.attrib["conaffinity"] = "0"
 
         # create <joint>
         for joint in body.parent_joints.values():  # parent_joints

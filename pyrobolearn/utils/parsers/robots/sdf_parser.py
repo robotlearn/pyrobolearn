@@ -108,10 +108,10 @@ class SDFParser(WorldParser):
             idx (int): model index.
 
         Returns:
-            Tree: tree data structure containing the model.
+            MultiBody: tree data structure containing the model.
         """
         # create tree
-        tree = Tree(name=model_tag.attrib.get('name', 'model_' + str(idx)))
+        tree = MultiBody(name=model_tag.attrib.get('name', 'model_' + str(idx)))
 
         # check bodies/links
         for i, link_tag in enumerate(model_tag.findall('link')):

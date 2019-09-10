@@ -5,7 +5,7 @@ Proto files are notably used in Webots.
 """
 
 from pyrobolearn.utils.parsers.robots.robot_parser import RobotParser
-from pyrobolearn.utils.parsers.robots.data_structures import Tree
+from pyrobolearn.utils.parsers.robots.data_structures import MultiBody
 
 
 __author__ = "Brian Delhaisse"
@@ -44,7 +44,7 @@ class ProtoParser(RobotParser):
         Return the Tree containing all the elements.
 
         Returns:
-            Tree: tree data structure.
+            MultiBody: tree data structure.
         """
         pass
 
@@ -53,7 +53,7 @@ class ProtoParser(RobotParser):
         Generate the XML tree from the `Tree` data structure.
 
         Args:
-            tree (Tree): Tree data structure.
+            tree (MultiBody): Tree data structure.
 
         Returns:
             ET.Element: root element in the XML file.

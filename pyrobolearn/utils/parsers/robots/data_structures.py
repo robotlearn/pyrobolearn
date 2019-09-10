@@ -802,8 +802,8 @@ class MultiBody(object):
         """
         self.name = name
         self.root = root
-        self.bodies = OrderedDict()
-        self.joints = OrderedDict()
+        self.bodies = OrderedDict()  # {name: Body}
+        self.joints = OrderedDict()  # {name: Joint}
         self.materials = {}
         self.frame = Frame(position, orientation, dtype='world')
 
@@ -823,9 +823,34 @@ class MultiBody(object):
     def num_dofs(self):
         """Return the total number of degrees of freedom."""
         num_dofs = 0
-        for joint in self.joints:
+        for joint in self.joints.values():
             num_dofs += joint.num_dofs
         return num_dofs
+
+    @property
+    def num_bodies(self):
+        """Return the total number of bodies in this multi-body."""
+        return len(self.bodies)
+
+    @property
+    def num_joints(self):
+        """Return the total number of joints in this multi-body (this accounts for fixed joints as well, but not
+        free joints)."""
+        # return len(self.joints)
+        num_joints = 0
+        for joint in self.joints.values():
+            if joint.dtype != 'floating':
+                num_joints += 1
+        return num_joints
+
+    @property
+    def num_actuated_joints(self):
+        """Return the total number of joints which are not fixed nor free."""
+        num_actuated_joints = 0
+        for joint in self.joints.values():
+            if joint.dtype != 'fixed' and joint.dtype != 'floating':
+                num_actuated_joints += 1
+        return num_actuated_joints
 
     @property
     def root(self):
@@ -833,7 +858,7 @@ class MultiBody(object):
         if self._root is not None:
             return self._root
         if len(self.bodies):
-            return next(iter(self.bodies))  # get first element
+            return self.bodies[next(iter(self.bodies))]  # get first element
 
     @root.setter
     def root(self, root):
@@ -848,6 +873,12 @@ class MultiBody(object):
         """Return if the root element in the tree is static or not."""
         if self.root is not None:
             return self.root.static
+
+    @static.setter
+    def static(self, static):
+        """Set the root element in the tree to be static or not."""
+        if self.root is not None:
+            self.root.static = static
 
     @property
     def position(self):
@@ -908,6 +939,39 @@ class MultiBody(object):
     def homogeneous(self, matrix):
         """Set the given homogeneous matrix."""
         self.frame.homogeneous = matrix
+        if self.root is not None:
+            self.root.homogeneous = matrix
+
+    def add_body(self, body):
+        """Add a body to the tree.
+
+        Args:
+            body (Body): body data structure.
+        """
+        if not isinstance(body, Body):
+            raise TypeError("Expecting the given 'body' to be an instance of `Body` but got instead: "
+                            "{}".format(type(body)))
+        self.bodies[body.name] = body
+
+    def add_joint(self, joint, idx=None):
+        """Add a joint to the tree.
+
+        Args:
+            joint (Joint): joint data structure.
+            idx (int): index to insert a joint. This has a O(N) complexity as we have to copy everything.
+        """
+        if not isinstance(joint, Joint):
+            raise TypeError("Expecting the given 'joint' to be an instance of `Joint`, but got instead: "
+                            "{}".format(type(joint)))
+        if idx is not None:
+            self.joints[joint.name] = joint
+        else:
+            # this insert
+            joints = OrderedDict()
+            for i, (joint_name, joint_instance) in enumerate(self.joints.items()):
+                if i == idx:
+                    joints[joint.name] = joint
+                joint[joint_name] = joint_instance
 
 
 # alias
@@ -1319,6 +1383,7 @@ class Joint(object):
             velocity (float, str): joint maximum allowed velocity.
         """
         self.id = int(joint_id)
+        self.num_dofs = 0
         self.name = name
         self.dtype = dtype
         self.limits = limits
@@ -1330,7 +1395,6 @@ class Joint(object):
         self.damping = damping
         self.effort = effort
         self.velocity = velocity
-        self.num_dofs = 0
 
         self.init_position = None
         self.init_velocity = None
@@ -1378,6 +1442,16 @@ class Joint(object):
                 self.num_dofs = 1
 
         self._dtype = dtype
+
+    @property
+    def num_dofs(self):
+        """Return the number of DoFs for the specified joint."""
+        return self._num_dofs
+
+    @num_dofs.setter
+    def num_dofs(self, dofs):
+        """Set the number of DoFs for the specified joint."""
+        self._num_dofs = int(dofs)
 
     @property
     def limits(self):

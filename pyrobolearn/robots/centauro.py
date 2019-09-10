@@ -76,6 +76,13 @@ class Centauro(WheeledRobot, QuadrupedRobot, BiManipulator):
 
         self.hands = [self.get_link_ids(link) for link in ['arm1_8', 'arm2_8']]
 
+        # load joint configurations
+        srdf = os.path.dirname(__file__) + '/urdfs/centauro/centauro.srdf'
+        self.load_joint_configurations(srdf)
+        # print(self._joint_configuration.keys())
+        joint_ids, joint_values = self._joint_configuration['home']
+        self.reset_joint_states(q=joint_values, joint_ids=joint_ids)
+
 
 # Test
 if __name__ == "__main__":
@@ -97,8 +104,8 @@ if __name__ == "__main__":
     print("Number of Legs: {}".format(robot.num_legs))
     print("Number of Arms: {}".format(robot.num_arms))
 
-    robot.add_joint_slider(robot.right_front_leg)
-    robot.drive(speed=3)
+    # robot.add_joint_slider(robot.left_arm)
+    # robot.drive(speed=3)
 
     # run simulator
     for _ in count():

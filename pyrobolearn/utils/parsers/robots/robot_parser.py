@@ -38,12 +38,18 @@ class RobotParser(object):
             self.dirname = os.path.dirname(filename) + '/'
             self.parse(filename)
 
+    ##############
+    # Properties #
+    ##############
+
     @property
     def root(self):
+        """Return the root XML tag element."""
         return self._root
 
     @root.setter
     def root(self, root):
+        """Set the root XML tag element."""
         if root is not None and not isinstance(root, ET.Element):
             raise TypeError("Expecting the root to be an instance of `ET.Element`, but got instead: "
                             "{}".format(type(root)))
@@ -51,14 +57,20 @@ class RobotParser(object):
 
     @property
     def tree(self):
+        """Return the tree / multi-body data structure."""
         return self._tree
 
     @tree.setter
     def tree(self, tree):
+        """Set the tree / multi-body data structure."""
         if tree is not None and not isinstance(tree, MultiBody):
             raise TypeError("Expecting the given tree to be an instance of `Tree`, but got instead: "
                             "{}".format(type(tree)))
         self._tree = tree
+
+    ###########
+    # Methods #
+    ###########
 
     def parse(self, filename):
         """
@@ -66,8 +78,23 @@ class RobotParser(object):
 
         Args:
             filename (str): path to the file to parse.
+
+        Returns:
+            object: data structure that can be passed to other generators.
         """
         pass
+
+    # def parse_string(self, string):
+    #     """
+    #     Parse the given string.
+    #
+    #     Args:
+    #         string (str): string to parse.
+    #
+    #     Returns:
+    #         object: data structure that can be passed to other generators.
+    #     """
+    #     pass
 
     def get_tree(self):
         """

@@ -59,7 +59,7 @@ def get_adjoint_from_rotation(rotation_matrix):
     return block_diag(rotation_matrix, rotation_matrix)
 
 
-def get_homogeneous_transform(position, orientation):
+def get_homogeneous_matrix(position, orientation):
     r"""
     Return the Homogeneous transform matrix given the position vector and the orientation.
 
@@ -126,6 +126,17 @@ def get_inverse_homogeneous(matrix):
                       np.array([[0, 0, 0, 1]])))
 
 
+def get_identity_homogeneous_matrix():
+    r"""
+    Return the identity homogeneous matrix which corresponds to no rotation (rotation matrix is the identity matrix),
+    and no translation (the translation vector is equal to 0). Note that this is equivalent to `np.identity(4)`.
+
+    Returns:
+        np.array[float[4,4]]: identity homogeneous matrix.
+    """
+    return np.identity(4)
+
+
 def homogeneous_to_pose(matrix):
     r"""
     Return a pose (7D vector: position + quaternion) from a homogeneous matrix.
@@ -153,7 +164,7 @@ def pose_to_homogeneous(pose):
     """
     pose = np.array(pose).flatten()
     position, orientation = pose[:3], pose[-4:]
-    return get_homogeneous_transform(position=position, orientation=orientation)
+    return get_homogeneous_matrix(position=position, orientation=orientation)
 
 
 def get_quaternion(orientation, convert_to_quat=False, convention='xyzw'):

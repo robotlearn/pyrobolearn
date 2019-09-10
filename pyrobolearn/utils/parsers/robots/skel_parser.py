@@ -97,10 +97,10 @@ class SkelParser(WorldParser):
             idx (int): skeleton index.
 
         Returns:
-            Tree: tree data structure containing the skeleton.
+            MultiBody: tree data structure containing the skeleton.
         """
         # create tree
-        tree = Tree(name=skeleton_tag.attrib.get('name', 'skeleton_' + str(idx)))
+        tree = MultiBody(name=skeleton_tag.attrib.get('name', 'skeleton_' + str(idx)))
 
         # check bodies/links
         for i, body_tag in enumerate(skeleton_tag.findall('body')):
