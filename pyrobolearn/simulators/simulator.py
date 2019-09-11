@@ -1219,7 +1219,7 @@ class Simulator(object):
         """
         pass
 
-    def reset_joint_state(self, body_id, joint_id, position, velocity=0.):
+    def reset_joint_state(self, body_id, joint_id, position, velocity=None):
         """
         Reset the state of the joint. It is best only to do this at the start, while not running the simulation:
         `reset_joint_state` overrides all physics simulation.
@@ -1465,6 +1465,38 @@ class Simulator(object):
         pass
 
     def get_link_velocities(self, body_id, link_ids):
+        pass
+
+    def get_link_world_linear_accelerations(self, body_id, link_ids):
+        """
+        Return the linear acceleration of the link(s) expressed in the Cartesian world space coordinates.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[3]]: linear acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[float[N,3]]: linear acceleration of each link
+        """
+        pass
+
+    def get_link_world_angular_accelerations(self, body_id, link_ids):
+        """
+        Return the angular acceleration of the link(s) in the Cartesian world space coordinates.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[3]]: angular acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[float[N,3]]: angular acceleration of each link
+        """
         pass
 
     def get_link_world_accelerations(self, body_id, link_ids):

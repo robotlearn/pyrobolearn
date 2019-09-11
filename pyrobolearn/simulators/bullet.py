@@ -91,8 +91,8 @@ class Bullet(Simulator):
         Args:
             render (bool): if True, it will open the GUI, otherwise, it will just run the server.
             num_instances (int): number of simulator instances.
-            **kwargs (dict): optional arguments (this is not used here).
             middleware (MiddleWare, None): middleware instance.
+            **kwargs (dict): optional arguments (this is not used here).
         """
         # try to import the pybullet library
         # normally that should be done outside the class but because it might have some conflicts with other libraries
@@ -1616,7 +1616,7 @@ class Bullet(Simulator):
             states[idx][2] = np.asarray(state[2])
         return states
 
-    def reset_joint_state(self, body_id, joint_id, position, velocity=0.):
+    def reset_joint_state(self, body_id, joint_id, position, velocity=None):
         """
         Reset the state of the joint. It is best only to do this at the start, while not running the simulation:
         `reset_joint_state` overrides all physics simulation. Note that we only support 1-DOF motorized joints at
@@ -1628,7 +1628,10 @@ class Bullet(Simulator):
             position (float): the joint position (angle in radians [rad] or position [m])
             velocity (float): the joint velocity (angular [rad/s] or linear velocity [m/s])
         """
-        self.sim.resetJointState(body_id, joint_id, position, velocity)
+        if velocity is None:
+            self.sim.resetJointState(body_id, joint_id, position)
+        else:
+            self.sim.resetJointState(body_id, joint_id, position, velocity)
 
     def enable_joint_force_torque_sensor(self, body_id, joint_ids, enable=True):
         """

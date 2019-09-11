@@ -822,10 +822,7 @@ class MultiBody(object):
     @property
     def num_dofs(self):
         """Return the total number of degrees of freedom."""
-        num_dofs = 0
-        for joint in self.joints.values():
-            num_dofs += joint.num_dofs
-        return num_dofs
+        return sum([joint.num_dofs for joint in self.joints.values()])
 
     @property
     def num_bodies(self):
@@ -834,23 +831,21 @@ class MultiBody(object):
 
     @property
     def num_joints(self):
-        """Return the total number of joints in this multi-body (this accounts for fixed joints as well, but not
-        free joints)."""
+        """Return the total number of joints which are not free joints (so this accounts for fixed joints as well, but
+        not free joints)."""
         # return len(self.joints)
-        num_joints = 0
-        for joint in self.joints.values():
-            if joint.dtype != 'floating':
-                num_joints += 1
-        return num_joints
+        return sum([1 for joint in self.joints.values() if joint.dtype != 'floating'])
+
+    @property
+    def num_free_joints(self):
+        """Return the total number of free joints (this does not include the fixed joints). Basically it is the joints
+        that have at least 1 DoF."""
+        return sum([1 for joint in self.joints.values() if joint.dtype != 'fixed'])
 
     @property
     def num_actuated_joints(self):
         """Return the total number of joints which are not fixed nor free."""
-        num_actuated_joints = 0
-        for joint in self.joints.values():
-            if joint.dtype != 'fixed' and joint.dtype != 'floating':
-                num_actuated_joints += 1
-        return num_actuated_joints
+        return sum([1 for joint in self.joints.values() if joint.dtype != 'fixed' and joint.dtype != 'floating'])
 
     @property
     def root(self):
@@ -873,12 +868,21 @@ class MultiBody(object):
         """Return if the root element in the tree is static or not."""
         if self.root is not None:
             return self.root.static
+        if self.joints:
+            joint = self.joints[next(iter(self.joints))]
+            if joint.dtype == 'free' or joint.dtype == 'floating':
+                return False
+            return True
 
     @static.setter
     def static(self, static):
         """Set the root element in the tree to be static or not."""
         if self.root is not None:
             self.root.static = static
+
+    # aliases
+    fixed = static
+    fixed_base = static
 
     @property
     def position(self):
@@ -963,15 +967,25 @@ class MultiBody(object):
         if not isinstance(joint, Joint):
             raise TypeError("Expecting the given 'joint' to be an instance of `Joint`, but got instead: "
                             "{}".format(type(joint)))
-        if idx is not None:
+
+        if idx is None:
             self.joints[joint.name] = joint
         else:
-            # this insert
-            joints = OrderedDict()
-            for i, (joint_name, joint_instance) in enumerate(self.joints.items()):
-                if i == idx:
+            # inserts a joint at the specified index
+            if idx == 0 and len(self.joints) == 0:  # first joint ever to insert
+                self.joints[joint.name] = joint
+            else:
+                joints = OrderedDict()
+                for i, (joint_name, joint_instance) in enumerate(self.joints.items()):
+                    if i == idx:
+                        joints[joint.name] = joint
+                    joints[joint_name] = joint_instance
+
+                if idx == len(self.joints):  # last joint
                     joints[joint.name] = joint
-                joint[joint_name] = joint_instance
+
+                # replace old joint dictionary
+                self.joints = joints
 
 
 # alias
