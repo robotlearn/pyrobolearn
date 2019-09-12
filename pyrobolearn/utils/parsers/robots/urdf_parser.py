@@ -283,7 +283,7 @@ class URDFParser(RobotParser):
             joint.friction = dynamics_tag.attrib.get('friction')
 
         # limits
-        limits_tag = joint_tag.find('limits')
+        limits_tag = joint_tag.find('limit')
         if limits_tag is not None:
             joint.effort = limits_tag.attrib.get('effort')
             joint.velocity = limits_tag.attrib.get('velocity')

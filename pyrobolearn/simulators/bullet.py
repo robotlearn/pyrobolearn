@@ -3323,7 +3323,8 @@ class Bullet(Simulator):
     def change_dynamics(self, body_id, link_id=-1, mass=None, lateral_friction=None, spinning_friction=None,
                         rolling_friction=None, restitution=None, linear_damping=None, angular_damping=None,
                         contact_stiffness=None, contact_damping=None, friction_anchor=None,
-                        local_inertia_diagonal=None, joint_damping=None):
+                        local_inertia_diagonal=None, inertia_position=None, inertia_orientation=None,
+                        joint_damping=None, joint_friction=None):
         """
         Change dynamic properties of the given body (or link) such as mass, friction and restitution coefficients, etc.
 
@@ -3334,21 +3335,25 @@ class Bullet(Simulator):
             lateral_friction (float): lateral (linear) contact friction
             spinning_friction (float): torsional friction around the contact normal
             rolling_friction (float): torsional friction orthogonal to contact normal
-            restitution (float): bouncyness of contact. Keep it a bit less than 1.
+            restitution (float): bounciness of contact. Keep it a bit less than 1.
             linear_damping (float): linear damping of the link (0.04 by default)
             angular_damping (float): angular damping of the link (0.04 by default)
             contact_stiffness (float): stiffness of the contact constraints, used together with `contact_damping`
             contact_damping (float): damping of the contact constraints for this body/link. Used together with
-                `contact_stiffness`. This overrides the value if it was specified in the URDF file in the contact
-                section.
+              `contact_stiffness`. This overrides the value if it was specified in the URDF file in the contact
+              section.
             friction_anchor (int): enable or disable a friction anchor: positional friction correction (disabled by
-                default, unless set in the URDF contact section)
+              default, unless set in the URDF contact section)
             local_inertia_diagonal (np.array[float[3]]): diagonal elements of the inertia tensor. Note that the base
-                and links are centered around the center of mass and aligned with the principal axes of inertia so
-                there are no off-diagonal elements in the inertia tensor.
+              and links are centered around the center of mass and aligned with the principal axes of inertia so
+              there are no off-diagonal elements in the inertia tensor.
+            inertia_position (np.array[float[3]]): new inertia position with respect to the link frame.
+            inertia_orientation (np.array[float[4]]): new inertia orientation (expressed as a quaternion [x,y,z,w]
+              with respect to the link frame.
             joint_damping (float): joint damping coefficient applied at each joint. This coefficient is read from URDF
-                joint damping field. Keep the value close to 0.
-                `joint_damping_force = -damping_coefficient * joint_velocity`.
+              joint damping field. Keep the value close to 0.
+              `joint_damping_force = -damping_coefficient * joint_velocity`.
+            joint_friction (float): joint friction coefficient.
         """
         kwargs = {}
         if mass is not None:

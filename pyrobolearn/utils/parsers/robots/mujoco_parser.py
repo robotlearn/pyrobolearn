@@ -1209,6 +1209,9 @@ class MuJoCoParser(WorldParser):
         # the element for geoms, joints, sites, cameras and lights", and a joint defined in a body connects that body
         # with its parent body.
 
+        # copy Tree just in case to not rewrite anything
+        tree = copy.deepcopy(tree)
+
         h_bodies, h_joints, h_visuals, h_collisions, h_inertials = {}, {}, {}, {}, {}
         for i, body in enumerate(tree.bodies.values()):
             # print(body.name, body.homogeneous)

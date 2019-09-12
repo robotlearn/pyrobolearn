@@ -1195,7 +1195,8 @@ class World(object):
             int: unique id of the floor in the world
         """
         # self.floor_id = self.sim.load_urdf('plane100.urdf', use_fixed_base=True, scale=scaling)
-        self.floor_id = self.sim.load_urdf('plane.urdf', position=[0., 0., 0.], use_fixed_base=True, scale=scaling)
+        # self.floor_id = self.sim.load_urdf('plane.urdf', position=[0., 0., 0.], use_fixed_base=True, scale=scaling)
+        self.floor_id = self.sim.load_floor(dimension=scaling * 20)
         # distance = self.camera.distance
         # self.camera.reset(distance=scaling * distance)
         return self.floor_id

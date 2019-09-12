@@ -303,7 +303,7 @@ class Dart(Simulator):
         self.collision_shapes = {}  # {collision_id: Collision}
         self._bodies = OrderedDict()  # {body_id: Body}
         self.textures = {}  # {texture_id: Texture}
-        self.constraints = OrderedDict()  # {constraint_id: Constraint}
+        self._constraints = OrderedDict()  # {constraint_id: Constraint}
 
         # create counters
         self._visual_cnt = 0
@@ -366,6 +366,74 @@ class Dart(Simulator):
     ###########
     # Methods #
     ###########
+
+    ###########
+    # Private #
+    ###########
+
+    @staticmethod
+    def _convert_wxyz_to_xyzw(q):
+        """Convert a quaternion in the (w,x,y,z) format to (x,y,z,w)."""
+        return np.roll(q, shift=-1)
+
+    @staticmethod
+    def _convert_xyzw_to_wxyz(q):
+        """Convert a quaternion in the (x,y,z,w) format to (w,x,y,z)."""
+        return np.roll(q, shift=1)
+
+    @staticmethod
+    def _get_matrix_from_transform(transform):
+        """Return the homogeneous matrix from the given transform.
+
+        Args:
+            transform (dartpy.math.Isometry3): transform.
+
+        Returns:
+            np.array[float[4,4]]: homogeneous matrix.
+        """
+        rot = transform.rotation()
+        pos = transform.translation()
+        return np.vstack((np.hstack((rot, pos.reshape(-1, 1))),
+                          np.array([0., 0., 0., 1.])))
+
+    @staticmethod
+    def _get_pose_from_transform(transform):
+        """Return the pose from the transform.
+
+        Args:
+            transform (dartpy.math.Isometry3): transform.
+
+        Returns:
+            np.array[float[3]]: position vector.
+            np.array[float[4]]: quaternion (expressed as [x,y,z,w]).
+        """
+        quat = Dart._convert_wxyz_to_xyzw(transform.quaternion().wxyz())
+        pos = transform.translation()
+        return pos, quat
+
+    @staticmethod
+    def _get_quat_from_transform(transform):
+        """Return the quaternion from the given transform.
+
+        Args:
+            transform (dartpy.math.Isometry3): transform.
+
+        Returns:
+            np.array[float[4]]: quaternion (expressed as [x,y,z,w]).
+        """
+        return Dart._convert_wxyz_to_xyzw(transform.quaternion().wxyz())
+
+    @staticmethod
+    def _get_pos_from_transform(transform):
+        """Return the position from the given transform.
+
+        Args:
+            transform (dartpy.math.Isometry3): transform.
+
+        Returns:
+            np.array[float[3]]: position vector.
+        """
+        return transform.translation()
 
     ##############
     # Simulators #
@@ -569,13 +637,17 @@ class Dart(Simulator):
         skeleton = self._urdf_parser.parseSkeleton(filename)
         self.world.addSkeleton(skeleton)
         rpy = get_rpy_from_quaternion(orientation) if orientation is not None else None
-        for i in range(6):
-            if i < 3:
-                if rpy is not None:
-                    skeleton.setPosition(index=i, position=rpy[i])
-            else:
-                if position is not None:
-                    skeleton.setPosition(index=i, position=position[i-3])
+
+        # set orientation
+        if rpy is not None:
+            for i in range(3):
+                skeleton.setPosition(index=i, position=rpy[i])
+
+        # set position
+        if position is not None:
+            for i in range(3):
+                skeleton.setPosition(index=i+3, position=position[i])
+
         return self.world.getNumSkeletons() - 1
 
     def load_sdf(self, filename, scaling=1., *args, **kwargs):
@@ -774,14 +846,12 @@ class Dart(Simulator):
         dynamics_aspect = shape_node.createDynamicsAspect()
 
         # set the position and orientation
-        if mass != 0:
-            orientation = get_rpy_from_quaternion(orientation) if orientation is not None else None
-            for i in range(6):
-                if i < 3:
-                    if orientation is not None:
-                        joint.setPosition(index=i, position=orientation[i])
-                else:
-                    joint.setPosition(index=i, position=position[i-3])
+        orientation = get_rpy_from_quaternion(orientation) if orientation is not None else None
+        if orientation is not None:
+            for i in range(3):
+                joint.setPosition(i, orientation[i])
+        for i in range(3):
+            joint.setPosition(i+3, position[i])
 
         # # increment body counter and remember the body
         # self._body_cnt += 1
@@ -855,11 +925,13 @@ class Dart(Simulator):
     def get_body_info(self, body_id):
         """Get the specified body information.
 
+        Specifically, it returns the base name extracted from the URDF, SDF, MJCF, or other file.
+
         Args:
             body_id (int): unique body id.
 
         Returns:
-            dict, list: info
+            str: base name
         """
         pass
 
@@ -872,7 +944,7 @@ class Dart(Simulator):
         Returns:
             int: unique body id.
         """
-        pass
+        return index
 
     ###############
     # constraints #
@@ -909,7 +981,27 @@ class Dart(Simulator):
         # ['BallJointConstraint', 'BoxedLcpConstraintSolver', 'BoxedLcpSolver', 'ConstraintBase', 'ConstraintSolver',
         # 'DantzigBoxedLcpSolver', 'JointConstraint', 'JointCoulombFrictionConstraint', 'JointLimitConstraint',
         # 'PgsBoxedLcpSolver', 'PgsBoxedLcpSolverOption', 'WeldJointConstraint']
-        pass
+
+        parent = self.world.getSkeleton(parent_body_id)
+        parent_node = parent.getBodyNode(parent_link_id + 1)
+
+        if child_body_id != -1:  # if child is a skeleton
+            child = self.world.getSkeleton(child_body_id)
+            child_node = child.getBodyNode(child_link_id + 1)
+        else:  # if child is the world
+            pass
+
+        # create constraint based on the type
+        if joint_type == Simulator.JOINT_FIXED:
+            constraint = dart.constraint.WeldJointConstraint(parent_node, child_node)
+
+        self._constraint_cnt += 1
+        self._constraints[self._constraint_cnt] = constraint
+
+        # add constraint
+        self.world.getConstraintSolver().addConstraint(constraint)
+
+        return self._constraint_cnt
 
     def remove_constraint(self, constraint_id):
         """
@@ -918,7 +1010,8 @@ class Dart(Simulator):
         Args:
             constraint_id (int): constraint unique id.
         """
-        pass
+        constraint = self._constraints.pop(constraint_id)
+        self.world.getConstraintSolver().removeConstraint(constraint)
 
     def change_constraint(self, constraint_id, *args, **kwargs):
         """
@@ -927,6 +1020,7 @@ class Dart(Simulator):
         Args:
             constraint_id (int): constraint unique id.
         """
+        constraint = self._constraints.pop(constraint_id)
         pass
 
     def num_constraints(self):
@@ -936,7 +1030,7 @@ class Dart(Simulator):
         Returns:
             int: number of constraints created.
         """
-        pass
+        return len(self._constraints)
 
     def get_constraint_id(self, index):
         """
@@ -948,7 +1042,7 @@ class Dart(Simulator):
         Returns:
             int: constraint unique id.
         """
-        pass
+        return list(self._constraints.keys())[index]
 
     def get_constraint_info(self, constraint_id):
         """
@@ -1028,18 +1122,18 @@ class Dart(Simulator):
         skeleton = self.world.getSkeleton(body_id)
 
         if link_ids is None:
-            com = skeleton.getCOM()  # (3,1)
-            return com.reshape(-1)
+            return skeleton.getCOM()
 
-        # if isinstance(link_ids, int):
-        #     link_ids = [link_ids]
-        #
-        # coms = []
-        # for link_id in link_ids:
-        #     body = skeleton.getBodyNode(link_id + 1)
-        #
-        #
-        return None  # TODO
+        if isinstance(link_ids, int):
+            return skeleton.getBodyNode(link_ids + 1).getCOM()
+
+        com = 0
+        for link_id in link_ids:
+            body = skeleton.getBodyNode(link_id + 1)
+            com += body.getCOM * body.getMass()
+        com /= skeleton.getMass()
+
+        return com
 
     def get_center_of_mass_velocity(self, body_id, link_ids=None):
         """
@@ -1056,10 +1150,17 @@ class Dart(Simulator):
         skeleton = self.world.getSkeleton(body_id)
 
         if link_ids is None:
-            com_vel = skeleton.getCOMLinearVelocity()  # (3,1)
-            return com_vel.reshape(-1)
+            return skeleton.getCOMLinearVelocity()
 
-        return None  # TODO
+        if isinstance(link_ids, int):
+            return skeleton.getBodyNode(link_ids + 1).getCOMLinearVelocity()
+
+        vel = 0
+        for link_id in link_ids:
+            body = skeleton.getBodyNode(link_id + 1)
+            vel += body.getCOMLinearVelocity() * body.getMass()
+        vel /= skeleton.getMass()
+        return vel
 
     def get_base_pose(self, body_id):
         """
@@ -1074,9 +1175,9 @@ class Dart(Simulator):
         """
         base = self.world.getSkeleton(body_id).getRootBodyNode()
         transform = base.getWorldTransform()
-        # position = transform[:-1, 3]
-        position = base.getCOM().reshape(-1)
-        orientation = get_quaternion_from_matrix(transform[:-1, :-1])
+        # position = self._get_pos_from_transform(transform)
+        position = base.getCOM()
+        orientation = self._get_quat_from_transform(transform)
         return position, orientation
 
     def get_base_position(self, body_id):
@@ -1090,8 +1191,8 @@ class Dart(Simulator):
             np.array[float[3]]: base position.
         """
         base = self.world.getSkeleton(body_id).getRootBodyNode()
-        # return base.getWorldTransform()[:-1, 3]
-        return base.getCOM().reshape(-1)
+        # return self._get_pos_from_transform(base.getWorldTransform())
+        return base.getCOM()
 
     def get_base_orientation(self, body_id):
         """
@@ -1105,7 +1206,7 @@ class Dart(Simulator):
         """
         base = self.world.getSkeleton(body_id).getRootBodyNode()
         transform = base.getWorldTransform()
-        return get_quaternion_from_matrix(transform[:-1, :-1])
+        return self._get_quat_from_transform(transform)
 
     def reset_base_pose(self, body_id, position, orientation):
         """
@@ -1116,7 +1217,13 @@ class Dart(Simulator):
             position (np.array[float[3]]): new base position.
             orientation (np.array[float[4]]): new base orientation (expressed as a quaternion [x,y,z,w])
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+        rpy = get_rpy_from_quaternion(orientation)
+        for i in range(6):
+            if i < 3:
+                skeleton.setPosition(index=i, position=rpy[i])
+            else:
+                skeleton.setPosition(index=i, position=position[i - 3])
 
     def reset_base_position(self, body_id, position):
         """
@@ -1126,7 +1233,9 @@ class Dart(Simulator):
             body_id (int): unique object id.
             position (np.array[float[3]]): new base position.
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+        for i in range(3):
+            skeleton.setPosition(index=i+3, position=position[i])
 
     def reset_base_orientation(self, body_id, orientation):
         """
@@ -1136,7 +1245,10 @@ class Dart(Simulator):
             body_id (int): unique object id.
             orientation (np.array[float[4]]): new base orientation (expressed as a quaternion [x,y,z,w])
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+        rpy = get_rpy_from_quaternion(orientation)
+        for i in range(3):
+            skeleton.setPosition(index=i, position=rpy[i])
 
     def get_base_velocity(self, body_id):
         """
@@ -1191,7 +1303,9 @@ class Dart(Simulator):
             linear_velocity (np.array[float[3]]): new linear velocity of the base.
             angular_velocity (np.array[float[3]]): new angular velocity of the base.
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+        for i in range(3):
+            skeleton.setVelocity(index=i + 3, velocity=linear_velocity[i])
 
     def reset_base_linear_velocity(self, body_id, linear_velocity):
         """
@@ -1201,7 +1315,9 @@ class Dart(Simulator):
             body_id (int): unique object id.
             linear_velocity (np.array[float[3]]): new linear velocity of the base
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+        for i in range(3):
+            skeleton.setVelocity(index=i+3, velocity=linear_velocity[i])
 
     def reset_base_angular_velocity(self, body_id, angular_velocity):
         """
@@ -1211,7 +1327,9 @@ class Dart(Simulator):
             body_id (int): unique object id.
             angular_velocity (np.array[float[3]]): new angular velocity of the base
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+        for i in range(3):
+            skeleton.setVelocity(index=i, velocity=angular_velocity[i])
 
     def apply_external_force(self, body_id, link_id=-1, force=(0., 0., 0.), position=(0., 0., 0.), frame=1):
         """
@@ -1229,7 +1347,7 @@ class Dart(Simulator):
         link = self.world.getSkeleton(body_id).getBodyNode(link_id + 1)
         force = np.asarray(force).reshape(-1, 1)  # (3,1)
         offset = np.asarray(position).reshape(-1, 1)  # (3,1)
-        is_local = (frame == 1)
+        is_local = (frame == Simulator.LINK_FRAME)
         link.setExtForce(force=force, offset=offset, isForceLocal=is_local, isOffsetLocal=is_local)
 
     def apply_external_torque(self, body_id, link_id=-1, torque=(0., 0., 0.), frame=1):
@@ -1246,7 +1364,7 @@ class Dart(Simulator):
         """
         link = self.world.getSkeleton(body_id).getBodyNode(link_id + 1)
         torque = np.asarray(torque).reshape(-1, 1)  # (3,1)
-        is_local = (frame == 1)
+        is_local = (frame == Simulator.LINK_FRAME)
         link.setExtForce(torque=torque, isLocal=is_local)
 
     ###################
@@ -1331,7 +1449,40 @@ class Dart(Simulator):
             [15] np.array[float[4]]:  joint orientation in parent frame
             [16] int:       parent link index, -1 for base
         """
-        pass
+        skeleton = self.world.getSkeleton(body_id)
+        joint = skeleton.getJoint(joint_id + 1)
+
+        name = joint.getName()
+
+        if isinstance(joint, dart.dynamics.FreeJoint):
+            joint_type = Simulator.JOINT_FREE
+        elif isinstance(joint, dart.dynamics.WeldJoint):
+            joint_type = Simulator.JOINT_FIXED
+        elif isinstance(joint, dart.dynamics.RevoluteJoint):
+            joint_type = Simulator.JOINT_REVOLUTE
+        elif isinstance(joint, dart.dynamics.BallJoint):
+            joint_type = Simulator.JOINT_SPHERICAL
+        elif isinstance(joint, dart.dynamics.PrismaticJoint):
+            joint_type = Simulator.JOINT_PRISMATIC
+        else:
+            joint_type = -1
+
+        q_idx = joint.getIndexInTree(joint_id)  # or joint.getIndexInSkeleton(joint_id)
+        dq_idx = 0
+        flag = -1
+        damping = joint.getDampingCoefficient()
+        friction = joint.getCoulombFriction()
+        pos_limits = (joint.getPositionLowerLimit, joint.getPositionUpperLimit)
+        force_limits = (joint.getForceLowerLimit, joint.getForceUpperLimit)
+        vel_limits = (joint.getVelocityLowerLimit, joint.getVelocityUpperLimit)
+        link_name = joint.getChildBodyNode().getName()
+        axis = joint.getAxis() if hasattr(joint, 'getAxis') else np.zeros(3)
+
+        transform = joint.getTransformFromParentBodyNode()
+        pos, quat = self._get_pose_from_transform(transform)
+
+        return joint_id, name, joint_type, q_idx, dq_idx, flag, damping, friction, pos_limits, force_limits, \
+               vel_limits, link_name, axis, pos, quat
 
     def get_joint_state(self, body_id, joint_id):
         """
@@ -1351,9 +1502,10 @@ class Dart(Simulator):
                 is exactly what you provide, so there is no need to report it separately.
         """
         joint = self.world.getSkeleton(body_id).getJoint(joint_id + 1)
+        body = joint.getChildBodyNode()
         position = joint.getPosition(0)  # joints can have less or more than 1 DoF (like WeldJoint, FreeJoint)
         velocity = joint.getVelocity(0)
-        reaction_forces = np.zeros(6)    # TODO
+        reaction_forces = body.getExternalForceGlobal()
         torque = joint.getForce(0)
         return position, velocity, reaction_forces, torque
 
@@ -1379,7 +1531,7 @@ class Dart(Simulator):
             return self.get_joint_state(body_id, joint_ids)
         return [self.get_joint_state(body_id, joint_id) for joint_id in joint_ids]
 
-    def reset_joint_state(self, body_id, joint_id, position, velocity=0.):
+    def reset_joint_state(self, body_id, joint_id, position, velocity=None):
         """
         Reset the state of the joint. It is best only to do this at the start, while not running the simulation:
         `reset_joint_state` overrides all physics simulation.
@@ -1408,7 +1560,7 @@ class Dart(Simulator):
         """
         pass
 
-    def set_joint_motor_control(self, body_id, joint_ids, control_mode=2, positions=None,
+    def set_joint_motor_control(self, body_id, joint_ids, control_mode=Simulator.POSITION_CONTROL, positions=None,
                                 velocities=None, forces=None, kp=None, kd=None, max_velocity=None):
         r"""
         Set the joint motor control.
@@ -2142,7 +2294,16 @@ class Dart(Simulator):
             if multiple joints:
                 np.array[float[N,6]]: joint reaction forces [N, Nm]
         """
-        pass
+        if isinstance(joint_ids, int):
+            joint = self.world.getSkeleton(body_id).getJoint(joint_ids + 1)
+            body = joint.getChildBodyNode()
+            return body.getExternalForceGlobal()
+        forces = []
+        for joint_id in joint_ids:
+            joint = self.world.getSkeleton(body_id).getJoint(joint_id + 1)
+            body = joint.getChildBodyNode()
+            forces.append(body.getExternalForceGlobal())
+        return np.array(forces)
 
     def get_joint_powers(self, body_id, joint_ids):
         """Return the applied power at the given joint(s). Power = torque * velocity.
@@ -2709,13 +2870,14 @@ class Dart(Simulator):
         damping = -1
         stiffness = -1
 
-        return [mass, friction, local_inertia_diag, position, orientation, restitution, rolling_friction,
-                spinning_friction, damping, stiffness]
+        return mass, friction, local_inertia_diag, position, orientation, restitution, rolling_friction, \
+               spinning_friction, damping, stiffness
 
     def change_dynamics(self, body_id, link_id=-1, mass=None, lateral_friction=None, spinning_friction=None,
                         rolling_friction=None, restitution=None, linear_damping=None, angular_damping=None,
                         contact_stiffness=None, contact_damping=None, friction_anchor=None,
-                        local_inertia_diagonal=None, joint_damping=None):
+                        local_inertia_diagonal=None, inertia_position=None, inertia_orientation=None,
+                        joint_damping=None, joint_friction=None):
         """
         Change dynamic properties of the given body (or link) such as mass, friction and restitution coefficients, etc.
 
@@ -2726,21 +2888,25 @@ class Dart(Simulator):
             lateral_friction (float): lateral (linear) contact friction
             spinning_friction (float): torsional friction around the contact normal
             rolling_friction (float): torsional friction orthogonal to contact normal
-            restitution (float): bouncyness of contact. Keep it a bit less than 1.
+            restitution (float): bounciness of contact. Keep it a bit less than 1.
             linear_damping (float): linear damping of the link (0.04 by default)
             angular_damping (float): angular damping of the link (0.04 by default)
             contact_stiffness (float): stiffness of the contact constraints, used together with `contact_damping`
             contact_damping (float): damping of the contact constraints for this body/link. Used together with
-                `contact_stiffness`. This overrides the value if it was specified in the URDF file in the contact
-                section.
+              `contact_stiffness`. This overrides the value if it was specified in the URDF file in the contact
+              section.
             friction_anchor (int): enable or disable a friction anchor: positional friction correction (disabled by
-                default, unless set in the URDF contact section)
+              default, unless set in the URDF contact section)
             local_inertia_diagonal (np.array[float[3]]): diagonal elements of the inertia tensor. Note that the base
-                and links are centered around the center of mass and aligned with the principal axes of inertia so
-                there are no off-diagonal elements in the inertia tensor.
+              and links are centered around the center of mass and aligned with the principal axes of inertia so
+              there are no off-diagonal elements in the inertia tensor.
+            inertia_position (np.array[float[3]]): new inertia position with respect to the link frame.
+            inertia_orientation (np.array[float[4]]): new inertia orientation (expressed as a quaternion [x,y,z,w]
+              with respect to the link frame.
             joint_damping (float): joint damping coefficient applied at each joint. This coefficient is read from URDF
-                joint damping field. Keep the value close to 0.
-                `joint_damping_force = -damping_coefficient * joint_velocity`.
+              joint damping field. Keep the value close to 0.
+              `joint_damping_force = -damping_coefficient * joint_velocity`.
+            joint_friction (float): joint friction coefficient.
         """
         skeleton = self.world.getSkeleton(body_id)
         body = skeleton.getBodyNode(link_id + 1)
@@ -2764,8 +2930,8 @@ class Dart(Simulator):
         if joint_damping is not None:
             joint.setDampingCoefficient(joint_damping)
 
-        # if joint_friction is not None:
-        #     joint.setCoulombFriction(joint_friction)
+        if joint_friction is not None:
+            joint.setCoulombFriction(joint_friction)
 
     def calculate_jacobian(self, body_id, link_id, local_position, q, dq=None, des_ddq=None):
         r"""

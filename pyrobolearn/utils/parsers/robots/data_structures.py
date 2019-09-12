@@ -8,7 +8,7 @@ import trimesh
 from collections import OrderedDict, Iterable
 
 from pyrobolearn.utils.transformation import get_rpy_from_quaternion, get_quaternion_from_rpy, get_matrix_from_rpy, \
-    get_rpy_from_matrix, get_matrix_from_axis_angle
+    get_rpy_from_matrix, get_matrix_from_axis_angle, get_inverse_homogeneous
 from pyrobolearn.utils.inertia import get_inertia_of_box, get_inertia_of_capsule, get_inertia_of_cylinder, \
     get_inertia_of_ellipsoid, get_inertia_of_mesh, get_inertia_of_sphere, combine_inertias
 
@@ -142,7 +142,41 @@ class PhysicsEngine(object):
 
 
 class Frame(object):
-    r"""Reference Frame"""
+    r"""Reference Frame.
+
+    This is used to expressed the position and orientation of frames that are used for bodies/links (inertials,
+    visuals, collisions) and joints.
+
+    Note that we follow the convention described in URDFs [1, 2] to describe the various frames. Notably,
+    - the link frame is the same as the joint frame and is at the base of a body/link.
+    - the inertial frame is expressed with respect to the link/joint frame.
+    - the visual frame is expressed with respect to the link/joint frame.
+    - the collision frame is expressed with respect to the link/joint frame.
+    - the child link/joint frame is expressed with respect to the parent link/joint frame.
+
+    This sometimes can conflict with other conventions such as the one followed in MuJoCo [3], where:
+    - In MuJoCo, the positions and orientations of all elements can be expressed in global or local coordinates in
+      the XML file. However, once compiled everything will be expressed in local coordinates. The local coordinates
+      are different from the ones defined in URDFs.
+    - the body/link frame is defined at the CoM of the body, thus at the inertial frame.
+    - the inertial, visual, and collision (geoms/sites) frames are expressed with respect to the body/link frame they
+      belong to.
+    - the child body frame is expressed with respect to the parent body frame.
+    - the joint frame that connects the parent and child body is expressed with respect to the child body frame.
+
+    Another one where there can be a conflict is with Bullet [4], where all the elements are expressed in local
+    coordinates and the convention is pretty similar to URDF, except:
+    - the link and joint frames are decoupled; the joint frame is the same as the link/joint frame in URDF but the
+      link frame is the same as Mujoco (i.e. it is at the inertial frame of the body).
+    - the next joint frame is expressed with respect to the inertial frame.
+
+    References:
+        - [1] http://wiki.ros.org/urdf/XML/link
+        - [2] http://wiki.ros.org/urdf/XML/joint
+        - [3] http://mujoco.org/book/modeling.html#CFrame
+        - [4] Pybullet Quickstart Guide:
+          https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit#heading=h.e27vav9dy7v6
+    """
 
     def __init__(self, position=None, orientation=None, dtype=None, right_handed=True):
         """
@@ -788,6 +822,34 @@ class MultiBody(object):
 
     The multi-body / tree data structure starts with a root element (=base link) and contains each bodies / joints.
     Each tree represents a multi-body in the world. Its position / orientation is expressed in the world frame.
+
+    Note that we follow the convention described in URDFs [1, 2] to describe the various frames. Notably,
+    - the link frame is the same as the joint frame and is at the base of a body/link.
+    - the inertial, visual, and collision frames are expressed with respect to the link/joint frame.
+    - the child link/joint frame is expressed with respect to the parent link/joint frame.
+
+    This sometimes can conflict with other conventions such as the one followed in MuJoCo [3], where:
+    - In MuJoCo, the positions and orientations of all elements can be expressed in global or local coordinates in
+      the XML file. However, once compiled everything will be expressed in local coordinates. The local coordinates
+      are different from the ones defined in URDFs.
+    - the body/link frame is defined at the CoM of the body, thus at the inertial frame.
+    - the inertial, visual, and collision (geoms/sites) frames are expressed with respect to the body/link frame they
+      belong to.
+    - the child body frame is expressed with respect to the parent body frame.
+    - the joint frame that connects the parent and child body is expressed with respect to the child body frame.
+
+    Another one where there can be a conflict is with Bullet [4], where all the elements are expressed in local
+    coordinates and the convention is pretty similar to URDF, except:
+    - the link and joint frames are decoupled; the joint frame is the same as the link/joint frame in URDF but the
+      link frame is the same as Mujoco (i.e. it is at the inertial frame of the body).
+    - the next joint frame is expressed with respect to the inertial frame.
+
+    References:
+        - [1] http://wiki.ros.org/urdf/XML/link
+        - [2] http://wiki.ros.org/urdf/XML/joint
+        - [3] http://mujoco.org/book/modeling.html#CFrame
+        - [4] Pybullet Quickstart Guide:
+          https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit#heading=h.e27vav9dy7v6
     """
 
     def __init__(self, name=None, root=None, position=None, orientation=None):
@@ -801,9 +863,9 @@ class MultiBody(object):
             orientation (list/tuple/np.array[float[3/4/9]], np.array[float[3,3]], str): frame orientation in the world.
         """
         self.name = name
-        self.root = root
         self.bodies = OrderedDict()  # {name: Body}
         self.joints = OrderedDict()  # {name: Joint}
+        self.root = root
         self.materials = {}
         self.frame = Frame(position, orientation, dtype='world')
 
@@ -858,9 +920,12 @@ class MultiBody(object):
     @root.setter
     def root(self, root):
         """Set the root body element."""
-        if root is not None and not isinstance(root, Body):
-            raise TypeError("Expecting the given 'body' to be an instance of `Body`, but instead got: "
-                            "{}".format(type(root)))
+        if root is not None:
+            if not isinstance(root, Body):
+                raise TypeError("Expecting the given 'body' to be an instance of `Body`, but instead got: "
+                                "{}".format(type(root)))
+            if len(self.bodies) == 0:  # only if it is empty
+                self.bodies[root.name] = root
         self._root = root
 
     @property
@@ -992,6 +1057,43 @@ class MultiBody(object):
 Tree = MultiBody
 
 
+def transform_inertial_frame_to_joint_frame(body):
+    """Return the homogeneous transform from the inertial frame to the joint frame."""
+    # the inertial frame is expressed wrt to the joint frame by default
+    inertial = body.inertial
+    if inertial is not None:
+        return get_inverse_homogeneous(inertial.homogeneous)
+
+
+def transform_child_joint_frame_to_parent_inertial_frame(child_body):
+    """Return the homogeneous transform from the child joint frame to the parent inertial frame."""
+    parent_joint = child_body.parent_joint
+    parent = child_body.parent_body
+    if parent_joint is not None and parent.inertial is not None:
+        h_p_c = parent_joint.homogeneous  # from parent to child link/joint frame
+        h_c_p = get_inverse_homogeneous(h_p_c)  # from child to parent link/joint frame
+        h_p_pi = parent.inertial.homogeneous  # from parent link/joint frame to inertial frame
+        h_c_pi = h_c_p.dot(h_p_pi)  # from child link/joint frame to parent inertial frame
+        return h_c_pi
+
+
+def transform_inertial_frame_to_child_link_frame(child_body):
+    """Return the homogeneous transform from the parent inertial frame to the child link/joint frame."""
+    # from child link/joint frame to parent inertial frame
+    h_c_pi = transform_child_joint_frame_to_parent_inertial_frame(child_body)
+    if h_c_pi is not None:
+        return get_inverse_homogeneous(h_c_pi)
+
+
+def transform_inertial_frame_to_child_inertial_frame(child_body):
+    """Return the homogeneous transform from the parent inertial frame to the child inertial frame."""
+    if child_body.inertial is not None:
+        h_c_ci = child_body.inertial.homogeneous
+        h_pi_c = transform_inertial_frame_to_child_link_frame(child_body)
+        if h_pi_c is not None:
+            return h_pi_c.dot(h_c_ci)  # from parent parent inertial frame to child inertial frame
+
+
 class Body(object):
     r"""Body / Link data structure."""
 
@@ -1022,7 +1124,7 @@ class Body(object):
         self.name = name
 
         self.joints = OrderedDict()             # child joints
-        self.parent_joints = OrderedDict()      # parent joints
+        self.parent_joints = OrderedDict()      # parent joints: Warning each body should only have one parent joint!!
 
         # set body properties
         self.inertials = inertials
@@ -1264,6 +1366,25 @@ class Body(object):
         """Set the given homogeneous matrix."""
         self.frame.homogeneous = matrix
 
+    @property
+    def parent_body(self):
+        """Return the parent body."""
+        if self.parent_joints:
+            joint = self.parent_joints[next(iter(self.parent_joints))]
+            return joint.parent  # this can be None (like for the root)
+
+    @property
+    def child_bodies(self):
+        """Return the child bodies."""
+        if self.joints:
+            return [joint.child for joint in self.joints if joint.child is not None]
+
+    @property
+    def parent_joint(self):
+        """Return the parent joint."""
+        if self.parent_joints:
+            return self.parent_joints[next(iter(self.parent_joints))]
+
     def add_collision(self, collision):
         """
         Add a collision shape to the list of collision shapes.
@@ -1349,14 +1470,14 @@ class Joint(object):
     Joint types: fixed, floating/free, prismatic, revolute/hinge, continuous, gearbox, revolute2, ball, screw,
     universal, and planar.
 
-    - fixed: no motions is allowed; both links are rigidly attached to each other.
+    - fixed/weld: no motions is allowed; both links are rigidly attached to each other.
     - floating/free: allows motion for all 6 degrees of motion.
     - prismatic: allows motion along 1 translational DoF.
     - revolute/hinge: allows rotational motion around one axis (1 DoF).
     - continuous: a revolute/hinge joint that doesn't have lower or upper limits.
-    - gearbox: geared revolute joint.
+    - gearbox/gear: geared revolute joint.
     - revolute2: two revolute joints connected in series
-    - ball: a ball and socket joint which allows rotational motions around the 3 axis (3 DoFs).
+    - ball (=spherical): a ball and socket joint which allows rotational motions around the 3 axis (3 DoFs).
     - screw: a single DoF joint wich coupled sliding and rotational motion
     - universal: like a ball joint, but constrains one DoF
     - planar: allows motion in a plane perpendicular to the axis.
@@ -1365,6 +1486,7 @@ class Joint(object):
     - SDF: ball, fixed, gearbox, prismatic, revolute, revolute2, screw, universal
     - Dart: ball, free (=floating), euler, prismatic, weld (=fixed), revolute, universal
     - MuJoCo: ball, free (=floating), hinge (=revolute), slide (=prismatic)
+    - Bullet: fixed, gear, planar, point2point, prismatic, revolute, spherical (=ball)
 
     By default, we follow the convention expressed in URDF to describe the frames. That is, the child joint frame is
     described with respect to the parent joint/link frame.
@@ -1450,7 +1572,8 @@ class Joint(object):
             elif dtype in {'free', 'floating'}:
                 dtype = 'floating'
                 self.num_dofs = 6
-            elif dtype == 'ball':
+            elif dtype in {'ball', 'spherical'}:
+                dtype = 'ball'
                 self.num_dofs = 3
             elif dtype == 'continuous':
                 self.num_dofs = 1

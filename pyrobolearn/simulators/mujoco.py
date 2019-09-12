@@ -77,6 +77,9 @@ from pyrobolearn.simulators.simulator import Simulator
 from pyrobolearn.utils.parsers.robots import URDFParser, MuJoCoParser, SDFParser
 import pyrobolearn.utils.parsers.robots.data_structures as struct
 from pyrobolearn.utils.transformation import get_homogeneous_matrix, get_quaternion_from_matrix
+from pyrobolearn.utils.parsers.robots.data_structures import transform_child_joint_frame_to_parent_inertial_frame, \
+    transform_inertial_frame_to_child_inertial_frame, transform_inertial_frame_to_child_link_frame, \
+    transform_inertial_frame_to_joint_frame
 
 
 # check Python version
@@ -127,7 +130,7 @@ class Body(object):
 
         # check given body
         if body is None:
-            body = struct.MultiBody()
+            body = struct.MultiBody(name='prl_dummy_' + str(body_id), root=struct.Body(body_id=body_id))
         if not isinstance(body, struct.MultiBody):
             raise TypeError("Expecting the given 'body' to be an instance of `MultiBody` but got instead: "
                             "{}".format(type(body)))
@@ -148,6 +151,7 @@ class Body(object):
         self._b_idx0, self._b_idxf = 0, 0  # initial and final body indices
         self._j_idx0, self._j_idxf = 0, 0  # initial and final free joint indices
         self._v_idx0, self._v_idxf = 0, 0  # initial and final dq (velocity) indices
+        self._q_idx1, self._v_idx1 = 0, 0  # initial q and dq indices (which don't take into account virtual joints)
 
         # keep in memory the body
         # self.body = body
@@ -163,6 +167,9 @@ class Body(object):
                 jnt_to_q.append(idx)
                 idx += 1
         self.jnt_to_q = np.array(jnt_to_q)
+
+        # keep in memory the link ids
+
 
     @property
     def num_links(self):
@@ -182,6 +189,12 @@ class Body(object):
             raise ValueError("Error while setting the initial q index, this index has to be bigger than 0!")
         self._q_idx0 = q
         self._q_idxf = q + self.q_length  # set the final q index
+        self._q_idx1 = q if self.fixed else q + 7  # set the initial q index (doesn't take into account virtual joints)
+
+    @property
+    def q_idx1(self):
+        """Return the initial q index that does not take into account the virtual joints for the base."""
+        return self._q_idx1
 
     @property
     def q_idxf(self):
@@ -277,6 +290,12 @@ class Body(object):
             raise ValueError("Error while setting the initial velocity index, this index has to be bigger than 0!")
         self._v_idx0 = v
         self._v_idxf = v + self.num_dofs  # set the final velocity index
+        self._v_idx1 = v if self.fixed else v + 6  # set the initial q index (doesn't take into account virtual joints)
+
+    @property
+    def v_idx1(self):
+        """Return the initial velocity index that does not take into account the virtual joints for the base."""
+        return self._v_idx1
 
     @property
     def v_idxf(self):
@@ -312,24 +331,42 @@ class Body(object):
         if keep:  # keep fixed joints (-1)
             return q
         if isinstance(q, float):
-            if q!=-1:
+            if q != -1:
                 return q
             return []
-        return q[q!=-1]  # remove fixed joints
+        return q[q != -1]  # remove fixed joints
 
     def get_dq_idx(self, joint_id, keep=False):
         return self.get_q_idx(joint_id, keep)
 
-    def check_joint_id(self, joint_id):
-        if joint_id < 0 or joint_id > (self.num_joints - 1):
-            raise ValueError("joint_id should belong to [0, `num_joints-1`].")
-
-    def check_link_id(self, link_id):
-        if link_id < -1 or link_id > (self.num_bodies - 2):  # -1 is for the base
-            raise ValueError("link_id should belong to [-1, `num_links-2`].")
+    def get_joint(self, joint_id):
+        return self.joints[joint_id]
 
     def get_joint_type(self, joint_id):
         return self.joints[joint_id].dtype
+
+    def get_link(self, link_id):
+        return self.links[link_id]
+
+    def transform_inertial_frame_to_joint_frame(self, body_id):
+        """Return the homogeneous transform from the inertial frame to the joint frame."""
+        body = self.links[body_id]
+        return transform_inertial_frame_to_joint_frame(body)
+
+    def transform_child_joint_frame_to_parent_inertial_frame(self, child_body_id):
+        """Return the homogeneous transform from the child joint frame to the parent inertial frame."""
+        body = self.links[child_body_id]
+        return transform_child_joint_frame_to_parent_inertial_frame(body)
+
+    def transform_inertial_frame_to_child_link_frame(self, child_body_id):
+        """Return the homogeneous transform from the parent inertial frame to the child link/joint frame."""
+        body = self.links[child_body_id]
+        return transform_inertial_frame_to_child_link_frame(body)
+
+    def transform_inertial_frame_to_child_inertial_frame(self, child_body_id):
+        """Return the homogeneous transform from the parent inertial frame to the child inertial frame."""
+        body = self.links[child_body_id]
+        return transform_inertial_frame_to_child_inertial_frame(body)
 
 
 class Mujoco(Simulator):
@@ -507,6 +544,8 @@ class Mujoco(Simulator):
               If None, it will take the root defined in the simulator.
             render (bool): if we should render or not.
         """
+        # self.render(enable=False)  # to delete the previous viewer instance if defined
+
         # create the model
         # self.model = mujoco.load_model_from_path(path)
         root = self._parser.get_string(pretty_format=False)
@@ -517,13 +556,69 @@ class Mujoco(Simulator):
 
         # if we need to render
         if render:
-            # self.render(enable=False)  # to delete the previous viewer instance if defined
             # self.render(enable=True)   # to instantiate the viewer
             if self.viewer is None:
                 self.render(enable=True)
             else:
                 print("Update the viewer's sim")
                 self.viewer.update_sim(self.sim)
+
+    @staticmethod
+    def _check_joint_id(body, joint_id):
+        if not isinstance(joint_id, int):
+            raise TypeError("Expecting the given joint id to be an int, but got instead: {}".format(type(joint_id)))
+        if joint_id < 0 or joint_id > (body.num_joints - 1):
+            raise ValueError("joint_id should belong to [0, {}], but got: {}".format(body.num_joints - 1, joint_id))
+        return joint_id
+
+    @staticmethod
+    def _check_joint_ids(body, joint_ids):
+        joint_ids = np.asarray(joint_ids)
+        if np.any(joint_ids < 0) or np.any(joint_ids > (body.num_joints - 1)):
+            raise ValueError("joint_ids should belong to [0, {}], but got: {}".format(body.num_joints - 1, joint_ids))
+        if joint_ids.ndim == 0:
+            return int(joint_ids)
+        return joint_ids
+
+    @staticmethod
+    def _check_link_id(body, link_id):
+        if not isinstance(link_id, int):
+            raise TypeError("Expecting the given link id to be an int, but got instead: {}".format(type(link_id)))
+        if link_id < -1 or link_id > (body.num_bodies - 2):  # -1 is for the base
+            raise ValueError("link_id should belong to [-1, {}], but got: {}".format(body.num_bodies - 2, link_id))
+        return link_id + 1  # shift such that between [0, `body.num_bodies`[.
+
+    @staticmethod
+    def _check_link_ids(body, link_ids):
+        link_ids = np.asarray(link_ids)
+        if np.any(link_ids < -1) or np.any(link_ids > (body.num_bodies - 2)):  # -1 is for the base
+            raise ValueError("link_ids should belong to [-1, {}], but got: {}".format(body.num_bodies - 2, link_ids))
+        if link_ids.ndim == 0:
+            return int(link_ids) + 1
+        return link_ids + 1  # shift such that between [0, `body.num_bodies`[.
+
+    @staticmethod
+    def _get_joint_type_id(joint_type):
+        if joint_type == 'fixed':
+            return Simulator.JOINT_FIXED
+        if joint_type == 'revolute':
+            return Simulator.JOINT_REVOLUTE
+        if joint_type == 'prismatic':
+            return Simulator.JOINT_PRISMATIC
+        elif joint_type == 'ball':
+            return Simulator.JOINT_SPHERICAL
+        elif joint_type == 'floating':
+            return Simulator.JOINT_FREE
+        elif joint_type == 'gear':
+            return Simulator.JOINT_GEAR
+        else:
+            return -1
+
+    @staticmethod
+    def _process_name(name):
+        if name.startswith('prl_'):
+            return '_'.join(name.split('_')[1:-1])
+        return name
 
     #################
     # utils methods #
@@ -532,12 +627,14 @@ class Mujoco(Simulator):
     @staticmethod
     def _convert_wxyz_to_xyzw(q):
         """Convert a quaternion in the (w,x,y,z) format to (x,y,z,w)."""
-        return np.roll(q, shift=-1)
+        q = np.asarray(q)
+        return np.roll(q, shift=-1, axis=q.ndim - 1)
 
     @staticmethod
     def _convert_xyzw_to_wxyz(q):
         """Convert a quaternion in the (x,y,z,w) format to (w,x,y,z)."""
-        return np.roll(q, shift=1)
+        q = np.asarray(q)
+        return np.roll(q, shift=1, axis=q.ndim - 1)
 
     ##############
     # Simulators #
@@ -742,7 +839,7 @@ class Mujoco(Simulator):
             body.add_parent_joint(joint)
             tree.add_joint(joint, idx=0)
 
-        return self._create_body(tree, verbose=2)
+        return self._create_body(tree, verbose=1)
 
     def load_sdf(self, filename, scaling=1., *args, **kwargs):  # TODO
         """Load a SDF file in the simulator.
@@ -870,9 +967,10 @@ class Mujoco(Simulator):
             self._create_sim(render=self._render)
         else:
             # notify that the Mujoco model has changed (this will be checked in the `step` method)
-            self._model_changed = True
+            # self._model_changed = True
+            self._create_sim()
 
-    def _create_body(self, tree, body_id=None, verbose=2):
+    def _create_body(self, tree, body_id=None, verbose=1):
         """
         Create inner body in the simulator; given the tree data structure, it generates all the XML tags using
         the inner parser/generator, wraps the returned tree XML tag to a Body structure, sets its attributes (such as
@@ -972,7 +1070,7 @@ class Mujoco(Simulator):
         if not static:
             tree.add_joint(joint)
 
-        return self._create_body(tree, body_id=self._body_cnt, verbose=2)
+        return self._create_body(tree, body_id=self._body_cnt, verbose=1)
 
     def remove_body(self, body_id):  # DONE
         """Remove a particular body in the simulator.
@@ -1538,7 +1636,7 @@ class Mujoco(Simulator):
         Returns:
             int: number of links with the associated body id.
         """
-        return self._bodies[body_id].num_links
+        return self._bodies[body_id].num_links - 1  # remove the base link
 
     def get_joint_info(self, body_id, joint_id):
         """
@@ -1576,33 +1674,67 @@ class Mujoco(Simulator):
         """
         body = self._bodies[body_id]
 
-        if joint_id < 0 or joint_id > (body.num_joints - 1):
-            raise ValueError("joint_id should belong to [0, `num_joints-1`].")
+        # check joint id
+        joint_id = self._check_joint_id(body, joint_id)
+        joint = body.get_joint(joint_id)
 
-        dtype = body.get_joint_type(joint_id)
-        if dtype == 'fixed':  # special care for fixed joints (as they are usually not specified in Mujoco models)
-            pass
-        idx = body.j_idx0 + joint_id
+        name = self._process_name(joint.name)
+        dtype = self._get_joint_type_id(joint.dtype)
 
-        name = self.model.joint_id2name()
-        dtype = self.model.jnt_type  # ['free', 'ball', 'slide', 'hinge']
-        q_idx = body.get_q_idx(joint_id)
-        dq_idx = body.get_dq_idx(joint_id)
-        flag = -1
-        damping = self.model.dof_damping
-        friction = self.model.dof_frictionloss
-        limited = self.model.limited
-        limits = self.model.jnt_range
-        axis = self.model.jnt_axis
-        pos = self.model.jnt_pos
-        orientation = 0
+        # get index
+        q = body.get_q_idx(joint_id, keep=True)  # -1 for fixed joint
+        flag = 1  # as in Bullet
+        if joint_id == body.num_joints - 1:
+            flag = 0
 
-        axis_pos = self.sim.data.xaxis
-        # xanchor
+        if q == -1:  # fixed joint
+            q_idx = -1
+            dq_idx = -1
+            damping = 0.
+            friction = 0.
+            axis = np.zeros(3)
+            lower, upper = 0., -1.
+            max_vel = 0.
+            max_force = 0.
 
-        # stiffness
+        else:
+            joint_idx = body.j_idx0 + q
+            q_idx = q
+            dq_idx = q
+            # if not body.fixed:  # compatible with Bullet
+            q_idx += 7
+            dq_idx += 6
+            dof_addr = self.model.jnt_dofadr[joint_idx]
+            damping = self.model.dof_damping[dof_addr]
+            friction = self.model.dof_frictionloss[dof_addr]
+            axis = self.model.jnt_axis[joint_idx]
+            limited = self.model.jnt_limited[joint_idx]
+            if limited:
+                lower, upper = self.model.jnt_range[joint_idx]
+            else:
+                lower, upper = -np.infty, np.infty
+            max_vel = joint.velocity
+            max_force = joint.effort
 
-        return joint_id
+        link = joint.child
+        link_name = link.name
+        parent_idx = joint.parent.id - 1  # the base is -1 by convention in Bullet
+
+        # position = joint.position  # self.model.jnt_pos[body.j_idx0 + q]
+        # orientation = joint.quaternion
+        homogeneous = transform_inertial_frame_to_child_link_frame(link)  # Bullet express joint from inertial
+        position = homogeneous[:3, 3]
+        orientation = get_quaternion_from_matrix(homogeneous[:3, :3])
+
+        if position is None:
+            position = np.zeros(3)
+        if orientation is None:
+            orientation = np.zeros(3)
+
+        # xanchor, stiffness, etc
+
+        return joint_id, name, dtype, q_idx, dq_idx, flag, damping, friction, lower, upper, max_force, max_vel, \
+               link_name, axis, position, orientation, parent_idx
 
     def get_joint_state(self, body_id, joint_id):
         """
@@ -1627,19 +1759,24 @@ class Mujoco(Simulator):
         if joint_id < 0 or joint_id > (body.num_joints - 1):
             raise ValueError("joint_id should belong to [0, `num_joints-1`].")
         q = body.get_q_idx(joint_id, keep=True)
-        if q == -1:
+        if q == -1:  # fixed joint
             return 0, 0, np.zeros(6), 0
-        qpos_idx = body.q_idx0 + q
-        qvel_idx = body.v_idx0 + q
-        if not body.fixed:
-            qpos_idx += 7
-            qvel_idx += 6
 
-        pos = self.sim.data.qpos[qpos_idx]
-        vel = self.sim.data.qvel[qvel_idx]
-        reaction_forces = np.zeros(6)
-        torque = self.sim.data.qfrc_applied[qvel_idx]
-        return pos, vel, reaction_forces, torque
+        # compute joint position and velocity
+        pos = self.sim.data.qpos[body.q_idx1 + q]
+        vel = self.sim.data.qvel[body.v_idx1 + q]
+
+        # compute reaction force
+        force_parent = self.sim.data.cfrc_int[body.b_idx0 + joint_id]  # com-based interaction force with parent
+        force_ext = self.sim.data.cfrc_ext[body.b_idx0 + joint_id]  # com-based external force on body
+        force = force_ext - force_parent  # TODO: is it + instead of -?
+        np.roll(force, shift=3, axis=force.ndim - 1)  # [torque, force] --> [force, torque]
+        # TODO: express it in the joint frame
+
+        # compute the applied torque
+        torque = self.sim.data.qfrc_applied[body.v_idx1 + q]
+
+        return pos, vel, force, torque
 
     def get_joint_states(self, body_id, joint_ids):
         """
@@ -1661,7 +1798,7 @@ class Mujoco(Simulator):
         """
         return [self.get_joint_state(body_id, joint_id) for joint_id in joint_ids]
 
-    def reset_joint_state(self, body_id, joint_id, position, velocity=0.):
+    def reset_joint_state(self, body_id, joint_id, position, velocity=None):
         """
         Reset the state of the joint. It is best only to do this at the start, while not running the simulation:
         `reset_joint_state` overrides all physics simulation.
@@ -1678,16 +1815,9 @@ class Mujoco(Simulator):
         if joint_id < 0 or joint_id > (body.num_joints - 1):
             raise ValueError("joint_id should belong to [0, `num_joints-1`].")
         q = body.get_q_idx(joint_id, keep=True)
-        if q == -1:
-            return
-        qpos_idx = body.q_idx0 + q
-        qvel_idx = body.v_idx0 + q
-        if not body.fixed:
-            qpos_idx += 7
-            qvel_idx += 6
-
-        self.sim.data.qpos[qpos_idx] = position
-        self.sim.data.qvel[qvel_idx] = velocity
+        if q != -1:
+            self.sim.data.qpos[body.q_idx1 + q] = position
+            self.sim.data.qvel[body.v_idx1 + q] = velocity
 
     def enable_joint_force_torque_sensor(self, body_id, joint_ids, enable=True):
         """
@@ -1698,9 +1828,12 @@ class Mujoco(Simulator):
             joint_ids (int, int[N]): joint index in range [0..num_joints(body_id)], or list of joint ids.
             enable (bool): True to enable, False to disable the force/torque sensor
         """
-        pass  # TODO
+        # attach a force sensor to the specified body (site)
+        # attach a torque sensor to the specfied body (site)
+        # or check cfrc_int and cfrc_ext
+        pass
 
-    def set_joint_motor_control(self, body_id, joint_ids, control_mode=2, positions=None,
+    def set_joint_motor_control(self, body_id, joint_ids, control_mode=Simulator.POSITION_CONTROL, positions=None,
                                 velocities=None, forces=None, kp=None, kd=None, max_velocity=None):
         r"""
         Set the joint motor control.
@@ -1757,22 +1890,28 @@ class Mujoco(Simulator):
             [7] np.array[float[3]]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
         """
         body = self._bodies[body_id]
-        if link_id < -1 or link_id > (body.num_bodies - 2):  # -1 is for the base
-            raise ValueError("link_id should belong to [-1, `num_links-2`].")
-        idx = body.b_idx0 + 1 + link_id
+        link_id = self._check_link_id(body, link_id)
+        idx = body.b_idx0 + link_id
 
-        pos = self.sim.data.body_xpos[idx]  # Cartesian position of body frame (same as xipos)
+        pos = self.sim.data.xipos[idx]  # Cartesian position of body CoM
         quat = self._convert_wxyz_to_xyzw(self.sim.data.body_xquat[idx])  # Cartesian orientation of body frame
         # Note that in Mujoco the body frame is defined at the CoM
 
-        # link frame in URDF is the joint frame in Mujoco
-        # TODO: read from the Tree data structure and perform the correct transformations
+        link = body.get_link(link_id)
+        inertial = link.inertial
+        ipos = inertial.position if inertial is not None else np.zeros(3)
+        iquat = inertial.quaternion if inertial is not None else np.array([0., 0., 0., 1.])
+
+        lpos = self.sim.data.body_xpos[idx]  # Cartesian position of body frame
+        lquat = quat
 
         if compute_velocity:
             vel = self.sim.data.cvel[idx]  # com-based velocity [3D rot; 3D tran]
-            return pos, quat, vel[3:], vel[:3]
+            lin_vel, ang_vel = vel[3:], vel[:3]
+        else:
+            lin_vel, ang_vel = np.zeros(3), np.zeros(3)
 
-        return pos, quat
+        return pos, quat, ipos, iquat, lpos, lquat, lin_vel, ang_vel
 
     def get_link_states(self, body_id, link_ids, compute_velocity=False, compute_forward_kinematics=False):
         """
@@ -1801,7 +1940,7 @@ class Mujoco(Simulator):
         return [self.get_link_state(body_id, link_id, compute_velocity, compute_forward_kinematics)
                 for link_id in link_ids]
 
-    def get_link_names(self, body_id, link_ids):
+    def get_link_names(self, body_id, link_ids=None):
         """
         Return the name of the given link(s).
 
@@ -1815,29 +1954,36 @@ class Mujoco(Simulator):
             if multiple links:
                 str[N]: link names
         """
-        pass
+        body = self._bodies[body_id]
+        one_link = isinstance(link_ids, int)
+        if link_ids is None:
+            link_ids = range(0, body.num_bodies-1)  # do not return the name of the base link
+        elif one_link:
+            link_ids = [link_ids]
+        names = []
+        for link_id in link_ids:
+            link_id = self._check_link_id(body, link_id)
+            name = self._process_name(body.get_link(link_id).name)
+            names.append(name)
+        if one_link:
+            return names[0]
+        return names
 
     def _get_link_result(self, body_id, link_ids, mujoco_data, fct=None, slice=None):
         body = self._bodies[body_id]  # TODO: maybe use the tree data structure instead...
-        one_link = isinstance(link_ids, int)
-        if one_link:
-            link_ids = [link_ids]
-        results = []
-        for link_id in link_ids:
-            if link_id < -1 or link_id > (body.num_bodies - 2):  # -1 is for the base
-                raise ValueError("link_id should belong to [-1, `num_links-2`].")
-            idx = body.b_idx0 + 1 + link_id
+        if link_ids is None:
+            data = mujoco_data[body.b_idx0+1:body.b_idxf]  # +1 to not account for the base as in PyBullet
+        else:
+            link_ids = self._check_link_ids(body, link_ids)
+            idx = body.b_idx0 + link_ids
             data = mujoco_data[idx]
-            if slice is not None:
-                data = data[slice]
-            if fct is not None:
-                data = fct(data)
-            results.append(data)
-        if one_link and len(results) > 0:
-            return results[0]
-        return results
+        if slice is not None:
+            data = data[slice]
+        if fct is not None:
+            data = fct(data)
+        return data
 
-    def get_link_masses(self, body_id, link_ids):
+    def get_link_masses(self, body_id, link_ids=None):
         """
         Return the mass of the given link(s).
 
@@ -1851,10 +1997,9 @@ class Mujoco(Simulator):
             else:
                 float[N]: mass of each link
         """
-        # TODO: maybe use the tree data structure instead...
         return self._get_link_result(body_id, link_ids, self.sim.model.body_mass)
 
-    def get_link_frames(self, body_id, link_ids):
+    def get_link_frames(self, body_id, link_ids=None):
         r"""
         Return the link world frame position(s) and orientation(s).
 
@@ -1870,9 +2015,11 @@ class Mujoco(Simulator):
                 np.array[float[N,3]]: link frame position of each link in world space
                 np.array[float[N,4]]: orientation of each link frame [x,y,z,w]
         """
-        pass
+        pos = self._get_link_result(body_id, link_ids, self.sim.data.body_xpos)
+        quat = self._get_link_result(body_id, link_ids, self.sim.data.body_xquat, fct=self._convert_wxyz_to_xyzw)
+        return pos, quat
 
-    def get_link_world_positions(self, body_id, link_ids):
+    def get_link_world_positions(self, body_id, link_ids=None):
         """
         Return the CoM position (in the Cartesian world space coordinates) of the given link(s).
 
@@ -1886,8 +2033,7 @@ class Mujoco(Simulator):
             if multiple links:
                 np.array[float[N,3]]: CoM position of each link in world space
         """
-        # Cartesian position of body frame (same as xipos)
-        return np.asarray(self._get_link_result(body_id, link_ids, self.sim.data.body_xpos))
+        return self._get_link_result(body_id, link_ids, self.sim.data.xipos)
 
     def get_link_positions(self, body_id, link_ids):
         pass
@@ -1906,9 +2052,7 @@ class Mujoco(Simulator):
             if multiple links:
                 np.array[float[N,4]]: CoM orientation of each link (x,y,z,w)
         """
-        # Cartesian orientation of body frame
-        return np.asarray(self._get_link_result(body_id, link_ids, self.sim.data.body_xquat,
-                                                fct=self._convert_wxyz_to_xyzw))
+        return self._get_link_result(body_id, link_ids, self.sim.data.body_xquat, fct=self._convert_wxyz_to_xyzw)
 
     def get_link_orientations(self, body_id, link_ids):
         pass
@@ -1927,7 +2071,7 @@ class Mujoco(Simulator):
             if multiple links:
                 np.array[float[N,3]]: linear velocity of each link
         """
-        return np.asarray(self._get_link_result(body_id, link_ids, self.sim.data.cvel, slice=slice(3, 6)))
+        return self._get_link_result(body_id, link_ids, self.sim.data.cvel, slice=slice(3, 6))
 
     def get_link_world_angular_velocities(self, body_id, link_ids):
         """
@@ -1961,9 +2105,7 @@ class Mujoco(Simulator):
                 np.array[float[N,6]]: linear and angular velocity of each link
         """
         velocities = np.asarray(self._get_link_result(body_id, link_ids, self.sim.data.cvel))
-        if velocities.ndim == 1:
-            return np.roll(velocities, shift=3)
-        return np.roll(velocities, shift=3, axis=1)
+        return np.roll(velocities, shift=3, axis=velocities.ndim-1)
 
     def get_link_velocities(self, body_id, link_ids):
         pass
@@ -2018,9 +2160,7 @@ class Mujoco(Simulator):
                 np.array[float[N,6]]: linear and angular acceleration of each link
         """
         accelerations = np.asarray(self._get_link_result(body_id, link_ids, self.sim.data.cacc))
-        if accelerations.ndim == 1:
-            return np.roll(accelerations, shift=3)
-        return np.roll(accelerations, shift=3, axis=1)
+        return np.roll(accelerations, shift=3, axis=accelerations.ndim - 1)
 
     def get_q_indices(self, body_id, joint_ids):
         """
@@ -2094,7 +2234,17 @@ class Mujoco(Simulator):
                 int: joint type id.
             if multiple joints: list of above
         """
-        pass
+        body = self._bodies[body_id]
+        one_joint = isinstance(joint_ids, int)
+        if one_joint:
+            joint_ids = [joint_ids]
+        types = []
+        for joint_id in joint_ids:
+            joint = body.get_joint(joint_id)
+            types.append(self._get_joint_type_id(joint.dtype))
+        if one_joint and len(types) > 1:
+            return types[0]
+        return types
 
     def get_joint_type_names(self, body_id, joint_ids):
         """
@@ -2224,15 +2374,32 @@ class Mujoco(Simulator):
             kds (None, float, np.array[float[N]]): velocity gain(s)
             forces (None, float, np.array[float[N]]): maximum motor force(s)/torque(s) used to reach the target values.
         """
-        pass
+        # TODO: use the other arguments
 
-    def get_joint_positions(self, body_id, joint_ids):
+        body = self._bodies[body_id]
+
+        if joint_ids is None:
+            self.sim.data.qpos[body.q_idx1:body.q_idxf] = positions
+
+        # check if valid joints
+        self._check_joint_ids(body, joint_ids)
+
+        # if one joint, set its torque
+        if isinstance(joint_ids, int):
+            self.sim.data.qpos[body.q_idx1 + joint_ids] = positions
+
+        # if multiple joints, set their torques
+        q = body.get_q_idx(joint_ids, keep=True)  # E.g. [0, -1, 1, -1, 2, 3]  (-1 are for fixed joints)
+        self.sim.data.qpos[body.q_idx1 + q[q != -1]] = positions
+
+    def get_joint_positions(self, body_id, joint_ids=None):
         """
         Get the position of the given joint(s).
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list[int]): joint id, or list of joint ids.
+            joint_ids (int, list[int], None): joint id, or list of joint ids. If None, it will take all the actuated
+              joints.
 
         Returns:
             if 1 joint:
@@ -2241,7 +2408,22 @@ class Mujoco(Simulator):
                 np.array[float[N]]: joint positions [rad]
         """
         body = self._bodies[body_id]
-        pass
+
+        if joint_ids is None:
+            return self.sim.data.qpos[body.q_idx1:body.q_idxf]
+
+        # check if valid joint
+        self._check_joint_ids(body, joint_ids)
+
+        # if one joint, return its position
+        if isinstance(joint_ids, int):
+            return self.sim.data.qpos[body.q_idx1 + joint_ids]
+
+        # if multiple joints, return their positions
+        q = body.get_q_idx(joint_ids, keep=True)  # E.g. [0, -1, 1, -1, 2, 3]  (-1 are for fixed joints)
+        qpos = np.zeros(len(joint_ids))
+        qpos[q != -1] = self.sim.data.qpos[body.q_idx1 + q[q != -1]]
+        return qpos
 
     def set_joint_velocities(self, body_id, joint_ids, velocities, max_force=None):
         """
@@ -2253,9 +2435,25 @@ class Mujoco(Simulator):
             velocities (float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
             max_force (None, float, np.array[float[N]]): maximum motor forces/torques
         """
-        pass
+        # TODO: use the other arguments
 
-    def get_joint_velocities(self, body_id, joint_ids):
+        body = self._bodies[body_id]
+
+        if joint_ids is None:
+            self.sim.data.qvel[body.v_idx1:body.v_idxf] = velocities
+
+        # check if valid joints
+        self._check_joint_ids(body, joint_ids)
+
+        # if one joint, set its torque
+        if isinstance(joint_ids, int):
+            self.sim.data.qvel[body.v_idx1 + joint_ids] = velocities
+
+        # if multiple joints, set their torques
+        q = body.get_q_idx(joint_ids, keep=True)  # E.g. [0, -1, 1, -1, 2, 3]  (-1 are for fixed joints)
+        self.sim.data.qvel[body.v_idx1 + q[q != -1]] = velocities
+
+    def get_joint_velocities(self, body_id, joint_ids=None):
         """
         Get the velocity of the given joint(s).
 
@@ -2269,7 +2467,23 @@ class Mujoco(Simulator):
             if multiple joints:
                 np.array[float[N]]: joint velocities [rad/s]
         """
-        pass
+        body = self._bodies[body_id]
+
+        if joint_ids is None:
+            return self.sim.data.qvel[body.v_idx1:body.v_idxf]
+
+        # check if valid joint
+        self._check_joint_ids(body, joint_ids)
+
+        # if one joint, return its velocity
+        if isinstance(joint_ids, int):
+            return self.sim.data.qvel[body.v_idx1 + joint_ids]
+
+        # if multiple joints, return their velocities
+        q = body.get_q_idx(joint_ids, keep=True)  # E.g. [0, -1, 1, -1, 2, 3]  (-1 are for fixed joints)
+        qvel = np.zeros(len(joint_ids))
+        qvel[q != -1] = self.sim.data.qvel[body.v_idx1 + q[q != -1]]
+        return qvel
 
     def set_joint_accelerations(self, body_id, joint_ids, accelerations, q=None, dq=None):
         """
@@ -2280,11 +2494,11 @@ class Mujoco(Simulator):
             body_id (int): unique body id.
             joint_ids (int, list[int]): joint id, or list of joint ids.
             accelerations (float, np.array[float[N]]): desired joint acceleration, or list of desired joint
-                accelerations [rad/s^2]
+              accelerations [rad/s^2]
         """
         pass
 
-    def get_joint_accelerations(self, body_id, joint_ids):  # , q=None, dq=None):
+    def get_joint_accelerations(self, body_id, joint_ids=None):  # , q=None, dq=None):
         """
         Get the acceleration of the specified joint(s). This is only valid if the simulator `supports_acceleration`.
 
@@ -2298,7 +2512,23 @@ class Mujoco(Simulator):
             if multiple joints:
                 np.array[float[N]]: joint accelerations [rad/s^2]
         """
-        pass
+        body = self._bodies[body_id]
+
+        if joint_ids is None:
+            return self.sim.data.qacc[body.v_idx1:body.v_idxf]
+
+        # check if valid joint
+        self._check_joint_ids(body, joint_ids)
+
+        # if one joint, return its velocity
+        if isinstance(joint_ids, int):
+            return self.sim.data.qacc[body.v_idx1 + joint_ids]
+
+        # if multiple joints, return their velocities
+        q = body.get_q_idx(joint_ids, keep=True)  # E.g. [0, -1, 1, -1, 2, 3]  (-1 are for fixed joints)
+        qacc = np.zeros(len(joint_ids))
+        qacc[q != -1] = self.sim.data.qacc[body.v_idx1 + q[q != -1]]
+        return qacc
 
     def set_joint_torques(self, body_id, joint_ids, torques):
         """
@@ -2309,9 +2539,23 @@ class Mujoco(Simulator):
             joint_ids (int, list[int]): joint id, or list of joint ids.
             torques (float, list[float], np.array[float]): desired torque(s) to apply to the joint(s) [N].
         """
-        pass
+        body = self._bodies[body_id]
 
-    def get_joint_torques(self, body_id, joint_ids):
+        if joint_ids is None:
+            self.sim.data.qfrc_applied[body.v_idx1:body.v_idxf] = torques
+
+        # check if valid joints
+        self._check_joint_ids(body, joint_ids)
+
+        # if one joint, set its torque
+        if isinstance(joint_ids, int):
+            self.sim.data.qfrc_applied[body.v_idx1 + joint_ids] = torques
+
+        # if multiple joints, set their torques
+        q = body.get_q_idx(joint_ids, keep=True)  # E.g. [0, -1, 1, -1, 2, 3]  (-1 are for fixed joints)
+        self.sim.data.qfrc_applied[body.v_idx1 + q[q != -1]] = torques
+
+    def get_joint_torques(self, body_id, joint_ids=None):
         """
         Get the applied torque(s) on the given joint(s).
 
@@ -2325,9 +2569,25 @@ class Mujoco(Simulator):
             if multiple joints:
                 np.array[float[N]]: torques associated to the given joints [Nm]
         """
-        pass
+        body = self._bodies[body_id]
 
-    def get_joint_reaction_forces(self, body_id, joint_ids):
+        if joint_ids is None:
+            return self.sim.data.qfrc_applied[body.v_idx1:body.v_idxf]
+
+        # check if valid joint
+        self._check_joint_ids(body, joint_ids)
+
+        # if one joint, return its velocity
+        if isinstance(joint_ids, int):
+            return self.sim.data.qfrc_applied[body.v_idx1 + joint_ids]
+
+        # if multiple joints, return their velocities
+        q = body.get_q_idx(joint_ids, keep=True)  # E.g. [0, -1, 1, -1, 2, 3]  (-1 are for fixed joints)
+        torques = np.zeros(len(joint_ids))
+        torques[q != -1] = self.sim.data.qfrc_applied[body.v_idx1 + q[q != -1]]
+        return torques
+
+    def get_joint_reaction_forces(self, body_id, joint_ids=None):
         """Return the joint reaction forces at the given joint. Note that the torque sensor must be enabled, otherwise
         it will always return [0,0,0,0,0,0].
 
@@ -2341,7 +2601,32 @@ class Mujoco(Simulator):
             if multiple joints:
                 np.array[float[N,6]]: joint reaction forces [N, Nm]
         """
-        pass
+        body = self._bodies[body_id]
+
+        if joint_ids is None:
+            # com-based interaction force with parent [torque, force]
+            force_parent = self.sim.data.cfrc_int[body.b_idx0:body.b_idxf]
+            # com-based external force on body [torque, force]
+            force_ext = self.sim.data.cfrc_ext[body.b_idx0:body.b_idxf]
+            force = force_ext - force_parent  # TODO: is it + instead of -?
+            np.roll(force, shift=3, axis=force.ndim - 1)  # [torque, force] --> [force, torque]
+            # TODO: express that force in the joint frame
+            return force
+
+        # check if valid link id
+        self._check_link_ids(body, joint_ids)
+
+        # com-based interaction force with parent [torque, force]
+        force_parent = self.sim.data.cfrc_int[body.b_idx0 + joint_ids]
+        # com-based external force on body [torque, force]
+        force_ext = self.sim.data.cfrc_ext[body.b_idx0 + joint_ids]
+
+        force = force_ext - force_parent  # TODO: is it + instead of -?
+
+        np.roll(force, shift=3, axis=force.ndim-1)  # [torque, force] --> [force, torque]
+
+        # TODO: express that force in the joint frame
+        return force
 
     def get_joint_powers(self, body_id, joint_ids):
         """Return the applied power at the given joint(s). Power = torque * velocity.
@@ -2356,7 +2641,9 @@ class Mujoco(Simulator):
             if multiple joints:
                 np.array[float[N]]: power at each joint [W]
         """
-        pass
+        torque = self.get_joint_torques(body_id, joint_ids)
+        velocity = self.get_joint_velocities(body_id, joint_ids)
+        return torque * velocity
 
     #################
     # Visualization #
@@ -2702,15 +2989,21 @@ class Mujoco(Simulator):
             to_position (np.array[float[3]]): end of the ray in world coordinates
 
         Returns:
-            list:
-                int: object unique id of the hit object
-                int: link index of the hit object, or -1 if none/parent
-                float: hit fraction along the ray in range [0,1] along the ray.
-                np.array[float[3]]: hit position in Cartesian world coordinates
-                np.array[float[3]]: hit normal in Cartesian world coordinates
+            [0] int: object unique id of the hit object
+            [1] int: link index of the hit object, or -1 if none/parent
+            [2] float: hit fraction along the ray in range [0,1] along the ray.
+            [3] np.array[float[3]]: hit position in Cartesian world coordinates
+            [4] np.array[float[3]]: hit normal in Cartesian world coordinates
         """
         vec = to_position - from_position
-        return self.sim.ray(pnt=from_position, vec=vec)  # this return the distance and id of the geom
+        distance, geom_id = self.sim.ray(pnt=from_position, vec=vec)  # this return the distance and id of the geom
+        norm = np.linalg.norm(vec)
+        fraction = distance / norm
+        unit_vec = vec / norm
+        position = distance * unit_vec
+        normal = -unit_vec  # TODO: this is not correct...
+        # TODO: get body_id and link_id from geom_id
+        return geom_id, geom_id, fraction, position, normal
 
     ###########################
     # Kinematics and Dynamics #
@@ -2772,7 +3065,8 @@ class Mujoco(Simulator):
     def change_dynamics(self, body_id, link_id=-1, mass=None, lateral_friction=None, spinning_friction=None,
                         rolling_friction=None, restitution=None, linear_damping=None, angular_damping=None,
                         contact_stiffness=None, contact_damping=None, friction_anchor=None,
-                        local_inertia_diagonal=None, joint_damping=None):
+                        local_inertia_diagonal=None, inertia_position=None, inertia_orientation=None,
+                        joint_damping=None, joint_friction=None):
         """
         Change dynamic properties of the given body (or link) such as mass, friction and restitution coefficients, etc.
 
@@ -2783,7 +3077,7 @@ class Mujoco(Simulator):
             lateral_friction (float): lateral (linear) contact friction
             spinning_friction (float): torsional friction around the contact normal
             rolling_friction (float): torsional friction orthogonal to contact normal
-            restitution (float): bouncyness of contact. Keep it a bit less than 1.
+            restitution (float): bounciness of contact. Keep it a bit less than 1.
             linear_damping (float): linear damping of the link (0.04 by default)
             angular_damping (float): angular damping of the link (0.04 by default)
             contact_stiffness (float): stiffness of the contact constraints, used together with `contact_damping`
@@ -2795,13 +3089,17 @@ class Mujoco(Simulator):
             local_inertia_diagonal (np.array[float[3]]): diagonal elements of the inertia tensor. Note that the base
                 and links are centered around the center of mass and aligned with the principal axes of inertia so
                 there are no off-diagonal elements in the inertia tensor.
+            inertia_position (np.array[float[3]]): new inertia position with respect to the link frame.
+            inertia_orientation (np.array[float[4]]): new inertia orientation (expressed as a quaternion [x,y,z,w]
+              with respect to the link frame.
             joint_damping (float): joint damping coefficient applied at each joint. This coefficient is read from URDF
                 joint damping field. Keep the value close to 0.
                 `joint_damping_force = -damping_coefficient * joint_velocity`.
+            joint_friction (float): joint friction coefficient.
+
         """
         body = self._bodies[body_id]
-        if link_id < -1 or link_id > (body.num_bodies - 2):  # -1 is for the base
-            raise ValueError("link_id should belong to [-1, `num_links-2`].")
+        self._check_link_id(body, link_id)
 
         idx = body.b_idx0 + 1 + link_id
         if mass is not None:
@@ -3091,6 +3389,53 @@ class Mujoco(Simulator):
         # get ddq and return it
         qacc = dest.qacc[body.v_idx0:body.v_idxf]
         return qacc
+
+    #########
+    # Debug #
+    #########
+
+    # TODO
+
+    ############################
+    # Events (mouse, keyboard) #
+    ############################
+
+    def get_keyboard_events(self):
+        """Get the key events.
+
+        Returns:
+            dict: {keyId: keyState}
+                * `keyID` is an integer (ascii code) representing the key. Some special keys like shift, arrows,
+                and others are are defined in pybullet such as `B3G_SHIFT`, `B3G_LEFT_ARROW`, `B3G_UP_ARROW`,...
+                * `keyState` is an integer. 3 if the button has been pressed, 1 if the key is down, 2 if the key has
+                been triggered.
+        """
+        pass
+
+    def get_mouse_events(self):
+        """Get the mouse events.
+
+        Returns:
+            list of mouse events:
+                eventType (int): 1 if the mouse is moving, 2 if a button has been pressed or released
+                mousePosX (float): x-coordinates of the mouse pointer
+                mousePosY (float): y-coordinates of the mouse pointer
+                buttonIdx (int): button index for left/middle/right mouse button. It is -1 if nothing,
+                                 0 if left button, 1 if scroll wheel (pressed), 2 if right button
+                buttonState (int): 0 if nothing, 3 if the button has been pressed, 4 is the button has been released,
+                                   1 if the key is down (never observed), 2 if the key has been triggered (never
+                                   observed).
+        """
+        pass
+
+    def get_mouse_and_keyboard_events(self):
+        """Get the mouse and key events.
+
+        Returns:
+            list: list of mouse events
+            dict: dictionary of key events
+        """
+        pass
 
 
 # Test
