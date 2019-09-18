@@ -48,6 +48,8 @@ except ImportError as e:
 # import PRL simulator
 from pyrobolearn.simulators.simulator import Simulator
 from pyrobolearn.utils.decorator import keyboard_interrupt
+from pyrobolearn.utils.mesh import convert_mesh
+from pyrobolearn.utils.parsers.robots import URDFParser
 
 
 __author__ = "Brian Delhaisse"
@@ -354,6 +356,22 @@ class Raisim(Simulator):
         camera.pitch(1.2)
         camera.yaw(0.6, raisim.ogre.Node.TransformSpace.TS_WORLD)
 
+    #################
+    # utils methods #
+    #################
+
+    @staticmethod
+    def _convert_wxyz_to_xyzw(q):
+        """Convert a quaternion in the (w,x,y,z) format to (x,y,z,w)."""
+        q = np.asarray(q)
+        return np.roll(q, shift=-1, axis=q.ndim - 1)
+
+    @staticmethod
+    def _convert_xyzw_to_wxyz(q):
+        """Convert a quaternion in the (x,y,z,w) format to (w,x,y,z)."""
+        q = np.asarray(q)
+        return np.roll(q, shift=1, axis=q.ndim - 1)
+
     #############
     # Simulator #
     #############
@@ -399,8 +417,8 @@ class Raisim(Simulator):
             # update visualization counter
             self.visualization_cnt += 1
 
-        if sleep_time:
-            time.sleep(sleep_time)
+        # if sleep_time:
+        #     time.sleep(sleep_time)
 
     def is_rendering(self):
         """Return True if the simulator is in the render mode."""
@@ -516,6 +534,19 @@ class Raisim(Simulator):
     # Loading URDFs, SDFs, MJCFs, meshes #
     ######################################
 
+    @staticmethod
+    def _convert_mesh(filename, format='obj'):
+        extension = filename.split('.')[-1]
+        if extension.lower() != format:  # if different file format than obj convert it
+            basename = os.path.basename(filename)
+            basename_without_extension = ''.join(basename.split('.')[:-1])
+            # dirname = os.path.dirname(os.path.abspath(__file__)) + '/meshes/'  # Raisim uses relative paths
+            new_filename = basename_without_extension + '.' + format
+            if not os.path.isfile(new_filename):
+                convert_mesh(filename, 'meshes/' + new_filename, library='pyassimp')
+            return True, new_filename
+        return False, filename
+
     def load_urdf(self, filename, position, orientation=None, use_fixed_base=0, scale=1.0, *args, **kwargs):
         """Load a URDF file in the simulator.
 
@@ -531,6 +562,31 @@ class Raisim(Simulator):
         Returns:
             int (non-negative): unique id associated to the load model.
         """
+        # parse the URDF file
+        urdf_parser = URDFParser(filename=filename)
+        tree = urdf_parser.tree
+
+        # Raisim only accepts collision bodies in the obj format, so check that each mesh is in the correct format.
+        # If not, convert them.
+        urdf_changed = False
+        for body in tree.bodies.values():
+            for visual in body.visuals:
+                if visual.dtype == 'mesh':
+                    urdf_changed, new_filename = self._convert_mesh(visual.filename)
+                    visual.filename = new_filename
+            for collision in body.collisions:
+                if collision.dtype == 'mesh':
+                    urdf_changed, new_filename = self._convert_mesh(collision.filename)
+                    collision.filename = new_filename
+
+        # if we had to convert some meshes, just create a new URDF with the converted meshes
+        if urdf_changed:
+            root = urdf_parser.generate(tree)
+            basename = os.path.basename(filename)
+            dirname = os.path.dirname(os.path.abspath(__file__)) + '/meshes/'
+            filename = dirname + 'prl_generated_' + basename
+            urdf_parser.write(filename, root=root)
+
         # load body
         body = self.world.add_articulated_system(filename)
 
@@ -730,7 +786,14 @@ class Raisim(Simulator):
         Args:
             body_id (int): unique body id.
         """
-        pass
+        body = self._bodies.pop(body_id)
+
+        # remove body from the world
+        self.world.remove_object(body)
+
+        # remove body from visualization
+        if self._render:
+            self.visualizer.remove(body)
 
     def num_bodies(self):
         """Return the number of bodies present in the simulator.
@@ -738,7 +801,9 @@ class Raisim(Simulator):
         Returns:
             int: number of bodies
         """
-        pass
+        # return len(self._bodies)
+        # return len(self.world.get_object_list)
+        return self.world.get_configuration_number()
 
     def get_body_info(self, body_id):
         """Get the specified body information.
@@ -862,9 +927,1060 @@ class Raisim(Simulator):
     # Objects #
     ###########
 
+    def get_mass(self, body_id):
+        """
+        Return the total mass of the robot (=sum of all mass links).
+
+        Args:
+            body_id (int): unique object id, as returned from `load_urdf`.
+
+        Returns:
+            float: total mass of the robot [kg]
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_mass(0)
+        return sum(body.get_masses())
+
+    def get_base_mass(self, body_id):
+        """Return the base mass of the robot.
+
+        Args:
+            body_id (int): unique object id.
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_mass(0)
+        return body.get_masses()[0]
+
+    def get_base_name(self, body_id):
+        """
+        Return the base name.
+
+        Args:
+            body_id (int): unique object id.
+
+        Returns:
+            str: base name
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_name()
+        return body.get_body_names()[0]  # body.get_name()
+
+    def get_center_of_mass_position(self, body_id, link_ids=None):
+        """
+        Return the center of mass position.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (list[int]): link ids associated with the given body id. If None, it will take all the links
+                of the specified body.
+
+        Returns:
+            np.array[float[3]]: center of mass position in the Cartesian world coordinates
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_com_position()
+        return body.get_composite_com()
+
+    def get_center_of_mass_velocity(self, body_id, link_ids=None):
+        """
+        Return the center of mass linear velocity.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (list[int]): link ids associated with the given body id. If None, it will take all the links
+                of the specified body.
+
+        Returns:
+            np.array[float[3]]: center of mass linear velocity.
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_linear_velocity()
+        return body.get_world_linear_velocity(body_id=body_id, body_pos=np.zeros(3))  # TODO: correct body_id
+
+    def get_base_pose(self, body_id):
+        """
+        Get the current position and orientation of the base (or root link) of the body in Cartesian world coordinates.
+
+        Args:
+            body_id (int): object unique id, as returned from `load_urdf`.
+
+        Returns:
+            np.array[float[3]]: base position
+            np.array[float[4]]: base orientation (quaternion [x,y,z,w])
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_position(), self._convert_wxyz_to_xyzw(body.get_quaternion())
+        pos, quat = body.get_body_pose(0)
+        return pos, self._convert_wxyz_to_xyzw(quat)
+
+    def get_base_position(self, body_id):
+        """
+        Return the base position of the specified body.
+
+        Args:
+            body_id (int): object unique id, as returned from `load_urdf`.
+
+        Returns:
+            np.array[float[3]]: base position.
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_position()
+        return body.get_world_position(0)
+
+    def get_base_orientation(self, body_id):
+        """
+        Get the base orientation of the specified body.
+
+        Args:
+            body_id (int): object unique id, as returned from `load_urdf`.
+
+        Returns:
+            np.array[float[4]]: base orientation in the form of a quaternion (x,y,z,w)
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return self._convert_wxyz_to_xyzw(body.get_quaternion())
+        return self._convert_wxyz_to_xyzw(body.get_base_quaternion())
+
+    def reset_base_pose(self, body_id, position, orientation):
+        """
+        Reset the base position and orientation of the specified object id.
+
+        Args:
+            body_id (int): unique object id.
+            position (np.array[float[3]]): new base position.
+            orientation (np.array[float[4]]): new base orientation (expressed as a quaternion [x,y,z,w])
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            body.set_position(position)
+            body.set_orientation(self._convert_xyzw_to_wxyz(orientation))
+        else:
+            body.set_base_position(position)
+            body.set_base_orientation(self._convert_xyzw_to_wxyz(orientation))
+
+    def reset_base_position(self, body_id, position):
+        """
+        Reset the base position of the specified body/object id while preserving its orientation.
+
+        Args:
+            body_id (int): unique object id.
+            position (np.array[float[3]]): new base position.
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            body.set_position(position)
+        else:
+            body.set_base_position(position)
+
+    def reset_base_orientation(self, body_id, orientation):
+        """
+        Reset the base orientation of the specified body/object id while preserving its position.
+
+        Args:
+            body_id (int): unique object id.
+            orientation (np.array[float[4]]): new base orientation (expressed as a quaternion [x,y,z,w])
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            body.set_orientation(self._convert_xyzw_to_wxyz(orientation))
+        else:
+            body.set_base_orientation(self._convert_xyzw_to_wxyz(orientation))
+
+    def get_base_velocity(self, body_id):
+        """
+        Return the base linear and angular velocities.
+
+        Args:
+            body_id (int): object unique id, as returned from `load_urdf`.
+
+        Returns:
+            np.array[float[3]]: linear velocity of the base in Cartesian world space coordinates
+            np.array[float[3]]: angular velocity of the base in Cartesian world space coordinates
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_linear_velocity(), body.get_angular_velocity()
+        return body.get_world_linear_velocity(0), body.get_world_angular_velocity(0)
+
+    def get_base_linear_velocity(self, body_id):
+        """
+        Return the linear velocity of the base.
+
+        Args:
+            body_id (int): object unique id, as returned from `load_urdf`.
+
+        Returns:
+            np.array[float[3]]: linear velocity of the base in Cartesian world space coordinates
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_linear_velocity()
+        return body.get_world_linear_velocity(0)
+
+    def get_base_angular_velocity(self, body_id):
+        """
+        Return the angular velocity of the base.
+
+        Args:
+            body_id (int): object unique id, as returned from `load_urdf`.
+
+        Returns:
+            np.array[float[3]]: angular velocity of the base in Cartesian world space coordinates
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_angular_velocity()
+        return body.get_world_angular_velocity(0)
+
+    def reset_base_velocity(self, body_id, linear_velocity=None, angular_velocity=None):
+        """
+        Reset the base velocity.
+
+        Args:
+            body_id (int): unique object id.
+            linear_velocity (np.array[float[3]]): new linear velocity of the base.
+            angular_velocity (np.array[float[3]]): new angular velocity of the base.
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            body.set_velocity(linear_velocity, angular_velocity)
+        else:
+            # TODO: request feature on Raisim github
+            pass
+
+    def reset_base_linear_velocity(self, body_id, linear_velocity):
+        """
+        Reset the base linear velocity.
+
+        Args:
+            body_id (int): unique object id.
+            linear_velocity (np.array[float[3]]): new linear velocity of the base
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            body.set_velocity(linear_velocity, np.zeros(3))
+        else:
+            # TODO: request feature on Raisim github
+            pass
+
+    def reset_base_angular_velocity(self, body_id, angular_velocity):
+        """
+        Reset the base angular velocity.
+
+        Args:
+            body_id (int): unique object id.
+            angular_velocity (np.array[float[3]]): new angular velocity of the base
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            body.set_velocity(np.zeros(3), angular_velocity)
+        else:
+            # TODO: request feature on Raisim github
+            pass
+
+    def get_base_acceleration(self, body_id):
+        """
+        Get the base acceleration. This is only valid if the simulator `supports_acceleration`.
+
+        Args:
+            body_id (int): unique object id.
+
+        Returns:
+            np.array[float[3]]: linear acceleration [m/s^2]
+            np.array[float[3]]: angular acceleration [rad/s^2]
+        """
+        pass  # Raisim does not support accelerations
+
+    def apply_external_force(self, body_id, link_id=-1, force=(0., 0., 0.), position=(0., 0., 0.),
+                             frame=Simulator.LINK_FRAME):
+        """
+        Apply the specified external force on the specified position on the body / link.
+
+        Args:
+            body_id (int): unique body id.
+            link_id (int): unique link id. If -1, it will be the base.
+            force (np.array[float[3]]): external force to be applied.
+            position (np.array[float[3]]): position on the link where the force is applied. See `flags` for coordinate
+                systems. If None, it is the center of mass of the body (or the link if specified).
+            frame (int): if frame = 1, then the force / position is described in the link frame. If frame = 2, they
+                are described in the world frame.
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            body.setExternalForce(link_id + 1, force)
+        else:
+            if frame == Simulator.LINK_FRAME:
+                frame = raisim.ArticulatedSystem.Frame.BODY_FRAME
+            elif frame == Simulator.WORLD_FRAME:
+                frame = raisim.ArticulatedSystem.Frame.WORLD_FRAME
+            else:
+                raise ValueError("Unknown specified frame.")
+            body.setExternalForce(link_id + 1, frame, force, frame, position)
+
+    def apply_external_torque(self, body_id, link_id=-1, torque=(0., 0., 0.), frame=1):
+        """
+        Apply an external torque on a body, or a link of the body. Note that after each simulation step, the external
+        torques are cleared to 0.
+
+        Args:
+            body_id (int): unique body id.
+            link_id (int): link id to apply the torque, if -1 it will apply the torque on the base
+            torque (float[3]): Cartesian torques to be applied on the body
+            frame (int): Specify the coordinate system of force/position: either `pybullet.WORLD_FRAME` (=2) for
+                Cartesian world coordinates or `pybullet.LINK_FRAME` (=1) for local link coordinates.
+        """
+        body = self._bodies[body_id]
+        body.setExternalTorque(link_id + 1, torque)
+
     #############################
     # Robots (joints and links) #
     #############################
+
+    def num_joints(self, body_id):
+        """
+        Return the total number of joints of the specified body. This is the same as calling `num_links`.
+
+        Args:
+            body_id (int): unique body id.
+
+        Returns:
+            int: number of joints with the associated body id.
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return 0
+        return len(body.get_body_names())
+
+    def num_actuated_joints(self, body_id):
+        """
+        Return the total number of actuated joints associated with the given body id.
+
+        Args:
+            body_id (int): unique body id.
+
+        Returns:
+            int: number of actuated joints of the specified body.
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return 0
+        return body.get_num_dof()
+
+    def num_links(self, body_id):
+        """
+        Return the total number of links of the specified body. This is the same as calling `num_joints`.
+
+        Args:
+            body_id (int): unique body id.
+
+        Returns:
+            int: number of links with the associated body id.
+        """
+        return self.num_joints(body_id)
+
+    def get_joint_info(self, body_id, joint_id):
+        """
+        Return information about the given joint about the specified body.
+
+        Note that this method returns a lot of information, so specific methods have been implemented that return
+        only the desired information. Also, note that we do not convert the data here.
+
+        Args:
+            body_id (int): unique body id.
+            joint_id (int): joint id is included in [0..`num_joints(body_id)`].
+
+        Returns:
+            dict, list: joint info
+        """
+        pass
+
+    def get_joint_state(self, body_id, joint_id):
+        """
+        Get the joint state.
+
+        Args:
+            body_id (int): unique body id.
+            joint_id (int): joint index in range [0..num_joints(body_id)]
+
+        Returns:
+            float: The position value of this joint.
+            float: The velocity value of this joint.
+            np.array[float[6]]: These are the joint reaction forces, if a torque sensor is enabled for this joint it is
+                [Fx, Fy, Fz, Mx, My, Mz]. Without torque sensor, it is [0, 0, 0, 0, 0, 0].
+            float: This is the motor torque applied during the last stepSimulation. Note that this only applies in
+                VELOCITY_CONTROL and POSITION_CONTROL. If you use TORQUE_CONTROL then the applied joint motor torque
+                is exactly what you provide, so there is no need to report it separately.
+        """
+        pass
+
+    def get_joint_states(self, body_id, joint_ids):
+        """
+        Get the joint state of the specified joints.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (list[int]): list of joint ids.
+
+        Returns:
+            list:
+                float: The position value of this joint.
+                float: The velocity value of this joint.
+                np.array[float[6]]: These are the joint reaction forces, if a torque sensor is enabled for this joint
+                    it is [Fx, Fy, Fz, Mx, My, Mz]. Without torque sensor, it is [0, 0, 0, 0, 0, 0].
+                float: This is the motor torque applied during the last `step`. Note that this only applies in
+                    VELOCITY_CONTROL and POSITION_CONTROL. If you use TORQUE_CONTROL then the applied joint motor
+                    torque is exactly what you provide, so there is no need to report it separately.
+        """
+        pass
+
+    def reset_joint_state(self, body_id, joint_id, position, velocity=None):
+        """
+        Reset the state of the joint. It is best only to do this at the start, while not running the simulation:
+        `reset_joint_state` overrides all physics simulation.
+
+        Args:
+            body_id (int): unique body id.
+            joint_id (int): joint index in range [0..num_joints(body_id)]
+            position (float): the joint position (angle in radians [rad] or position [m])
+            velocity (float): the joint velocity (angular [rad/s] or linear velocity [m/s])
+        """
+        pass
+
+    def enable_joint_force_torque_sensor(self, body_id, joint_ids, enable=True):
+        """
+        You can enable or disable a joint force/torque sensor in each joint.
+
+        Args:
+            body_id (int): body unique id.
+            joint_ids (int, int[N]): joint index in range [0..num_joints(body_id)], or list of joint ids.
+            enable (bool): True to enable, False to disable the force/torque sensor
+        """
+        pass
+
+    def set_joint_motor_control(self, body_id, joint_ids, control_mode=2, positions=None,
+                                velocities=None, forces=None, kp=None, kd=None, max_velocity=None):
+        r"""
+        Set the joint motor control.
+
+        In position control:
+        .. math:: error = Kp (x_{des} - x) + Kd (\dot{x}_{des} - \dot{x})
+
+        In velocity control:
+        .. math:: error = \dot{x}_{des} - \dot{x}
+
+        Note that the maximum forces and velocities are not automatically used for the different control schemes.
+
+        Args:
+            body_id (int): body unique id.
+            joint_ids (int): joint/link id, or list of joint ids.
+            control_mode (int): POSITION_CONTROL (=2) (which is in fact CONTROL_MODE_POSITION_VELOCITY_PD),
+                VELOCITY_CONTROL (=0), TORQUE_CONTROL (=1) and PD_CONTROL (=3).
+            positions (float, np.array[float[N]]): target joint position(s) (used in POSITION_CONTROL).
+            velocities (float, np.array[float[N]]): target joint velocity(ies). In VELOCITY_CONTROL and
+                POSITION_CONTROL, the target velocity(ies) is(are) the desired velocity of the joint. Note that the
+                target velocity(ies) is(are) not the maximum joint velocity(ies). In PD_CONTROL and
+                POSITION_CONTROL/CONTROL_MODE_POSITION_VELOCITY_PD, the final target velocities are computed using:
+                `kp*(erp*(desiredPosition-currentPosition)/dt)+currentVelocity+kd*(m_desiredVelocity - currentVelocity)`
+            forces (float, list[float]): in POSITION_CONTROL and VELOCITY_CONTROL, these are the maximum motor
+                forces used to reach the target values. In TORQUE_CONTROL these are the forces / torques to be applied
+                each simulation step.
+            kp (float, list[float]): position (stiffness) gain(s) (used in POSITION_CONTROL).
+            kd (float, list[float]): velocity (damping) gain(s) (used in POSITION_CONTROL).
+            max_velocity (float): in POSITION_CONTROL this limits the velocity to a maximum.
+        """
+        pass
+
+    def get_link_state(self, body_id, link_id, compute_velocity=False, compute_forward_kinematics=False):
+        """
+        Get the state of the associated link.
+
+        Args:
+            body_id (int): body unique id.
+            link_id (int): link index.
+            compute_velocity (bool): If True, the Cartesian world velocity will be computed and returned.
+            compute_forward_kinematics (bool): if True, the Cartesian world position/orientation will be recomputed
+                using forward kinematics.
+
+        Returns:
+            np.array[float[3]]: Cartesian world position of CoM
+            np.array[float[4]]: Cartesian world orientation of CoM, in quaternion [x,y,z,w]
+            np.array[float[3]]: local position offset of inertial frame (center of mass) expressed in the URDF link
+                frame
+            np.array[float[4]]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed in
+                URDF link frame
+            np.array[float[3]]: world position of the URDF link frame
+            np.array[float[4]]: world orientation of the URDF link frame
+            np.array[float[3]]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
+            np.array[float[3]]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
+        """
+        pass
+
+    def get_link_states(self, body_id, link_ids, compute_velocity=False, compute_forward_kinematics=False):
+        """
+        Get the state of the associated links.
+
+        Args:
+            body_id (int): body unique id.
+            link_ids (list[int]): list of link index.
+            compute_velocity (bool): If True, the Cartesian world velocity will be computed and returned.
+            compute_forward_kinematics (bool): if True, the Cartesian world position/orientation will be recomputed
+                using forward kinematics.
+
+        Returns:
+            list:
+                np.array[float[3]]: Cartesian position of CoM
+                np.array[float[4]]: Cartesian orientation of CoM, in quaternion [x,y,z,w]
+                np.array[float[3]]: local position offset of inertial frame (center of mass) expressed in the URDF
+                    link frame
+                np.array[float[4]]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed
+                    in URDF link frame
+                np.array[float[3]]: world position of the URDF link frame
+                np.array[float[4]]: world orientation of the URDF link frame
+                np.array[float[3]]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
+                np.array[float[3]]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
+        """
+        pass
+
+    def get_link_names(self, body_id, link_ids):
+        """
+        Return the name of the given link(s).
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link id, or list of link ids.
+
+        Returns:
+            if 1 link:
+                str: link name
+            if multiple links:
+                str[N]: link names
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_name()
+        names = body.get_body_names()
+        if isinstance(link_ids, int):
+            return names[link_ids]
+        return np.asarray(names)[link_ids]
+
+    def get_link_masses(self, body_id, link_ids):
+        """
+        Return the mass of the given link(s).
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link id, or list of link ids.
+
+        Returns:
+            if 1 link:
+                float: mass of the given link
+            else:
+                float[N]: mass of each link
+        """
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_mass(0)
+        masses = body.get_masses()
+        if isinstance(link_ids, int):
+            return masses[link_ids]
+        return np.asarray(masses)[link_ids]
+
+    def get_link_frames(self, body_id, link_ids):
+        r"""
+        Return the link world frame position(s) and orientation(s).
+
+        Args:
+            body_id (int): body id.
+            link_ids (int, int[N]): link id, or list of desired link ids.
+
+        Returns:
+            if 1 link:
+                np.array[float[3]]: the link frame position in the world space
+                np.array[float[4]]: Cartesian orientation of the link frame [x,y,z,w]
+            if multiple links:
+                np.array[float[N,3]]: link frame position of each link in world space
+                np.array[float[N,4]]: orientation of each link frame [x,y,z,w]
+        """
+        body = self._bodies[body_id]
+        # get_frame_world_position
+        # get_frame_world_quaternion
+
+    def get_link_world_positions(self, body_id, link_ids):
+        """
+        Return the CoM position (in the Cartesian world space coordinates) of the given link(s).
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[3]]: the link CoM position in the world space
+            if multiple links:
+                np.array[float[N,3]]: CoM position of each link in world space
+        """
+        body = self._bodies[body_id]
+        # get_link_coms  # in body frame
+        # get_frame_world_position
+
+    def get_link_positions(self, body_id, link_ids):
+        pass
+
+    def get_link_world_orientations(self, body_id, link_ids):
+        """
+        Return the CoM orientation (in the Cartesian world space) of the given link(s).
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[4]]: Cartesian orientation of the link CoM (x,y,z,w)
+            if multiple links:
+                np.array[float[N,4]]: CoM orientation of each link (x,y,z,w)
+        """
+        pass
+
+    def get_link_orientations(self, body_id, link_ids):
+        pass
+
+    def get_link_world_linear_velocities(self, body_id, link_ids):
+        """
+        Return the linear velocity of the link(s) expressed in the Cartesian world space coordinates.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[3]]: linear velocity of the link in the Cartesian world space
+            if multiple links:
+                np.array[float[N,3]]: linear velocity of each link
+        """
+        body = self._bodies[body_id]
+        # get_frame_linear_velocity
+        # get_world_linear_velocity
+
+    def get_link_world_angular_velocities(self, body_id, link_ids):
+        """
+        Return the angular velocity of the link(s) in the Cartesian world space coordinates.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[3]]: angular velocity of the link in the Cartesian world space
+            if multiple links:
+                np.array[float[N,3]]: angular velocity of each link
+        """
+        body = self._bodies[body_id]
+        # get_frame_angular_velocity
+        # get_world_angular_velocity
+
+    def get_link_world_velocities(self, body_id, link_ids):
+        """
+        Return the linear and angular velocities (expressed in the Cartesian world space coordinates) for the given
+        link(s).
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[6]]: linear and angular velocity of the link in the Cartesian world space
+            if multiple links:
+                np.array[float[N,6]]: linear and angular velocity of each link
+        """
+        body = self._bodies[body_id]
+        # get_frame_linear_velocity
+        # get_world_linear_velocity
+        # get_frame_angular_velocity
+        # get_world_angular_velocity
+
+    def get_link_velocities(self, body_id, link_ids):
+        pass
+
+    def get_link_world_linear_accelerations(self, body_id, link_ids):
+        """
+        Return the linear acceleration of the link(s) expressed in the Cartesian world space coordinates.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[3]]: linear acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[float[N,3]]: linear acceleration of each link
+        """
+        pass  # Raisim does not support accelerations
+
+    def get_link_world_angular_accelerations(self, body_id, link_ids):
+        """
+        Return the angular acceleration of the link(s) in the Cartesian world space coordinates.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[3]]: angular acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[float[N,3]]: angular acceleration of each link
+        """
+        pass  # Raisim does not support accelerations
+
+    def get_link_world_accelerations(self, body_id, link_ids):
+        """
+        Return the linear and angular accelerations (expressed in the Cartesian world space coordinates) for the given
+        link(s). This is only valid if the simulator `supports_acceleration`.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[6]]: linear and angular acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[float[N,6]]: linear and angular acceleration of each link
+        """
+        pass  # Raisim does not support accelerations
+
+    def get_q_indices(self, body_id, joint_ids):
+        """
+        Get the corresponding q index of the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                int: q index
+            if multiple joints:
+                list[int]: q indices
+        """
+        pass
+
+    def get_actuated_joint_ids(self, body_id):
+        """
+        Get the actuated joint ids associated with the given body id.
+
+        Args:
+            body_id (int): unique body id.
+
+        Returns:
+            list[int]: actuated joint ids.
+        """
+        pass
+
+    def get_joint_names(self, body_id, joint_ids):
+        """
+        Return the name of the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                str: name of the joint
+            if multiple joints:
+                str[N]: name of each joint
+        """
+        pass
+
+    def get_joint_type_ids(self, body_id, joint_ids):
+        """
+        Get the joint type ids.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                int: joint type id.
+            if multiple joints: list of above
+        """
+        pass
+
+    def get_joint_type_names(self, body_id, joint_ids):
+        """
+        Get joint type names.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                str: joint type name.
+            if multiple joints: list of above
+        """
+        pass
+
+    def get_joint_dampings(self, body_id, joint_ids):
+        """
+        Get the damping coefficient of the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                float: damping coefficient of the given joint
+            if multiple joints:
+                np.array[float[N]]: damping coefficient for each specified joint
+        """
+        pass
+
+    def get_joint_frictions(self, body_id, joint_ids):
+        """
+        Get the friction coefficient of the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                float: friction coefficient of the given joint
+            if multiple joints:
+                np.array[float[N]]: friction coefficient for each specified joint
+        """
+        pass
+
+    def get_joint_limits(self, body_id, joint_ids):
+        """
+        Get the joint limits of the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                np.array[float[2]]]: lower and upper limit
+            if multiple joints:
+                np.array[N,2]: lower and upper limit for each specified joint
+        """
+        pass
+
+    def get_joint_max_forces(self, body_id, joint_ids):
+        """
+        Get the maximum force that can be applied on the given joint(s).
+
+        Warning: Note that this is not automatically used in position, velocity, or torque control.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                float: maximum force [N]
+            if multiple joints:
+                np.array[float[N]]: maximum force for each specified joint [N]
+        """
+        pass
+
+    def get_joint_max_velocities(self, body_id, joint_ids):
+        """
+        Get the maximum velocity that can be applied on the given joint(s).
+
+        Warning: Note that this is not automatically used in position, velocity, or torque control.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                float: maximum velocity [rad/s]
+            if multiple joints:
+                np.array[float[N]]: maximum velocities for each specified joint [rad/s]
+        """
+        pass
+
+    def get_joint_axes(self, body_id, joint_ids):
+        """
+        Get the joint axis about the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                np.array[float[3]]: joint axis
+            if multiple joint:
+                np.array[float[N,3]]: list of joint axis
+        """
+        pass
+
+    def set_joint_positions(self, body_id, joint_ids, positions, velocities=None, kps=None, kds=None, forces=None):
+        """
+        Set the position of the given joint(s) (using position control).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            positions (float, np.array[float[N]]): desired position, or list of desired positions [rad]
+            velocities (None, float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
+            kps (None, float, np.array[float[N]]): position gain(s)
+            kds (None, float, np.array[float[N]]): velocity gain(s)
+            forces (None, float, np.array[float[N]]): maximum motor force(s)/torque(s) used to reach the target values.
+        """
+        pass
+
+    def get_joint_positions(self, body_id, joint_ids):
+        """
+        Get the position of the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                float: joint position [rad]
+            if multiple joints:
+                np.array[float[N]]: joint positions [rad]
+        """
+        pass
+
+    def set_joint_velocities(self, body_id, joint_ids, velocities, max_force=None):
+        """
+        Set the velocity of the given joint(s) (using velocity control).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            velocities (float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
+            max_force (None, float, np.array[float[N]]): maximum motor forces/torques
+        """
+        pass
+
+    def get_joint_velocities(self, body_id, joint_ids):
+        """
+        Get the velocity of the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                float: joint velocity [rad/s]
+            if multiple joints:
+                np.array[float[N]]: joint velocities [rad/s]
+        """
+        pass
+
+    def set_joint_accelerations(self, body_id, joint_ids, accelerations, q=None, dq=None):
+        """
+        Set the acceleration of the given joint(s) (using force control). This is achieved by performing inverse
+        dynamic which given the joint accelerations compute the joint torques to be applied.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            accelerations (float, np.array[float[N]]): desired joint acceleration, or list of desired joint
+                accelerations [rad/s^2]
+        """
+        pass
+
+    def get_joint_accelerations(self, body_id, joint_ids):  # , q=None, dq=None):
+        """
+        Get the acceleration of the specified joint(s). This is only valid if the simulator `supports_acceleration`.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                float: joint acceleration [rad/s^2]
+            if multiple joints:
+                np.array[float[N]]: joint accelerations [rad/s^2]
+        """
+        pass
+
+    def set_joint_torques(self, body_id, joint_ids, torques):
+        """
+        Set the torque/force to the given joint(s) (using force/torque control).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            torques (float, list[float], np.array[float]): desired torque(s) to apply to the joint(s) [N].
+        """
+        pass
+
+    def get_joint_torques(self, body_id, joint_ids):
+        """
+        Get the applied torque(s) on the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                float: torque [Nm]
+            if multiple joints:
+                np.array[float[N]]: torques associated to the given joints [Nm]
+        """
+        pass
+
+    def get_joint_reaction_forces(self, body_id, joint_ids):
+        """Return the joint reaction forces at the given joint. Note that the torque sensor must be enabled, otherwise
+        it will always return [0,0,0,0,0,0].
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, int[N]): joint id, or list of joint ids
+
+        Returns:
+            if 1 joint:
+                np.array[float[6]]: joint reaction force (fx,fy,fz,mx,my,mz) [N,Nm]
+            if multiple joints:
+                np.array[float[N,6]]: joint reaction forces [N, Nm]
+        """
+        pass
+
+    def get_joint_powers(self, body_id, joint_ids):
+        """Return the applied power at the given joint(s). Power = torque * velocity.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, int[N]): joint id, or list of joint ids
+
+        Returns:
+            if 1 joint:
+                float: joint power [W]
+            if multiple joints:
+                np.array[float[N]]: power at each joint [W]
+        """
+        pass
 
     #################
     # Visualization #
@@ -873,6 +1989,256 @@ class Raisim(Simulator):
     ##############
     # Collisions #
     ##############
+
+    ###########################
+    # Kinematics and Dynamics #
+    ###########################
+
+    def get_dynamics_info(self, body_id, link_id=-1):
+        """
+        Get dynamic information about the mass, center of mass, friction and other properties of the base and links.
+
+        Args:
+            body_id (int): body/object unique id.
+            link_id (int): link/joint index or -1 for the base.
+
+        Returns:
+            float: mass in kg
+            float: lateral friction coefficient
+            np.array[float[3]]: local inertia diagonal. Note that links and base are centered around the center of
+                mass and aligned with the principal axes of inertia.
+            np.array[float[3]]: position of inertial frame in local coordinates of the joint frame
+            np.array[float[4]]: orientation of inertial frame in local coordinates of joint frame
+            float: coefficient of restitution
+            float: rolling friction coefficient orthogonal to contact normal
+            float: spinning friction coefficient around contact normal
+            float: damping of contact constraints. -1 if not available.
+            float: stiffness of contact constraints. -1 if not available.
+        """
+        pass
+
+    def change_dynamics(self, body_id, link_id=-1, mass=None, lateral_friction=None, spinning_friction=None,
+                        rolling_friction=None, restitution=None, linear_damping=None, angular_damping=None,
+                        contact_stiffness=None, contact_damping=None, friction_anchor=None,
+                        local_inertia_diagonal=None, inertia_position=None, inertia_orientation=None,
+                        joint_damping=None, joint_friction=None):
+        """
+        Change dynamic properties of the given body (or link) such as mass, friction and restitution coefficients, etc.
+
+        Args:
+            body_id (int): object unique id, as returned by `load_urdf`, etc.
+            link_id (int): link index or -1 for the base.
+            mass (float): change the mass of the link (or base for link index -1)
+            lateral_friction (float): lateral (linear) contact friction
+            spinning_friction (float): torsional friction around the contact normal
+            rolling_friction (float): torsional friction orthogonal to contact normal
+            restitution (float): bounciness of contact. Keep it a bit less than 1.
+            linear_damping (float): linear damping of the link (0.04 by default)
+            angular_damping (float): angular damping of the link (0.04 by default)
+            contact_stiffness (float): stiffness of the contact constraints, used together with `contact_damping`
+            contact_damping (float): damping of the contact constraints for this body/link. Used together with
+              `contact_stiffness`. This overrides the value if it was specified in the URDF file in the contact
+              section.
+            friction_anchor (int): enable or disable a friction anchor: positional friction correction (disabled by
+              default, unless set in the URDF contact section)
+            local_inertia_diagonal (np.array[float[3]]): diagonal elements of the inertia tensor. Note that the base
+              and links are centered around the center of mass and aligned with the principal axes of inertia so
+              there are no off-diagonal elements in the inertia tensor.
+            inertia_position (np.array[float[3]]): new inertia position with respect to the link frame.
+            inertia_orientation (np.array[float[4]]): new inertia orientation (expressed as a quaternion [x,y,z,w]
+              with respect to the link frame.
+            joint_damping (float): joint damping coefficient applied at each joint. This coefficient is read from URDF
+              joint damping field. Keep the value close to 0.
+              `joint_damping_force = -damping_coefficient * joint_velocity`.
+            joint_friction (float): joint friction coefficient.
+        """
+        pass
+
+    def calculate_jacobian(self, body_id, link_id, local_position, q, dq, des_ddq):
+        r"""
+        Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q), J_{ang}(q)]^T`, such that:
+
+        .. math:: v = [\dot{p}, \omega]^T = J(q) \dot{q}
+
+        where :math:`\dot{p}` is the Cartesian linear velocity of the link, and :math:`\omega` is its angular velocity.
+
+        Warnings: if we have a floating base then the Jacobian will also include columns corresponding to the root
+            link DoFs (at the beginning). If it is a fixed base, it will only have columns associated with the joints.
+
+        Args:
+            body_id (int): unique body id.
+            link_id (int): link id.
+            local_position (np.array[float[3]]): the point on the specified link to compute the Jacobian (in link local
+                coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+            q (np.array[float[N]]): joint positions of size N, where N is the number of DoFs.
+            dq (np.array[float[N]]): joint velocities of size N, where N is the number of DoFs.
+            des_ddq (np.array[float[N]]): desired joint accelerations of size N.
+
+        Returns:
+            np.array[float[6,N]], np.array[float[6,6+N]]: full geometric (linear and angular) Jacobian matrix. The
+                number of columns depends if the base is fixed or floating.
+        """
+        pass
+
+    def calculate_mass_matrix(self, body_id, q):
+        r"""
+        Return the mass/inertia matrix :math:`H(q)`, which is used in the rigid-body equation of motion (EoM) in joint
+        space given by (see [1]):
+
+        .. math:: \tau = H(q)\ddot{q} + C(q,\dot{q})
+
+        where :math:`\tau` is the vector of applied torques, :math:`H(q)` is the inertia matrix, and
+        :math:`C(q,\dot{q}) \dot{q}` is the vector accounting for Coriolis, centrifugal forces, gravity, and any
+        other forces acting on the system except the applied torques :math:`\tau`.
+
+        Warnings: If the base is floating, it will return a [6+N,6+N] inertia matrix, where N is the number of actuated
+            joints. If the base is fixed, it will return a [N,N] inertia matrix
+
+        Args:
+            body_id (int): body unique id.
+            q (np.array[float[N]]): joint positions of size N, where N is the total number of DoFs.
+
+        Returns:
+            np.array[float[N,N]], np.array[float[6+N,6+N]]: inertia matrix
+        """
+        pass
+
+    def calculate_inverse_kinematics(self, body_id, link_id, position, orientation=None, lower_limits=None,
+                                     upper_limits=None, joint_ranges=None, rest_poses=None, joint_dampings=None,
+                                     solver=None, q_curr=None, max_iters=None, threshold=None):
+        r"""
+        Compute the FULL Inverse kinematics; it will return a position for all the actuated joints.
+
+        "You can compute the joint angles that makes the end-effector reach a given target position in Cartesian world
+        space. Internally, Bullet uses an improved version of Samuel Buss Inverse Kinematics library. At the moment
+        only the Damped Least Squares method with or without Null Space control is exposed, with a single end-effector
+        target. Optionally you can also specify the target orientation of the end effector. In addition, there is an
+        option to use the null-space to specify joint limits and rest poses. This optional null-space support requires
+        all 4 lists (lower_limits, upper_limits, joint_ranges, rest_poses), otherwise regular IK will be used." [1]
+
+        Args:
+            body_id (int): body unique id, as returned by `load_urdf`, etc.
+            link_id (int): end effector link index.
+            position (np.array[float[3]]): target position of the end effector (its link coordinate, not center of mass
+                coordinate!). By default this is in Cartesian world space, unless you provide `q_curr` joint angles.
+            orientation (np.array[float[4]]): target orientation in Cartesian world space, quaternion [x,y,w,z]. If not
+                specified, pure position IK will be used.
+            lower_limits (np.array[float[N]], list of N floats): lower joint limits. Optional null-space IK.
+            upper_limits (np.array[float[N]], list of N floats): upper joint limits. Optional null-space IK.
+            joint_ranges (np.array[float[N]], list of N floats): range of value of each joint.
+            rest_poses (np.array[float[N]], list of N floats): joint rest poses. Favor an IK solution closer to a
+                given rest pose.
+            joint_dampings (np.array[float[N]], list of N floats): joint damping factors. Allow to tune the IK solution
+                using joint damping factors.
+            solver (int): p.IK_DLS (=0) or p.IK_SDLS (=1), Damped Least Squares or Selective Damped Least Squares, as
+                described in the paper by Samuel Buss "Selectively Damped Least Squares for Inverse Kinematics".
+            q_curr (np.array[float[N]]): list of joint positions. By default PyBullet uses the joint positions of the
+                body. If provided, the target_position and targetOrientation is in local space!
+            max_iters (int): maximum number of iterations. Refine the IK solution until the distance between target
+                and actual end effector position is below this threshold, or the `max_iters` is reached.
+            threshold (float): residual threshold. Refine the IK solution until the distance between target and actual
+                end effector position is below this threshold, or the `max_iters` is reached.
+
+        Returns:
+            np.array[float[N]]: joint positions (for each actuated joint).
+        """
+        pass
+
+    def calculate_inverse_dynamics(self, body_id, q, dq, des_ddq):
+        r"""
+        Starting from the specified joint positions :math:`q` and velocities :math:`\dot{q}`, it computes the joint
+        torques :math:`\tau` required to reach the desired joint accelerations :math:`\ddot{q}_{des}`. That is,
+        :math:`\tau = ID(model, q, \dot{q}, \ddot{q}_{des})`.
+
+        Specifically, it uses the rigid-body equation of motion in joint space given by (see [1]):
+
+        .. math:: \tau = H(q)\ddot{q} + C(q,\dot{q})
+
+        where :math:`\tau` is the vector of applied torques, :math:`H(q)` is the inertia matrix, and
+        :math:`C(q,\dot{q}) \dot{q}` is the vector accounting for Coriolis, centrifugal forces, gravity, and any
+        other forces acting on the system except the applied torques :math:`\tau`.
+
+        Normally, a more popular form of this equation of motion (in joint space) is given by:
+
+        .. math:: H(q) \ddot{q} + S(q,\dot{q}) \dot{q} + g(q) = \tau + J^T(q) F
+
+        which is the same as the first one with :math:`C = S\dot{q} + g(q) - J^T(q) F`. However, this last formulation
+        is useful to understand what happens when we set some variables to 0.
+        Assuming that there are no forces acting on the system, and giving desired joint accelerations of 0, this
+        method will return :math:`\tau = S(q,\dot{q}) \dot{q} + g(q)`. If in addition joint velocities are also 0,
+        it will return :math:`\tau = g(q)` which can for instance be useful for gravity compensation.
+
+        For forward dynamics, which computes the joint accelerations given the joint positions, velocities, and
+        torques (that is, :math:`\ddot{q} = FD(model, q, \dot{q}, \tau)`, this can be computed using
+        :math:`\ddot{q} = H^{-1} (\tau - C)` (see also `computeFullFD`). For more information about different
+        control schemes (position, force, impedance control and others), or about the formulation of the equation
+        of motion in task/operational space (instead of joint space), check the references [1-4].
+
+        Args:
+            body_id (int): body unique id.
+            q (np.array[float[N]]): joint positions
+            dq (np.array[float[N]]): joint velocities
+            des_ddq (np.array[float[N]]): desired joint accelerations
+
+        Returns:
+            np.array[float[N]]: joint torques computed using the rigid-body equation of motion
+
+        References:
+            - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            - [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            - [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            - [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+                http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
+        """
+        pass
+
+    def calculate_forward_dynamics(self, body_id, q, dq, torques):
+        r"""
+        Given the specified joint positions :math:`q` and velocities :math:`\dot{q}`, and joint torques :math:`\tau`,
+        it computes the joint accelerations :math:`\ddot{q}`. That is, :math:`\ddot{q} = FD(model, q, \dot{q}, \tau)`.
+
+        Specifically, it uses the rigid-body equation of motion in joint space given by (see [1]):
+
+        .. math:: \ddot{q} = H(q)^{-1} (\tau - C(q,\dot{q}))
+
+        where :math:`\tau` is the vector of applied torques, :math:`H(q)` is the inertia matrix, and
+        :math:`C(q,\dot{q}) \dot{q}` is the vector accounting for Coriolis, centrifugal forces, gravity, and any
+        other forces acting on the system except the applied torques :math:`\tau`.
+
+        Normally, a more popular form of this equation of motion (in joint space) is given by:
+
+        .. math:: H(q) \ddot{q} + S(q,\dot{q}) \dot{q} + g(q) = \tau + J^T(q) F
+
+        which is the same as the first one with :math:`C = S\dot{q} + g(q) - J^T(q) F`. However, this last formulation
+        is useful to understand what happens when we set some variables to 0.
+        Assuming that there are no forces acting on the system, and giving desired joint torques of 0, this
+        method will return :math:`\ddot{q} = - H(q)^{-1} (S(q,\dot{q}) \dot{q} + g(q))`. If in addition
+        the joint velocities are also 0, it will return :math:`\ddot{q} = - H(q)^{-1} g(q)` which are
+        the accelerations due to gravity.
+
+        For inverse dynamics, which computes the joint torques given the joint positions, velocities, and
+        accelerations (that is, :math:`\tau = ID(model, q, \dot{q}, \ddot{q})`, this can be computed using
+        :math:`\tau = H(q)\ddot{q} + C(q,\dot{q})`. For more information about different
+        control schemes (position, force, impedance control and others), or about the formulation of the equation
+        of motion in task/operational space (instead of joint space), check the references [1-4].
+
+        Args:
+            body_id (int): unique body id.
+            q (np.array[float[N]]): joint positions
+            dq (np.array[float[N]]): joint velocities
+            torques (np.array[float[N]]): desired joint torques
+
+        Returns:
+            np.array[float[N]]: joint accelerations computed using the rigid-body equation of motion
+
+        References:
+            - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            - [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            - [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            - [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+                http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
+        """
+        pass
 
 
 # Tests
@@ -893,7 +2259,14 @@ if __name__ == '__main__':
 
     # load robot
     path = os.path.dirname(os.path.abspath(__file__)) + '/../robots/urdfs/anymal/anymal.urdf'
+    # path = os.path.dirname(os.path.abspath(__file__)) + '/../robots/urdfs/kuka/kuka_iiwa/iiwa14.urdf'
     robot = sim.load_urdf(path, position=(3, -3, 2))
+
+    print(sim.get_base_name(box))
+    print(sim.get_mass(sphere))
+    print(sim.get_mass(capsule))
+    print(sim.get_mass(cylinder))
+    print(sim.get_base_name(robot))
 
     # perform step
     for t in count():

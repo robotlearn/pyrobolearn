@@ -143,5 +143,6 @@ class RobotParser(object):
             root (ET.Element): root element in the XML file.
         """
         xml_str = self.get_string(root)
+        print(xml_str)
         with open(filename, "w") as f:
             f.write(xml_str)  # .encode('utf-8'))

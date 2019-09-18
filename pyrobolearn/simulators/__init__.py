@@ -2,6 +2,9 @@
 # load middlewares
 from . import middlewares
 
+# check Python version
+import sys
+python_version = sys.version_info[0]
 
 # load all simulators
 
@@ -14,14 +17,24 @@ from .bullet import Bullet
 # Bullet ros simulator
 from .bullet_ros import BulletROS
 
-# Dart simulator
-# from .dart import Dart
+if python_version >= 3:
+    # Dart simulator
+    try:
+        from .dart import Dart
+    except ImportError as e:
+        print("Dart not found.")
 
-# MuJoCo simulator
-# from .mujoco import Mujoco
+    # MuJoCo simulator
+    try:
+        from .mujoco import Mujoco
+    except ImportError as e:
+        print("MuJoCo not found.")
 
 # Raisim simulator
-# from .raisim import Raisim
+try:
+    from .raisim import Raisim
+except ImportError as e:
+    print("Raisim not found.")
 
 # Vrep simulator (note that there is a currently a problem when loading pybullet with pyrep)
 # from .vrep import VREP

@@ -1629,10 +1629,10 @@ class Robot(ControllableBody):
 
         Args:
             link_ids (int, int[N], None): link id, or list of desired link ids. If None, get the state of all links
-                associated to actuated joints.
+              associated to actuated joints.
             compute_link_velocity (bool): if True, the Cartesian world velocity will be computed and returned.
             compute_forward_kinematics (bool): if True, the Cartesian world position/orientation will be recomputed
-                using forward kinematics.
+              using forward kinematics.
 
         Returns:
             if 1 link:
@@ -2696,9 +2696,9 @@ class Robot(ControllableBody):
         Args:
             link_id (int): link id.
             q (np.array[float[N]], None): joint positions of size N, where N is the number of DoFs. If None, it will
-                compute q based on the current joint positions.
+              compute q based on the current joint positions.
             local_position (None, np.array[float[3]]): the point on the specified link to compute the Jacobian (in link
-                local coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+              local coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
 
         Returns:
             np.array[float[6,N]], np.array[float[6,6+N]]: full geometric (linear and angular) Jacobian matrix. The
@@ -2737,9 +2737,9 @@ class Robot(ControllableBody):
         Args:
             link_id (int): link id
             q (np.array[float[N]]): joint positions of size N, where N is the number of DoFs. If None, it will compute
-                q based on the current joint positions.
+              q based on the current joint positions.
             local_position: the point on the specified link to compute the Jacobian (in link local coordinates around
-                its center of mass). If None, it will use the CoM position (in the link frame).
+              its center of mass). If None, it will use the CoM position (in the link frame).
 
         Returns:
             np.array[float[3,N]], np.array[float[3,6+N]]: full linear geometric Jacobian matrix. The number of
@@ -2761,9 +2761,9 @@ class Robot(ControllableBody):
         Args:
             link_id (int): link id
             q (np.array[float[N]]): joint positions of size N, where N is the number of DoFs. If None, it will compute
-                q based on the current joint positions.
+              q based on the current joint positions.
             local_position: the point on the specified link to compute the Jacobian (in link local coordinates around
-                its center of mass). If None, it will use the CoM position (in the link frame).
+              its center of mass). If None, it will use the CoM position (in the link frame).
 
         Returns:
             np.array[float[3,N]], np.array[float[3,6+N]]: full angular geometric Jacobian matrix. The number of

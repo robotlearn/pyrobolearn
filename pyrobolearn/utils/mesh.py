@@ -39,7 +39,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-def convert_mesh(from_filename, to_filename, library='pyassimp'):
+def convert_mesh(from_filename, to_filename, library='pyassimp', binary=False):
     """
     Convert the given file containing the original mesh to the other specified format using the `pyassimp` library.
 
@@ -47,11 +47,16 @@ def convert_mesh(from_filename, to_filename, library='pyassimp'):
         from_filename (str): filename of the mesh to convert.
         to_filename (str): filename of the converted mesh.
         library (str): library to use to convert the meshes. Select between 'pyassimp' and 'trimesh'.
+        binary (bool): if True, it will be in a binary format. This is only valid for some formats such as STL where
+          you have the ASCII version 'stl' and the binary version 'stlb'.
     """
     if library == 'pyassimp':
         scene = pyassimp.load(from_filename)
-        extension = to_filename.split('.')[-1]
-        pyassimp.export(scene, to_filename, file_type=extension)
+        extension = to_filename.split('.')[-1].lower()
+        if binary:  # for binary add 'b' as a suffix. Ex: '<file>.stlb'
+            pyassimp.export(scene, to_filename, file_type=extension + 'b')
+        else:
+            pyassimp.export(scene, to_filename, file_type=extension)
         pyassimp.release(scene)
     elif library == 'trimesh':
         export_mesh(trimesh.load(from_filename), to_filename)

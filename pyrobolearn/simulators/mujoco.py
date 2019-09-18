@@ -69,8 +69,10 @@ except ImportError as e:
 # import glfw
 # GLFW: OpenGL library for creating windows, contexts and surfaces, receiving input and events. This is used in
 # mujoco_py
-import glfw
-
+try:
+    import glfw
+except ImportError as e:
+    raise ImportError(str(e) + "\nTry to install GLFW: `pip install glfw`")
 
 # import pyrobolearn related functionalities
 from pyrobolearn.simulators.simulator import Simulator
@@ -155,8 +157,8 @@ class Body(object):
 
         # keep in memory the body
         # self.body = body
-        self.joints = list(body.joints.values())
-        self.links = list(body.bodies.values())
+        self.joints = np.array(body.joints.values())
+        self.links = np.array(body.bodies.values())
 
         # compute mapping from joint ids to q indices
         idx, jnt_to_q = 0, []
@@ -333,7 +335,7 @@ class Body(object):
         if isinstance(q, float):
             if q != -1:
                 return q
-            return []
+            return None
         return q[q != -1]  # remove fixed joints
 
     def get_dq_idx(self, joint_id, keep=False):
@@ -367,6 +369,22 @@ class Body(object):
         """Return the homogeneous transform from the parent inertial frame to the child inertial frame."""
         body = self.links[child_body_id]
         return transform_inertial_frame_to_child_inertial_frame(body)
+
+
+class StateIndices(object):
+
+    def __init__(self):
+        self.qpos = None
+        self.qvel = None
+        self.act = None
+        self.mocap_pos = None
+        self.mocap_quat = None
+        self.userdata = None
+        self.qacc_warmstart = None
+
+    def reset(self):
+        self.qpos, self.qvel, self.act, self.mocap_pos, self.mocap_quat = None, None, None, None, None
+        self.userdata, self.qacc_warmstart = None, None
 
 
 class Mujoco(Simulator):
@@ -461,10 +479,17 @@ class Mujoco(Simulator):
         self._root = self._parser.root
         self._worldbody = self._parser.worldbody
 
+        self._state_indices = StateIndices()
+
         # add light
         self._parser.add_element("light", self._worldbody,
                                  attributes={"diffuse": "0.5 0.5 0.5", "pos": "0 0 3", "directional": "true",
                                              "dir": "0 0 -1"})
+
+        # add world camera
+        self._parser.add_element("camera", self._worldbody, attributes={"name": "prl_world_camera",
+                                                                        "fovy": "45", "pos": "0 0 0"})
+
         # add floor
         self.load_floor()
 
@@ -545,6 +570,7 @@ class Mujoco(Simulator):
             render (bool): if we should render or not.
         """
         # self.render(enable=False)  # to delete the previous viewer instance if defined
+        state = None if self.sim is None else self._save_state()
 
         # create the model
         # self.model = mujoco.load_model_from_path(path)
@@ -554,13 +580,17 @@ class Mujoco(Simulator):
         # create the simulator from the model
         self.sim = mujoco.MjSim(self.model)
 
+        # load the state
+        if state is not None:
+            self._load_state(state, self._state_indices)
+            self._state_indices.reset()
+
         # if we need to render
         if render:
             # self.render(enable=True)   # to instantiate the viewer
             if self.viewer is None:
                 self.render(enable=True)
             else:
-                print("Update the viewer's sim")
                 self.viewer.update_sim(self.sim)
 
     @staticmethod
@@ -619,6 +649,79 @@ class Mujoco(Simulator):
         if name.startswith('prl_'):
             return '_'.join(name.split('_')[1:-1])
         return name
+
+    def _save_state(self):
+        # check: http://www.mujoco.org/book/programming.html#siStateControl
+
+        # copy simulation state
+        t = self.sim.data.time
+        qpos = self.sim.data.qpos
+        qvel = self.sim.data.qvel
+        act = self.sim.data.act
+
+        # copy mocap body pose and user data
+        mocap_pos = self.sim.data.mocap_pos
+        mocap_quat = self.sim.data.mocap_quat
+        userdata = self.sim.data.userdata
+
+        # copy warm-start acceleration
+        qacc_warmstart = self.sim.data.qacc_warmstart
+
+        return t, qpos, qvel, act, mocap_pos, mocap_quat, userdata, qacc_warmstart
+
+    def _clear_control(self):
+        self.sim.data.ctrl[:] = 0
+        self.sim.data.qfrc_applied[:] = 0
+        self.sim.data.xfrc_applied[:, :] = 0
+
+    def _load_state(self, state, indices=None):
+        t, qpos, qvel, act, mocap_pos, mocap_quat, userdata, qacc_warmstart = state
+        if indices is None:
+            indices = self._state_indices
+
+        self.sim.data.time = t
+
+        if qpos is not None:
+            if indices.qpos is None:
+                self.sim.data.qpos[:len(qpos)] = qpos
+            else:
+                self.sim.data.qpos[indices.qpos] = qpos
+
+        if qvel is not None:
+            if indices.qvel is None:
+                self.sim.data.qvel[:len(qvel)] = qvel
+            else:
+                self.sim.data.qvel[indices.qvel] = qvel
+
+        if act is not None:
+            if indices.act is None:
+                self.sim.data.act[:len(act)] = act
+            else:
+                self.sim.data.act[indices.act] = act
+
+        if mocap_pos is not None:
+            if indices.mocap_pos is None:
+                self.sim.data.mocap_pos[:len(mocap_pos)] = mocap_pos
+            else:
+                self.sim.data.mocap_pos[indices.mocap_pos] = mocap_pos
+
+        if mocap_quat is not None:
+            if indices.mocap_quat is None:
+                self.sim.data.mocap_quat[:len(mocap_quat)] = mocap_quat
+            else:
+                self.sim.data.mocap_quat[indices.mocap_quat] = mocap_quat
+
+        if userdata is not None:
+            if indices.userdata is None:
+                self.sim.data.userdata[:len(userdata)] = userdata
+            else:
+                self.sim.data.userdata[indices.userdata] = userdata
+
+        if qacc_warmstart is not None:
+            if indices.qacc_warmstart is None:
+                self.sim.data.qacc_warmstart[:len(qacc_warmstart)] = qacc_warmstart
+            else:
+                self.sim.data.qacc_warmstart[indices.qacc_warmstart] = qacc_warmstart
 
     #################
     # utils methods #
@@ -680,6 +783,22 @@ class Mujoco(Simulator):
                 self.viewer = mujoco.MjViewer(self.sim)
             self.viewer.render()
 
+            # select with the mouse
+            coordinates = np.zeros(3)
+            geomid, skin = 0, 0
+
+            # mouse selection.
+            mujoco.functions.mjv_select(self.model, self.sim.data, self.viewer.vopt, aspectratio, relx, rely,
+                                        self.viewer.scn, coordinates, geomid, skin)
+
+            # Move perturb object with mouse; action is mjtMouse.
+            action = 0
+            mujoco.functions.mjv_movePerturb(self.model, self.sim.data, action, reldx, reldy, self.viewer.scn,
+                                             self.viewer.pert)
+
+            # Set perturb force,torque in d->xfrc_applied, if selected body is dynamic.
+            mujoco.functions.mjv_applyPerturbForce(self.model, self.sim.data, self.viewer.pert)
+
         # sleep the specified amount of time
         # time.sleep(sleep_time)
 
@@ -736,6 +855,22 @@ class Mujoco(Simulator):
         time_step = self._parser.convert_attribute_to_string(time_step)
         self._parser.option_tag.attrib.setdefault('timestep', time_step)
         self._update_sim()
+
+    def pause(self):
+        """Pause the simulator if in real-time."""
+        pass
+
+    def unpause(self):
+        """Unpause the simulator if in real-time."""
+        pass
+
+    def get_physics_properties(self):
+        """Get the physics engine parameters."""
+        pass
+
+    def set_physics_properties(self, *args, **kwargs):
+        """Set the physics engine parameters."""
+        pass
 
     def get_gravity(self):
         """Return the gravity set in the simulator."""
@@ -1769,7 +1904,7 @@ class Mujoco(Simulator):
         # compute reaction force
         force_parent = self.sim.data.cfrc_int[body.b_idx0 + joint_id]  # com-based interaction force with parent
         force_ext = self.sim.data.cfrc_ext[body.b_idx0 + joint_id]  # com-based external force on body
-        force = force_ext - force_parent  # TODO: is it + instead of -?
+        force = force_ext + force_parent  # TODO: is it - instead of +?
         np.roll(force, shift=3, axis=force.ndim - 1)  # [torque, force] --> [force, torque]
         # TODO: express it in the joint frame
 
@@ -1810,14 +1945,37 @@ class Mujoco(Simulator):
             velocity (float): the joint velocity (angular [rad/s] or linear velocity [m/s])
         """
         body = self._bodies[body_id]
-        if not isinstance(joint_id, int):
-            raise TypeError("Expecting the given joint id to be an int, but got instead: {}".format(type(joint_id)))
-        if joint_id < 0 or joint_id > (body.num_joints - 1):
-            raise ValueError("joint_id should belong to [0, `num_joints-1`].")
+        joint_id = self._check_joint_id(body, joint_id)
         q = body.get_q_idx(joint_id, keep=True)
         if q != -1:
-            self.sim.data.qpos[body.q_idx1 + q] = position
-            self.sim.data.qvel[body.v_idx1 + q] = velocity
+            self.model.qpos0[body.q_idx1 + q] = position
+            # self.sim.data.qpos[body.q_idx1 + q] = position
+            if velocity is not None:
+                self.sim.data.qvel[body.v_idx1 + q] = velocity
+
+    def reset_joint_states(self, body_id, joint_ids=None, positions=None, velocities=None):
+        """
+        Reset the state of the joint. It is best only to do this at the start, while not running the simulation:
+        `reset_joint_state` overrides all physics simulation.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (list[int]): joint index in range [0..num_joints(body_id)]
+            positions (np.array[float]): the joint positions (angle in radians [rad] or position [m])
+            velocities (np.array[float]): the joint velocities (angular [rad/s] or linear velocity [m/s])
+        """
+        body = self._bodies[body_id]
+        if joint_ids is None:
+            self.model.qpos0[body.q_idx1:body.q_idxf] = positions
+        else:
+            joint_ids = self._check_joint_ids(body, joint_ids)
+            q = body.get_q_idx(joint_ids, keep=False)
+            if q is None:
+                return
+            self.model.qpos0[body.q_idx1 + q] = positions
+            # self.sim.data.qpos[body.q_idx1 + q] = positions
+            if velocities is not None:
+                self.sim.data.qvel[body.v_idx1 + q] = velocities
 
     def enable_joint_force_torque_sensor(self, body_id, joint_ids, enable=True):
         """
@@ -1850,21 +2008,26 @@ class Mujoco(Simulator):
             body_id (int): body unique id.
             joint_ids (int): joint/link id, or list of joint ids.
             control_mode (int): POSITION_CONTROL (=2) (which is in fact CONTROL_MODE_POSITION_VELOCITY_PD),
-                VELOCITY_CONTROL (=0), TORQUE_CONTROL (=1) and PD_CONTROL (=3).
+              VELOCITY_CONTROL (=0), TORQUE_CONTROL (=1) and PD_CONTROL (=3).
             positions (float, np.array[float[N]]): target joint position(s) (used in POSITION_CONTROL).
             velocities (float, np.array[float[N]]): target joint velocity(ies). In VELOCITY_CONTROL and
-                POSITION_CONTROL, the target velocity(ies) is(are) the desired velocity of the joint. Note that the
-                target velocity(ies) is(are) not the maximum joint velocity(ies). In PD_CONTROL and
-                POSITION_CONTROL/CONTROL_MODE_POSITION_VELOCITY_PD, the final target velocities are computed using:
-                `kp*(erp*(desiredPosition-currentPosition)/dt)+currentVelocity+kd*(m_desiredVelocity - currentVelocity)`
+              POSITION_CONTROL, the target velocity(ies) is(are) the desired velocity of the joint. Note that the
+              target velocity(ies) is(are) not the maximum joint velocity(ies). In PD_CONTROL and
+              POSITION_CONTROL/CONTROL_MODE_POSITION_VELOCITY_PD, the final target velocities are computed using:
+              `kp*(erp*(desiredPosition-currentPosition)/dt)+currentVelocity+kd*(m_desiredVelocity - currentVelocity)`
             forces (float, list[float]): in POSITION_CONTROL and VELOCITY_CONTROL, these are the maximum motor
-                forces used to reach the target values. In TORQUE_CONTROL these are the forces / torques to be applied
-                each simulation step.
+              forces used to reach the target values. In TORQUE_CONTROL these are the forces / torques to be applied
+              each simulation step.
             kp (float, list[float]): position (stiffness) gain(s) (used in POSITION_CONTROL).
             kd (float, list[float]): velocity (damping) gain(s) (used in POSITION_CONTROL).
             max_velocity (float): in POSITION_CONTROL this limits the velocity to a maximum.
         """
-        pass
+        if control_mode == Simulator.POSITION_CONTROL:
+            self.set_joint_positions(body_id, joint_ids, positions, velocities, kp, kd, forces)
+        elif control_mode == Simulator.VELOCITY_CONTROL:
+            self.set_joint_velocities(body_id, joint_ids, velocities, forces)
+        elif control_mode == Simulator.TORQUE_CONTROL:
+            self.set_joint_torques(body_id, joint_ids, forces)
 
     def get_link_state(self, body_id, link_id, compute_velocity=False, compute_forward_kinematics=False):
         """
@@ -2033,7 +2196,7 @@ class Mujoco(Simulator):
             if multiple links:
                 np.array[float[N,3]]: CoM position of each link in world space
         """
-        return self._get_link_result(body_id, link_ids, self.sim.data.xipos)
+        return self._get_link_result(body_id, link_ids, self.sim.data.body_xpos)  # TODO: xipos vs body_xpos
 
     def get_link_positions(self, body_id, link_ids):
         pass
@@ -2325,7 +2488,21 @@ class Mujoco(Simulator):
             if multiple joints:
                 np.array[float[N]]: maximum force for each specified joint [N]
         """
-        pass
+        body = self._bodies[body_id]
+        joint = body.get_joint(joint_ids)
+        one_joint = isinstance(joint, struct.Joint)
+        if one_joint:
+            joint = [joint]
+        forces = []
+        for j in joint:
+            force = j.effort
+            if force is None:
+                forces.append(0.)
+            else:
+                forces.append(force)
+        if one_joint:
+            return forces[0]
+        return forces
 
     def get_joint_max_velocities(self, body_id, joint_ids):
         """
@@ -2343,7 +2520,21 @@ class Mujoco(Simulator):
             if multiple joints:
                 np.array[float[N]]: maximum velocities for each specified joint [rad/s]
         """
-        pass
+        body = self._bodies[body_id]
+        joint = body.get_joint(joint_ids)
+        one_joint = isinstance(joint, struct.Joint)
+        if one_joint:
+            joint = [joint]
+        velocities = []
+        for j in joint:
+            vel = j.velocity
+            if vel is None:
+                velocities.append(0.)
+            else:
+                velocities.append(vel)
+        if one_joint:
+            return velocities[0]
+        return velocities
 
     def get_joint_axes(self, body_id, joint_ids):
         """
@@ -2359,7 +2550,15 @@ class Mujoco(Simulator):
             if multiple joint:
                 np.array[float[N,3]]: list of joint axis
         """
-        pass
+        body = self._bodies[body_id]
+        q = body.get_q_idx(joint_ids, keep=True)  # -1 for fixed joint
+        if isinstance(q, float):
+            if q == -1:  # fixed joint
+                return np.zeros(3)
+            return self.model.jnt_axis[body.j_idx0 + q]
+        axes = np.zeros((len(q), 3))
+        axes[q != -1] = self.model.jnt_axis[body.j_idx0 + q[q != -1]]
+        return axes
 
     def set_joint_positions(self, body_id, joint_ids, positions, velocities=None, kps=None, kds=None, forces=None):
         """
@@ -2378,19 +2577,39 @@ class Mujoco(Simulator):
 
         body = self._bodies[body_id]
 
+        q = self.get_joint_positions(body_id, joint_ids=joint_ids)
+        qvel= self.get_joint_velocities(body_id, joint_ids=joint_ids)
+
+        if kps is None:
+            kps = 1000.
+        if kds is None:
+            kds = 1.
+        if velocities is None:
+            velocities = 0.
+
+        tau = kps * (positions - q) + kds * (velocities - qvel)
+
         if joint_ids is None:
-            self.sim.data.qpos[body.q_idx1:body.q_idxf] = positions
+            # self.sim.data.qpos[body.q_idx1:body.q_idxf] = positions
+            c_q_dq = self.sim.data.qfrc_bias[body.v_idx1:body.v_idxf]
+            self.sim.data.qfrc_applied[body.v_idx1:body.v_idxf] = tau + c_q_dq
 
-        # check if valid joints
-        self._check_joint_ids(body, joint_ids)
+        else:
+            # check if valid joints
+            self._check_joint_ids(body, joint_ids)
 
-        # if one joint, set its torque
-        if isinstance(joint_ids, int):
-            self.sim.data.qpos[body.q_idx1 + joint_ids] = positions
+            # if one joint, set its torque
+            if isinstance(joint_ids, int):
+                # self.sim.data.qpos[body.q_idx1 + joint_ids] = positions
+                c_q_dq = self.sim.data.qfrc_bias[body.v_idx1 + joint_ids]
+                self.sim.data.qfrc_applied[body.v_idx1 + joint_ids] = tau + c_q_dq
 
-        # if multiple joints, set their torques
-        q = body.get_q_idx(joint_ids, keep=True)  # E.g. [0, -1, 1, -1, 2, 3]  (-1 are for fixed joints)
-        self.sim.data.qpos[body.q_idx1 + q[q != -1]] = positions
+            # if multiple joints, set their torques
+            q = body.get_q_idx(joint_ids, keep=True)  # E.g. [0, -1, 1, -1, 2, 3]  (-1 are for fixed joints)
+
+            # self.sim.data.qpos[body.q_idx1 + q[q != -1]] = positions
+            c_q_dq = self.sim.data.qfrc_bias[body.v_idx1 + q[q != -1]]
+            self.sim.data.qfrc_applied[body.v_idx1 + q[q != -1]] = tau + c_q_dq
 
     def get_joint_positions(self, body_id, joint_ids=None):
         """
@@ -2441,17 +2660,17 @@ class Mujoco(Simulator):
 
         if joint_ids is None:
             self.sim.data.qvel[body.v_idx1:body.v_idxf] = velocities
+        else:
+            # check if valid joints
+            self._check_joint_ids(body, joint_ids)
 
-        # check if valid joints
-        self._check_joint_ids(body, joint_ids)
+            # if one joint, set its torque
+            if isinstance(joint_ids, int):
+                self.sim.data.qvel[body.v_idx1 + joint_ids] = velocities
 
-        # if one joint, set its torque
-        if isinstance(joint_ids, int):
-            self.sim.data.qvel[body.v_idx1 + joint_ids] = velocities
-
-        # if multiple joints, set their torques
-        q = body.get_q_idx(joint_ids, keep=True)  # E.g. [0, -1, 1, -1, 2, 3]  (-1 are for fixed joints)
-        self.sim.data.qvel[body.v_idx1 + q[q != -1]] = velocities
+            # if multiple joints, set their torques
+            q = body.get_q_idx(joint_ids, keep=True)  # E.g. [0, -1, 1, -1, 2, 3]  (-1 are for fixed joints)
+            self.sim.data.qvel[body.v_idx1 + q[q != -1]] = velocities
 
     def get_joint_velocities(self, body_id, joint_ids=None):
         """
@@ -2543,17 +2762,17 @@ class Mujoco(Simulator):
 
         if joint_ids is None:
             self.sim.data.qfrc_applied[body.v_idx1:body.v_idxf] = torques
+        else:
+            # check if valid joints
+            self._check_joint_ids(body, joint_ids)
 
-        # check if valid joints
-        self._check_joint_ids(body, joint_ids)
+            # if one joint, set its torque
+            if isinstance(joint_ids, int):
+                self.sim.data.qfrc_applied[body.v_idx1 + joint_ids] = torques
 
-        # if one joint, set its torque
-        if isinstance(joint_ids, int):
-            self.sim.data.qfrc_applied[body.v_idx1 + joint_ids] = torques
-
-        # if multiple joints, set their torques
-        q = body.get_q_idx(joint_ids, keep=True)  # E.g. [0, -1, 1, -1, 2, 3]  (-1 are for fixed joints)
-        self.sim.data.qfrc_applied[body.v_idx1 + q[q != -1]] = torques
+            # if multiple joints, set their torques
+            q = body.get_q_idx(joint_ids, keep=True)  # E.g. [0, -1, 1, -1, 2, 3]  (-1 are for fixed joints)
+            self.sim.data.qfrc_applied[body.v_idx1 + q[q != -1]] = torques
 
     def get_joint_torques(self, body_id, joint_ids=None):
         """
@@ -2621,7 +2840,7 @@ class Mujoco(Simulator):
         # com-based external force on body [torque, force]
         force_ext = self.sim.data.cfrc_ext[body.b_idx0 + joint_ids]
 
-        force = force_ext - force_parent  # TODO: is it + instead of -?
+        force = force_ext + force_parent  # TODO: is it - instead of +?
 
         np.roll(force, shift=3, axis=force.ndim-1)  # [torque, force] --> [force, torque]
 
@@ -2794,6 +3013,82 @@ class Mujoco(Simulator):
         # return texture id
         return self._texture_cnt - 1
 
+    def compute_view_matrix(self, eye_position, target_position, up_vector):
+        """Compute the view matrix.
+
+        The view matrix is the 4x4 matrix that maps the world coordinates into the camera coordinates. Basically,
+        it applies a rotation and translation such that the world is in front of the camera. That is, instead
+        of turning the camera to capture what we want in the world, we keep the camera fixed and turn the world.
+
+        Args:
+            eye_position (np.array[float[3]]): eye position in Cartesian world coordinates
+            target_position (np.array[float[3]]): position of the target (focus) point in Cartesian world coordinates
+            up_vector (np.array[float[3]]): up vector of the camera in Cartesian world coordinates
+
+        Returns:
+            np.array[float[4,4]]: the view matrix
+        """
+        pass
+
+    def compute_view_matrix_from_ypr(self, target_position, distance, yaw, pitch, roll, up_axis_index=2):
+        """Compute the view matrix from the yaw, pitch, and roll angles.
+
+        The view matrix is the 4x4 matrix that maps the world coordinates into the camera coordinates. Basically,
+        it applies a rotation and translation such that the world is in front of the camera. That is, instead
+        of turning the camera to capture what we want in the world, we keep the camera fixed and turn the world.
+
+        Args:
+            target_position (np.array[float[3]]): target focus point in Cartesian world coordinates
+            distance (float): distance from eye to focus point
+            yaw (float): yaw angle in radians left/right around up-axis
+            pitch (float): pitch in radians up/down.
+            roll (float): roll in radians around forward vector
+            up_axis_index (int): either 1 for Y or 2 for Z axis up.
+
+        Returns:
+            np.array[float[4,4]]: the view matrix
+        """
+        pass
+
+    def compute_projection_matrix(self, left, right, bottom, top, near, far):
+        """Compute the orthographic projection matrix.
+
+        The projection matrix is the 4x4 matrix that maps from the camera/eye coordinates to clipped coordinates.
+        It is applied after the view matrix.
+
+        There are 2 projection matrices:
+        * orthographic projection
+        * perspective projection
+
+        For the perspective projection, see `computeProjectionMatrixFOV(self)`.
+
+        Args:
+            left (float): left screen (canvas) coordinate
+            right (float): right screen (canvas) coordinate
+            bottom (float): bottom screen (canvas) coordinate
+            top (float): top screen (canvas) coordinate
+            near (float): near plane distance
+            far (float): far plane distance
+
+        Returns:
+            np.array[float[4,4]]: the perspective projection matrix
+        """
+        pass
+
+    def compute_projection_matrix_fov(self, fov, aspect, near, far):
+        """Compute the perspective projection matrix using the field of view (FOV).
+
+        Args:
+            fov (float): field of view
+            aspect (float): aspect ratio
+            near (float): near plane distance
+            far (float): far plane distance
+
+        Returns:
+            np.array[float[4,4]]: the perspective projection matrix
+        """
+        pass
+
     # TODO: change such that we don't return the width and height (the user already knows them)
     # TODO: check for segmentation image
     def get_camera_image(self, width, height, view_matrix=None, projection_matrix=None, light_direction=None,
@@ -2826,10 +3121,16 @@ class Mujoco(Simulator):
             np.array[float[width, height]]: Depth buffer.
             np.array[int[width, height]]: Segmentation mask buffer. For each pixels the visible object unique id.
         """
-        # based on the arguments, check the camera name
-        camera_name = None
+        camera_name = "prl_world_camera"
 
-        return width, height, self.sim.render(width, height, camera_name, depth=True), None
+        # based on camera
+
+        # mjvCamera
+
+        rgb, depth = self.sim.render(width, height, camera_name, depth=True)
+        segmentation = -np.ones(width, height)
+        rgba = np.dstack((rgb, -segmentation))
+        return width, height, rgba, depth, segmentation
 
     def get_rgba_image(self, width, height, view_matrix=None, projection_matrix=None, light_direction=None,
                        light_color=None, light_distance=None, shadow=None, light_ambient_coeff=None,
@@ -2980,6 +3281,121 @@ class Mujoco(Simulator):
         """
         pass
 
+    def get_overlapping_objects(self, aabb_min, aabb_max):
+        """
+        This query will return all the unique ids of objects that have Axis Aligned Bounding Box (AABB) overlap with
+        a given axis aligned bounding box. Note that the query is conservative and may return additional objects that
+        don't have actual AABB overlap. This happens because the acceleration structures have some heuristic that
+        enlarges the AABBs a bit (extra margin and extruded along the velocity vector).
+
+        Args:
+            aabb_min (np.array[float[3]]): minimum coordinates of the aabb
+            aabb_max (np.array[float[3]]): maximum coordinates of the aabb
+
+        Returns:
+            list[int]: list of object unique ids.
+        """
+        pass
+
+    def get_aabb(self, body_id, link_id=-1):
+        """
+        You can query the axis aligned bounding box (in world space) given an object unique id, and optionally a link
+        index. (when you don't pass the link index, or use -1, you get the AABB of the base).
+
+        Args:
+            body_id (int): object unique id as returned by creation methods
+            link_id (int): link index in range [0..`getNumJoints(..)]
+
+        Returns:
+            np.array[float[3]]: minimum coordinates of the axis aligned bounding box
+            np.array[float[3]]: maximum coordinates of the axis aligned bounding box
+        """
+        pass
+
+    def get_contact_points(self, body1, body2=None, link1_id=None, link2_id=None):
+        """
+        Returns the contact points computed during the most recent call to `step`.
+
+        Args:
+            body1 (int): only report contact points that involve body A
+            body2 (int, None): only report contact points that involve body B. Important: you need to have a valid
+                body A if you provide body B
+            link1_id (int, None): only report contact points that involve link index of body A
+            link2_id (int, None): only report contact points that involve link index of body B
+
+        Returns:
+            list:
+                [0] int: contact flag (reserved)
+                [1] int: body unique id of body A
+                [2] int: body unique id of body B
+                [3] int: link index of body A, -1 for base
+                [4] int: link index of body B, -1 for base
+                [5] np.array[float[3]]: contact position on A, in Cartesian world coordinates
+                [6] np.array[float[3]]: contact position on B, in Cartesian world coordinates
+                [7] np.array[float[3]]: contact normal on B, pointing towards A
+                [8] float: contact distance, positive for separation, negative for penetration
+                [9] float: normal force applied during the last `step`
+                [10] float: lateral friction force in the first lateral friction direction (see next returned value)
+                [11] np.array[float[3]]: first lateral friction direction
+                [12] float: lateral friction force in the second lateral friction direction (see next returned value)
+                [13] np.array[float[3]]: second lateral friction direction
+        """
+        # mjContact
+        # mj_contactForce
+        # check sim.data.contact = list of all detected contact
+        for contact in sim.data.contact:
+            geom_id1 = contact.geom1
+            geom_id2 = contact.geom2
+
+            body_id1 = self.model.geom_bodyid[geom_id1]
+            body_id2 = self.model.geom_bodyid[geom_id2]
+
+            midpos = contact.pos
+            dist = contact.dist
+
+            frame = contact.frame
+            normal = frame[:3]
+
+            frictions = contact.friction
+            lateral_1 = frictions[0]
+            lateral_2 = frictions[1]
+            spin = frictions[2]
+            roll_1 = frictions[3]
+            roll_2 = frictions[4]
+        pass
+
+    def get_closest_points(self, body1, body2, distance, link1_id=None, link2_id=None):
+        """
+        Computes the closest points, independent from `step`. This also lets you compute closest points of objects
+        with an arbitrary separating distance. In this query there will be no normal forces reported.
+
+        Args:
+            body1 (int): only report contact points that involve body A
+            body2 (int): only report contact points that involve body B. Important: you need to have a valid body A
+                if you provide body B
+            distance (float): If the distance between objects exceeds this maximum distance, no points may be returned.
+            link1_id (int): only report contact points that involve link index of body A
+            link2_id (int): only report contact points that involve link index of body B
+
+        Returns:
+            list:
+                int: contact flag (reserved)
+                int: body unique id of body A
+                int: body unique id of body B
+                int: link index of body A, -1 for base
+                int: link index of body B, -1 for base
+                np.array[float[3]]: contact position on A, in Cartesian world coordinates
+                np.array[float[3]]: contact position on B, in Cartesian world coordinates
+                np.array[float[3]]: contact normal on B, pointing towards A
+                float: contact distance, positive for separation, negative for penetration
+                float: normal force applied during the last `step`. Always equal to 0.
+                float: lateral friction force in the first lateral friction direction (see next returned value)
+                np.array[float[3]]: first lateral friction direction
+                float: lateral friction force in the second lateral friction direction (see next returned value)
+                np.array[float[3]]: second lateral friction direction
+        """
+        pass
+
     def ray_test(self, from_position, to_position):
         """
         Performs a single raycast to find the intersection information of the first object hit.
@@ -3004,6 +3420,57 @@ class Mujoco(Simulator):
         normal = -unit_vec  # TODO: this is not correct...
         # TODO: get body_id and link_id from geom_id
         return geom_id, geom_id, fraction, position, normal
+
+    def ray_test_batch(self, from_positions, to_positions, parent_object_id=None, parent_link_id=None):
+        """Perform a batch of raycasts to find the intersection information of the first objects hit.
+
+        This is similar to the ray_test, but allows you to provide an array of rays, for faster execution. The size of
+        'rayFromPositions' needs to be equal to the size of 'rayToPositions'. You can one ray result per ray, even if
+        there is no intersection: you need to use the objectUniqueId field to check if the ray has hit anything: if
+        the objectUniqueId is -1, there is no hit. In that case, the 'hit fraction' is 1.
+
+        Args:
+            from_positions (np.array[float[N,3]]): list of start points for each ray, in world coordinates
+            to_positions (np.array[float[N,3]]): list of end points for each ray in world coordinates
+            parent_object_id (int): ray from/to is in local space of a parent object
+            parent_link_id (int): ray from/to is in local space of a parent object
+
+        Returns:
+            list:
+                int: object unique id of the hit object
+                int: link index of the hit object, or -1 if none/parent
+                float: hit fraction along the ray in range [0,1] along the ray.
+                np.array[float[3]]: hit position in Cartesian world coordinates
+                np.array[float[3]]: hit normal in Cartesian world coordinates
+        """
+        pass
+
+    def set_collision_filter_group_mask(self, body_id, link_id, filter_group, filter_mask):
+        """
+        Enable/disable collision detection between groups of objects. Each body is part of a group. It collides with
+        other bodies if their group matches the mask, and vise versa. The following check is performed using the group
+        and mask of the two bodies involved. It depends on the collision filter mode.
+
+        Args:
+            body_id (int): unique id of the body to be configured
+            link_id (int): link index of the body to be configured
+            filter_group (int): bitwise group of the filter
+            filter_mask (int): bitwise mask of the filter
+        """
+        pass
+
+    def set_collision_filter_pair(self, body1, body2, link1=-1, link2=-1, enable=True):
+        """
+        Enable/disable collision between two bodies/links.
+
+        Args:
+            body1 (int): unique id of body A to be filtered
+            body2 (int): unique id of body B to be filtered, A==B implies self-collision
+            link1 (int): link index of body A
+            link2 (int): link index of body B
+            enable (bool): True to enable collision, False to disable collision
+        """
+        pass
 
     ###########################
     # Kinematics and Dynamics #
@@ -3152,7 +3619,7 @@ class Mujoco(Simulator):
                 idx += 6  #
             self.model.dof_damping[idx] = joint_damping
 
-    def calculate_jacobian(self, body_id, link_id, local_position, q=None, dq=None, des_ddq=None):
+    def calculate_jacobian(self, body_id, link_id, local_position=None, q=None, dq=None, des_ddq=None):
         r"""
         Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q), J_{ang}(q)]^T`, such that:
 
@@ -3166,8 +3633,9 @@ class Mujoco(Simulator):
         Args:
             body_id (int): unique body id.
             link_id (int): link id.
-            local_position (np.array[float[3]]): the point on the specified link to compute the Jacobian (in link local
-                coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+            local_position (np.array[float[3]], None): the point on the specified link to compute the Jacobian (in
+              link local coordinates around its center of mass). If None, it will use the CoM position (in the link
+              frame).
             q (np.array[float[N]]): joint positions of size N, where N is the number of DoFs.
             dq (np.array[float[N]]): joint velocities of size N, where N is the number of DoFs.
             des_ddq (np.array[float[N]]): desired joint accelerations of size N.
@@ -3177,15 +3645,13 @@ class Mujoco(Simulator):
                 number of columns depends if the base is fixed or floating.
         """
         body = self._bodies[body_id]
-        if link_id < -1 or link_id > (body.num_bodies - 2):  # -1 is for the base
-            raise ValueError("link_id should belong to [-1, `num_links-2`].")
+        link_id = self._check_link_id(body, link_id)
+        idx = body.b_idx0 + link_id
 
         # TODO: use q, dq, des_ddq by setting it in the data and then restoring the data
-
-        idx = body.b_idx0 + 1 + link_id
         jacp, jacr = np.zeros(3 * self.model.nv), np.zeros(3 * self.model.nv)
-        if local_position is None:
-            local_position = np.zeros(3)
+        local_position = self.get_link_world_positions(body_id, link_ids=link_id-1)  # in the cartesian world frame
+        # TODO: modify the local position
         mujoco.functions.mj_jac(self.model, self.sim.data, jacp, jacr, local_position, idx)
         jacp = jacp.reshape(3, self.model.nv)[:, body.v_idx0:body.v_idxf]
         jacr = jacr.reshape(3, self.model.nv)[:, body.v_idx0:body.v_idxf]
@@ -3315,17 +3781,26 @@ class Mujoco(Simulator):
         body = self._bodies[body_id]
 
         # copy data
-        dest = mujoco.cymj.PyMjData()
-        mujoco.functions.mj_copyData(dest, self.model, self.sim.data)
-        dest.qpos[body.q_idx0:body.q_idxf] = q
-        dest.qvel[body.v_idx0:body.v_idxf] = dq
-        dest.qacc[body.v_idx0:body.v_idxf] = des_ddq
+        # dest = mujoco.cymj.PyMjData()
+        # mujoco.functions.mj_copyData(dest, self.model, self.sim.data)
+        # dest.qpos[body.q_idx0:body.q_idxf] = q
+        # dest.qvel[body.v_idx0:body.v_idxf] = dq
+        # dest.qacc[body.v_idx0:body.v_idxf] = des_ddq
+
+        data = self._save_state()
+        self.sim.data.qpos[body.q_idx0:body.q_idxf] = q
+        self.sim.data.qvel[body.v_idx0:body.v_idxf] = dq
+        self.sim.data.qacc[body.v_idx0:body.v_idxf] = des_ddq
 
         # inverse dynamics
-        mujoco.functions.mj_inverse(self.model, dest)
+        mujoco.functions.mj_inverse(self.model, self.sim.data)
 
         # get resulting torques and return it
-        torques = dest.qfrc_applied[body.v_idx0:body.v_idxf]
+        # torques = self.sim.data.qfrc_applied[body.v_idx0:body.v_idxf]
+        torques = self.sim.data.qfrc_inverse[body.v_idx0:body.v_idxf]
+
+        # restore data
+        self._load_state(data)
         return torques
 
     def calculate_forward_dynamics(self, body_id, q, dq, torques):
@@ -3377,24 +3852,280 @@ class Mujoco(Simulator):
         body = self._bodies[body_id]
 
         # copy data and set q, dq, tau
-        dest = mujoco.cymj.PyMjData()
-        mujoco.functions.mj_copyData(dest, self.model, self.sim.data)
-        dest.qpos[body.q_idx0:body.q_idxf] = q
-        dest.qvel[body.v_idx0:body.v_idxf] = dq
-        dest.qfrc_applied[body.v_idx0:body.v_idxf] = torques
+        # dest = mujoco.cymj.PyMjData()
+        # mujoco.functions.mj_copyData(dest, self.model, self.sim.data)
+        # dest.qpos[body.q_idx0:body.q_idxf] = q
+        # dest.qvel[body.v_idx0:body.v_idxf] = dq
+        # dest.qfrc_applied[body.v_idx0:body.v_idxf] = torques
+
+        data = self._save_state()
+        self.sim.data.qpos[body.q_idx0:body.q_idxf] = q
+        self.sim.data.qvel[body.v_idx0:body.v_idxf] = dq
+        self.sim.data.qfrc_applied[body.v_idx0:body.v_idxf] = torques
 
         # forward dynamics
-        mujoco.functions.mj_forward(self.model, dest)
+        mujoco.functions.mj_forward(self.model, self.sim.data)
 
         # get ddq and return it
-        qacc = dest.qacc[body.v_idx0:body.v_idxf]
+        qacc = self.sim.data.qacc[body.v_idx0:body.v_idxf]
+
+        # restore data
+        self._load_state(data)
         return qacc
 
     #########
     # Debug #
     #########
 
-    # TODO
+    def add_user_debug_line(self, from_pos, to_pos, rgb_color=None, width=None, lifetime=None,
+                            parent_object_id=None,
+                            parent_link_id=None, line_id=None):
+        """Add a user debug line in the simulator.
+
+        You can add a 3d line specified by a 3d starting point (from) and end point (to), a color [red,green,blue],
+        a line width and a duration in seconds.
+
+        Args:
+            from_pos (np.array[float[3]]): starting point of the line in Cartesian world coordinates
+            to_pos (np.array[float[3]]): end point of the line in Cartesian world coordinates
+            rgb_color (np.array[float[3]]): RGB color (each channel in range [0,1])
+            width (float): line width (limited by OpenGL implementation).
+            lifetime (float): use 0 for permanent line, or positive time in seconds (afterwards the line with be
+                removed automatically)
+            parent_object_id (int): draw line in local coordinates of a parent object.
+            parent_link_id (int): draw line in local coordinates of a parent link.
+            line_id (int): replace an existing line item (to avoid flickering of remove/add).
+
+        Returns:
+            int: unique user debug line id.
+        """
+        # mjr_drawPixels
+        pass
+
+    def add_user_debug_text(self, text, position, rgb_color=None, size=None, lifetime=None, orientation=None,
+                            parent_object_id=None, parent_link_id=None, text_id=None):
+        """
+        Add 3D text at a specific location using a color and size.
+
+        Args:
+            text (str): text.
+            position (np.array[float[3]]): 3d position of the text in Cartesian world coordinates.
+            rgb_color (list/tuple of 3 floats): RGB color; each component in range [0..1]
+            size (float): text size
+            lifetime (float): use 0 for permanent text, or positive time in seconds (afterwards the text with be
+                removed automatically)
+            orientation (np.array[float[4]]): By default, debug text will always face the camera, automatically
+                rotation. By specifying a text orientation (quaternion), the orientation will be fixed in world space
+                or local space (when parent is specified). Note that a different implementation/shader is used for
+                camera facing text, with different appearance: camera facing text uses bitmap fonts, text with
+                specified orientation uses TrueType font.
+            parent_object_id (int): draw text in local coordinates of a parent object.
+            parent_link_id (int): draw text in local coordinates of a parent link.
+            text_id (int): replace an existing text item (to avoid flickering of remove/add).
+
+        Returns:
+            int: unique user debug text id.
+        """
+        # mjr_text
+        pass
+
+    def add_user_debug_parameter(self, name, min_range, max_range, start_value):
+        """
+        Add custom sliders to tune parameters.
+
+        Args:
+            name (str): name of the parameter.
+            min_range (float): minimum value.
+            max_range (float): maximum value.
+            start_value (float): starting value.
+
+        Returns:
+            int: unique user debug parameter id.
+        """
+        pass
+
+    def read_user_debug_parameter(self, parameter_id):
+        """
+        Read the value of the parameter / slider.
+
+        Args:
+            parameter_id: unique user debug parameter id.
+
+        Returns:
+            float: reading of the parameter.
+        """
+        pass
+
+    def remove_user_debug_item(self, item_id):
+        """
+        Remove the specified user debug item (line, text, parameter) from the simulator.
+
+        Args:
+            item_id (int): unique id of the debug item to be removed (line, text etc)
+        """
+        pass
+
+    def remove_all_user_debug_items(self):
+        """
+        Remove all user debug items from the simulator.
+        """
+        pass
+
+    def set_debug_object_color(self, object_id, link_id, rgb_color=(1, 0, 0)):
+        """
+        Override the color of a specific object and link.
+
+        Args:
+            object_id (int): unique object id.
+            link_id (int): link id.
+            rgb_color (float[3]): RGB debug color.
+        """
+        pass
+
+    def add_user_data(self, object_id, key, value):
+        """
+        Add user data (at the moment text strings) attached to any link of a body. You can also override a previous
+        given value. You can add multiple user data to the same body/link.
+
+        Args:
+            object_id (int): unique object/link id.
+            key (str): key string.
+            value (str): value string.
+
+        Returns:
+            int: user data id.
+        """
+        pass
+
+    def num_user_data(self, object_id):
+        """
+        Return the number of user data associated with the specified object/link id.
+
+        Args:
+            object_id (int): unique object/link id.
+
+        Returns:
+            int: the number of user data
+        """
+        pass
+
+    def get_user_data(self, user_data_id):
+        """
+        Get the specified user data value.
+
+        Args:
+            user_data_id (int): unique user data id.
+
+        Returns:
+            str: value string.
+        """
+        pass
+
+    def get_user_data_id(self, object_id, key):
+        """
+        Get the specified user data id.
+
+        Args:
+            object_id (int): unique object/link id.
+            key (str): key string.
+
+        Returns:
+            int: user data id.
+        """
+        pass
+
+    def get_user_data_info(self, object_id, index):
+        """
+        Get the user data info associated with the given object and index.
+
+        Args:
+            object_id (int): unique object id.
+            index (int): index (should be between [0, self.num_user_data(object_id)]).
+
+        Returns:
+            int: user data id.
+            str: key.
+            int: body id.
+            int: link index
+            int: visual shape index.
+        """
+        pass
+
+    def remove_user_data(self, user_data_id):
+        """
+        Remove the specified user data.
+
+        Args:
+            user_data_id (int): user data id.
+        """
+        pass
+
+    def sync_user_data(self):
+        """
+        Synchronize the user data.
+        """
+        pass
+
+    def configure_debug_visualizer(self, flag, enable):
+        """Configure the debug visualizer camera.
+
+        Configure some settings of the built-in OpenGL visualizer, such as enabling or disabling wireframe,
+        shadows and GUI rendering.
+
+        Args:
+            flag (int): The feature to enable or disable, such as
+                        COV_ENABLE_WIREFRAME (=3): show/hide the collision wireframe
+                        COV_ENABLE_SHADOWS (=2): show/hide shadows
+                        COV_ENABLE_GUI (=1): enable/disable the GUI
+                        COV_ENABLE_VR_PICKING (=5): enable/disable VR picking
+                        COV_ENABLE_VR_TELEPORTING (=4): enable/disable VR teleporting
+                        COV_ENABLE_RENDERING (=7): enable/disable rendering
+                        COV_ENABLE_TINY_RENDERER (=12): enable/disable tiny renderer
+                        COV_ENABLE_VR_RENDER_CONTROLLERS (=6): render VR controllers
+                        COV_ENABLE_KEYBOARD_SHORTCUTS (=9): enable/disable keyboard shortcuts
+                        COV_ENABLE_MOUSE_PICKING (=10): enable/disable mouse picking
+                        COV_ENABLE_Y_AXIS_UP (Z is default world up axis) (=11): enable/disable Y axis up
+                        COV_ENABLE_RGB_BUFFER_PREVIEW (=13): enable/disable RGB buffer preview
+                        COV_ENABLE_DEPTH_BUFFER_PREVIEW (=14): enable/disable Depth buffer preview
+                        COV_ENABLE_SEGMENTATION_MARK_PREVIEW (=15): enable/disable segmentation mark preview
+            enable (bool): False (disable) or True (enable)
+        """
+        pass
+
+    def get_debug_visualizer(self):
+        """Get information about the debug visualizer camera.
+
+        Returns:
+            float: width of the visualizer camera
+            float: height of the visualizer camera
+            np.array[float[4,4]],4]: view matrix [4,4]
+            np.array[float[4,4]],4]: perspective projection matrix [4,4]
+            np.array[float[3]]: camera up vector expressed in the Cartesian world space
+            np.array[float[3]]: forward axis of the camera expressed in the Cartesian world space
+            np.array[float[3]]: This is a horizontal vector that can be used to generate rays (for mouse picking or
+                creating a simple ray tracer for example)
+            np.array[float[3]]: This is a vertical vector that can be used to generate rays (for mouse picking or
+                creating a simple ray tracer for example)
+            float: yaw angle (in radians) of the camera, in Cartesian local space coordinates
+            float: pitch angle (in radians) of the camera, in Cartesian local space coordinates
+            float: distance between the camera and the camera target
+            np.array[float[3]]: target of the camera, in Cartesian world space coordinates
+        """
+        pass
+
+    def reset_debug_visualizer(self, distance, yaw, pitch, target_position):
+        """Reset the debug visualizer camera.
+
+        Reset the 3D OpenGL debug visualizer camera distance (between eye and camera target position), camera yaw and
+        pitch and camera target position
+
+        Args:
+            distance (float): distance from eye to camera target position
+            yaw (float): camera yaw angle (in radians) left/right
+            pitch (float): camera pitch angle (in radians) up/down
+            target_position (np.array[float[3]]): target focus point of the camera
+        """
+        pass
 
     ############################
     # Events (mouse, keyboard) #

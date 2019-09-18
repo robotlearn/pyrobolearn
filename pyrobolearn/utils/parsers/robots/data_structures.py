@@ -190,7 +190,7 @@ class Frame(object):
               using the right hand.
         """
         # forward_axis=(1., 0., 0.), up_axis=(0., 0., 1.)):
-
+        self.name = None
         self.position = position
         self.orientation = orientation
         self.dtype = dtype  # world frame, body frame, joint frame, inertial frame, etc.
@@ -707,7 +707,7 @@ class Floor(object):
         """
         self.name = name
         self.dimensions = dimensions
-        self.frame = Frame(position, orientation, dtype='world')
+        self.frame = Frame(position=position, orientation=orientation, dtype='world')
         if name is not None:
             name = name + '_material'
         self.material = Material(name=name, color=color, texture=texture)
@@ -867,7 +867,10 @@ class MultiBody(object):
         self.joints = OrderedDict()  # {name: Joint}
         self.root = root
         self.materials = {}
-        self.frame = Frame(position, orientation, dtype='world')
+        self.frame = Frame(position=position, orientation=orientation, dtype='world')
+
+        self.sensors = {}
+        self.actuators = {}
 
     @property
     def name(self):
@@ -1051,6 +1054,42 @@ class MultiBody(object):
 
                 # replace old joint dictionary
                 self.joints = joints
+
+    def has_sensors(self):
+        """
+        Return True if the multi-body data structure has some sensors.
+        """
+        return len(self.sensors) > 0
+
+    def has_actuators(self):
+        """
+        Return True if the multi-body data structure has some actuators.
+        """
+        return len(self.actuators) > 0
+
+    def add_sensor(self, sensor):
+        """
+        Add a sensor to the multi-body data structure.
+
+        Args:
+            sensor (Sensor): sensor data structure.
+        """
+        if not isinstance(sensor, Sensor):
+            raise TypeError("Expecting the given 'sensor' to be an instance of `Sensor`, but got instead: "
+                            "{}".format(type(sensor)))
+        self.sensors[sensor.id] = sensor
+
+    def add_actuator(self, actuator):
+        """
+        Add an actuator to the multi-body data structure.
+
+        Args:
+            actuator (Actuator): actuator data structure.
+        """
+        if not isinstance(actuator, Actuator):
+            raise TypeError("Expecting the given 'actuator' to be an instance of `Actuator`, but got instead: "
+                            "{}".format(type(actuator)))
+        self.actuators[actuator.id] = actuator
 
 
 # alias
@@ -2831,20 +2870,39 @@ class Material(object):
         self._emissive = self._check_color(emissive)
 
 
+class Noise(object):
+    """Noise distribution used in sensors and actuators."""
+    pass
+
+
+class GaussianNoise(Noise):
+    """Gaussian noise distribution used in sensors and actuators."""
+
+    def __init__(self, mean, stddev):
+        self.mean = mean
+        self.stddev = stddev
+
+
 class Sensor(object):
     r"""Sensor (abstract) class.
 
     """
 
-    def __init__(self, name=None, sensors=[]):
+    def __init__(self, sensor_id, name=None, update_rate=None, noise=None, sensors=[]):
         """
         Initialize the sensor.
 
         Args:
+            sensor_id (int): sensor unique id.
             name (str): name of the sensor.
+            update_rate (float): update rate.
+            noise (Noise): noise that is applied on the sensor.
             sensors (list[Sensor]): inner list of sensors.
         """
+        self.id = sensor_id
         self.name = name
+        self.update_rate = update_rate
+        self.noise = noise
         self.sensors = sensors
 
     @property
@@ -2860,24 +2918,254 @@ class Sensor(object):
         self._name = name
 
     @property
+    def noise(self):
+        """Return the sensor noise."""
+        return self._noise
+
+    @noise.setter
+    def noise(self, noise):
+        """Set the sensor noise."""
+        if noise is not None and not isinstance(noise, Noise):
+            raise TypeError("Expecting the given 'noise' to be an instance of `Noise` but got instead: "
+                            "{}".format(type(noise)))
+        self._noise = noise
+
+    @property
     def num_sensors(self):
         """Return the number of inner sensors."""
         return len(self.sensors)
 
 
-class Actuator(object):  # Motor
-    r"""Actuator/Motor (abstract) class.
+class JointSensor(Sensor):
+    """Joint sensor
 
+    Sensor attached to a joint.
     """
 
-    def __init__(self, name=None, actuators=[]):
+    def __init__(self, sensor_id, joint, name=None, update_rate=None, noise=None):
+        """
+        Initialize the joint sensor.
+
+        Args:
+            sensor_id (int): unique sensor id.
+            joint (Joint): joint to which the sensor is attached.
+            name (str): name of the sensor.
+            update_rate (float): update rate of the sensor.
+            noise (Noise): noise distribution that is used on the sensor.
+        """
+        super(JointSensor, self).__init__(sensor_id, name, update_rate, noise)
+        self.joint = joint
+
+    @property
+    def joint(self):
+        """Return the joint data structure."""
+        return self._joint
+
+    @joint.setter
+    def joint(self, joint):
+        """Set the joint."""
+        if joint is not None and not isinstance(joint, Joint):
+            raise TypeError("Expecting the given 'joint' to be an instance of `Joint` but got instead: "
+                            "{}".format(type(joint)))
+        self._joint = joint
+
+
+class LinkSensor(Sensor):
+    """Link Sensor
+
+    Sensor attached to a link.
+    """
+
+    def __init__(self, sensor_id, link, name=None, update_rate=None, noise=None):
+        """
+        Initialize the link sensor.
+
+        Args:
+            sensor_id (int): unique sensor id.
+            link (Body): link/body to which the sensor is attached.
+            name (str): name of the sensor.
+            update_rate (float): update rate of the sensor.
+            noise (Noise): noise distribution that is used on the sensor.
+        """
+        super(LinkSensor, self).__init__(sensor_id, name, update_rate, noise)
+        self.link = link
+
+    @property
+    def link(self):
+        """Return the link data structure."""
+        return self._link
+
+    @link.setter
+    def link(self, link):
+        """Set the link."""
+        if link is not None and not isinstance(link, Body):
+            raise TypeError("Expecting the given 'link' to be an instance of `Body` but got instead: "
+                            "{}".format(type(link)))
+        self._link = link
+
+
+class CameraSensor(LinkSensor):
+    """Camera sensor
+
+    References:
+        - http://gazebosim.org/tutorials?tut=ros_gzplugins#Camera
+    """
+
+    def __init__(self, sensor_id, link, name=None, update_rate=None, noise=None):
+        """
+        Initialize the camera sensor.
+
+        Args:
+            sensor_id (int): unique sensor id.
+            link (Body): link/body to which the sensor is attached.
+            name (str): name of the sensor.
+            update_rate (float): update rate of the sensor.
+            noise (Noise): noise distribution that is used on the sensor.
+        """
+        super(CameraSensor, self).__init__(sensor_id, link, name, update_rate, noise)
+        self.frame = Frame()
+        self.visualize = False
+
+        # intrinsic properties of camera
+        self.horizontal_fov = None
+        self.width = None
+        self.height = None
+        self.format = None  # R8G8B8
+        self.near = None
+        self.far = None
+
+        self.plugin_filename = None
+        self.plugin_name = None
+        self.camera_base_topic = None  # camera_base_topic
+        self.image_topic = None  # added to the camera_base_topic
+        self.camera_info_topic = None  # added to the camera_base_topic
+        self.frame_name = None  # check 'name' attribute in Frame class
+        self.hack_baseline = None
+        self.distortion_k1 = None
+        self.distortion_k2 = None
+        self.distortion_k3 = None
+        self.distortion_t1 = None
+        self.distortion_t2 = None
+
+
+class DepthCameraSensor(LinkSensor):
+    """Depth camera sensor
+
+    References:
+        - http://gazebosim.org/tutorials?tut=ros_gzplugins#Camera
+    """
+
+    def __init__(self, sensor_id, link, name=None, update_rate=None, noise=None):
+        """
+        Initialize the depth camera sensor.
+
+        Args:
+            sensor_id (int): unique sensor id.
+            link (Body): link/body to which the sensor is attached.
+            name (str): name of the sensor.
+            update_rate (float): update rate of the sensor.
+            noise (Noise): noise distribution that is used on the sensor.
+        """
+        super(DepthCameraSensor, self).__init__(sensor_id, link, name, update_rate, noise)
+
+
+class GPURay(LinkSensor):
+    """GPU Ray sensor
+
+    References:
+        - http://gazebosim.org/tutorials?tut=ros_gzplugins#GPULaser
+    """
+
+    def __init__(self, sensor_id, link, name=None, update_rate=None, noise=None):
+        """
+        Initialize the GPU ray sensor.
+
+        Args:
+            sensor_id (int): unique sensor id.
+            link (Body): link/body to which the sensor is attached.
+            name (str): name of the sensor.
+            update_rate (float): update rate of the sensor.
+            noise (Noise): noise distribution that is used on the sensor.
+        """
+        super(GPURay, self).__init__(sensor_id, link, name, update_rate, noise)
+
+        self.frame = Frame()
+        self.visualize = False
+
+        # <scan>
+        self.horizontal = None
+        self.samples = None
+        self.scan_resolution = None
+        self.range_angle = None  # <min_angle> and <max_angle>
+
+        # <range>
+        self.range = None  # <min> and <max>
+        self.range_resolution = 0.01
+
+        # plugin
+        self.plugin_filename = None
+        self.plugin_name = None
+        self.topic = None
+        self.frame_name = None  # Check 'name' attribute in Frame class
+
+
+class IMUSensor(LinkSensor):
+    """IMU sensor.
+
+    References:
+        - http://gazebosim.org/tutorials?tut=ros_gzplugins#IMUsensor(GazeboRosImuSensor)
+    """
+
+    def __init__(self, sensor_id, link, name=None, update_rate=None, noise=None):
+        """
+        Initialize the IMU sensor.
+
+        Args:
+            sensor_id (int): unique sensor id.
+            link (Body): link/body to which the sensor is attached.
+            name (str): name of the sensor.
+            update_rate (float): update rate of the sensor.
+            noise (Noise): noise distribution that is used on the sensor.
+        """
+        super(IMUSensor, self).__init__(sensor_id, link, name, update_rate, noise)
+
+
+class ForceTorqueSensor(JointSensor):
+    """Force torque sensor.
+
+    References:
+        - http://gazebosim.org/tutorials?tut=force_torque_sensor&cat=sensors
+        - http://docs.ros.org/jade/api/gazebo_plugins/html/group__GazeboRosFTSensor.html
+    """
+
+    def __init__(self, sensor_id, joint, name=None, update_rate=None, noise=None):
+        """
+        Initialize the F/T sensor.
+
+        Args:
+            sensor_id (int): unique sensor id.
+            joint (Joint): joint to which the sensor is attached.
+            name (str): name of the sensor.
+            update_rate (float): update rate of the sensor.
+            noise (Noise): noise distribution that is used on the sensor.
+        """
+        super(ForceTorqueSensor, self).__init__(sensor_id, joint, name, update_rate, noise)
+
+
+class Actuator(object):  # Motor
+    r"""Actuator/Motor (abstract) class.
+    """
+
+    def __init__(self, actuator_id, name=None, actuators=[]):
         """
         Initialize the actuator/motor.
 
         Args:
+            actuator_id (int): actuator unique id.
             name (str): name of the actuator/motor.
             actuators (list[Sensor]): inner list of actuators.
         """
+        self.id = actuator_id
         self.name = name
         self.actuators = actuators
 
@@ -2899,6 +3187,73 @@ class Actuator(object):  # Motor
         return len(self.actuators)
 
 
+class JointActuator(Actuator):
+    """Joint Actuator."""
+
+    def __init__(self, actuator_id, joint, name=None):
+        """
+        Initialize the joint actuator.
+
+        Args:
+            actuator_id (int): unique actuator id.
+            joint (Joint): joint to which the actuator is attached.
+            name (str): name of the actuator.
+        """
+        super(JointActuator, self).__init__(actuator_id, name)
+        self.joint = joint
+
+    @property
+    def joint(self):
+        """Return the joint data structure."""
+        return self._joint
+
+    @joint.setter
+    def joint(self, joint):
+        """Set the joint."""
+        if joint is not None and not isinstance(joint, Joint):
+            raise TypeError("Expecting the given 'joint' to be an instance of `Joint` but got instead: "
+                            "{}".format(type(joint)))
+        self._joint = joint
+
+
+class MotorJointActuator(JointActuator):
+    """Motor joint actuator."""
+
+    def __init__(self, actuator_id, joint, name=None):
+        """
+        Initialize the joint actuator.
+
+        Args:
+            actuator_id (int): unique actuator id.
+            joint (Joint): joint to which the actuator is attached.
+            name (str): name of the actuator.
+        """
+        super(MotorJointActuator, self).__init__(actuator_id, joint, name)
+
+        self.transmission_type = None
+        self.hardware_interface = None  # EffortJointInterface
+        self.mechanical_reduction = None
+
+
+class PositionJointActuator(MotorJointActuator):
+    """Position joint actuator."""
+
+    def __init__(self, actuator_id, joint, name=None):
+        """
+        Initialize the position joint actuator.
+
+        Args:
+            actuator_id (int): unique actuator id.
+            joint (Joint): joint to which the actuator is attached.
+            name (str): name of the actuator.
+        """
+        super(MotorJointActuator, self).__init__(actuator_id, joint, name)
+
+        self.p = None
+        self.i = None
+        self.d = None
+
+
 class Heightmap(object):
     r"""Heightmap (abstract) class.
 
@@ -2912,3 +3267,46 @@ class Constraint(object):
     This allows to define a constraint.
     """
     pass
+
+
+class Transmission(object):
+    r"""Transmission interface.
+
+    The transmission interface is used in the control loop to "describe the relationship between an actuator and a
+    joint. This allows one to model concepts such as gear ratios and parallel linkages. A transmission transforms
+    efforts/flow variables such that their product - power - remains constant. Multiple actuators may be linked to
+    multiple joints through complex transmission." [3]
+
+    The control loop consists of 6 stages:
+    - read state from robotic hardware
+    - transmission: actuator to joint state
+    - controller manager update
+
+    Available transmission type:
+    - Simple reducer (type = transmission_interface/SimpleTransmission)
+    - Four-bar linkage
+    - Differential
+
+    References:
+        - [1] ROS Control: https://roscon.ros.org/2014/wp-content/uploads/2014/07/ros_control_an_overview.pdf
+        - [2] ros_control: http://wiki.ros.org/ros_control
+        - [3] URDF Transmissions: https://wiki.ros.org/urdf/XML/Transmission
+    """
+
+    def __init__(self, name, joint, transmission_type=None, actuator_name=None, hardware_interface=None):
+        """
+        Initialize the transmission.
+
+        Args:
+            name (str): name of the transmission.
+            joint (Joint): joint to which is attached the transmission.
+            transmission_type (str): transmission type; select between {'simple', 'four-bar linkage', 'differential'}.
+            actuator_name (str): name of the actuator.
+            hardware_interface (str): hardware interface.
+        """
+        self.name = name
+        self.type = transmission_type
+        self.actuator = actuator_name
+        self.mechanical_reduction = None
+        self.joint = joint
+        self.hardware_interface = hardware_interface

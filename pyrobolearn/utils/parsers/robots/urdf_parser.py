@@ -308,10 +308,13 @@ class URDFParser(RobotParser):
             tree = self.tree
 
         # create root element
-        root = ET.Element('robot')
+        attrib = {}
+        if tree.name is not None:
+            attrib['name'] = tree.name
+        root = ET.Element('robot', attrib=attrib)
 
         # generate material tags
-        for material in tree.materials:
+        for material in tree.materials.values():
             material_tag = ET.SubElement(root, 'material', attrib={'name': material.name})
             if material.color is not None:
                 ET.SubElement(material_tag, 'color', attrib={'rgba': str(np.asarray(material.rgba))[1:-1]})
@@ -352,12 +355,15 @@ class URDFParser(RobotParser):
                         attrib['length'] = str(geometry.size[1])
                     else:  # mesh
                         attrib['filename'] = geometry.filename
-                        attrib['scale'] = str(np.asarray(geometry.size))[1:-1]
+                        if geometry.size is not None:
+                            size = geometry.size
+                            size = np.array([size] * 3) if isinstance(size, (float, int)) else np.asarray(size)
+                            attrib['scale'] = str(size)[1:-1]
 
                     ET.SubElement(geometry_tag, dtype, attrib=attrib)
 
         # generate <link>
-        for link in tree.bodies:
+        for link in tree.bodies.values():
             link_tag = ET.SubElement(root, 'link', attrib={'name': link.name})
 
             # create <inertial> tag
@@ -434,7 +440,7 @@ class URDFParser(RobotParser):
             return ET.SubElement(parent_tag, tag, attrib=kwargs)
 
         # generate <joint>
-        for joint in tree.joints:
+        for joint in tree.joints.values():
             # set joint name and type
             joint_tag = set_name_and_type(root, 'joint', joint)
 
@@ -443,11 +449,11 @@ class URDFParser(RobotParser):
 
             # <parent>
             if joint.parent is not None:
-                ET.SubElement(joint_tag, 'parent', attrib={'link': joint.parent})
+                ET.SubElement(joint_tag, 'parent', attrib={'link': joint.parent.name})
 
             # <child>
             if joint.child is not None:
-                ET.SubElement(joint_tag, 'child', attrib={'link': joint.child})
+                ET.SubElement(joint_tag, 'child', attrib={'link': joint.child.name})
 
             # <axis>
             if joint.axis is not None:

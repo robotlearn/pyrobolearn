@@ -1286,12 +1286,13 @@ class MuJoCoParser(WorldParser):
             # if file does not already exists, convert it
             if not os.path.isfile(new_filename):
 
-                # # Arf, pyassimp export an ASCII STL, but Mujoco requires a binary STL --> use trimesh
-                # scene = pyassimp.load(filename)
-                # pyassimp.export(scene, new_filename, file_type='stl')
-                # pyassimp.release(scene)
+                # use pyassimp to
+                scene = pyassimp.load(filename)
+                pyassimp.export(scene, new_filename, file_type='stlb')
+                pyassimp.release(scene)
 
-                export_mesh(trimesh.load(filename), new_filename)
+                #
+                # export_mesh(trimesh.load(filename), new_filename)
 
             return new_filename
         return filename

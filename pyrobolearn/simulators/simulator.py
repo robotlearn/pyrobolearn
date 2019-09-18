@@ -18,6 +18,7 @@ References:
 """
 
 from pyrobolearn.utils.data_structures.orderedset import OrderedSet
+from pyrobolearn.simulators.middlewares.middleware import MiddleWare
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -199,7 +200,7 @@ class Simulator(object):
         self.real_time = False
         self.kwargs = kwargs
         self._num_instances = num_instances
-        self._middleware = middleware
+        self.middleware = middleware
 
         # main camera in the simulator
         self._camera = None
@@ -245,6 +246,19 @@ class Simulator(object):
     def timestep(self):
         """Return the simulator time step."""
         return self.get_time_step()
+
+    @property
+    def middleware(self):
+        """Return the middleware."""
+        return self._middleware
+
+    @middleware.setter
+    def middleware(self, middleware):
+        """Set the middleware."""
+        if middleware is not None and not isinstance(middleware, MiddleWare):
+            raise TypeError("Expecting the given 'middleware' to be an instance of `MiddleWare`, but got instead: "
+                            "{}".format(middleware))
+        self._middleware = middleware
 
     #############
     # Operators #
@@ -1704,9 +1718,62 @@ class Simulator(object):
             kds (None, float, np.array[float[N]]): velocity gain(s)
             forces (None, float, np.array[float[N]]): maximum motor force(s)/torque(s) used to reach the target values.
         """
+        # set joint positions in the simulator
+        self._set_joint_positions(body_id, joint_ids, positions, velocities, kps, kds, forces)
+
+        # publish the joint positions through the middleware
+        if self.middleware is not None:
+            self.middleware.set_joint_positions(body_id, joint_ids, positions, velocities, kps, kds, forces)
+
+    def _set_joint_positions(self, body_id, joint_ids, positions, velocities=None, kps=None, kds=None, forces=None):
+        """
+        Set the position of the given joint(s) (using position control).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            positions (float, np.array[float[N]]): desired position, or list of desired positions [rad]
+            velocities (None, float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
+            kps (None, float, np.array[float[N]]): position gain(s)
+            kds (None, float, np.array[float[N]]): velocity gain(s)
+            forces (None, float, np.array[float[N]]): maximum motor force(s)/torque(s) used to reach the target values.
+        """
         pass
 
     def get_joint_positions(self, body_id, joint_ids):
+        """
+        Get the position of the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                float: joint position [rad]
+            if multiple joints:
+                np.array[float[N]]: joint positions [rad]
+        """
+        # if a middleware is defined
+        if self.middleware is not None:
+            # get joint positions from the middleware
+            q = self.middleware.get_joint_positions(body_id, joint_ids)
+            if q is None:  # if we didn't get the joint positions from the middleware, get them from the simulator
+                q = self._get_joint_positions(body_id, joint_ids)
+            else:  # if we got them from the middleware, set them in the simulator
+                self._set_joint_positions(body_id=body_id, joint_ids=joint_ids, positions=q)
+
+        else:
+            # get the joint positions from the simulator
+            q = self._get_joint_positions(body_id, joint_ids)
+
+            # if the middleware is set on the teleoperation mode, publish the joint positions through the middleware
+            if self.middleware is not None:
+                self.middleware.set_joint_positions(body_id, joint_ids, q, check_teleoperate=True)
+
+        return q
+
+    def _get_joint_positions(self, body_id, joint_ids):
         """
         Get the position of the given joint(s).
 
@@ -1732,9 +1799,59 @@ class Simulator(object):
             velocities (float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
             max_force (None, float, np.array[float[N]]): maximum motor forces/torques
         """
+        # set joint velocities in the simulator
+        self._set_joint_velocities(body_id, joint_ids, velocities, max_force)
+
+        # publish the joint velocities through the middleware
+        if self.middleware is not None:
+            self.middleware.set_joint_velocities(body_id, joint_ids, velocities, max_force)
+
+    def _set_joint_velocities(self, body_id, joint_ids, velocities, max_force=None):
+        """
+        Set the velocity of the given joint(s) (using velocity control).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            velocities (float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
+            max_force (None, float, np.array[float[N]]): maximum motor forces/torques
+        """
         pass
 
     def get_joint_velocities(self, body_id, joint_ids):
+        """
+        Get the velocity of the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                float: joint velocity [rad/s]
+            if multiple joints:
+                np.array[float[N]]: joint velocities [rad/s]
+        """
+        # if a middleware is defined
+        if self.middleware is not None:
+            # get joint velocities from the middleware
+            dq = self.middleware.get_joint_velocities(body_id, joint_ids)
+            if dq is None:  # if we didn't get the joint velocities from the middleware, get them from the simulator
+                dq = self._get_joint_velocities(body_id, joint_ids)
+            else:  # if we got them from the middleware, set them in the simulator
+                self._set_joint_velocities(body_id=body_id, joint_ids=joint_ids, velocities=dq)
+
+        else:
+            # get the joint velocities from the simulator
+            dq = self._get_joint_velocities(body_id, joint_ids)
+
+            # if the middleware is set on the teleoperation mode, publish the joint velocities through the middleware
+            if self.middleware is not None:
+                self.middleware.set_joint_velocities(body_id, joint_ids, dq, check_teleoperate=True)
+
+        return dq
+
+    def _get_joint_velocities(self, body_id, joint_ids):
         """
         Get the velocity of the given joint(s).
 
@@ -1788,9 +1905,58 @@ class Simulator(object):
             joint_ids (int, list[int]): joint id, or list of joint ids.
             torques (float, list[float], np.array[float]): desired torque(s) to apply to the joint(s) [N].
         """
+        # set joint torques in the simulator
+        self._set_joint_torques(body_id, joint_ids, torques)
+
+        # publish the joint torques through the middleware
+        if self.middleware is not None:
+            self.middleware.set_joint_torques(body_id, joint_ids, torques)
+
+    def _set_joint_torques(self, body_id, joint_ids, torques):
+        """
+        Set the torque/force to the given joint(s) (using force/torque control).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            torques (float, list[float], np.array[float]): desired torque(s) to apply to the joint(s) [N].
+        """
         pass
 
     def get_joint_torques(self, body_id, joint_ids):
+        """
+        Get the applied torque(s) on the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                float: torque [Nm]
+            if multiple joints:
+                np.array[float[N]]: torques associated to the given joints [Nm]
+        """
+        # if a middleware is defined
+        if self.middleware is not None:
+            # get joint torques from the middleware
+            tau = self.middleware.get_joint_torques(body_id, joint_ids)
+            if tau is None:  # if we didn't get the joint torques from the middleware, get them from the simulator
+                tau = self._get_joint_torques(body_id, joint_ids)
+            else:  # if we got them from the middleware, set them in the simulator
+                self._set_joint_torques(body_id=body_id, joint_ids=joint_ids, torques=tau)
+
+        else:
+            # get the joint velocities from the simulator
+            tau = self._get_joint_torques(body_id, joint_ids)
+
+            # if the middleware is set on the teleoperation mode, publish the joint torques through the middleware
+            if self.middleware is not None:
+                self.middleware.set_joint_torques(body_id, joint_ids, tau, check_teleoperate=True)
+
+        return tau
+
+    def _get_joint_torques(self, body_id, joint_ids):
         """
         Get the applied torque(s) on the given joint(s).
 

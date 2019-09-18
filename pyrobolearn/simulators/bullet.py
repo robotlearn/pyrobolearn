@@ -1735,15 +1735,15 @@ class Bullet(Simulator):
             link_id (int): link index.
             compute_velocity (bool): If True, the Cartesian world velocity will be computed and returned.
             compute_forward_kinematics (bool): if True, the Cartesian world position/orientation will be recomputed
-                using forward kinematics.
+              using forward kinematics.
 
         Returns:
             np.array[float[3]]: Cartesian world position of CoM
             np.array[float[4]]: Cartesian world orientation of CoM, in quaternion [x,y,z,w]
             np.array[float[3]]: local position offset of inertial frame (center of mass) expressed in the URDF
-                link frame
+              link frame
             np.array[float[4]]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed in URDF
-                link frame
+              link frame
             np.array[float[3]]: world position of the URDF link frame
             np.array[float[4]]: world orientation of the URDF link frame (expressed as a quaternion [x,y,z,w])
             np.array[float[3]]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
@@ -2214,7 +2214,7 @@ class Bullet(Simulator):
             return np.asarray(self.sim.getJointInfo(body_id, joint_ids)[-4])
         return np.asarray([self.sim.getJointInfo(body_id, joint_id)[-4] for joint_id in joint_ids])
 
-    def set_joint_positions(self, body_id, joint_ids, positions, velocities=None, kps=None, kds=None, forces=None):
+    def _set_joint_positions(self, body_id, joint_ids, positions, velocities=None, kps=None, kds=None, forces=None):
         """
         Set the position of the given joint(s) (using position control).
 
@@ -2230,7 +2230,7 @@ class Bullet(Simulator):
         self.set_joint_motor_control(body_id, joint_ids, control_mode=pybullet.POSITION_CONTROL, positions=positions,
                                      velocities=velocities, forces=forces, kp=kps, kd=kds)
 
-    def get_joint_positions(self, body_id, joint_ids):
+    def _get_joint_positions(self, body_id, joint_ids):
         """
         Get the position of the given joint(s).
 
@@ -2248,7 +2248,7 @@ class Bullet(Simulator):
             return self.sim.getJointState(body_id, joint_ids)[0]
         return np.asarray([state[0] for state in self.sim.getJointStates(body_id, joint_ids)])
 
-    def set_joint_velocities(self, body_id, joint_ids, velocities, max_force=None):
+    def _set_joint_velocities(self, body_id, joint_ids, velocities, max_force=None):
         """
         Set the velocity of the given joint(s) (using velocity control).
 
@@ -2269,7 +2269,7 @@ class Bullet(Simulator):
         self.sim.setJointMotorControlArray(body_id, joint_ids, self.sim.VELOCITY_CONTROL,
                                            targetVelocities=velocities, forces=max_force)
 
-    def get_joint_velocities(self, body_id, joint_ids):
+    def _get_joint_velocities(self, body_id, joint_ids):
         """
         Get the velocity of the given joint(s).
 
@@ -2372,7 +2372,7 @@ class Bullet(Simulator):
     #     q_idx = self.get_q_indices(body_id, joint_ids)
     #     return accelerations[q_idx]
 
-    def set_joint_torques(self, body_id, joint_ids, torques):
+    def _set_joint_torques(self, body_id, joint_ids, torques):
         """
         Set the torque/force to the given joint(s) (using force/torque control).
 
@@ -2385,7 +2385,7 @@ class Bullet(Simulator):
             self.sim.setJointMotorControl2(body_id, joint_ids, self.sim.TORQUE_CONTROL, force=torques)
         self.sim.setJointMotorControlArray(body_id, joint_ids, self.sim.TORQUE_CONTROL, forces=torques)
 
-    def get_joint_torques(self, body_id, joint_ids):
+    def _get_joint_torques(self, body_id, joint_ids):
         """
         Get the applied torque(s) on the given joint(s). "This is the motor torque applied during the last `step`.
         Note that this only applies in VELOCITY_CONTROL and POSITION_CONTROL. If you use TORQUE_CONTROL then the
@@ -3397,8 +3397,8 @@ class Bullet(Simulator):
         Args:
             body_id (int): unique body id.
             link_id (int): link id.
-            local_position (np.array[float[3]]): the point on the specified link to compute the Jacobian (in link local
-                coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+            local_position (np.array[float[3]]): the point on the specified link to compute the Jacobian (in link
+              local coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
             q (np.array[float[N]]): joint positions of size N, where N is the number of DoFs.
             dq (np.array[float[N]]): joint velocities of size N, where N is the number of DoFs.
             des_ddq (np.array[float[N]]): desired joint accelerations of size N.
