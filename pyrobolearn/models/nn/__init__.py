@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import general neural network model
 from .dnn import NN

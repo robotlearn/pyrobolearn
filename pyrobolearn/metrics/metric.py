@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Defines the various metrics used in different learning paradigms.
 """

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import interface state
 from .interface_state import InterfaceState

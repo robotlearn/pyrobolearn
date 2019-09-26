@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import struct
 
 def pack(fmt, *args):

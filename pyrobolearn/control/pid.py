@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # This defines the PID controller
 
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import physics
 from .physics_randomizer import *

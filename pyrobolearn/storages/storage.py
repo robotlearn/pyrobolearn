@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provide the replay memories which stores transitions (states, actions, next_states, rewards) at each time step,
 when running a policy in the environment.

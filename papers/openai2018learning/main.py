@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """
 This sample of code implements the "Learning Dexterous In-Hand Manipulation" paper [1] using the PyRoboLearn framework.

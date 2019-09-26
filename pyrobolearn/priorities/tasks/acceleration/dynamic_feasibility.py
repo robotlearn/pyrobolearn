@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 r"""Provide the dynamic feasibility task (which is based on the dynamic feasibility constraint).
 

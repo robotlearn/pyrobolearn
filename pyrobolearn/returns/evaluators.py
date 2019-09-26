@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Computes the various targets based on value function on batches of trajectories/transitions (used in RL).
 

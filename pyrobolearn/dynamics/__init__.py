@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import the transition dynamic models
 from .dynamic import *

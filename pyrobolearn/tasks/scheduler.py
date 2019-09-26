@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Define the `Scheduler` class which deals on how to run multiple tasks in a sequential or parallel way.
 

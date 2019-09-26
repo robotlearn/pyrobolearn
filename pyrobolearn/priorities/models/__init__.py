@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import the abstract model interface
 from .model import ModelInterface

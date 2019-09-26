@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provide the Explorer class used in the first step of RL algorithms
 

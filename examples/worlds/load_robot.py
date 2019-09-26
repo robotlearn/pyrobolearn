@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """load a robot in a basic world and distribute randomly few objects on the floor.
 

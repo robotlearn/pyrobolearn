@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # General model
 from .model import Model

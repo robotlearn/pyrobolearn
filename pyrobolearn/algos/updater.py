@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provide the Updater class used in the third and final step of RL algorithms
 

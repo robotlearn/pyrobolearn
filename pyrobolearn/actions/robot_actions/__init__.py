@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import the basic robot actions
 from .robot_actions import RobotAction

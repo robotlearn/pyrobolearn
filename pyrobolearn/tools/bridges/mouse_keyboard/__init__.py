@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import
 from .bridge_mousekeyboard_world import BridgeMouseKeyboardWorld

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Example on how to use the 'Pendulum' OpenAI Gym environments in PRL using the `stable_baselines` library.
 """

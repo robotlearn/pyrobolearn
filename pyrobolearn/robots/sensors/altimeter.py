@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Define the altimeter sensor which measures the altitude of an object.
 """

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import function approximators
 from .approximator import *

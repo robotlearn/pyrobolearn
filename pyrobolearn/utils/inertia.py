@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provide functions to process inertia matrices and moments of inertia.
 

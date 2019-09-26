@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 from autograd import *
 from autograd.numpy import *

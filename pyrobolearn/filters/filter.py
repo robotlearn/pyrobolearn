@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # This file provides some common filters used in signal processing
 
 import scipy

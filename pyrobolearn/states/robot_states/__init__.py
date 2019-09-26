@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import the basic robot states
 from .robot_states import RobotState, BasePositionState, BaseHeightState, BaseOrientationState, BasePoseState, \

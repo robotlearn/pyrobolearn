@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """In this file, we create from scratch the inverted pendulum swing-up environment defined in OpenAI Gym.
 

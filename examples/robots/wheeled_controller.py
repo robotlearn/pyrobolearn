@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Control a wheeled robot using a keyboard, an Xbox or Playstation game controller.
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import task
 from .task import *

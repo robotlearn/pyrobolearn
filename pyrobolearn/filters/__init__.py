@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import basic filter
 from .filter import *

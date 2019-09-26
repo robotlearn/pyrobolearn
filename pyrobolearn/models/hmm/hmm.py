@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # This file describes the Hidden Markov Model
 
 # TODO: implement this model

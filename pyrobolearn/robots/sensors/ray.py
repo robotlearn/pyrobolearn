@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Define ray sensors; sensors that cast rays into the world and return the range of the nearest object that were
 intersected with these ones.

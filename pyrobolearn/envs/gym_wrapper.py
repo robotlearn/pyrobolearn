@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provide a wrapper around the gym framework and the `gym.Env` class
 

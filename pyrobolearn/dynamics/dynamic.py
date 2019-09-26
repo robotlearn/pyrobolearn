@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provides the `transition`/`dynamic` function approximators in RL.
 
