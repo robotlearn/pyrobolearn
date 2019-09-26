@@ -30,6 +30,18 @@ class LeggedRobot(Robot):
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.,
                  foot_frictions=None):
+        """
+        Initialize the Legged robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            foot_frictions (float, list of float): foot friction value(s).
+        """
         super(LeggedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale=scale)
 
         # leg and feet ids
@@ -169,14 +181,21 @@ class LeggedRobot(Robot):
             floor_id (int, None): id of the floor in the simulator. If None, it will use the force/pressure sensors.
 
         Returns:
-            np.array[3], None: center of pressure. None if the robot is not in contact with the ground.
+            np.array[float[3]], None: center of pressure. None if the robot is not in contact with the ground.
 
         References:
             - [1] "Postural Stability of Biped Robots and Foot-Rotation Index (FRI) Point", Goswami, 1999
             - [2] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
-            Implications", Popovic et al., 2005
+              Implications", Popovic et al., 2005
         """
         if floor_id is not None:
+
+            cop_key = 'cop_' + str(floor_id)
+
+            # checked if already cached
+            if cop_key in self._state:
+                return self._state[cop_key]
+
             # get contact points between the robot's links and the floor
             points = self.sim.get_contact_points(body1=self.id, body2=floor_id)
 
@@ -191,6 +210,9 @@ class LeggedRobot(Robot):
             # compute CoP and return it
             cop = forces * positions / np.sum(forces)
             cop = np.sum(cop, axis=0)
+
+            # cache it
+            self._state[cop_key] = cop
 
             return cop
 
@@ -231,8 +253,8 @@ class LeggedRobot(Robot):
 
         .. math::
 
-            d_x^{-} \leq \frac{n^i_y}{f^i_z} \leq d_x^{+} \\
-            d_y^{-} \leq -\frac{n^i_x}{f^i_z} \leq d_y^{+}
+            d_x^{-} \leq -\frac{n^i_y}{f^i_z} \leq d_x^{+} \\
+            d_y^{-} \leq \frac{n^i_x}{f^i_z} \leq d_y^{+}
 
         which ensures the stability of the foot/ground contact. The :math:`(d_x^{-}, d_x^{+})` and
         :math:`(d_y^{-}, d_y^{+})` defines the size of the sole in the x and y directions respectively. Basically,
@@ -251,11 +273,11 @@ class LeggedRobot(Robot):
             floor_id (int, None): id of the floor in the simulator. If None, it will use the force/pressure sensors.
 
         Returns:
-            np.array[3], None: zero-moment point. None if the ground reaction force in z is 0.
+            np.array[float[3]], None: zero-moment point. None if the ground reaction force in z is 0.
 
         References:
             - [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
-            Implications", Popovic et al., 2005
+              Implications", Popovic et al., 2005
             - [2] "Biped Walking Pattern Generation by using Preview Control of ZMP", Kajita et al., 2003
             - [3] "Exploiting Angular Momentum to Enhance Bipedal Center-of-Mass Control", Hofmann et al., 2009
         """
@@ -265,6 +287,13 @@ class LeggedRobot(Robot):
 
         # if the floor id is given, use the simulator to compute the ZMP (using the contact points)
         if floor_id is not None:
+
+            zmp_key = 'zmp_' + str(floor_id)
+
+            # checked if already cached
+            if zmp_key in self._state:
+                return self._state[zmp_key]
+
             # get contact points between the robot's links and the floor
             points = self.sim.get_contact_points(body1=self.id, body2=floor_id)
 
@@ -299,6 +328,9 @@ class LeggedRobot(Robot):
             zmp[0] += -forces[0]/forces[2] * self.com[2] - moments[1]/forces[2]
             zmp[1] += -forces[1]/forces[2] * self.com[2] + moments[0]/forces[2]
 
+            # cache it
+            self._state[zmp_key] = zmp
+
             # return ZMP
             return zmp
 
@@ -329,7 +361,7 @@ class LeggedRobot(Robot):
         References:
             - [1] "Postural Stability of Biped Robots and the Foot-Rotation Indicator (FRI) Point", Goswami, 1999
             - [2] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
-            Implications", Popovic et al., 2005
+              Implications", Popovic et al., 2005
         """
         raise NotImplementedError
 
@@ -359,17 +391,24 @@ class LeggedRobot(Robot):
             floor_id (int, None): id of the floor in the simulator. If None, it will use the force/pressure sensors.
 
         Returns:
-            np.array[3], None: centroidal moment pivot point. None if the ground reaction force in z is 0.
+            np.array[float[3]], None: centroidal moment pivot point. None if the ground reaction force in z is 0.
 
         References:
             - [1] "Ground Reference Points in Legged Locomotion: Definitions, Biological Trajectories and Control
-            Implications", Popovic et al., 2005
+              Implications", Popovic et al., 2005
         """
         # update the CoM
         if update_com:
             self.get_center_of_mass_position()
 
         if floor_id is not None:
+
+            cmp_key = 'cmp_' + str(floor_id)
+
+            # checked if already cached
+            if cmp_key in self._state:
+                return self._state[cmp_key]
+
             # get contact points between the robot's links and the floor
             points = self.sim.get_contact_points(body1=self.id, body2=floor_id)
 
@@ -396,6 +435,9 @@ class LeggedRobot(Robot):
             cmp[2] = np.mean(positions, axis=0)[2]
             cmp[0] -= forces[0] / forces[2] * self.com[2]
             cmp[1] -= forces[1] / forces[2] * self.com[2]
+
+            # cache it
+            self._state[cmp_key] = cmp
 
             # return CMP
             return cmp
@@ -604,7 +646,7 @@ class LeggedRobot(Robot):
         Draw the CoP in the simulator.
 
         Args:
-            cop (np.array[3], None, int): center of pressure. If None or int, it will compute the CoP. If None, it
+            cop (np.array[float[3]], None, int): center of pressure. If None or int, it will compute the CoP. If None, it
                 will compute it using the force sensors. If int, it will be assumed to be the floor's id, and will
                 use the simulator to compute the CoP.
             radius (float): radius of the sphere representing the CoP of the robot
@@ -626,7 +668,7 @@ class LeggedRobot(Robot):
         Draw the ZMP in the simulator.
 
         Args:
-            zmp (np.array[3], None, int): zero-moment point. If None or int, it will compute the ZMP. If None, it
+            zmp (np.array[float[3]], None, int): zero-moment point. If None or int, it will compute the ZMP. If None, it
                 will compute it using the force sensors. If int, it will be assumed to be the floor's id, and will
                 use the simulator to compute the ZMP.
             radius (float): radius of the sphere representing the ZMP of the robot
@@ -649,7 +691,7 @@ class LeggedRobot(Robot):
         Draw the CMP in the simulator.
 
         Args:
-            cmp (np.array[3], None, int): central moment pivot. If None or int, it will compute the CMP. If None, it
+            cmp (np.array[float[3]], None, int): central moment pivot. If None or int, it will compute the CMP. If None, it
                 will compute it using the force sensors. If int, it will be assumed to be the floor's id, and will
                 use the simulator to compute the CMP.
             radius (float): radius of the sphere representing the CMP of the robot
@@ -672,7 +714,7 @@ class LeggedRobot(Robot):
         Draw the FRI in the simulator.
 
         Args:
-            fri (np.array[3], None, int): central moment pivot. If None or int, it will compute the FRI. If None, it
+            fri (np.array[float[3]], None, int): central moment pivot. If None or int, it will compute the FRI. If None, it
                 will compute it using the force sensors. If int, it will be assumed to be the floor's id, and will
                 use the simulator to compute the FRI.
             radius (float): radius of the sphere representing the FRI of the robot
@@ -722,6 +764,33 @@ class LeggedRobot(Robot):
             self.sim.remove_body(self.fri_visual)
             self.fri_visual = None
 
+    def update_visuals(self):  # TODO: finish this
+        """
+        Update all visuals.
+        """
+        # update robot visuals
+        super(LeggedRobot, self).update_visuals()
+
+        # update support polygon
+
+        # update friction cones/pyramids
+
+        # update cop
+        if self.cop_visual is not None:
+            self.draw_cop()
+
+        # update zmp
+        if self.zmp_visual is not None:
+            self.draw_zmp()
+
+        # update cmp
+        if self.cmp_visual is not None:
+            self.draw_cmp()
+
+        # update fri
+        if self.fri_visual is not None:
+            self.draw_fri()
+
 
 class BipedRobot(LeggedRobot):
     r"""Biped Robot
@@ -730,6 +799,17 @@ class BipedRobot(LeggedRobot):
     """
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        """
+        Initialize the Biped robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(BipedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_leg_id = 0
@@ -767,6 +847,17 @@ class QuadrupedRobot(LeggedRobot):
     """
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        """
+        Initialize the Quadruped robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(QuadrupedRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_front_leg_id = 0
@@ -826,6 +917,17 @@ class HexapodRobot(LeggedRobot):
     """
 
     def __init__(self, simulator, urdf, position, orientation=None, fixed_base=False, scale=1.):
+        """
+        Initialize the hexapod robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(HexapodRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_front_leg_id = 0

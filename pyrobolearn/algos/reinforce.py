@@ -15,7 +15,7 @@ from pyrobolearn.actorcritics import ActorCritic
 from pyrobolearn.exploration import ActionExploration
 
 from pyrobolearn.storages import RolloutStorage
-from pyrobolearn.samplers import StorageSampler
+from pyrobolearn.samplers import BatchRandomSampler
 from pyrobolearn.returns import ActionRewardEstimator, PolicyEvaluator
 from pyrobolearn.losses import PGLoss, ValueL2Loss
 from pyrobolearn.optimizers import Adam
@@ -132,15 +132,17 @@ class REINFORCE(GradientRLAlgo):
 
 
     References:
-        [1] "Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning", Williams, 1992
-        [2] "Policy Gradient Methods", Peters, 2010 (Scholarpedia)
-        [3] "A Survey on Policy Search for Robotics", Deisenroth et al., 2013
-        [4] PyTorch Reinforce: https://github.com/pytorch/examples/blob/master/reinforcement_learning/reinforce.py
-        [5] OpenAI - Spinning Up: https://spinningup.openai.com/en/latest/algorithms/vpg.html
-        [6] "Policy Gradient Algorithms":
-            https://lilianweng.github.io/lil-log/2018/04/08/policy-gradient-algorithms.html
+        - [1] "Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning", Williams,
+          1992
+        - [2] "Policy Gradient Methods", Peters, 2010 (Scholarpedia)
+        - [3] "A Survey on Policy Search for Robotics", Deisenroth et al., 2013
+        - [4] PyTorch Reinforce: https://github.com/pytorch/examples/blob/master/reinforcement_learning/reinforce.py
+        - [5] OpenAI - Spinning Up: https://spinningup.openai.com/en/latest/algorithms/vpg.html
+        - [6] "Policy Gradient Algorithms":
+          https://lilianweng.github.io/lil-log/2018/04/08/policy-gradient-algorithms.html
 
     Other implementations:
+
     - https://github.com/rll/rllab/blob/master/rllab/algos/vpg.py
     - https://github.com/pytorch/examples/blob/master/reinforcement_learning/reinforce.py
     - https://github.com/JamesChuanggg/pytorch-REINFORCE
@@ -149,7 +151,7 @@ class REINFORCE(GradientRLAlgo):
     - https://github.com/rlcode/reinforcement-learning/blob/master/2-cartpole/3-reinforce/cartpole_reinforce.py
     """
 
-    def __init__(self, task, approximators, gamma=0.99, lr=0.001, num_workers=1):
+    def __init__(self, task, approximators, gamma=0.99, lr=0.001, num_batches=10, batch_size=10, num_workers=1):
         """
         Initialize the REINFORCE on-policy RL algorithm.
 
@@ -190,7 +192,7 @@ class REINFORCE(GradientRLAlgo):
         states, actions = policy.states, policy.actions
         storage = RolloutStorage(num_steps=1000, state_shapes=states.merged_shape, action_shapes=actions.merged_shape,
                                  num_trajectories=1)
-        sampler = StorageSampler(storage)
+        sampler = BatchRandomSampler(storage, num_batches=10, batch_size_bounds=(8, 64))
 
         # create return: R_t = \sum_{t'=t}^{T} \gamma^{t'-t} r_{t'}
         returns = ActionRewardEstimator(storage, gamma=gamma)
@@ -218,7 +220,7 @@ class REINFORCE(GradientRLAlgo):
         updater = Updater(approximators, sampler, loss, optimizer, evaluators=[policy_evaluator])
 
         # initialize RL algorithm
-        super(REINFORCE, self).__init__(explorer, evaluator, updater)
+        super(REINFORCE, self).__init__(explorer, evaluator, updater, )
 
 
 # alias

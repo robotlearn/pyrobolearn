@@ -20,13 +20,18 @@ class Manipulator(Robot):
     Manipulator robots are robots that use some of its end-effectors to manipulate objects in its environment.
     """
 
-    def __init__(self,
-                 simulator,
-                 urdf,
-                 position=(0, 0, 0.),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.):
+    def __init__(self, simulator, urdf, position=(0, 0, 0.), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.):
+        """
+        Initialize the manipulator.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(Manipulator, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.arms = []  # list of arms where an arm is a list of links
@@ -123,8 +128,18 @@ class BiManipulator(Manipulator):
     Bi-manipulators are robots that have two manipulators to manipulate objects in the environment.
     """
 
-    def __init__(self, simulator, urdf, position=(0, 0, 1.5), orientation=(0, 0, 0, 1), fixed_base=False,
-                 scale=1.):
+    def __init__(self, simulator, urdf, position=(0, 0, 1.5), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.):
+        """
+        Initialize the bi-manipulator.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(BiManipulator, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_arm_id = 0

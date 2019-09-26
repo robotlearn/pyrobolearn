@@ -3,6 +3,34 @@ import inspect
 import types
 import numpy as np
 
+# import data structures
+from . import data_structures
+
+# import transformations
+from . import transformation
+
+# import math utils
+from . import math_utils
+from . import manifold_utils
+
+# import interpolators
+from . import interpolator
+
+# import units
+from . import units
+
+# import converters
+from . import converter
+
+# import feedback laws
+from . import feedback
+
+# import real-time plotting
+from . import plotting
+
+# import parsers
+# from . import parsers
+
 
 # Built-in functions
 

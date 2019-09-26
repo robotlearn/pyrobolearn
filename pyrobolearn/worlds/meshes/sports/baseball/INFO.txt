@@ -1,0 +1,3 @@
+
+- The license for the baseball bat is the `BLENDSWAP_LICENSE.txt` file.
+- The license for the baseball ball is the `LICENSE.html` file.

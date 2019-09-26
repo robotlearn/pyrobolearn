@@ -19,6 +19,7 @@ world = BasicWorld(sim)
 # create robot
 robot = KukaIIWA(sim)
 robot.print_info()
+world.load_robot(robot)
 
 # define useful variables for IK
 dt = 1./240
@@ -61,7 +62,7 @@ for t in count():
     else:
         J = robot.get_linear_jacobian(link_id, q=q)[:, qIdx]
 
-    # Pseudo-inverse
+    # Pseudo-inverse: \hat{J} = J^T (JJ^T + k^2 I)^{-1}
     Jp = robot.get_damped_least_squares_inverse(J, damping)
 
     # evaluate damped-least-squares IK

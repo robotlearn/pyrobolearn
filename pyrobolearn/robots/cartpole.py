@@ -27,23 +27,30 @@ class CartPole(Robot):
     The number of links for the pendulum can be specified during runtime.
 
     References:
-        [1] "Reinforcement Learning: an Introduction", Barto and Sutton, 1998
-        [2] Cartpole bullet environment:
+        - [1] "Reinforcement Learning: an Introduction", Barto and Sutton, 1998
+        - [2] Cartpole bullet environment:
             github.com/bulletphysics/bullet3/blob/master/examples/pybullet/gym/pybullet_envs/bullet/cartpole_bullet.py
-        [3] "PyDy Tutorial: Human Standing": https://github.com/pydy/pydy-tutorial-human-standing
-        [4] "Dynamics with Python balancing the five link pendulum": http://www.moorepants.info/blog/npendulum.html
+        - [3] "PyDy Tutorial: Human Standing": https://github.com/pydy/pydy-tutorial-human-standing
+        - [4] "Dynamics with Python balancing the five link pendulum": http://www.moorepants.info/blog/npendulum.html
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0),
-                 orientation=(0, 0, 0, 1),
-                 scale=1.,
-                 fixed_base=True,
-                 urdf=os.path.join(pybullet_data.getDataPath(), "cartpole.urdf"),
-                 num_links=1,
-                 inverted_pole=False,
-                 pole_mass=1):   # pole_mass=10
+    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), scale=1., fixed_base=True,
+                 num_links=1, inverted_pole=False, pole_mass=1,
+                 urdf=os.path.join(pybullet_data.getDataPath(), "cartpole.urdf")):  # pole_mass=10
+        """
+        Initialize the Cartpole robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            num_links (int): number of links / poles connected to each other.
+            inverted_pole (bool): if we should start with inverted poles, or not.
+            pole_mass (float): mass of each link/pole.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.)
@@ -99,8 +106,6 @@ class CartPole(Robot):
         dims = (15, 0.025, 0.025)
         color = (0, 0.8, 0.8, 1)
         mass = 0
-        position = (0, 0, 0)
-        orientation = (0, 0, 0, 1)
         collision_shape = self.sim.create_collision_shape(self.sim.GEOM_BOX, half_extents=dims)
         visual_shape = self.sim.create_visual_shape(self.sim.GEOM_BOX, half_extents=dims, rgba_color=color)
 
@@ -530,11 +535,11 @@ class LQR(object):
 if __name__ == "__main__":
     import numpy as np
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import World
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = World(sim)

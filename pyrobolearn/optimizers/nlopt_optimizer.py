@@ -47,9 +47,9 @@ class NLopt(Optimizer):
     - algorithms: https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/
 
     References:
-        [1] NLopt: https://nlopt.readthedocs.io/en/latest/
-        [2] NLopt with Python: with Python: https://nlopt.readthedocs.io/en/latest/NLopt_Python_Reference/
-        [3] Github repo: https://github.com/stevengj/nlopt
+        - [1] NLopt: https://nlopt.readthedocs.io/en/latest/
+        - [2] NLopt with Python: with Python: https://nlopt.readthedocs.io/en/latest/NLopt_Python_Reference/
+        - [3] Github repo: https://github.com/stevengj/nlopt
     """
 
     def __init__(self, method, submethod=None, seed=None, *args, **kwargs):

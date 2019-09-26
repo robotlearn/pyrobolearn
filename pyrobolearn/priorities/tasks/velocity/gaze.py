@@ -47,10 +47,10 @@ class GazeTask(JointVelocityTask):
 
         Args:
             model (ModelInterface): model interface.
-            weight (float, np.array[2,2]): weight scalar or matrix associated to the task.
-            constraints (list of Constraint): list of constraints associated with the task.
+            weight (float, np.array[float[2,2]]): weight scalar or matrix associated to the task.
+            constraints (list[Constraint]): list of constraints associated with the task.
         """
-        super(GazeTask, self).__init__(model=model, constraints=constraints)
+        super(GazeTask, self).__init__(model=model, weight=weight, constraints=constraints)
 
         # self.cartesian_task = CartesianTask(self.model, distal_link=distal_link, weight=weight)
 

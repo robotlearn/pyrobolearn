@@ -19,17 +19,23 @@ class Crab(HexapodRobot):
     r"""Crab Hexapod robot
 
     References:
-        [1] http://wiki.ros.org/Robots/HexapodRobot
-        [2] https://github.com/tuuzdu/crab_project
+        - [1] http://wiki.ros.org/Robots/HexapodRobot
+        - [2] https://github.com/tuuzdu/crab_project
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0.12),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0.12), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/crab/crab.urdf'):
+        """
+        Initialize the Crab robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.12)
@@ -59,11 +65,11 @@ class Crab(HexapodRobot):
 # Test
 if __name__ == "__main__":
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

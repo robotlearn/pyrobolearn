@@ -8,7 +8,7 @@ References:
 from pyrobolearn.storages.er import ExperienceReplay
 
 __author__ = "Brian Delhaisse"
-__copyright__ = "Copyright 2018, PyRoboLearn"
+__copyright__ = "Copyright 2019, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
@@ -22,9 +22,9 @@ class HindsightExperienceReplay(ExperienceReplay):
 
     One of the main challenges in RL is to shape the reward function such that the agent can successfully learned to
     perform the specified task. This often requires expert knowledge to engineer this reward function.
-    To address this, the authors from [1] proposes to use a hindsight experience replay, which enables learning from
-    sparse and binary rewards, and can be combined with any off-policy RL algorithms. This notably improves the
-    sample efficiency.
+    To address this, the authors from [1] propose to use a hindsight experience replay storage unit, which enables
+    learning from sparse and binary rewards, and can be combined with any off-policy RL algorithms. This notably
+    improves the sample efficiency.
 
     In this setting, one or several goals have to be defined. They are concatenated with the state and feed to the
     policy and value approximators. Additionally, they are included in the transition tuple sampled from the
@@ -64,9 +64,19 @@ class HindsightExperienceReplay(ExperienceReplay):
 
 
     References:
-        [1] "Hindsight Experience Replay", Andrychowicz et al., 2017
+        - [1] "Hindsight Experience Replay", Andrychowicz et al., 2017
     """
-    pass
+
+    def __init__(self, state_shapes, action_shapes, capacity=10000, *args, **kwargs):
+        """
+        Initialize the experience replay storage.
+
+        Args:
+            state_shapes (list[tuple[int]], tuple[int]): each tuple represents the shape of an observation/state.
+            action_shapes (list[tuple[int]], tuple[int]): each tuple represents the shape of an action.
+            capacity (int): maximum size of the experience replay storage.
+        """
+        super(HindsightExperienceReplay, self).__init__(state_shapes, action_shapes, capacity, *args, **kwargs)
 
 
 # alias

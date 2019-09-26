@@ -13,7 +13,7 @@
   
   -->
   <!-- Uncomment this to have the robot rigidly connected to the world -->
-  <!--link name="world"> <!-- if you put mass/inertia to 0 for the base_link in pybullet then the robot will not be affected by gravity (i.e. it will float)>
+  <!--link name="world"--> <!-- if you put mass/inertia to 0 for the base_link in pybullet then the robot will not be affected by gravity (i.e. it will float)>
     <inertial>
       <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
       <mass value="0.0"/>

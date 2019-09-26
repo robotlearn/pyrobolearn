@@ -7,7 +7,7 @@ from pyrobolearn.tasks.task import Task
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "GNU GPLv3"
+__license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
@@ -21,8 +21,8 @@ class TLTask(object):
     different but similar problem [1,2].
 
     References:
-        [1] "A Survey on Transfer Learning", Pan et al., 2010
-        [2]" Transfer Learning for Reinforcement Learning Domains: A Survey", Taylor et al., 2009
+        - [1] "A Survey on Transfer Learning", Pan et al., 2010
+        - [2]" Transfer Learning for Reinforcement Learning Domains: A Survey", Taylor et al., 2009
     """
 
     def __init__(self, domain_task, target_task):

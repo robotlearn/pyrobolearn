@@ -2,7 +2,8 @@
 """Provide the Hand abstract classes.
 """
 
-from pyrobolearn.robots.robot import Robot
+from pyrobolearn.robots.gripper import AngularGripper
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -14,31 +15,135 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class Hand(Robot):
+class Hand(AngularGripper):
     r"""Hand end-effector
     """
 
-    def __init__(self,
-                 simulator,
-                 urdf,
-                 position=(0, 0, 1.),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.):
+    def __init__(self, simulator, urdf, position=(0, 0, 1.), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.):
+        """
+        Initialize the hand robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(Hand, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
-        self.fingers = []  # list of fingers where each finger is a list of links/joints
+    def get_fist_configuration(self):
+        """Return the joint configuration for the hand (and fingers) to form a fist."""
+        pass
 
-    @property
-    def num_fingers(self):
-        """Return the number of fingers on the hand"""
-        return len(self.fingers)
+    def get_open_configuration(self):
+        """Return the joint configuration for the hand (and fingers) to form an open hand (where the fingers are
+        attached/close to each other)."""
+        pass
 
-    def get_finger(self, finger_id=None):
-        """Return the list of joint/link ids for the specified finger"""
-        if finger_id:
-            return self.fingers[finger_id]
-        return self.fingers
+    def get_fully_open_configuration(self):
+        """Return the joint configuration for the hand (and fingers) to form a fully open hand (where the distance
+        between the fingers is maximal)."""
+        pass
+
+    def get_thumb_up_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the thumb up.
+
+        Args:
+            factor (float): 1 = completely up, 0 = completely down
+        """
+        pass
+
+    def get_thumb_down_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the thumb up.
+
+        Args:
+            factor (float): 1 = completely down, 0 = completely up
+        """
+        return self.get_thumb_up_configuration(factor=1.-factor)
+
+    def get_index_up_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the index finger up.
+
+        Args:
+            factor (float): 1 = completely up, 0 = completely down
+        """
+        pass
+
+    def get_index_down_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the index finger up.
+
+        Args:
+            factor (float): 1 = completely down, 0 = completely up
+        """
+        return self.get_index_up_configuration(factor=1.-factor)
+
+    def get_middle_up_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the middle finger up.
+
+        Args:
+            factor (float): 1 = completely up, 0 = completely down
+        """
+        pass
+
+    def get_middle_down_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the middle finger up.
+
+        Args:
+            factor (float): 1 = completely down, 0 = completely up
+        """
+        return self.get_middle_up_configuration(factor=1.-factor)
+
+    def get_ring_up_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the ring finger up.
+
+        Args:
+            factor (float): 1 = completely up, 0 = completely down
+        """
+        pass
+
+    def get_ring_down_configuration(self, factor=1.):
+        """
+        Return the joint configuration for the fingers to have the ring finger up.
+
+        Args:
+            factor (float): 1 = completely down, 0 = completely up
+        """
+        return self.get_ring_up_configuration(factor=1.-factor)
+
+    def get_pinky_up_configuration(self,  factor=1.):
+        """
+        Return the joint configuration for the fingers to have the pinky finger up.
+
+        Args:
+            factor (float): 1 = completely up, 0 = completely down
+        """
+        pass
+
+    def get_pinky_down_configuration(self,  factor=1.):
+        """
+        Return the joint configuration for the fingers to have the pinky finger up.
+
+        Args:
+            factor (float): 1 = completely down, 0 = completely up
+        """
+        return self.get_pinky_up_configuration(factor=1.-factor)
+
+    def get_ok_configuration(self):
+        """Return the joint configuration for the fingers to perform the OK or ring gesture.
+
+        References:
+            - https://en.wikipedia.org/wiki/OK_gesture
+        """
+        pass
 
 
 class TwoHand(Hand):
@@ -46,13 +151,18 @@ class TwoHand(Hand):
 
     """
 
-    def __init__(self,
-                 simulator,
-                 urdf,
-                 position=(0, 0, 1.),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.):
+    def __init__(self, simulator, urdf, position=(0, 0, 1.), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.):
+        """
+        Initialize the two hands robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(TwoHand, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.left_fingers = []  # list of ids in self.fingers

@@ -161,6 +161,17 @@ class Action(object):
         # one action: change the data
         # if self.has_data():
         else:
+            if self.is_discrete():  # discrete action
+                if isinstance(data, np.ndarray):  # data action is a numpy array
+                    # check if given logits or not
+                    if data.shape[-1] != 1:  # logits
+                        data = np.array([np.argmax(data)])
+                elif isinstance(data, (float, np.integer)):
+                    data = int(data)
+                else:
+                    raise TypeError("Expecting the `data` action to be an int, numpy array, instead got: "
+                                    "{}".format(type(data)))
+
             if not isinstance(data, np.ndarray):
                 if isinstance(data, (list, tuple)):
                     data = np.array(data)
@@ -289,13 +300,24 @@ class Action(object):
         return torch.cat([data.reshape(-1) for data in self.merged_torch_data])
 
     @property
+    def spaces(self):
+        """
+        Get the corresponding spaces as a list of spaces.
+        """
+        if self.has_space():
+            return [self._space]
+        return [action._space for action in self._actions]
+
+    @property
     def space(self):
         """
         Get the corresponding space.
         """
         if self.has_space():
-            return [self._space]
-        return [action._space for action in self._actions]
+            # return gym.spaces.Tuple([self._space])
+            return self._space
+        # return [action._space for action in self._actions]
+        return gym.spaces.Tuple([action._space for action in self._actions])
 
     @space.setter
     def space(self, space):
@@ -303,8 +325,42 @@ class Action(object):
         Set the corresponding space. This can only be used one time!
         """
         if self.has_data() and not self.has_space() and \
-                isinstance(space, (gym.spaces.Box, gym.spaces.Discrete)):
+                isinstance(space, (gym.spaces.Box, gym.spaces.Discrete, gym.spaces.MultiDiscrete)):
             self._space = space
+
+    @property
+    def merged_space(self):
+        """
+        Get the corresponding merged space. Note that all the spaces have to be of the same type.
+        """
+        if self.has_space():
+            return self._space
+        spaces = self.spaces
+        result = []
+        dtype, prev_dtype = None, None
+        for space in spaces:
+            if isinstance(space, gym.spaces.Box):
+                dtype = 'box'
+                result.append([space.low, space.high])
+            elif isinstance(space, gym.spaces.Discrete):
+                dtype = 'discrete'
+                result.append(space.n)
+            else:
+                raise NotImplementedError
+
+            if prev_dtype is not None and dtype != prev_dtype:
+                return self.space
+
+            prev_dtype = dtype
+
+        if dtype == 'box':
+            low = np.concatenate([res[0] for res in result])
+            high = np.concatenate([res[1] for res in result])
+            return gym.spaces.Box(low=low, high=high, dtype=np.float32)
+        elif dtype == 'discrete':
+            return gym.spaces.Discrete(n=np.sum(result))
+
+        return self.space
 
     @property
     def name(self):
@@ -456,7 +512,7 @@ class Action(object):
                 if data is None:
                     data = self._data
                 self._write(data)
-            else:  # read each action
+            else:  # write each action
                 if self.actions:
                     if data is None:
                         data = [None] * len(self.actions)
@@ -525,8 +581,9 @@ class Action(object):
         Does the action have discrete values?
         """
         if self._data is None:
-            return [isinstance(action._space, gym.spaces.Discrete) for action in self._actions]
-        if isinstance(self._space, gym.spaces.Discrete):
+            return [isinstance(action._space, (gym.spaces.Discrete, gym.spaces.MultiDiscrete))
+                    for action in self._actions]
+        if isinstance(self._space, (gym.spaces.Discrete, gym.spaces.MultiDiscrete)):
             return [True]
         return [False]
 
@@ -534,7 +591,10 @@ class Action(object):
         """
         If all the actions are discrete, then it is discrete.
         """
-        return all(self.has_discrete_values())
+        values = self.has_discrete_values()
+        if len(values) == 0:
+            return False
+        return all(values)
 
     def has_continuous_values(self):
         """
@@ -556,6 +616,7 @@ class Action(object):
         """
         If the action is continuous, it returns the lower and higher bounds of the action.
         If the action is discrete, it returns the maximum number of discrete values that the action can take.
+        If the action is multi-discrete, it returns the maximum number of discrete values that each subaction can take.
 
         Returns:
             list/tuple: list of bounds if multiple actions, or bounds of this action
@@ -566,6 +627,8 @@ class Action(object):
             return (self._space.low, self._space.high)
         elif isinstance(self._space, gym.spaces.Discrete):
             return (self._space.n,)
+        elif isinstance(self._space, gym.spaces.MultiDiscrete):
+            return (self._space.nvec,)
         raise NotImplementedError
 
     def apply(self, fct):

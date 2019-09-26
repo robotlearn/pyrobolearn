@@ -22,6 +22,7 @@ robot = prl.robots.RRBot(sim)
 robot.disable_motor()       # disable motors
 robot.print_info()
 robot.change_transparency()
+world.load_robot(robot)
 
 
 # run simulator

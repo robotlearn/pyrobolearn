@@ -8,7 +8,7 @@ References:
     - [1] "OpenSoT: A whole-body control library for the compliant humanoid robot COMAN", Rocchi et al., 2015
 """
 
-# TODO: finish to implement this
+# TODO: finish to implement this.
 
 import numpy as np
 
@@ -40,8 +40,8 @@ class MinEffortTask(JointVelocityTask):
 
         Args:
             model (ModelInterface): model interface.
-            weight (float, np.array[N,N]): weight scalar or matrix associated to the task.
-            constraints (list of Constraint): list of constraints associated with the task.
+            weight (float, np.array[float[N,N]]): weight scalar or matrix associated to the task.
+            constraints (list[Constraint]): list of constraints associated with the task.
         """
         super(MinEffortTask, self).__init__(model=model, weight=weight, constraints=constraints)
 

@@ -7,7 +7,7 @@ import numpy as np
 from pyrobolearn.robots.sensors.links import LinkSensor
 
 __author__ = "Brian Delhaisse"
-__copyright__ = "Copyright 2018, PyRoboLearn"
+__copyright__ = "Copyright 2019, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
@@ -26,10 +26,18 @@ class LaserSensor(LinkSensor):
     r"""Laser Sensor
 
     """
+    pass
 
 
 class ProximityLaserSensor(LaserSensor):
     r"""Proximity Laser Sensor
+
+    """
+    pass
+
+
+class RaySensor(LaserSensor):
+    r"""
 
     """
     pass

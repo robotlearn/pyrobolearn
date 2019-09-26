@@ -12,12 +12,13 @@ dynamics, etc.
 Dependencies in PRL: None
 
 References:
-    [1] PyBullet: https://pybullet.org
-    [2] PyBullet Quickstart Guide: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA
-    [3] PEP8: https://www.python.org/dev/peps/pep-0008/
+    - [1] PyBullet: https://pybullet.org
+    - [2] PyBullet Quickstart Guide: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA
+    - [3] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
 
 from pyrobolearn.utils.data_structures.orderedset import OrderedSet
+from pyrobolearn.simulators.middlewares.middleware import MiddleWare
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -42,8 +43,8 @@ class Simulator(object):
         sim = GazeboROS()
 
     References:
-    [1] PyBullet: https://pybullet.org
-    [2] PEP8: https://www.python.org/dev/peps/pep-0008/
+        - [1] PyBullet: https://pybullet.org
+        - [2] PEP8: https://www.python.org/dev/peps/pep-0008/
     """
 
     # keep track of the instantiated simulators
@@ -111,7 +112,10 @@ class Simulator(object):
     GEOM_MESH = 5
     GEOM_PLANE = 6
     GEOM_CAPSULE = 7
-    GEOM_CONE = 8       # NEW
+    GEOM_CONE = 8        # NEW
+    GEOM_ELLIPSOID = 9   # NEW
+    GEOM_HEIGHTMAP = 10  # NEW
+    GEOM_ARROW = 11      # NEW
 
     GUI = 1
     GUI_MAIN_THREAD = 8
@@ -132,6 +136,7 @@ class Simulator(object):
     JOINT_PRISMATIC = 1
     JOINT_REVOLUTE = 0
     JOINT_SPHERICAL = 2
+    JOINT_FREE = 7      # NEW
 
     KEY_IS_DOWN = 1
     KEY_WAS_RELEASED = 4
@@ -181,10 +186,21 @@ class Simulator(object):
     URDF_USE_SELF_COLLISION_EXCLUDE_PARENT = 16
     URDF_USE_SELF_COLLISION_INCLUDE_PARENT = 8192
 
-    def __init__(self, render=True, **kwargs):
+    def __init__(self, render=True, num_instances=1, middleware=None, **kwargs):
+        r"""
+        Initialize the Simulator.
+
+        Args:
+            render (bool): if True, it will open the GUI, otherwise, it will just run the server.
+            num_instances (int): number of simulator instances.
+            middleware (MiddleWare, None): middleware instance.
+            **kwargs (dict): optional arguments (this is not used here).
+        """
         self._render = render
         self.real_time = False
         self.kwargs = kwargs
+        self._num_instances = num_instances
+        self.middleware = middleware
 
         # main camera in the simulator
         self._camera = None
@@ -231,6 +247,19 @@ class Simulator(object):
         """Return the simulator time step."""
         return self.get_time_step()
 
+    @property
+    def middleware(self):
+        """Return the middleware."""
+        return self._middleware
+
+    @middleware.setter
+    def middleware(self, middleware):
+        """Set the middleware."""
+        if middleware is not None and not isinstance(middleware, MiddleWare):
+            raise TypeError("Expecting the given 'middleware' to be an instance of `MiddleWare`, but got instead: "
+                            "{}".format(middleware))
+        self._middleware = middleware
+
     #############
     # Operators #
     #############
@@ -268,6 +297,11 @@ class Simulator(object):
     ##################
 
     @staticmethod
+    def in_simulation():
+        """Return True if we are running in simulation instead of the real-world."""
+        return True
+
+    @staticmethod
     def simulate_gas_dynamics():
         """Return True if the simulator can simulate gases."""
         return False
@@ -290,6 +324,95 @@ class Simulator(object):
     @staticmethod
     def has_middleware_communication_layer():
         """Return True if the simulator has a middleware communication layer (like ROS, YARP, etc)."""
+        return self._middleware is not None
+
+    @staticmethod
+    def supports_dynamic_loading():
+        """Return True if the simulator supports the dynamic loading of models."""
+        return False
+
+    @staticmethod
+    def supports_acceleration():
+        """Return True if the simulator provides acceleration (dynamic) information (such as joint accelerations, link
+        Cartesian accelerations, etc). If not, the `Robot` class will have to implement these using finite
+        difference."""
+        return False
+
+    @staticmethod
+    def supports_sensors(sensor_type=None):
+        """Return True if the simulator provides supports for the specified sensor."""
+        return False
+
+    @staticmethod
+    def supports_urdf():
+        """Return True if we can use URDFs."""
+        return False
+
+    @staticmethod
+    def supports_light():
+        """Return True if we can define and access to the lights in the simulator."""
+        return False
+
+    @staticmethod
+    def supports_depth_image():
+        """Return True if we can get depth images from the simulator."""
+        return False
+
+    @staticmethod
+    def supports_segmentation_images():
+        """Return True if we can get segmentation images from the simulator."""
+        return False
+
+    @staticmethod
+    def supports_visualization():
+        """Return True if there is a graphical user interface (GUI)."""
+        return False
+
+    @staticmethod
+    def supports_interactive_gui():
+        """Return True if the simulator has an interactive GUI."""
+        return False
+
+    @staticmethod
+    def supports_mousekeyboard_events():
+        """Return True if the simulator allows to capture mouse and keyboard events."""
+        return False
+
+    @staticmethod
+    def supports_visual_objects():
+        """Return True if we can simulate objects that do not have collision shapes."""
+        return False
+
+    @staticmethod
+    def supports_plugins():
+        """Return True if we can use plugins."""
+        return False
+
+    @staticmethod
+    def supports_constraints(constraint_type):
+        """Return True if we can support the specified constraint type."""
+        return False
+
+    @staticmethod
+    def supports_realtime():
+        """Return True if the simulator supports real-time (meaning we don't need to step manually in the simulator).
+        Note that if we can step in the simulator, we can use threads to simulate the real-time. So the return value
+        should always be True."""
+        return True
+
+    @staticmethod
+    def supports_ray_casting():
+        """Return True if the simulator supports ray casting."""
+        return False
+
+    @staticmethod
+    def can_step():
+        """Return True if we can step manually in the simulator."""
+        return False
+
+    @staticmethod
+    def can_load_heightmap():
+        """Return True if the simulator can load a heightmap."""
         return False
 
     ###########
@@ -365,7 +488,11 @@ class Simulator(object):
         Args:
             enable (bool): If True, it will enable the real-time simulation. If False, it will disable it.
         """
-        pass
+        self.real_time = True
+
+    def use_real_time(self):
+        """Return True if the simulator is in real-time mode."""
+        return self.real_time
 
     def pause(self):
         """Pause the simulator if in real-time."""
@@ -461,9 +588,10 @@ class Simulator(object):
 
         Args:
             filename (str): a relative or absolute path to the URDF file on the file system of the physics server.
-            position (vec3): create the base of the object at the specified position in world space coordinates [x,y,z]
-            orientation (quat): create the base of the object at the specified orientation as world space quaternion
-                [x,y,z,w]
+            position (np.array[float[3]]): create the base of the object at the specified position in world space
+              coordinates [x,y,z].
+            orientation (np.array[float[4]]): create the base of the object at the specified orientation as world
+              space quaternion [x,y,z,w].
             use_fixed_base (bool): force the base of the loaded object to be static
             scale (float): scale factor to the URDF model.
 
@@ -560,6 +688,70 @@ class Simulator(object):
 
     # bodies
 
+    def create_primitive_object(self, shape_type, position, mass, orientation=(0., 0., 0., 1.), radius=0.5,
+                                half_extents=(.5, .5, .5), height=1., filename=None, mesh_scale=(1., 1., 1.),
+                                plane_normal=(0., 0., 1.), rgba_color=None, specular_color=None, frame_position=None,
+                                frame_orientation=None, vertices=None, indices=None, uvs=None, normals=None, flags=-1):
+        """Create a primitive object in the simulator. This is basically the combination of `create_visual_shape`,
+        `create_collision_shape`, and `create_body`.
+
+        Args:
+            shape_type (int): type of shape; GEOM_SPHERE (=2), GEOM_BOX (=3), GEOM_CAPSULE (=7), GEOM_CYLINDER (=4),
+                GEOM_PLANE (=6), GEOM_MESH (=5)
+            position (np.array[float[3]]): Cartesian world position of the base
+            mass (float): mass of the base, in kg (if using SI units)
+            orientation (np.array[float[4]]): Orientation of base as quaternion [x,y,z,w]
+            radius (float): only for GEOM_SPHERE, GEOM_CAPSULE, GEOM_CYLINDER
+            half_extents (np.array[float[3]], list/tuple of 3 floats): only for GEOM_BOX.
+            height (float): only for GEOM_CAPSULE, GEOM_CYLINDER (height = length).
+            filename (str): Filename for GEOM_MESH, currently only Wavefront .obj. Will create convex hulls for each
+                object (marked as 'o') in the .obj file.
+            mesh_scale (np.array[float[3]], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
+            plane_normal (np.array[float[3]], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
+            rgba_color (list/tuple of 4 floats): color components for red, green, blue and alpha, each in range [0..1].
+            specular_color (list/tuple of 3 floats): specular reflection color, red, green, blue components in range
+                [0..1]
+            frame_position (np.array[float[3]]): translational offset of the visual and collision shape with respect
+              to the link frame.
+            frame_orientation (np.array[float[4]]): rotational offset (quaternion x,y,z,w) of the visual and collision
+              shape with respect to the link frame.
+            vertices (list[np.array[float[3]]]): Instead of creating a mesh from obj file, you can provide vertices,
+              indices, uvs and normals
+            indices (list[int]): triangle indices, should be a multiple of 3.
+            uvs (list of np.array[2]): uv texture coordinates for vertices. Use `changeVisualShape` to choose the
+              texture image. The number of uvs should be equal to number of vertices.
+            normals (list[np.array[float[3]]]): vertex normals, number should be equal to number of vertices.
+            flags (int): unused / to be decided
+
+        Returns:
+            int: non-negative unique id for primitive object, or -1 for failure
+        """
+        visual_shape = self.create_visual_shape(shape_type=shape_type, radius=radius, half_extents=half_extents,
+                                                length=height, filename=filename, mesh_scale=mesh_scale,
+                                                plane_normal=plane_normal, flags=flags, rgba_color=rgba_color,
+                                                specular_color=specular_color, visual_frame_position=frame_position,
+                                                vertices=vertices, indices=indices, uvs=uvs, normals=normals,
+                                                visual_frame_orientation=frame_orientation)
+        collision_shape = self.create_collision_shape(shape_type=shape_type, radius=radius, half_extents=half_extents,
+                                                      height=height, filename=filename, mesh_scale=mesh_scale,
+                                                      plane_normal=plane_normal, flags=flags,
+                                                      collision_frame_position=frame_position,
+                                                      collision_frame_orientation=frame_orientation)
+        body = self.create_body(visual_shape_id=visual_shape, collision_shape_id=collision_shape, mass=mass,
+                                position=position, orientation=orientation)
+        return body
+
+    def load_floor(self, dimension):
+        """Load a floor in the simulator.
+
+        Args:
+            dimension (float): dimension of the floor.
+
+        Returns:
+            int: non-negative unique id for the floor, or -1 for failure.
+        """
+        pass
+
     def create_body(self, visual_shape_id=-1, collision_shape_id=-1, mass=0., position=(0., 0., 0.),
                     orientation=(0., 0., 0., 1.), *args, **kwargs):
         """Create a body in the simulator.
@@ -569,8 +761,8 @@ class Simulator(object):
             collision_shape_id (int): unique id from createCollisionShape or -1. You can re-use the collision shape
                 for multiple multibodies (instancing)
             mass (float): mass of the base, in kg (if using SI units)
-            position (np.float[3]): Cartesian world position of the base
-            orientation (np.float[4]): Orientation of base as quaternion [x,y,z,w]
+            position (np.array[float[3]]): Cartesian world position of the base
+            orientation (np.array[float[4]]): Orientation of base as quaternion [x,y,z,w]
 
         Returns:
             int: non-negative unique id or -1 for failure.
@@ -632,13 +824,13 @@ class Simulator(object):
             child_link_id (int): child link index, or -1 for the base
             joint_type (int): joint type: JOINT_PRISMATIC (=1), JOINT_FIXED (=4), JOINT_POINT2POINT (=5),
                 JOINT_GEAR (=6)
-            joint_axis (np.float[3]): joint axis, in child link frame
-            parent_frame_position (np.float[3]): position of the joint frame relative to parent CoM frame.
-            child_frame_position (np.float[3]): position of the joint frame relative to a given child CoM frame (or
-                world origin if no child specified)
-            parent_frame_orientation (np.float[4]): the orientation of the joint frame relative to parent CoM
+            joint_axis (np.array[float[3]]): joint axis, in child link frame
+            parent_frame_position (np.array[float[3]]): position of the joint frame relative to parent CoM frame.
+            child_frame_position (np.array[float[3]]): position of the joint frame relative to a given child CoM frame
+                (or world origin if no child specified)
+            parent_frame_orientation (np.array[float[4]]): the orientation of the joint frame relative to parent CoM
                 coordinate frame
-            child_frame_orientation (np.float[4]): the orientation of the joint frame relative to the child CoM
+            child_frame_orientation (np.array[float[4]]): the orientation of the joint frame relative to the child CoM
                 coordinate frame (or world origin frame if no child specified)
 
         Returns:
@@ -749,11 +941,11 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): link ids associated with the given body id. If None, it will take all the links
+            link_ids (list[int]): link ids associated with the given body id. If None, it will take all the links
                 of the specified body.
 
         Returns:
-            np.float[3]: center of mass position in the Cartesian world coordinates
+            np.array[float[3]]: center of mass position in the Cartesian world coordinates
         """
         pass
 
@@ -763,11 +955,11 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): link ids associated with the given body id. If None, it will take all the links
+            link_ids (list[int]): link ids associated with the given body id. If None, it will take all the links
                 of the specified body.
 
         Returns:
-            np.float[3]: center of mass linear velocity.
+            np.array[float[3]]: center of mass linear velocity.
         """
         pass
 
@@ -779,8 +971,8 @@ class Simulator(object):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: base position
-            np.float[4]: base orientation (quaternion [x,y,z,w])
+            np.array[float[3]]: base position
+            np.array[float[4]]: base orientation (quaternion [x,y,z,w])
         """
         pass
 
@@ -792,7 +984,7 @@ class Simulator(object):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: base position.
+            np.array[float[3]]: base position.
         """
         pass
 
@@ -804,7 +996,7 @@ class Simulator(object):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[4]: base orientation in the form of a quaternion (x,y,z,w)
+            np.array[float[4]]: base orientation in the form of a quaternion (x,y,z,w)
         """
         pass
 
@@ -814,8 +1006,8 @@ class Simulator(object):
 
         Args:
             body_id (int): unique object id.
-            position (np.float[3]): new base position.
-            orientation (np.float[4]): new base orientation (expressed as a quaternion [x,y,z,w])
+            position (np.array[float[3]]): new base position.
+            orientation (np.array[float[4]]): new base orientation (expressed as a quaternion [x,y,z,w])
         """
         pass
 
@@ -825,7 +1017,7 @@ class Simulator(object):
 
         Args:
             body_id (int): unique object id.
-            position (np.float[3]): new base position.
+            position (np.array[float[3]]): new base position.
         """
         pass
 
@@ -835,7 +1027,7 @@ class Simulator(object):
 
         Args:
             body_id (int): unique object id.
-            orientation (np.float[4]): new base orientation (expressed as a quaternion [x,y,z,w])
+            orientation (np.array[float[4]]): new base orientation (expressed as a quaternion [x,y,z,w])
         """
         pass
 
@@ -847,8 +1039,8 @@ class Simulator(object):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: linear velocity of the base in Cartesian world space coordinates
-            np.float[3]: angular velocity of the base in Cartesian world space coordinates
+            np.array[float[3]]: linear velocity of the base in Cartesian world space coordinates
+            np.array[float[3]]: angular velocity of the base in Cartesian world space coordinates
         """
         pass
 
@@ -860,7 +1052,7 @@ class Simulator(object):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: linear velocity of the base in Cartesian world space coordinates
+            np.array[float[3]]: linear velocity of the base in Cartesian world space coordinates
         """
         pass
 
@@ -872,7 +1064,7 @@ class Simulator(object):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: angular velocity of the base in Cartesian world space coordinates
+            np.array[float[3]]: angular velocity of the base in Cartesian world space coordinates
         """
         pass
 
@@ -882,8 +1074,8 @@ class Simulator(object):
 
         Args:
             body_id (int): unique object id.
-            linear_velocity (np.float[3]): new linear velocity of the base.
-            angular_velocity (np.float[3]): new angular velocity of the base.
+            linear_velocity (np.array[float[3]]): new linear velocity of the base.
+            angular_velocity (np.array[float[3]]): new angular velocity of the base.
         """
         pass
 
@@ -893,7 +1085,7 @@ class Simulator(object):
 
         Args:
             body_id (int): unique object id.
-            linear_velocity (np.float[3]): new linear velocity of the base
+            linear_velocity (np.array[float[3]]): new linear velocity of the base
         """
         pass
 
@@ -903,7 +1095,20 @@ class Simulator(object):
 
         Args:
             body_id (int): unique object id.
-            angular_velocity (np.float[3]): new angular velocity of the base
+            angular_velocity (np.array[float[3]]): new angular velocity of the base
+        """
+        pass
+
+    def get_base_acceleration(self, body_id):
+        """
+        Get the base acceleration. This is only valid if the simulator `supports_acceleration`.
+
+        Args:
+            body_id (int): unique object id.
+
+        Returns:
+            np.array[float[3]]: linear acceleration [m/s^2]
+            np.array[float[3]]: angular acceleration [rad/s^2]
         """
         pass
 
@@ -914,8 +1119,8 @@ class Simulator(object):
         Args:
             body_id (int): unique body id.
             link_id (int): unique link id. If -1, it will be the base.
-            force (np.float[3]): external force to be applied.
-            position (np.float[3]): position on the link where the force is applied. See `flags` for coordinate
+            force (np.array[float[3]]): external force to be applied.
+            position (np.array[float[3]]): position on the link where the force is applied. See `flags` for coordinate
                 systems. If None, it is the center of mass of the body (or the link if specified).
             frame (int): if frame = 1, then the force / position is described in the link frame. If frame = 2, they
                 are described in the world frame.
@@ -1001,7 +1206,7 @@ class Simulator(object):
         Returns:
             float: The position value of this joint.
             float: The velocity value of this joint.
-            np.float[6]: These are the joint reaction forces, if a torque sensor is enabled for this joint it is
+            np.array[float[6]]: These are the joint reaction forces, if a torque sensor is enabled for this joint it is
                 [Fx, Fy, Fz, Mx, My, Mz]. Without torque sensor, it is [0, 0, 0, 0, 0, 0].
             float: This is the motor torque applied during the last stepSimulation. Note that this only applies in
                 VELOCITY_CONTROL and POSITION_CONTROL. If you use TORQUE_CONTROL then the applied joint motor torque
@@ -1015,21 +1220,21 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (list of int): list of joint ids.
+            joint_ids (list[int]): list of joint ids.
 
         Returns:
             list:
                 float: The position value of this joint.
                 float: The velocity value of this joint.
-                np.float[6]: These are the joint reaction forces, if a torque sensor is enabled for this joint it is
-                    [Fx, Fy, Fz, Mx, My, Mz]. Without torque sensor, it is [0, 0, 0, 0, 0, 0].
+                np.array[float[6]]: These are the joint reaction forces, if a torque sensor is enabled for this joint
+                    it is [Fx, Fy, Fz, Mx, My, Mz]. Without torque sensor, it is [0, 0, 0, 0, 0, 0].
                 float: This is the motor torque applied during the last `step`. Note that this only applies in
                     VELOCITY_CONTROL and POSITION_CONTROL. If you use TORQUE_CONTROL then the applied joint motor
                     torque is exactly what you provide, so there is no need to report it separately.
         """
         pass
 
-    def reset_joint_state(self, body_id, joint_id, position, velocity=0.):
+    def reset_joint_state(self, body_id, joint_id, position, velocity=None):
         """
         Reset the state of the joint. It is best only to do this at the start, while not running the simulation:
         `reset_joint_state` overrides all physics simulation.
@@ -1071,17 +1276,17 @@ class Simulator(object):
             joint_ids (int): joint/link id, or list of joint ids.
             control_mode (int): POSITION_CONTROL (=2) (which is in fact CONTROL_MODE_POSITION_VELOCITY_PD),
                 VELOCITY_CONTROL (=0), TORQUE_CONTROL (=1) and PD_CONTROL (=3).
-            positions (float, np.float[N]): target joint position(s) (used in POSITION_CONTROL).
-            velocities (float, np.float[N]): target joint velocity(ies). In VELOCITY_CONTROL and POSITION_CONTROL,
-                the target velocity(ies) is(are) the desired velocity of the joint. Note that the target velocity(ies)
-                is(are) not the maximum joint velocity(ies). In PD_CONTROL and
+            positions (float, np.array[float[N]]): target joint position(s) (used in POSITION_CONTROL).
+            velocities (float, np.array[float[N]]): target joint velocity(ies). In VELOCITY_CONTROL and
+                POSITION_CONTROL, the target velocity(ies) is(are) the desired velocity of the joint. Note that the
+                target velocity(ies) is(are) not the maximum joint velocity(ies). In PD_CONTROL and
                 POSITION_CONTROL/CONTROL_MODE_POSITION_VELOCITY_PD, the final target velocities are computed using:
                 `kp*(erp*(desiredPosition-currentPosition)/dt)+currentVelocity+kd*(m_desiredVelocity - currentVelocity)`
-            forces (float, list of float): in POSITION_CONTROL and VELOCITY_CONTROL, these are the maximum motor
+            forces (float, list[float]): in POSITION_CONTROL and VELOCITY_CONTROL, these are the maximum motor
                 forces used to reach the target values. In TORQUE_CONTROL these are the forces / torques to be applied
                 each simulation step.
-            kp (float, list of float): position (stiffness) gain(s) (used in POSITION_CONTROL).
-            kd (float, list of float): velocity (damping) gain(s) (used in POSITION_CONTROL).
+            kp (float, list[float]): position (stiffness) gain(s) (used in POSITION_CONTROL).
+            kd (float, list[float]): velocity (damping) gain(s) (used in POSITION_CONTROL).
             max_velocity (float): in POSITION_CONTROL this limits the velocity to a maximum.
         """
         pass
@@ -1098,15 +1303,16 @@ class Simulator(object):
                 using forward kinematics.
 
         Returns:
-            np.float[3]: Cartesian position of CoM
-            np.float[4]: Cartesian orientation of CoM, in quaternion [x,y,z,w]
-            np.float[3]: local position offset of inertial frame (center of mass) expressed in the URDF link frame
-            np.float[4]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed in URDF link
+            np.array[float[3]]: Cartesian world position of CoM
+            np.array[float[4]]: Cartesian world orientation of CoM, in quaternion [x,y,z,w]
+            np.array[float[3]]: local position offset of inertial frame (center of mass) expressed in the URDF link
                 frame
-            np.float[3]: world position of the URDF link frame
-            np.float[4]: world orientation of the URDF link frame
-            np.float[3]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
-            np.float[3]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
+            np.array[float[4]]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed in
+                URDF link frame
+            np.array[float[3]]: world position of the URDF link frame
+            np.array[float[4]]: world orientation of the URDF link frame
+            np.array[float[3]]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
+            np.array[float[3]]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
         """
         pass
 
@@ -1116,22 +1322,23 @@ class Simulator(object):
 
         Args:
             body_id (int): body unique id.
-            link_ids (list of int): list of link index.
+            link_ids (list[int]): list of link index.
             compute_velocity (bool): If True, the Cartesian world velocity will be computed and returned.
             compute_forward_kinematics (bool): if True, the Cartesian world position/orientation will be recomputed
                 using forward kinematics.
 
         Returns:
             list:
-                np.float[3]: Cartesian position of CoM
-                np.float[4]: Cartesian orientation of CoM, in quaternion [x,y,z,w]
-                np.float[3]: local position offset of inertial frame (center of mass) expressed in the URDF link frame
-                np.float[4]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed in URDF
+                np.array[float[3]]: Cartesian position of CoM
+                np.array[float[4]]: Cartesian orientation of CoM, in quaternion [x,y,z,w]
+                np.array[float[3]]: local position offset of inertial frame (center of mass) expressed in the URDF
                     link frame
-                np.float[3]: world position of the URDF link frame
-                np.float[4]: world orientation of the URDF link frame
-                np.float[3]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
-                np.float[3]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
+                np.array[float[4]]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed
+                    in URDF link frame
+                np.array[float[3]]: world position of the URDF link frame
+                np.array[float[4]]: world orientation of the URDF link frame
+                np.array[float[3]]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
+                np.array[float[3]]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
         """
         pass
 
@@ -1141,7 +1348,7 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (int, list of int): link id, or list of link ids.
+            link_ids (int, list[int]): link id, or list of link ids.
 
         Returns:
             if 1 link:
@@ -1157,7 +1364,7 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (int, list of int): link id, or list of link ids.
+            link_ids (int, list[int]): link id, or list of link ids.
 
         Returns:
             if 1 link:
@@ -1168,6 +1375,21 @@ class Simulator(object):
         pass
 
     def get_link_frames(self, body_id, link_ids):
+        r"""
+        Return the link world frame position(s) and orientation(s).
+
+        Args:
+            body_id (int): body id.
+            link_ids (int, int[N]): link id, or list of desired link ids.
+
+        Returns:
+            if 1 link:
+                np.array[float[3]]: the link frame position in the world space
+                np.array[float[4]]: Cartesian orientation of the link frame [x,y,z,w]
+            if multiple links:
+                np.array[float[N,3]]: link frame position of each link in world space
+                np.array[float[N,4]]: orientation of each link frame [x,y,z,w]
+        """
         pass
 
     def get_link_world_positions(self, body_id, link_ids):
@@ -1176,13 +1398,13 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
-                np.float[3]: the link CoM position in the world space
+                np.array[float[3]]: the link CoM position in the world space
             if multiple links:
-                np.float[N,3]: CoM position of each link in world space
+                np.array[float[N,3]]: CoM position of each link in world space
         """
         pass
 
@@ -1195,13 +1417,13 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
-                np.float[4]: Cartesian orientation of the link CoM (x,y,z,w)
+                np.array[float[4]]: Cartesian orientation of the link CoM (x,y,z,w)
             if multiple links:
-                np.float[N,4]: CoM orientation of each link (x,y,z,w)
+                np.array[float[N,4]]: CoM orientation of each link (x,y,z,w)
         """
         pass
 
@@ -1214,13 +1436,13 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
-                np.float[3]: linear velocity of the link in the Cartesian world space
+                np.array[float[3]]: linear velocity of the link in the Cartesian world space
             if multiple links:
-                np.float[N,3]: linear velocity of each link
+                np.array[float[N,3]]: linear velocity of each link
         """
         pass
 
@@ -1230,13 +1452,13 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
-                np.float[3]: angular velocity of the link in the Cartesian world space
+                np.array[float[3]]: angular velocity of the link in the Cartesian world space
             if multiple links:
-                np.float[N,3]: angular velocity of each link
+                np.array[float[N,3]]: angular velocity of each link
         """
         pass
 
@@ -1247,17 +1469,66 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
-                np.float[6]: linear and angular velocity of the link in the Cartesian world space
+                np.array[float[6]]: linear and angular velocity of the link in the Cartesian world space
             if multiple links:
-                np.float[N,6]: linear and angular velocity of each link
+                np.array[float[N,6]]: linear and angular velocity of each link
         """
         pass
 
     def get_link_velocities(self, body_id, link_ids):
+        pass
+
+    def get_link_world_linear_accelerations(self, body_id, link_ids):
+        """
+        Return the linear acceleration of the link(s) expressed in the Cartesian world space coordinates.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[3]]: linear acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[float[N,3]]: linear acceleration of each link
+        """
+        pass
+
+    def get_link_world_angular_accelerations(self, body_id, link_ids):
+        """
+        Return the angular acceleration of the link(s) in the Cartesian world space coordinates.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[3]]: angular acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[float[N,3]]: angular acceleration of each link
+        """
+        pass
+
+    def get_link_world_accelerations(self, body_id, link_ids):
+        """
+        Return the linear and angular accelerations (expressed in the Cartesian world space coordinates) for the given
+        link(s). This is only valid if the simulator `supports_acceleration`.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[6]]: linear and angular acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[float[N,6]]: linear and angular acceleration of each link
+        """
         pass
 
     def get_q_indices(self, body_id, joint_ids):
@@ -1266,13 +1537,13 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 int: q index
             if multiple joints:
-                np.int[N]: q indices
+                list[int]: q indices
         """
         pass
 
@@ -1284,7 +1555,7 @@ class Simulator(object):
             body_id (int): unique body id.
 
         Returns:
-            list of int: actuated joint ids.
+            list[int]: actuated joint ids.
         """
         pass
 
@@ -1294,7 +1565,7 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
@@ -1310,7 +1581,7 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
@@ -1325,7 +1596,7 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
@@ -1340,13 +1611,13 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: damping coefficient of the given joint
             if multiple joints:
-                np.float[N]: damping coefficient for each specified joint
+                np.array[float[N]]: damping coefficient for each specified joint
         """
         pass
 
@@ -1356,13 +1627,13 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: friction coefficient of the given joint
             if multiple joints:
-                np.float[N]: friction coefficient for each specified joint
+                np.array[float[N]]: friction coefficient for each specified joint
         """
         pass
 
@@ -1372,13 +1643,13 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
-                np.float[2]: lower and upper limit
+                np.array[float[2]]]: lower and upper limit
             if multiple joints:
-                np.float[N,2]: lower and upper limit for each specified joint
+                np.array[N,2]: lower and upper limit for each specified joint
         """
         pass
 
@@ -1390,13 +1661,13 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: maximum force [N]
             if multiple joints:
-                np.float[N]: maximum force for each specified joint [N]
+                np.array[float[N]]: maximum force for each specified joint [N]
         """
         pass
 
@@ -1408,13 +1679,13 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: maximum velocity [rad/s]
             if multiple joints:
-                np.float[N]: maximum velocities for each specified joint [rad/s]
+                np.array[float[N]]: maximum velocities for each specified joint [rad/s]
         """
         pass
 
@@ -1424,13 +1695,13 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
-                np.float[3]: joint axis
+                np.array[float[3]]: joint axis
             if multiple joint:
-                np.float[N,3]: list of joint axis
+                np.array[float[N,3]]: list of joint axis
         """
         pass
 
@@ -1440,12 +1711,32 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
-            positions (float, np.float[N]): desired position, or list of desired positions [rad]
-            velocities (None, float, np.float[N]): desired velocity, or list of desired velocities [rad/s]
-            kps (None, float, np.float[N]): position gain(s)
-            kds (None, float, np.float[N]): velocity gain(s)
-            forces (None, float, np.float[N]): maximum motor force(s)/torque(s) used to reach the target values.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            positions (float, np.array[float[N]]): desired position, or list of desired positions [rad]
+            velocities (None, float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
+            kps (None, float, np.array[float[N]]): position gain(s)
+            kds (None, float, np.array[float[N]]): velocity gain(s)
+            forces (None, float, np.array[float[N]]): maximum motor force(s)/torque(s) used to reach the target values.
+        """
+        # set joint positions in the simulator
+        self._set_joint_positions(body_id, joint_ids, positions, velocities, kps, kds, forces)
+
+        # publish the joint positions through the middleware
+        if self.middleware is not None:
+            self.middleware.set_joint_positions(body_id, joint_ids, positions, velocities, kps, kds, forces)
+
+    def _set_joint_positions(self, body_id, joint_ids, positions, velocities=None, kps=None, kds=None, forces=None):
+        """
+        Set the position of the given joint(s) (using position control).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            positions (float, np.array[float[N]]): desired position, or list of desired positions [rad]
+            velocities (None, float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
+            kps (None, float, np.array[float[N]]): position gain(s)
+            kds (None, float, np.array[float[N]]): velocity gain(s)
+            forces (None, float, np.array[float[N]]): maximum motor force(s)/torque(s) used to reach the target values.
         """
         pass
 
@@ -1455,13 +1746,46 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: joint position [rad]
             if multiple joints:
-                np.float[N]: joint positions [rad]
+                np.array[float[N]]: joint positions [rad]
+        """
+        # if a middleware is defined
+        if self.middleware is not None:
+            # get joint positions from the middleware
+            q = self.middleware.get_joint_positions(body_id, joint_ids)
+            if q is None:  # if we didn't get the joint positions from the middleware, get them from the simulator
+                q = self._get_joint_positions(body_id, joint_ids)
+            else:  # if we got them from the middleware, set them in the simulator
+                self._set_joint_positions(body_id=body_id, joint_ids=joint_ids, positions=q)
+
+        else:
+            # get the joint positions from the simulator
+            q = self._get_joint_positions(body_id, joint_ids)
+
+            # if the middleware is set on the teleoperation mode, publish the joint positions through the middleware
+            if self.middleware is not None:
+                self.middleware.set_joint_positions(body_id, joint_ids, q, check_teleoperate=True)
+
+        return q
+
+    def _get_joint_positions(self, body_id, joint_ids):
+        """
+        Get the position of the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                float: joint position [rad]
+            if multiple joints:
+                np.array[float[N]]: joint positions [rad]
         """
         pass
 
@@ -1471,9 +1795,26 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
-            velocities (float, np.float[N]): desired velocity, or list of desired velocities [rad/s]
-            max_force (None, float, np.float[N]): maximum motor forces/torques
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            velocities (float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
+            max_force (None, float, np.array[float[N]]): maximum motor forces/torques
+        """
+        # set joint velocities in the simulator
+        self._set_joint_velocities(body_id, joint_ids, velocities, max_force)
+
+        # publish the joint velocities through the middleware
+        if self.middleware is not None:
+            self.middleware.set_joint_velocities(body_id, joint_ids, velocities, max_force)
+
+    def _set_joint_velocities(self, body_id, joint_ids, velocities, max_force=None):
+        """
+        Set the velocity of the given joint(s) (using velocity control).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            velocities (float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
+            max_force (None, float, np.array[float[N]]): maximum motor forces/torques
         """
         pass
 
@@ -1483,13 +1824,46 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: joint velocity [rad/s]
             if multiple joints:
-                np.float[N]: joint velocities [rad/s]
+                np.array[float[N]]: joint velocities [rad/s]
+        """
+        # if a middleware is defined
+        if self.middleware is not None:
+            # get joint velocities from the middleware
+            dq = self.middleware.get_joint_velocities(body_id, joint_ids)
+            if dq is None:  # if we didn't get the joint velocities from the middleware, get them from the simulator
+                dq = self._get_joint_velocities(body_id, joint_ids)
+            else:  # if we got them from the middleware, set them in the simulator
+                self._set_joint_velocities(body_id=body_id, joint_ids=joint_ids, velocities=dq)
+
+        else:
+            # get the joint velocities from the simulator
+            dq = self._get_joint_velocities(body_id, joint_ids)
+
+            # if the middleware is set on the teleoperation mode, publish the joint velocities through the middleware
+            if self.middleware is not None:
+                self.middleware.set_joint_velocities(body_id, joint_ids, dq, check_teleoperate=True)
+
+        return dq
+
+    def _get_joint_velocities(self, body_id, joint_ids):
+        """
+        Get the velocity of the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                float: joint velocity [rad/s]
+            if multiple joints:
+                np.array[float[N]]: joint velocities [rad/s]
         """
         pass
 
@@ -1500,28 +1874,25 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
-            accelerations (float, np.float[N]): desired joint acceleration, or list of desired joint accelerations
-                [rad/s^2]
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            accelerations (float, np.array[float[N]]): desired joint acceleration, or list of desired joint
+                accelerations [rad/s^2]
         """
         pass
 
-    def get_joint_accelerations(self, body_id, joint_ids, q=None, dq=None):
+    def get_joint_accelerations(self, body_id, joint_ids):  # , q=None, dq=None):
         """
-        Get the acceleration at the given joint(s). This is carried out by first getting the joint torques, then
-        performing forward dynamics to get the joint accelerations from the joint torques.
+        Get the acceleration of the specified joint(s). This is only valid if the simulator `supports_acceleration`.
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
-            q (list of int, None): all the joint positions. If None, it will compute it.
-            dq (list of int, None): all the joint velocities. If None, it will compute it.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: joint acceleration [rad/s^2]
             if multiple joints:
-                np.float[N]: joint accelerations [rad/s^2]
+                np.array[float[N]]: joint accelerations [rad/s^2]
         """
         pass
 
@@ -1531,8 +1902,24 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
-            torques (float, list of float): desired torque(s) to apply to the joint(s) [N].
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            torques (float, list[float], np.array[float]): desired torque(s) to apply to the joint(s) [N].
+        """
+        # set joint torques in the simulator
+        self._set_joint_torques(body_id, joint_ids, torques)
+
+        # publish the joint torques through the middleware
+        if self.middleware is not None:
+            self.middleware.set_joint_torques(body_id, joint_ids, torques)
+
+    def _set_joint_torques(self, body_id, joint_ids, torques):
+        """
+        Set the torque/force to the given joint(s) (using force/torque control).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            torques (float, list[float], np.array[float]): desired torque(s) to apply to the joint(s) [N].
         """
         pass
 
@@ -1542,13 +1929,46 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: torque [Nm]
             if multiple joints:
-                np.float[N]: torques associated to the given joints [Nm]
+                np.array[float[N]]: torques associated to the given joints [Nm]
+        """
+        # if a middleware is defined
+        if self.middleware is not None:
+            # get joint torques from the middleware
+            tau = self.middleware.get_joint_torques(body_id, joint_ids)
+            if tau is None:  # if we didn't get the joint torques from the middleware, get them from the simulator
+                tau = self._get_joint_torques(body_id, joint_ids)
+            else:  # if we got them from the middleware, set them in the simulator
+                self._set_joint_torques(body_id=body_id, joint_ids=joint_ids, torques=tau)
+
+        else:
+            # get the joint velocities from the simulator
+            tau = self._get_joint_torques(body_id, joint_ids)
+
+            # if the middleware is set on the teleoperation mode, publish the joint torques through the middleware
+            if self.middleware is not None:
+                self.middleware.set_joint_torques(body_id, joint_ids, tau, check_teleoperate=True)
+
+        return tau
+
+    def _get_joint_torques(self, body_id, joint_ids):
+        """
+        Get the applied torque(s) on the given joint(s).
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
+
+        Returns:
+            if 1 joint:
+                float: torque [Nm]
+            if multiple joints:
+                np.array[float[N]]: torques associated to the given joints [Nm]
         """
         pass
 
@@ -1562,9 +1982,9 @@ class Simulator(object):
 
         Returns:
             if 1 joint:
-                np.float[6]: joint reaction force (fx,fy,fz,mx,my,mz) [N,Nm]
+                np.array[float[6]]: joint reaction force (fx,fy,fz,mx,my,mz) [N,Nm]
             if multiple joints:
-                np.float[N,6]: joint reaction forces [N, Nm]
+                np.array[float[N,6]]: joint reaction forces [N, Nm]
         """
         pass
 
@@ -1579,7 +1999,7 @@ class Simulator(object):
             if 1 joint:
                 float: joint power [W]
             if multiple joints:
-                np.float[N]: power at each joint [W]
+                np.array[float[N]]: power at each joint [W]
         """
         pass
 
@@ -1596,25 +2016,26 @@ class Simulator(object):
             shape_type (int): type of shape; GEOM_SPHERE (=2), GEOM_BOX (=3), GEOM_CAPSULE (=7), GEOM_CYLINDER (=4),
                 GEOM_PLANE (=6), GEOM_MESH (=5)
             radius (float): only for GEOM_SPHERE, GEOM_CAPSULE, GEOM_CYLINDER
-            half_extents (np.float[3], list/tuple of 3 floats): only for GEOM_BOX.
+            half_extents (np.array[float[3]], list/tuple of 3 floats): only for GEOM_BOX.
             length (float): only for GEOM_CAPSULE, GEOM_CYLINDER (length = height).
             filename (str): Filename for GEOM_MESH, currently only Wavefront .obj. Will create convex hulls for each
                 object (marked as 'o') in the .obj file.
-            mesh_scale (np.float[3], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
-            plane_normal (np.float[3], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
+            mesh_scale (np.array[float[3]], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
+            plane_normal (np.array[float[3]], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
             flags (int): unused / to be decided
             rgba_color (list/tuple of 4 floats): color components for red, green, blue and alpha, each in range [0..1].
             specular_color (list/tuple of 3 floats): specular reflection color, red, green, blue components in range
                 [0..1]
-            visual_frame_position (np.float[3]): translational offset of the visual shape with respect to the link frame
-            vertices (list of np.float[3]): Instead of creating a mesh from obj file, you can provide vertices, indices,
-                uvs and normals
-            indices (list of int): triangle indices, should be a multiple of 3.
-            uvs (list of np.float[2]): uv texture coordinates for vertices. Use changeVisualShape to choose the
+            visual_frame_position (np.array[float[3]]): translational offset of the visual shape with respect to the
+                link frame
+            vertices (list[np.array[float[3]]]): Instead of creating a mesh from obj file, you can provide vertices,
+                indices, uvs and normals
+            indices (list[int]): triangle indices, should be a multiple of 3.
+            uvs (list of np.array[2]): uv texture coordinates for vertices. Use changeVisualShape to choose the
                 texture image. The number of uvs should be equal to number of vertices
-            normals (list of np.float[3]): vertex normals, number should be equal to number of vertices.
-            visual_frame_orientation (np.float[4]): rotational offset (quaternion x,y,z,w) of the visual shape with
-                respect to the link frame
+            normals (list[np.array[float[3]]]): vertex normals, number should be equal to number of vertices.
+            visual_frame_orientation (np.array[float[4]]): rotational offset (quaternion x,y,z,w) of the visual shape
+                with respect to the link frame
 
         Returns:
             int: The return value is a non-negative int unique id for the visual shape or -1 if the call failed.
@@ -1634,11 +2055,11 @@ class Simulator(object):
                 int: object unique id.
                 int: link index or -1 for the base
                 int: visual geometry type (TBD)
-                np.float[3]: dimensions (size, local scale) of the geometry
+                np.array[float[3]]: dimensions (size, local scale) of the geometry
                 str: path to the triangle mesh, if any. Typically relative to the URDF, SDF or MJCF file location, but
                     could be absolute
-                np.float[3]: position of local visual frame, relative to link/joint frame
-                np.float[4]: orientation of local visual frame relative to link/joint frame
+                np.array[float[3]]: position of local visual frame, relative to link/joint frame
+                np.array[float[4]]: orientation of local visual frame relative to link/joint frame
                 list of 4 floats: URDF color (if any specified) in Red / Green / Blue / Alpha
                 int: texture unique id of the shape or -1 if None. This field only exists if using
                     VISUAL_SHAPE_DATA_TEXTURE_UNIQUE_IDS (=1) flag.
@@ -1683,12 +2104,12 @@ class Simulator(object):
         of turning the camera to capture what we want in the world, we keep the camera fixed and turn the world.
 
         Args:
-            eye_position (np.float[3]): eye position in Cartesian world coordinates
-            target_position (np.float[3]): position of the target (focus) point in Cartesian world coordinates
-            up_vector (np.float[3]): up vector of the camera in Cartesian world coordinates
+            eye_position (np.array[float[3]]): eye position in Cartesian world coordinates
+            target_position (np.array[float[3]]): position of the target (focus) point in Cartesian world coordinates
+            up_vector (np.array[float[3]]): up vector of the camera in Cartesian world coordinates
 
         Returns:
-            np.float[4,4]: the view matrix
+            np.array[float[4,4]]: the view matrix
         """
         pass
 
@@ -1700,7 +2121,7 @@ class Simulator(object):
         of turning the camera to capture what we want in the world, we keep the camera fixed and turn the world.
 
         Args:
-            target_position (np.float[3]): target focus point in Cartesian world coordinates
+            target_position (np.array[float[3]]): target focus point in Cartesian world coordinates
             distance (float): distance from eye to focus point
             yaw (float): yaw angle in radians left/right around up-axis
             pitch (float): pitch in radians up/down.
@@ -1708,7 +2129,7 @@ class Simulator(object):
             up_axis_index (int): either 1 for Y or 2 for Z axis up.
 
         Returns:
-            np.float[4,4]: the view matrix
+            np.array[float[4,4]]: the view matrix
         """
         pass
 
@@ -1733,7 +2154,7 @@ class Simulator(object):
             far (float): far plane distance
 
         Returns:
-            np.float[4,4]: the perspective projection matrix
+            np.array[float[4,4]]: the perspective projection matrix
         """
         pass
 
@@ -1747,7 +2168,7 @@ class Simulator(object):
             far (float): far plane distance
 
         Returns:
-            np.float[4,4]: the perspective projection matrix
+            np.array[float[4,4]]: the perspective projection matrix
         """
         pass
 
@@ -1761,11 +2182,11 @@ class Simulator(object):
         Args:
             width (int): horizontal image resolution in pixels
             height (int): vertical image resolution in pixels
-            view_matrix (np.float[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.float[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.float[3]): `light_direction` specifies the world position of the light source,
+            view_matrix (np.array[float[4,4]]): 4x4 view matrix, see `compute_view_matrix`
+            projection_matrix (np.array[float[4,4]]): 4x4 projection matrix, see `compute_projection`
+            light_direction (np.array[float[3]]): `light_direction` specifies the world position of the light source,
                 the direction is from the light source position to the origin of the world frame.
-            light_color (np.float[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
+            light_color (np.array[float[3]]): directional light color in [RED,GREEN,BLUE] in range 0..1
             light_distance (float): distance of the light along the normalized `light_direction`
             shadow (bool): True for shadows, False for no shadows
             light_ambient_coeff (float): light ambient coefficient
@@ -1777,9 +2198,9 @@ class Simulator(object):
         Returns:
             int: width image resolution in pixels (horizontal)
             int: height image resolution in pixels (vertical)
-            np.int[width, height, 4]: RBGA pixels (each pixel is in the range [0..255] for each channel R, G, B, A)
-            np.float[width, heigth]: Depth buffer.
-            np.int[width, height]: Segmentation mask buffer. For each pixels the visible object unique id.
+            np.array[int[width, height, 4]]: RBGA pixels (each pixel is in the range [0..255] for each channel)
+            np.array[float[width, height]]: Depth buffer.
+            np.array[int[width, height]]: Segmentation mask buffer. For each pixels the visible object unique id.
         """
         pass
 
@@ -1792,11 +2213,11 @@ class Simulator(object):
         Args:
             width (int): horizontal image resolution in pixels
             height (int): vertical image resolution in pixels
-            view_matrix (np.float[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.float[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.float[3]): `light_direction` specifies the world position of the light source,
+            view_matrix (np.array[float[4,4]]): 4x4 view matrix, see `compute_view_matrix`
+            projection_matrix (np.array[float[4,4]]): 4x4 projection matrix, see `compute_projection`
+            light_direction (np.array[float[3]]): `light_direction` specifies the world position of the light source,
                 the direction is from the light source position to the origin of the world frame.
-            light_color (np.float[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
+            light_color (np.array[float[3]]): directional light color in [RED,GREEN,BLUE] in range 0..1
             light_distance (float): distance of the light along the normalized `light_direction`
             shadow (bool): True for shadows, False for no shadows
             light_ambient_coeff (float): light ambient coefficient
@@ -1806,7 +2227,7 @@ class Simulator(object):
             flags (int): flags.
 
         Returns:
-            np.int[width, height, 4]: RBGA pixels (each pixel is in the range [0..255] for each channel R, G, B, A)
+            np.array[int[width, height, 4]]: RBGA pixels (each pixel is in the range [0..255] for each channel)
         """
         pass
 
@@ -1819,11 +2240,11 @@ class Simulator(object):
         Args:
             width (int): horizontal image resolution in pixels
             height (int): vertical image resolution in pixels
-            view_matrix (np.float[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.float[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.float[3]): `light_direction` specifies the world position of the light source,
+            view_matrix (np.array[float[4,4]]): 4x4 view matrix, see `compute_view_matrix`
+            projection_matrix (np.array[float[4,4]]): 4x4 projection matrix, see `compute_projection`
+            light_direction (np.array[float[3]]): `light_direction` specifies the world position of the light source,
                 the direction is from the light source position to the origin of the world frame.
-            light_color (np.float[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
+            light_color (np.array[float[3]]): directional light color in [RED,GREEN,BLUE] in range 0..1
             light_distance (float): distance of the light along the normalized `light_direction`
             shadow (bool): True for shadows, False for no shadows
             light_ambient_coeff (float): light ambient coefficient
@@ -1833,7 +2254,7 @@ class Simulator(object):
             flags (int): flags.
 
         Returns:
-            np.float[width, heigth]: Depth buffer.
+            np.array[float[width, height]]: Depth buffer.
         """
         pass
 
@@ -1847,11 +2268,11 @@ class Simulator(object):
         Args:
             width (int): horizontal image resolution in pixels
             height (int): vertical image resolution in pixels
-            view_matrix (np.float[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.float[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.float[3]): `light_direction` specifies the world position of the light source,
+            view_matrix (np.array[float[4,4]]): 4x4 view matrix, see `compute_view_matrix`
+            projection_matrix (np.array[float[4,4]]): 4x4 projection matrix, see `compute_projection`
+            light_direction (np.array[float[3]]): `light_direction` specifies the world position of the light source,
                 the direction is from the light source position to the origin of the world frame.
-            light_color (np.float[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
+            light_color (np.array[float[3]]): directional light color in [RED,GREEN,BLUE] in range 0..1
             light_distance (float): distance of the light along the normalized `light_direction`
             shadow (bool): True for shadows, False for no shadows
             light_ambient_coeff (float): light ambient coefficient
@@ -1861,7 +2282,7 @@ class Simulator(object):
             flags (int): flags
 
         Returns:
-            np.int[width, height]: Segmentation mask buffer. For each pixels the visible object unique id.
+            np.array[int[width, height]]: Segmentation mask buffer. For each pixels the visible object unique id.
         """
         pass
 
@@ -1877,17 +2298,17 @@ class Simulator(object):
             shape_type (int): type of shape; GEOM_SPHERE (=2), GEOM_BOX (=3), GEOM_CAPSULE (=7), GEOM_CYLINDER (=4),
                 GEOM_PLANE (=6), GEOM_MESH (=5)
             radius (float): only for GEOM_SPHERE, GEOM_CAPSULE, GEOM_CYLINDER
-            half_extents (np.float[3], list/tuple of 3 floats): only for GEOM_BOX.
+            half_extents (np.array[float[3]], list/tuple of 3 floats): only for GEOM_BOX.
             height (float): only for GEOM_CAPSULE, GEOM_CYLINDER (length = height).
             filename (str): Filename for GEOM_MESH, currently only Wavefront .obj. Will create convex hulls for each
                 object (marked as 'o') in the .obj file.
-            mesh_scale (np.float[3], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
-            plane_normal (np.float[3], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
+            mesh_scale (np.array[float[3]], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
+            plane_normal (np.array[float[3]], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
             flags (int): unused / to be decided
-            collision_frame_position (np.float[3]): translational offset of the collision shape with respect to the
-                link frame
-            collision_frame_orientation (np.float[4]): rotational offset (quaternion x,y,z,w) of the collision shape
-                with respect to the link frame
+            collision_frame_position (np.array[float[3]]): translational offset of the collision shape with respect
+                to the link frame
+            collision_frame_orientation (np.array[float[4]]): rotational offset (quaternion x,y,z,w) of the collision
+                shape with respect to the link frame
 
         Returns:
             int: The return value is a non-negative int unique id for the collision shape or -1 if the call failed.
@@ -1906,14 +2327,14 @@ class Simulator(object):
             int: object unique id.
             int: link id.
             int: geometry type; GEOM_BOX (=3), GEOM_SPHERE (=2), GEOM_CAPSULE (=7), GEOM_MESH (=5), GEOM_PLANE (=6)
-            np.float[3]: depends on geometry type:
+            np.array[float[3]]: depends on geometry type:
                 for GEOM_BOX: extents,
                 for GEOM_SPHERE: dimensions[0] = radius,
                 for GEOM_CAPSULE and GEOM_CYLINDER: dimensions[0] = height (length), dimensions[1] = radius.
                 For GEOM_MESH: dimensions is the scaling factor.
             str: Only for GEOM_MESH: file name (and path) of the collision mesh asset.
-            np.float[3]: Local position of the collision frame with respect to the center of mass/inertial frame
-            np.float[4]: Local orientation of the collision frame with respect to the inertial frame
+            np.array[float[3]]: Local position of the collision frame with respect to the center of mass/inertial frame
+            np.array[float[4]]: Local orientation of the collision frame with respect to the inertial frame
         """
         pass
 
@@ -1925,11 +2346,11 @@ class Simulator(object):
         enlarges the AABBs a bit (extra margin and extruded along the velocity vector).
 
         Args:
-            aabb_min (np.float[3]): minimum coordinates of the aabb
-            aabb_max (np.float[3]): maximum coordinates of the aabb
+            aabb_min (np.array[float[3]]): minimum coordinates of the aabb
+            aabb_max (np.array[float[3]]): maximum coordinates of the aabb
 
         Returns:
-            list of int: list of object unique ids.
+            list[int]: list of object unique ids.
         """
         pass
 
@@ -1943,8 +2364,8 @@ class Simulator(object):
             link_id (int): link index in range [0..`getNumJoints(..)]
 
         Returns:
-            np.float[3]: minimum coordinates of the axis aligned bounding box
-            np.float[3]: maximum coordinates of the axis aligned bounding box
+            np.array[float[3]]: minimum coordinates of the axis aligned bounding box
+            np.array[float[3]]: maximum coordinates of the axis aligned bounding box
         """
         pass
 
@@ -1961,20 +2382,20 @@ class Simulator(object):
 
         Returns:
             list:
-                int: contact flag (reserved)
-                int: body unique id of body A
-                int: body unique id of body B
-                int: link index of body A, -1 for base
-                int: link index of body B, -1 for base
-                np.float[3]: contact position on A, in Cartesian world coordinates
-                np.float[3]: contact position on B, in Cartesian world coordinates
-                np.float[3]: contact normal on B, pointing towards A
-                float: contact distance, positive for separation, negative for penetration
-                float: normal force applied during the last `step`
-                float: lateral friction force in the first lateral friction direction (see next returned value)
-                np.float[3]: first lateral friction direction
-                float: lateral friction force in the second lateral friction direction (see next returned value)
-                np.float[3]: second lateral friction direction
+                [0] int: contact flag (reserved)
+                [1] int: body unique id of body A
+                [2] int: body unique id of body B
+                [3] int: link index of body A, -1 for base
+                [4] int: link index of body B, -1 for base
+                [5] np.array[float[3]]: contact position on A, in Cartesian world coordinates
+                [6] np.array[float[3]]: contact position on B, in Cartesian world coordinates
+                [7] np.array[float[3]]: contact normal on B, pointing towards A
+                [8] float: contact distance, positive for separation, negative for penetration
+                [9] float: normal force applied during the last `step`
+                [10] float: lateral friction force in the first lateral friction direction (see next returned value)
+                [11] np.array[float[3]]: first lateral friction direction
+                [12] float: lateral friction force in the second lateral friction direction (see next returned value)
+                [13] np.array[float[3]]: second lateral friction direction
         """
         pass
 
@@ -1998,15 +2419,15 @@ class Simulator(object):
                 int: body unique id of body B
                 int: link index of body A, -1 for base
                 int: link index of body B, -1 for base
-                np.float[3]: contact position on A, in Cartesian world coordinates
-                np.float[3]: contact position on B, in Cartesian world coordinates
-                np.float[3]: contact normal on B, pointing towards A
+                np.array[float[3]]: contact position on A, in Cartesian world coordinates
+                np.array[float[3]]: contact position on B, in Cartesian world coordinates
+                np.array[float[3]]: contact normal on B, pointing towards A
                 float: contact distance, positive for separation, negative for penetration
                 float: normal force applied during the last `step`. Always equal to 0.
                 float: lateral friction force in the first lateral friction direction (see next returned value)
-                np.float[3]: first lateral friction direction
+                np.array[float[3]]: first lateral friction direction
                 float: lateral friction force in the second lateral friction direction (see next returned value)
-                np.float[3]: second lateral friction direction
+                np.array[float[3]]: second lateral friction direction
         """
         pass
 
@@ -2015,16 +2436,16 @@ class Simulator(object):
         Performs a single raycast to find the intersection information of the first object hit.
 
         Args:
-            from_position (np.float[3]): start of the ray in world coordinates
-            to_position (np.float[3]): end of the ray in world coordinates
+            from_position (np.array[float[3]]): start of the ray in world coordinates
+            to_position (np.array[float[3]]): end of the ray in world coordinates
 
         Returns:
             list:
                 int: object unique id of the hit object
                 int: link index of the hit object, or -1 if none/parent
                 float: hit fraction along the ray in range [0,1] along the ray.
-                np.float[3]: hit position in Cartesian world coordinates
-                np.float[3]: hit normal in Cartesian world coordinates
+                np.array[float[3]]: hit position in Cartesian world coordinates
+                np.array[float[3]]: hit normal in Cartesian world coordinates
         """
         pass
 
@@ -2037,8 +2458,8 @@ class Simulator(object):
         the objectUniqueId is -1, there is no hit. In that case, the 'hit fraction' is 1.
 
         Args:
-            from_positions (np.array[N,3]): list of start points for each ray, in world coordinates
-            to_positions (np.array[N,3]): list of end points for each ray in world coordinates
+            from_positions (np.array[float[N,3]]): list of start points for each ray, in world coordinates
+            to_positions (np.array[float[N,3]]): list of end points for each ray in world coordinates
             parent_object_id (int): ray from/to is in local space of a parent object
             parent_link_id (int): ray from/to is in local space of a parent object
 
@@ -2047,8 +2468,8 @@ class Simulator(object):
                 int: object unique id of the hit object
                 int: link index of the hit object, or -1 if none/parent
                 float: hit fraction along the ray in range [0,1] along the ray.
-                np.float[3]: hit position in Cartesian world coordinates
-                np.float[3]: hit normal in Cartesian world coordinates
+                np.array[float[3]]: hit position in Cartesian world coordinates
+                np.array[float[3]]: hit normal in Cartesian world coordinates
         """
         pass
 
@@ -2092,10 +2513,10 @@ class Simulator(object):
         Returns:
             float: mass in kg
             float: lateral friction coefficient
-            np.float[3]: local inertia diagonal. Note that links and base are centered around the center of mass and
-                aligned with the principal axes of inertia.
-            np.float[3]: position of inertial frame in local coordinates of the joint frame
-            np.float[4]: orientation of inertial frame in local coordinates of joint frame
+            np.array[float[3]]: local inertia diagonal. Note that links and base are centered around the center of
+                mass and aligned with the principal axes of inertia.
+            np.array[float[3]]: position of inertial frame in local coordinates of the joint frame
+            np.array[float[4]]: orientation of inertial frame in local coordinates of joint frame
             float: coefficient of restitution
             float: rolling friction coefficient orthogonal to contact normal
             float: spinning friction coefficient around contact normal
@@ -2107,7 +2528,8 @@ class Simulator(object):
     def change_dynamics(self, body_id, link_id=-1, mass=None, lateral_friction=None, spinning_friction=None,
                         rolling_friction=None, restitution=None, linear_damping=None, angular_damping=None,
                         contact_stiffness=None, contact_damping=None, friction_anchor=None,
-                        local_inertia_diagonal=None, joint_damping=None):
+                        local_inertia_diagonal=None, inertia_position=None, inertia_orientation=None,
+                        joint_damping=None, joint_friction=None):
         """
         Change dynamic properties of the given body (or link) such as mass, friction and restitution coefficients, etc.
 
@@ -2118,21 +2540,25 @@ class Simulator(object):
             lateral_friction (float): lateral (linear) contact friction
             spinning_friction (float): torsional friction around the contact normal
             rolling_friction (float): torsional friction orthogonal to contact normal
-            restitution (float): bouncyness of contact. Keep it a bit less than 1.
+            restitution (float): bounciness of contact. Keep it a bit less than 1.
             linear_damping (float): linear damping of the link (0.04 by default)
             angular_damping (float): angular damping of the link (0.04 by default)
             contact_stiffness (float): stiffness of the contact constraints, used together with `contact_damping`
             contact_damping (float): damping of the contact constraints for this body/link. Used together with
-                `contact_stiffness`. This overrides the value if it was specified in the URDF file in the contact
-                section.
+              `contact_stiffness`. This overrides the value if it was specified in the URDF file in the contact
+              section.
             friction_anchor (int): enable or disable a friction anchor: positional friction correction (disabled by
-                default, unless set in the URDF contact section)
-            local_inertia_diagonal (np.float[3]): diagonal elements of the inertia tensor. Note that the base and
-                links are centered around the center of mass and aligned with the principal axes of inertia so there
-                are no off-diagonal elements in the inertia tensor.
+              default, unless set in the URDF contact section)
+            local_inertia_diagonal (np.array[float[3]]): diagonal elements of the inertia tensor. Note that the base
+              and links are centered around the center of mass and aligned with the principal axes of inertia so
+              there are no off-diagonal elements in the inertia tensor.
+            inertia_position (np.array[float[3]]): new inertia position with respect to the link frame.
+            inertia_orientation (np.array[float[4]]): new inertia orientation (expressed as a quaternion [x,y,z,w]
+              with respect to the link frame.
             joint_damping (float): joint damping coefficient applied at each joint. This coefficient is read from URDF
-                joint damping field. Keep the value close to 0.
-                `joint_damping_force = -damping_coefficient * joint_velocity`.
+              joint damping field. Keep the value close to 0.
+              `joint_damping_force = -damping_coefficient * joint_velocity`.
+            joint_friction (float): joint friction coefficient.
         """
         pass
 
@@ -2150,15 +2576,15 @@ class Simulator(object):
         Args:
             body_id (int): unique body id.
             link_id (int): link id.
-            local_position (np.float[3]): the point on the specified link to compute the Jacobian (in link local
+            local_position (np.array[float[3]]): the point on the specified link to compute the Jacobian (in link local
                 coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
-            q (np.float[N]): joint positions of size N, where N is the number of DoFs.
-            dq (np.float[N]): joint velocities of size N, where N is the number of DoFs.
-            des_ddq (np.float[N]): desired joint accelerations of size N.
+            q (np.array[float[N]]): joint positions of size N, where N is the number of DoFs.
+            dq (np.array[float[N]]): joint velocities of size N, where N is the number of DoFs.
+            des_ddq (np.array[float[N]]): desired joint accelerations of size N.
 
         Returns:
-            np.float[6,N], np.float[6,(6+N)]: full geometric (linear and angular) Jacobian matrix. The number of
-                columns depends if the base is fixed or floating.
+            np.array[float[6,N]], np.array[float[6,6+N]]: full geometric (linear and angular) Jacobian matrix. The
+                number of columns depends if the base is fixed or floating.
         """
         pass
 
@@ -2178,10 +2604,10 @@ class Simulator(object):
 
         Args:
             body_id (int): body unique id.
-            q (np.float[N]): joint positions of size N, where N is the total number of DoFs.
+            q (np.array[float[N]]): joint positions of size N, where N is the total number of DoFs.
 
         Returns:
-            np.float[N,N], np.float[6+N,6+N]: inertia matrix
+            np.array[float[N,N]], np.array[float[6+N,6+N]]: inertia matrix
         """
         pass
 
@@ -2201,28 +2627,28 @@ class Simulator(object):
         Args:
             body_id (int): body unique id, as returned by `load_urdf`, etc.
             link_id (int): end effector link index.
-            position (np.float[3]): target position of the end effector (its link coordinate, not center of mass
+            position (np.array[float[3]]): target position of the end effector (its link coordinate, not center of mass
                 coordinate!). By default this is in Cartesian world space, unless you provide `q_curr` joint angles.
-            orientation (np.float[4]): target orientation in Cartesian world space, quaternion [x,y,w,z]. If not
+            orientation (np.array[float[4]]): target orientation in Cartesian world space, quaternion [x,y,w,z]. If not
                 specified, pure position IK will be used.
-            lower_limits (np.float[N], list of N floats): lower joint limits. Optional null-space IK.
-            upper_limits (np.float[N], list of N floats): upper joint limits. Optional null-space IK.
-            joint_ranges (np.float[N], list of N floats): range of value of each joint.
-            rest_poses (np.float[N], list of N floats): joint rest poses. Favor an IK solution closer to a given rest
-                pose.
-            joint_dampings (np.float[N], list of N floats): joint damping factors. Allow to tune the IK solution using
-                joint damping factors.
+            lower_limits (np.array[float[N]], list of N floats): lower joint limits. Optional null-space IK.
+            upper_limits (np.array[float[N]], list of N floats): upper joint limits. Optional null-space IK.
+            joint_ranges (np.array[float[N]], list of N floats): range of value of each joint.
+            rest_poses (np.array[float[N]], list of N floats): joint rest poses. Favor an IK solution closer to a
+                given rest pose.
+            joint_dampings (np.array[float[N]], list of N floats): joint damping factors. Allow to tune the IK solution
+                using joint damping factors.
             solver (int): p.IK_DLS (=0) or p.IK_SDLS (=1), Damped Least Squares or Selective Damped Least Squares, as
                 described in the paper by Samuel Buss "Selectively Damped Least Squares for Inverse Kinematics".
-            q_curr (np.float[N]): list of joint positions. By default PyBullet uses the joint positions of the body.
-                If provided, the target_position and targetOrientation is in local space!
+            q_curr (np.array[float[N]]): list of joint positions. By default PyBullet uses the joint positions of the
+                body. If provided, the target_position and targetOrientation is in local space!
             max_iters (int): maximum number of iterations. Refine the IK solution until the distance between target
                 and actual end effector position is below this threshold, or the `max_iters` is reached.
             threshold (float): residual threshold. Refine the IK solution until the distance between target and actual
                 end effector position is below this threshold, or the `max_iters` is reached.
 
         Returns:
-            np.float[N]: joint positions (for each actuated joint).
+            np.array[float[N]]: joint positions (for each actuated joint).
         """
         pass
 
@@ -2258,18 +2684,18 @@ class Simulator(object):
 
         Args:
             body_id (int): body unique id.
-            q (np.float[N]): joint positions
-            dq (np.float[N]): joint velocities
-            des_ddq (np.float[N]): desired joint accelerations
+            q (np.array[float[N]]): joint positions
+            dq (np.array[float[N]]): joint velocities
+            des_ddq (np.array[float[N]]): desired joint accelerations
 
         Returns:
-            np.float[N]: joint torques computed using the rigid-body equation of motion
+            np.array[float[N]]: joint torques computed using the rigid-body equation of motion
 
         References:
-            [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
-            [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
-            [3] "Springer Handbook of Robotics", Siciliano et al., 2008
-            [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+            - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            - [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            - [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            - [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
                 http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
         pass
@@ -2306,18 +2732,18 @@ class Simulator(object):
 
         Args:
             body_id (int): unique body id.
-            q (np.float[N]): joint positions
-            dq (np.float[N]): joint velocities
-            torques (np.float[N]): desired joint torques
+            q (np.array[float[N]]): joint positions
+            dq (np.array[float[N]]): joint velocities
+            torques (np.array[float[N]]): desired joint torques
 
         Returns:
-            np.float[N]: joint accelerations computed using the rigid-body equation of motion
+            np.array[float[N]]: joint accelerations computed using the rigid-body equation of motion
 
         References:
-            [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
-            [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
-            [3] "Springer Handbook of Robotics", Siciliano et al., 2008
-            [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+            - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            - [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            - [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            - [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
                 http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
         pass
@@ -2332,9 +2758,9 @@ class Simulator(object):
         a line width and a duration in seconds.
 
         Args:
-            from_pos (np.float[3]): starting point of the line in Cartesian world coordinates
-            to_pos (np.float[3]): end point of the line in Cartesian world coordinates
-            rgb_color (np.float[3]): RGB color (each channel in range [0,1])
+            from_pos (np.array[float[3]]): starting point of the line in Cartesian world coordinates
+            to_pos (np.array[float[3]]): end point of the line in Cartesian world coordinates
+            rgb_color (np.array[float[3]]): RGB color (each channel in range [0,1])
             width (float): line width (limited by OpenGL implementation).
             lifetime (float): use 0 for permanent line, or positive time in seconds (afterwards the line with be
                 removed automatically)
@@ -2354,16 +2780,16 @@ class Simulator(object):
 
         Args:
             text (str): text.
-            position (np.float[3]): 3d position of the text in Cartesian world coordinates.
+            position (np.array[float[3]]): 3d position of the text in Cartesian world coordinates.
             rgb_color (list/tuple of 3 floats): RGB color; each component in range [0..1]
             size (float): text size
             lifetime (float): use 0 for permanent text, or positive time in seconds (afterwards the text with be
                 removed automatically)
-            orientation (np.float[4]): By default, debug text will always face the camera, automatically rotation.
-                By specifying a text orientation (quaternion), the orientation will be fixed in world space or local
-                space (when parent is specified). Note that a different implementation/shader is used for camera
-                facing text, with different appearance: camera facing text uses bitmap fonts, text with specified
-                orientation uses TrueType font.
+            orientation (np.array[float[4]]): By default, debug text will always face the camera, automatically
+                rotation. By specifying a text orientation (quaternion), the orientation will be fixed in world space
+                or local space (when parent is specified). Note that a different implementation/shader is used for
+                camera facing text, with different appearance: camera facing text uses bitmap fonts, text with
+                specified orientation uses TrueType font.
             parent_object_id (int): draw text in local coordinates of a parent object.
             parent_link_id (int): draw text in local coordinates of a parent link.
             text_id (int): replace an existing text item (to avoid flickering of remove/add).
@@ -2542,18 +2968,18 @@ class Simulator(object):
         Returns:
             float: width of the visualizer camera
             float: height of the visualizer camera
-            np.float[4,4]: view matrix [4,4]
-            np.float[4,4]: perspective projection matrix [4,4]
-            np.float[3]: camera up vector expressed in the Cartesian world space
-            np.float[3]: forward axis of the camera expressed in the Cartesian world space
-            np.float[3]: This is a horizontal vector that can be used to generate rays (for mouse picking or creating
-                a simple ray tracer for example)
-            np.float[3]: This is a vertical vector that can be used to generate rays (for mouse picking or creating a
-                simple ray tracer for example)
+            np.array[float[4,4]],4]: view matrix [4,4]
+            np.array[float[4,4]],4]: perspective projection matrix [4,4]
+            np.array[float[3]]: camera up vector expressed in the Cartesian world space
+            np.array[float[3]]: forward axis of the camera expressed in the Cartesian world space
+            np.array[float[3]]: This is a horizontal vector that can be used to generate rays (for mouse picking or
+                creating a simple ray tracer for example)
+            np.array[float[3]]: This is a vertical vector that can be used to generate rays (for mouse picking or
+                creating a simple ray tracer for example)
             float: yaw angle (in radians) of the camera, in Cartesian local space coordinates
             float: pitch angle (in radians) of the camera, in Cartesian local space coordinates
             float: distance between the camera and the camera target
-            np.float[3]: target of the camera, in Cartesian world space coordinates
+            np.array[float[3]]: target of the camera, in Cartesian world space coordinates
         """
         pass
 
@@ -2567,7 +2993,7 @@ class Simulator(object):
             distance (float): distance from eye to camera target position
             yaw (float): camera yaw angle (in radians) left/right
             pitch (float): camera pitch angle (in radians) up/down
-            target_position (np.float[3]): target focus point of the camera
+            target_position (np.array[float[3]]): target focus point of the camera
         """
         pass
 

@@ -1,0 +1,2 @@
+
+Brian Delhaisse: Compared to the original, I separated the various objects into separate OBJ files. I also rotated the various elements.

@@ -10,6 +10,7 @@ References:
 """
 
 import numpy as np
+from scipy.linalg import block_diag
 import quaternion
 # from pyquaternion import Quaternion  # TODO: check API at http://kieranwynn.github.io/pyquaternion
 import sympy
@@ -27,7 +28,38 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-def get_homogeneous_transform(position, orientation):
+def min_angle_difference(q1, q2):
+    r"""
+    Return the minimum angle difference between two (set of) angles (expressed in radians). The differences are
+    always between [-pi, pi].
+
+    Args:
+        q1 (float, np.array[float[N]]): first angle(s)
+        q2 (float, np.array[float[N]]): second angle(s)
+
+    Returns:
+        float, np.array[float[N]]: minimum angle difference(s)
+    """
+    diff = np.maximum(q1, q2) - np.minimum(q1, q2)
+    if diff > np.pi:
+        diff = 2 * np.pi - diff
+    return diff
+
+
+def get_adjoint_from_rotation(rotation_matrix):
+    r"""
+    Get the adjoint matrix from a rotation matrix.
+
+    Args:
+        rotation_matrix (np.array[float[3,3]]): rotation matrix.
+
+    Returns:
+        np.array[float[6,6]]: adjoint matrix.
+    """
+    return block_diag(rotation_matrix, rotation_matrix)
+
+
+def get_homogeneous_matrix(position, orientation):
     r"""
     Return the Homogeneous transform matrix given the position vector and the orientation.
 
@@ -39,12 +71,12 @@ def get_homogeneous_transform(position, orientation):
     where :math:`R` is the 3x3 rotation matrix, :math:`p` is the 3x1 position vector.
 
     Args:
-        position (np.array[3]): position vector
-        orientation (np.array[4], np.array[3,3], np.array[3]): orientation (expressed as a quaternion [x,y,z,w],
-            3x3 rotation matrix, or roll-pitch-yaw angles).
+        position (np.array[float[3]]): position vector
+        orientation (np.array[float[4]], np.array[float[3,3]], np.array[float[3]]): orientation (expressed as a
+            quaternion [x,y,z,w], 3x3 rotation matrix, or roll-pitch-yaw angles).
 
     Returns:
-        np.array[4,4]: homogeneous matrix
+        np.array[float[4,4]]: homogeneous matrix
     """
     if isinstance(orientation, quaternion.quaternion):
         R = quaternion.as_rotation_matrix(orientation)
@@ -63,15 +95,57 @@ def get_homogeneous_transform(position, orientation):
     return H
 
 
+def get_inverse_homogeneous(matrix):
+    r"""
+    Return the inverse of the homogeneous matrix.
+
+    If the homogeneous matrix is expressed as:
+
+    .. math::
+
+        H = [[R, p],
+             [zeros(3), 1]],
+
+    where :math:`R` is the 3x3 rotation matrix, :math:`p` is the 3x1 position vector. Then, the inverse homogeneous
+    matrix is given by:
+
+    .. math::
+
+        H^{-1} = [[R^\top, -R^\top p],
+                  [zeros(3), 1]].
+
+    Args:
+        matrix (np.array[float[4,4]]): homogeneous matrix to inverse.
+
+    Returns:
+        np.array[float[4,4]]: inverse homogeneous matrix.
+    """
+    R = matrix[:3, :3].T
+    p = -R.dot(matrix[:3, 3].reshape(-1, 1))
+    return np.vstack((np.hstack((R, p)),
+                      np.array([[0, 0, 0, 1]])))
+
+
+def get_identity_homogeneous_matrix():
+    r"""
+    Return the identity homogeneous matrix which corresponds to no rotation (rotation matrix is the identity matrix),
+    and no translation (the translation vector is equal to 0). Note that this is equivalent to `np.identity(4)`.
+
+    Returns:
+        np.array[float[4,4]]: identity homogeneous matrix.
+    """
+    return np.identity(4)
+
+
 def homogeneous_to_pose(matrix):
     r"""
     Return a pose (7D vector: position + quaternion) from a homogeneous matrix.
 
     Args:
-        matrix (np.array[4,4]): homogeneous matrix
+        matrix (np.array[float[4,4]]): homogeneous matrix
 
     Returns:
-        np.array[7]: pose (position + quaternion [x,y,z,w])
+        np.array[float[7]]: pose (position + quaternion [x,y,z,w])
     """
     position = matrix[:3, -1]
     quaternion = get_quaternion_from_matrix(matrix[:3, :3])
@@ -83,14 +157,14 @@ def pose_to_homogeneous(pose):
     Return a homogeneous matrix from a pose (7D vector: concatenation of position and quaternion).
 
     Args:
-        pose (np.array[7]): concatenation of position and orientation (expressed as a quaternion [x,y,z,w])
+        pose (np.array[float[7]]): concatenation of position and orientation (expressed as a quaternion [x,y,z,w])
 
     Returns:
-        np.array[4,4]: homogeneous matrix
+        np.array[float[4,4]]: homogeneous matrix
     """
     pose = np.array(pose).flatten()
     position, orientation = pose[:3], pose[-4:]
-    return get_homogeneous_transform(position=position, orientation=orientation)
+    return get_homogeneous_matrix(position=position, orientation=orientation)
 
 
 def get_quaternion(orientation, convert_to_quat=False, convention='xyzw'):
@@ -99,15 +173,16 @@ def get_quaternion(orientation, convert_to_quat=False, convention='xyzw'):
     angles, or an axis-angle).
 
     Args:
-        orientation (np.array[4], np.array[3,3], np.array[3], tuple of float and np.array[3]): orientation (expressed
-            as a quaternion [x,y,z,w], 3x3 rotation matrix, roll-pitch-yaw angles, or axis-angle).
+        orientation (np.array[float[4]], np.array[float[3,3]], np.array[float[3]], tuple of float and
+            np.array[float[3]]): orientation (expressed as a quaternion [x,y,z,w], 3x3 rotation matrix,
+            roll-pitch-yaw angles, or axis-angle).
         convert_to_quat (bool): If True, it will return an instance of `quaternion.quaternion`. Otherwise, it will
             return a numpy array.
         convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        np.array[4], quaternion.quaternion: quaternion.
+        np.array[float[4]], quaternion.quaternion: quaternion.
     """
     if isinstance(orientation, quaternion.quaternion):  # quaternion
         return orientation
@@ -139,11 +214,12 @@ def get_rotation_matrix(orientation):
     angles, or an axis-angle).
 
     Args:
-        orientation (np.array[4], np.array[3,3], np.array[3], tuple of float and np.array[3]): orientation (expressed
-            as a quaternion [x,y,z,w], 3x3 rotation matrix, roll-pitch-yaw angles, or axis-angle).
+        orientation (np.array[float[4]], np.array[float[3,3]], np.array[float[3]], tuple of float and
+            np.array[float[3]]): orientation (expressed as a quaternion [x,y,z,w], 3x3 rotation matrix, roll-pitch-yaw
+            angles, or axis-angle).
 
     Returns:
-        np.array[3,3]: rotation matrix.
+        np.array[float[3,3]]: rotation matrix.
     """
     if isinstance(orientation, quaternion.quaternion):  # quaternion
         return get_matrix_from_quaternion(orientation)
@@ -170,11 +246,11 @@ def get_matrix_from_axis_angle(axis, angle):
     """Return the rotation matrix from the specified axis and angle.
 
     Args:
-        axis (np.float[3], list of 3 float): 3d axis vector.
+        axis (np.array[float[3]], list[float[3]]): 3d axis vector.
         angle (float): angle.
 
     Returns:
-        np.float[3,3]: rotation matrix.
+        np.array[float[3,3]]: rotation matrix.
     """
     x, y, z = axis
     a = angle
@@ -190,11 +266,11 @@ def get_symbolic_matrix_from_axis_angle(axis, angle):
     """Return the symbolic rotation matrix from the specified axis and angle.
 
     Args:
-        axis (np.float[3], list of 3 float, list of 3 sympy.Symbol): 3d axis vector.
+        axis (np.array[float[3]], list[float[3]], list[sympy.Symbol[3]]): 3d axis vector.
         angle (float, sympy.Symbol): angle.
 
     Returns:
-        np.float[3,3]: rotation matrix.
+        np.array[float[3,3]]: rotation matrix.
     """
     x, y, z = axis
     a = angle
@@ -210,11 +286,11 @@ def get_axis_angle_from_matrix(R):
     """Return the associated axis and angle from the specified rotation matrix.
 
     Args:
-        R (np.float[3,3]): 3-by-3 rotation matrix.
+        R (np.array[float[3,3]]): 3-by-3 rotation matrix.
 
     Returns:
         float: angle.
-        np.float[3]: 3d axis vector.
+        np.array[float[3]]: 3d axis vector.
     """
     angle = np.arccos((R[0, 0] + R[1, 1] + R[2, 2] - 1) / 2.)
     axis = 1. / (2. * np.sin(angle)) * np.array([R[2, 1] - R[1, 2], R[0, 2] - R[2, 0], R[1, 0] - R[0, 1]])
@@ -225,11 +301,11 @@ def get_symbolic_axis_angle_from_matrix(R):
     """Return the symbolic axis and angle from the specified rotation matrix.
 
     Args:
-        R (np.array of sympy.Symbol): 3-by-3 rotation matrix.
+        R (np.array[sympy.Symbol[3,3]]): 3-by-3 rotation matrix.
 
     Returns:
         sympy.Symbol: angle.
-        np.array of 3 sympy.Symbol: 3d axis vector.
+        np.array[sympy.Symbol[3]]: 3d axis vector.
     """
     angle = sympy.acos((R[0, 0] + R[1, 1] + R[2, 2] - 1) / 2.)
     axis = 1. / (2. * sympy.sin(angle)) * np.array([R[2, 1] - R[1, 2], R[0, 2] - R[2, 0], R[1, 0] - R[0, 1]])
@@ -240,14 +316,14 @@ def get_quaternion_from_axis_angle(axis, angle, convert_to_quat=False, conventio
     """Get the quaternion associated from the axis/angle representation.
 
     Args:
-        axis (np.float[3]): 3d axis vector.
+        axis (np.array[float[3]]): 3d axis vector.
         angle (float): angle.
         convert_to_quat (bool): If True, it will return an instance of `quaternion.quaternion`.
         convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        np.array[4], quaternion.quaternion: quaternion.
+        np.array[float[4]], quaternion.quaternion: quaternion.
     """
     w = np.cos(angle / 2.)
     x, y, z = np.sin(angle / 2.) * axis
@@ -266,13 +342,13 @@ def get_symbolic_quaternion_from_axis_angle(axis, angle, convention='xyzw'):
     """Get the symbolic quaternion associated from the axis/angle representation.
 
     Args:
-        axis (np.float[3], np.array of 3 sympy.Symbol): 3d axis vector.
+        axis (np.array[float[3]], np.array[sympy.Symbol[3]]): 3d axis vector.
         angle (float, sympy.Symbol): angle.
         convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        np.array[4]: symbolic quaternion.
+        np.array[float[4]]: symbolic quaternion.
     """
     w = sympy.cos(angle / 2.)
     x, y, z = sympy.sin(angle / 2.) * axis
@@ -288,10 +364,10 @@ def get_rpy_from_matrix(R):
     """Get the Roll-Pitch-Yaw angle values from the given rotation matrix.
 
     Args:
-        R (np.float[3,3]): 3-by-3 rotation matrix.
+        R (np.array[float[3,3]]): 3-by-3 rotation matrix.
 
     Returns:
-        np.float[3]: roll-pitch-yaw angle values.
+        np.array[float[3]]: roll-pitch-yaw angle values.
     """
     # r = np.arctan2(R[1, 0], R[0, 0])
     # p = np.arctan2(-R[2, 0], np.sqrt(R[2, 1]**2 + R[2, 2]**2))
@@ -308,10 +384,10 @@ def get_symbolic_rpy_from_matrix(R):
     """Get the symbolic Roll-Pitch-Yaw angles from the given rotation matrix.
 
     Args:
-        R (np.float[3,3], np.array of sympy.Symbol): symbolic 3-by-3 rotation matrix.
+        R (np.array[float[3,3]], np.array[sympy.Symbol[3,3]]): symbolic 3-by-3 rotation matrix.
 
     Returns:
-        np.array of 3 sympy.Symbol: symbolic roll-pitch-yaw angles.
+        np.array[sympy.Symbol[3]]: symbolic roll-pitch-yaw angles.
     """
     # r = sympy.atan2(R[1, 0], R[0, 0])
     # p = sympy.atan2(-R[2, 0], sympy.sqrt(R[2, 1] ** 2 + R[2, 2] ** 2))
@@ -328,10 +404,10 @@ def get_matrix_from_rpy(rpy):
     """Get rotation matrix from the given Roll-Pitch-Yaw angles.
 
     Args:
-        rpy (np.float[3]): roll-pitch-yaw angles
+        rpy (np.array[float[3]]): roll-pitch-yaw angles
 
     Returns:
-        np.float[3,3]: rotation matrix.
+        np.array[float[3,3]]: rotation matrix.
     """
     cr, cp, cy = [np.cos(i) for i in rpy]
     sr, sp, sy = [np.sin(i) for i in rpy]
@@ -346,10 +422,10 @@ def get_symbolic_matrix_from_rpy(rpy):
     Get the symbolic rotation matrix from the given Roll-Pitch-Yaw angles.
 
     Args:
-        rpy (np.float[3], np.array of 3 sympy.Symbol): roll-pitch-yaw angles.
+        rpy (np.array[float[3]], np.array[sympy.Symbol[3]]): roll-pitch-yaw angles.
 
     Returns:
-        3-by-3 np.array of sympy.Symbol: symbolic rotation matrix
+        np.array[sympy.Symbol[3,3]]: symbolic rotation matrix
     """
     cr, cp, cy = [sympy.cos(i) for i in rpy]
     sr, sp, sy = [sympy.sin(i) for i in rpy]
@@ -364,13 +440,13 @@ def get_quaternion_from_matrix(R, convert_to_quat=False, convention='xyzw'):
     Get the quaternion from the given rotation matrix.
 
     Args:
-        R (np.float[3,3]): rotation matrix.
+        R (np.array[float[3,3]]): rotation matrix.
         convert_to_quat (bool): If True, it will return an instance of `quaternion.quaternion`.
         convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        np.array[4], quaternion.quaternion: quaternion
+        np.array[float[4]], quaternion.quaternion: quaternion
     """
     w = 1./2 * np.sqrt(R[0, 0] + R[1, 1] + R[2, 2] + 1)
     x, y, z = 1./2 * np.array([np.sign(R[2, 1] - R[1, 2]) * np.sqrt(R[0, 0] - R[1, 1] - R[2, 2] + 1),
@@ -392,12 +468,12 @@ def get_symbolic_quaternion_from_matrix(R, convention='xyzw'):
     Get the symbolic quaternion from the given rotation matrix.
 
     Args:
-        R (3-by-3 np.array of sympy.Symbol, np.float[3,3]): (symbolic) rotation matrix
+        R (np.array[sympy.Symbol[3,3]], np.array[float[3,3]]): (symbolic) rotation matrix
         convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        np.array of 4 sympy.Symbol: symbolic quaternion.
+        np.array[sympy.Symbol[4]]: symbolic quaternion.
     """
     w = 1. / 2 * sympy.sqrt(R[0, 0] + R[1, 1] + R[2, 2] + 1)
     x, y, z = 1. / 2 * np.array([sympy.sign(R[2, 1] - R[1, 2]) * sympy.sqrt(R[0, 0] - R[1, 1] - R[2, 2] + 1),
@@ -416,12 +492,12 @@ def get_matrix_from_quaternion(q, convention='xyzw'):
     Get rotation matrix from the given quaternion.
 
     Args:
-        q (np.array[4], quaternion.quaternion): quaternion
+        q (np.array[float[4]], quaternion.quaternion): quaternion
         convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        np.float[3,3]: rotation matrix.
+        np.array[float[3,3]]: rotation matrix.
     """
     if isinstance(q, quaternion.quaternion):
         x, y, z, w = q.x, q.y, q.z, q.w
@@ -445,43 +521,56 @@ def get_symbolic_matrix_from_quaternion(q, convention='xyzw'):
     Get symbolic rotation matrix from the given quaternion.
 
     Args:
-        q (np.array of 4 sympy.Symbol, np.array[4]): (symbolic) quaternion.
+        q (np.array[sympy.Symbol[4]], np.array[float[4]]): (symbolic) quaternion.
         convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        3-by-3 np.array of sympy.Symbol: symbolic rotation matrix.
+        np.array[sympy.Symbol[3,3]]: symbolic rotation matrix.
     """
     return get_matrix_from_quaternion(q, convention=convention)
 
 
 def get_rpy_from_quaternion(q, convention='xyzw'):
     """
-    Get the Roll-Pitch-Yaw angle from the given quaternion.
+    Get the Roll-Pitch-Yaw angle(s) from the given quaternion(s).
 
     Args:
-        q (np.array[4], quaternion.quaternion): quaternion
+        q (np.array[float[4]], np.array[float[N,4]], (list of) quaternion.quaternion): quaternion(s)
         convention: convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        np.float[3]: roll-pitch-yaw angles.
+        np.array[float[3]], np.array[float[N,3]]: roll-pitch-yaw angles.
     """
-    if isinstance(q, quaternion.quaternion):
-        x, y, z, w = q.x, q.y, q.z, q.w
+    multiple_quaternions = True
+    if isinstance(q, (np.ndarray, list, tuple)):
+        q = np.asarray(q)
+    if isinstance(q, quaternion.quaternion) or (isinstance(q, np.ndarray) and len(q.shape) == 1):
+        multiple_quaternions = False
+        q = np.array([q])  # (1,4)
+
+    if isinstance(q[0], quaternion.quaternion):
+        q = quaternion.as_float_array(q)
+        x, y, z, w = q[:, 1], q[:, 2], q[:, 3], q[:, 0]  # (N,)
     elif isinstance(q, Iterable):
         if convention == 'xyzw':
-            x, y, z, w = q
+            x, y, z, w = q[:, 0], q[:, 1], q[:, 2], q[:, 3]  # (N,)
         elif convention == 'wxyz':
-            w, x, y, z = q
+            w, x, y, z = q[:, 0], q[:, 1], q[:, 2], q[:, 3]  # (N,)
         else:
             raise NotImplementedError("Asking for a convention that has not been implemented")
     else:
         raise TypeError
-    roll = np.arctan2(2*(w*x + y*z), 1 - 2 * (x**2 + y**2))
-    pitch = np.arcsin(2 * (w*y - z*x))
-    yaw = np.arctan2(2 * (w*z + x*y), 1 - 2 * (y**2 + z**2))
-    return np.array([roll, pitch, yaw])
+
+    roll = np.arctan2(2 * (w*x + y*z), 1 - 2 * (x**2 + y**2))   # (N,)
+    pitch = np.arcsin(2 * (w*y - z*x))                          # (N,)
+    yaw = np.arctan2(2 * (w*z + x*y), 1 - 2 * (y**2 + z**2))    # (N,)
+    rpy = np.vstack((roll, pitch, yaw)).T  # (N,3)
+
+    if not multiple_quaternions:
+        return rpy[0]
+    return np.array(rpy)
 
 
 def get_symbolic_rpy_from_quaternion(q, convention='xyzw'):
@@ -489,12 +578,12 @@ def get_symbolic_rpy_from_quaternion(q, convention='xyzw'):
     Get the symbolic Roll-Pitch-Yaw angle from the given quaternion.
 
     Args:
-        q (np.array[4], np.array of 4 sympy.Symbol): quaternion
+        q (np.array[float[4]], np.array[sympy.Symbol[4]]): quaternion
         convention: convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        np.array of 3 sympy.Symbol: symbolic roll-pitch-yaw angles.
+        np.array[sympy.Symbol[3]]: symbolic roll-pitch-yaw angles.
     """
     if isinstance(q, quaternion.quaternion):
         x, y, z, w = q.x, q.y, q.z, q.w
@@ -520,33 +609,43 @@ def get_quaternion_from_rpy(rpy, convert_to_quat=False, convention='xyzw'):
     Get quaternion from Roll-Pitch-Yaw angle.
 
     Args:
-        rpy (np.float[3]): roll-pitch-yaw angles
+        rpy (np.array[float[3]], np.array[float[N,3]]): roll-pitch-yaw angles
         convert_to_quat (bool): If True, it will return an instance of `quaternion.quaternion`.
         convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        np.array[4], quaternion.quaternion: quaternion
+        np.array[float[4]], quaternion.quaternion: quaternion
     """
-    r, p, y = rpy
+    rpy = np.asarray(rpy)
+    multiple_rpy = True
+    if len(rpy.shape) < 2:
+        multiple_rpy = False
+        rpy = np.array([rpy])  # (1,3)
+
+    r, p, y = rpy[:, 0], rpy[:, 1], rpy[:, 2]
     cr, sr = np.cos(r/2.), np.sin(r/2.)
     cp, sp = np.cos(p/2.), np.sin(p/2.)
     cy, sy = np.cos(y/2.), np.sin(y/2.)
 
-    w = cr * cp * cy + sr * sp * sy
-    x = sr * cp * cy - cr * sp * sy
-    y = cr * sp * cy + sr * cp * sy
-    z = cr * cp * sy - sr * sp * cy
+    w = cr * cp * cy + sr * sp * sy  # (N,)
+    x = sr * cp * cy - cr * sp * sy  # (N,)
+    y = cr * sp * cy + sr * cp * sy  # (N,)
+    z = cr * cp * sy - sr * sp * cy  # (N,)
 
     if convert_to_quat:
-        return quaternion.quaternion(w, x, y, z)
+        q = quaternion.from_float_array(np.vstack((w, x, y, z)).T)
     else:
         if convention == 'xyzw':
-            return np.array([x, y, z, w])
+            q = np.vstack([x, y, z, w]).T
         elif convention == 'wxyz':
-            return np.array([w, x, y, z])
+            q = np.vstack([w, x, y, z]).T
         else:
             raise NotImplementedError("Asking for a convention that has not been implemented")
+
+    if not multiple_rpy:
+        return q[0]
+    return q
 
 
 def get_symbolic_quaternion_from_rpy(rpy, convention='xyzw'):
@@ -554,12 +653,12 @@ def get_symbolic_quaternion_from_rpy(rpy, convention='xyzw'):
     Get symbolic quaternion from Roll-Pitch-Yaw angle.
 
     Args:
-        rpy (np.float[3], np.array of 3 sympy.Symbol): (symbolic) roll-pitch-yaw angles
+        rpy (np.array[float[3]], np.array[sympy.Symbol[3]]): (symbolic) roll-pitch-yaw angles
         convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        np.array of 4 sympy.Symbol: symbolic quaternion
+        np.array[sympy.Symbol[4]]: symbolic quaternion
     """
     r, p, y = rpy
     cr, sr = sympy.cos(r/2.), sympy.sin(r/2.)
@@ -597,10 +696,10 @@ def skew_matrix(vector):
     returns the skew-symmetric matrix from the given vector.
 
     Args:
-        vector (np.array[3]): 3D vector
+        vector (np.array[float[3]]): 3D vector
 
     Returns:
-        np.array[3,3]: skew-symmetric matrix
+        np.array[float[3,3]]: skew-symmetric matrix
 
     References:
         - [1] Wikipedia: https://en.wikipedia.org/wiki/Skew-symmetric_matrix#Cross_product
@@ -623,10 +722,10 @@ def vector_from_skew_matrix(matrix):
     Warnings: this function does not check if the given matrix is skew-symmetric.
 
     Args:
-        matrix (np.array[3,3]): skew-symmetric matrix
+        matrix (np.array[float[3,3]]): skew-symmetric matrix
 
     Returns:
-        np.array[3]: vector which produced the skew-symmetric matrix
+        np.array[float[3]]: vector which produced the skew-symmetric matrix
 
     References:
         - [1] Wikipedia: https://en.wikipedia.org/wiki/Skew-symmetric_matrix#Cross_product
@@ -649,7 +748,7 @@ def rotation_matrix_x(angle):
         angle (float): angle in radians
 
     Returns:
-        np.array[3,3]: rotation matrix around the x-axis
+        np.array[float[3,3]]: rotation matrix around the x-axis
     """
     c, s = np.cos(angle), np.sin(angle)
     return np.array([[1., 0., 0.],
@@ -665,7 +764,7 @@ def rotation_matrix_y(angle):
         angle (float): angle in radians
 
     Returns:
-        np.array[3,3]: rotation matrix around the y-axis
+        np.array[float[3,3]]: rotation matrix around the y-axis
     """
     c, s = np.cos(angle), np.sin(angle)
     return np.array([[c, 0., s],
@@ -681,7 +780,7 @@ def rotation_matrix_z(angle):
         angle (float): angle in radians
 
     Returns:
-        np.array[3,3]: rotation matrix around the z-axis
+        np.array[float[3,3]]: rotation matrix around the z-axis
     """
     c, s = np.cos(angle), np.sin(angle)
     return np.array([[c, -s, 0.],
@@ -696,11 +795,11 @@ def get_spatial_transformation_matrix(rotation, position):
     .. math:: ^1X_2^T =
 
     Args:
-        rotation (np.array[3,3]): rotation matrix
-        position (np.array[3]): position of body
+        rotation (np.array[float[3,3]]): rotation matrix
+        position (np.array[float[3]]): position of body
 
     Returns:
-        np.array[6,6]: spatial transformation matrix
+        np.array[float[6,6]]: spatial transformation matrix
     """
     pass
 
@@ -714,17 +813,46 @@ def get_spatial_transformation_matrix(rotation, position):
 quat_converter = QuaternionNumpyConverter(convention=1)
 
 
-def get_quaternion_conjugate(q, convention='xyzw'):
-    r"""Return the conjugate of the given quaternion; i.e. if the quaternion is given by q = [x,y,z,w] where [x,y,z]
-    is the vector part and
+def get_rotated_point_from_quaternion(q, p, convention='xyzw'):
+    """
+    Return the rotated point due to the provided quaternion.
+
+    .. math:: P_{\text{rotated}} = q * P * q^{-1} = q * P * q'
+
+    where :math:`q` is the unit quaternion (to represents a proper rotation and thus the inverse :math:`q^{-1}` is
+    equal to the conjugate :math:`q' = \bar{q}`), and :math:`P` is the quaternion where its vector part is equal to
+    the 3D position of the point :math:`p` and its scalar part is 0.
 
     Args:
-        q (np.array[4], quaternion.quaternion): quaternion (it doesn't have to be a unit quaternion)
+        q (np.array[float[4]], quaternion.quaternion): quaternion (it doesn't have to be a unit quaternion)
+        p (np.array[float[3]]): 3d point in space.
         convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        np.array[4], quaternion.quaternion: quaternion inverse.
+        np.array[float[3]]: rotated 3 point.
+    """
+    # TODO: fix this!
+    p_quat = np.array([p[0], p[1], p[2], 0])
+    q_inv = get_quaternion_inverse(q, convention=convention)
+    p_rot = get_quaternion_product(q, get_quaternion_product(p_quat, q_inv, convention=convention),
+                                   convention=convention)
+    return p_rot[:3]
+
+
+def get_quaternion_conjugate(q, convention='xyzw'):
+    r"""Return the conjugate of the given quaternion; i.e. if the quaternion is given by q = [x,y,z,w] where [x,y,z]
+    is the vector part and w is the scalar part, the conjugate is q'=[-x,-y,-z,w].
+
+    If the quaternion is a unit quaternion, the conjugate is equal to the inverse of that quaternion.
+
+    Args:
+        q (np.array[float[4]], quaternion.quaternion): quaternion (it doesn't have to be a unit quaternion)
+        convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
+            'wxyz'.
+
+    Returns:
+        np.array[float[4]], quaternion.quaternion: quaternion inverse.
     """
     if isinstance(q, quaternion.quaternion):
         return q.inverse()
@@ -746,7 +874,7 @@ def get_quaternion_norm(q):
     Return the norm of a quaternion: :math:`|q| = \sqrt(x^2 + y^2 + z^2 + w^2)`
 
     Args:
-        q (np.array[4], quaternion.quaternion): quaternion (it doesn't have to be a unit quaternion)
+        q (np.array[float[4]], quaternion.quaternion): quaternion (it doesn't have to be a unit quaternion)
 
     Returns:
         float: norm of a quaternion
@@ -762,10 +890,10 @@ def normalize_quaternion(q):
     Return the normalized quaternion; the quaternion divided by its norm.
 
     Args:
-        q (np.array[4], quaternion.quaternion): quaternion (it doesn't have to be a unit quaternion)
+        q (np.array[float[4]], quaternion.quaternion): quaternion (it doesn't have to be a unit quaternion)
 
     Returns:
-        np.array[4], quaternion.quaternion: normalized quaternion.
+        np.array[float[4]], quaternion.quaternion: normalized quaternion.
     """
     return q / get_quaternion_norm(q)
 
@@ -774,24 +902,31 @@ def get_quaternion_inverse(q, convention='xyzw'):
     """Return the inverse of the given quaternion.
 
     Note: the inverse of a quaternion is the conjugate of the quaternion divided by the square norm of that quaternion.
+    Thus for a unit quaternion, the inverse of a quaternion is equal to its conjugate.
+
+    This is given by:
+
+    .. math:: q^{-1} = \frac{\bar{q}}{||q||}
+
+    where :math:`\bar{q}` is the conjugate of the quaternion :math:`q`.
 
     Args:
-        q (np.array[4], quaternion.quaternion): quaternion.
+        q (np.array[float[4]], quaternion.quaternion): quaternion.
         convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        np.array[4], quaternion.quaternion: quaternion inverse.
+        np.array[float[4]], quaternion.quaternion: quaternion inverse.
     """
     if isinstance(q, quaternion.quaternion):
         return q.inverse()
-    elif isinstance(q, Iterable):
+    elif isinstance(q, (np.ndarray, tuple, list)):
         if convention == 'xyzw':
             x, y, z, w = q
-            return np.array([-x, -y, -z, w])
+            return np.array([-x, -y, -z, w]) / np.linalg.norm(q)
         elif convention == 'wxyz':
             w, x, y, z = q
-            return np.array([w, -x, -y, -z])
+            return np.array([w, -x, -y, -z]) / np.linalg.norm(q)
         else:
             raise NotImplementedError("Asking for a convention that has not been implemented")
     else:
@@ -801,14 +936,17 @@ def get_quaternion_inverse(q, convention='xyzw'):
 def get_quaternion_product(q1, q2, convention='xyzw'):
     """Return the quaternion product between two quaternions.
 
+    The quaternion corresponding to the product :math:`R_1 R_2` where :math:`R_i` are rotation matrices is given by
+    :math:`q_1 * q_2`.
+
     Args:
-        q1 (np.array[4], quaternion.quaternion): first quaternion
-        q2 (np.array[4], quaternion.quaternion): second quaternion
+        q1 (np.array[float[4]], quaternion.quaternion): first quaternion
+        q2 (np.array[float[4]], quaternion.quaternion): second quaternion
         convention (str): convention to be adopted when representing the quaternion. You can choose between 'xyzw' or
             'wxyz'.
 
     Returns:
-        np.array[4], quaternion.quaternion: resulting quaternion.
+        np.array[float[4]], quaternion.quaternion: resulting quaternion.
     """
     if type(q1) != type(q2):
         raise TypeError("Expecting q1 and q2 to be of the same type")
@@ -854,11 +992,11 @@ def quaternion_error(quat_des, quat_cur):
     Only the vector part is returned which can be used in PD control.
 
     Args:
-        quat_des (np.array[4]): desired quaternion [x,y,z,w]
-        quat_cur (np.array[4]): current quaternion [x,y,z,w]
+        quat_des (np.array[float[4]]): desired quaternion [x,y,z,w]
+        quat_cur (np.array[float[4]]): current quaternion [x,y,z,w]
 
     Returns:
-        np.array[3]: vector error between the current and desired quaternion
+        np.array[float[3]]: vector error between the current and desired quaternion
     """
     diff = quat_cur[-1] * quat_des[:3] - quat_des[-1] * quat_cur[:3] - skew_matrix(quat_des[:3]).dot(quat_cur[:3])
     return diff
@@ -882,10 +1020,10 @@ def logarithm_map(q):
     part and :math:`\pmb{v} \in \mathbb{R}^3` the vector part.
 
     Args:
-        q (float[4]): quaternion
+        q (np.array[float[4]]): quaternion
 
     Returns:
-        float[3]: resulting 3d vector
+        np.array[float[3]]: resulting 3d vector
     """
     q = quat_converter.convert_to(q)
     s, v = q.w, np.array([q.x, q.y, q.z])
@@ -917,10 +1055,10 @@ def exponential_map(r):
     its vector part.
 
     Args:
-        r (float[3]): 3d vector
+        r (np.array[float[3]]): 3d vector
 
     Returns:
-        float[4]: quaternion
+        np.array[float[4]]: quaternion
     """
     if np.allclose(r, np.zeros(3)):
         return quaternion.quaternion(1, 0, 0, 0)
@@ -947,7 +1085,7 @@ def angular_velocity_from_quaternion(q1, q2):
         q2: second (current) quaternion
 
     Returns:
-        float[3]: angular velocity (angular error in :math:`R^3`)
+        np.array[float[3]]: angular velocity (angular error in :math:`R^3`)
     """
     q1 = quat_converter.convert_to(q1)
     q2 = quat_converter.convert_to(q2)
@@ -956,10 +1094,12 @@ def angular_velocity_from_quaternion(q1, q2):
 
 def quaternion_distance(q1, q2):
     r"""
-    Compute the distance metric (on :math:`\mathbb{S}^3`) betwen two quaternions :math:`q_1` and :math:`q_2`:
+    Compute the distance metric (on :math:`\mathbb{S}^3`) between two quaternions :math:`q_1` and :math:`q_2`:
 
     Assuming a quaternion :math:`q` is represented as :math:`s + \pmb{v}` where :math:`s \in \mathbb{R}` is the scalar
     part and :math:`\pmb{v} \in \mathbb{R}^3` is the vector part, the distance is given by:
+
+    .. math::
 
         d(q_1, q_2) = \left\{ \begin{array}{ll}
                 2\pi, & q1 * \bar{q}_2 = -1 + [0,0,0]^\top \\
@@ -977,6 +1117,10 @@ def quaternion_distance(q1, q2):
 
     Returns:
         float: distance between the 2 given quaternions
+
+    References:
+        - [1] "Orientation in Cartesian Space Dynamic Movement Primitives", Ude et al., 2014
+        - [2] "Metrics for 3D Rotations: Comparison and Analysis", Huynh, 2009
     """
     q1 = quat_converter.convert_to(q1)
     q2 = quat_converter.convert_to(q2)
@@ -1001,8 +1145,8 @@ def trajectory_tracking_error(p_des, p_curr, q_des, q_curr, gamma=1.):
     function for more info).
 
     Args:
-        p_des (np.array[3]): desired position
-        p_curr (np.array[3]): current position
+        p_des (np.array[float[3]]): desired position
+        p_curr (np.array[float[3]]): current position
         q_des: desired orientation (quaternion)
         q_curr: current orientation (quaternion)
 
@@ -1026,7 +1170,7 @@ def quaternion_derivative(rate, q):
     quaternion and :math:`*` is the quaternion product operator.
 
     Args:
-        rate (np.array[3]): angular velocity at time t.
+        rate (np.array[float[3]]): angular velocity at time t.
         q: unit quaternion at time t.
 
     Returns:
@@ -1050,7 +1194,7 @@ def quaternion_integrate(rate, q, dt=0):
     operator.
 
     Args:
-        rate (np.array[3]): angular velocity at time t.
+        rate (np.array[float[3]]): angular velocity at time t.
         q: unit quaternion at time t.
         dt (float): time difference to move forward in the future.
 
@@ -1068,14 +1212,14 @@ def slerp(q0, qf, t, t0=0., tf=1.):
     Interpolate between two quaternions using Spherical Linear intERPolation (SLERP).
 
     Args:
-        q0 (np.array[4], quaternion.quaternion): initial quaternion.
-        qf (np.array[4], quaternion.quaternion): final quaternion.
-        t (float, list of float, np.array): the times to which the quaternions should be interpolated.
+        q0 (np.array[float[4]], quaternion.quaternion): initial quaternion.
+        qf (np.array[float[4]], quaternion.quaternion): final quaternion.
+        t (float, list[float], np.array[float]): the times to which the quaternions should be interpolated.
         t0 (float): initial time corresponding to the initial quaternion.
         tf (float): final time corresponding to the final quaternion.
 
     Returns:
-        np.array, quaternion, np.array of quaternion: one or multiple interpolated quaternions
+        np.array, quaternion, np.array[quaternion]: one or multiple interpolated quaternions
 
     References:
         - [1] "Understanding Quaternions", https://www.3dgep.com/understanding-quaternions
@@ -1120,13 +1264,13 @@ def squad(quaternions, times, t):
     conditions are violated."
 
     Args:
-        quaternions (list of np.array[4], list of quaternion.quaternion): A time-series of rotors (unit quaternions)
-            to be interpolated
-        times (np.array, list of float): the times corresponding to the quaternions.
-        t (np.array, list of float): the times to which the quaternions should be interpolated.
+        quaternions (list[np.array[float[4]]], list[quaternion.quaternion]): A time-series of rotors (unit
+            quaternions) to be interpolated
+        times (np.array[float], list[float]): the times corresponding to the quaternions.
+        t (np.array[float], list[float]): the times to which the quaternions should be interpolated.
 
     Returns:
-        np.array, np.array of quaternion: interpolated quaternions
+        np.array, np.array[quaternion]: interpolated quaternions
 
     References:
         - [1] "Understanding Quaternions", https://www.3dgep.com/understanding-quaternions

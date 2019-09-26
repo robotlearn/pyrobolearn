@@ -10,11 +10,17 @@ try:
     import cPickle as pickle
 except ImportError as e:
     import pickle
+from scipy import signal
+from scipy import interpolate
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 
+import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse
+
 # from pyrobolearn.models.model import Model
-from pyrobolearn.models.gaussian import Gaussian
+from pyrobolearn.models.gaussian import Gaussian, plot_2d_ellipse
+from pyrobolearn.filters.utils import smooth
 
 
 __author__ = "Brian Delhaisse"
@@ -104,7 +110,7 @@ class GMM(object):
     respectively.
 
     This results in another GMM, which can be approximated by a simple Gaussian (see [4] for more info, or the
-    documentation of the corresponding method: `approximate_by_single_gaussian`):
+    documentation of the corresponding method: :func:`~approximate_by_single_gaussian`):
 
     .. math::
 
@@ -129,12 +135,13 @@ class GMM(object):
         - [5] "Programming by Demonstration on Riemannian Manifolds" (PhD thesis, chap 1 and 2), Zeerstraten, 2017
         - [6] "Learning Control", Calinon et al., 2018
 
-    The code was inspired by the following codes:
-    - `gaussian.py`: defines the Gaussian distribution
-    - `sklearn.mixture.gmm` and `sklearn.mixture.dpgmm`: http://scikit-learn.org/stable/modules/mixture.html
-    - `gmr`: https://github.com/AlexanderFabisch/gmr
-    - `pybdlib`: https://gitlab.idiap.ch/rli/pbdlib-python/tree/master/pbdlib
-    - `riepybdlib.statistics`: https://gitlab.martijnzeestraten.nl/martijn/riepybdlib
+    Other codes related to GMM (from which we were loosely inspired; we looked at the number and name of the methods
+    but were mainly inspired by [1, 3, 4] to implement several methods) can be found at:
+        - `gaussian.py`: defines our Gaussian distribution
+        - `sklearn.mixture.gmm` and `sklearn.mixture.dpgmm`: http://scikit-learn.org/stable/modules/mixture.html
+        - `gmr`: https://github.com/AlexanderFabisch/gmr
+        - `pybdlib`: https://gitlab.idiap.ch/rli/pbdlib-python/tree/master/pbdlib
+        - `riepybdlib.statistics`: https://gitlab.martijnzeestraten.nl/martijn/riepybdlib
     """
 
     def __init__(self, num_components=1, priors=None, means=None, covariances=None, gaussians=None, seed=None,
@@ -182,6 +189,9 @@ class GMM(object):
             if len(priors) != len(gaussians):
                 raise ValueError("The number of priors and gaussians are differents")
 
+        # Set dimensionality
+        self._dimensionality = dimensionality if isinstance(dimensionality, int) and dimensionality > 0 else 0
+
     ##############
     # Properties #
     ##############
@@ -210,7 +220,7 @@ class GMM(object):
         """Return the dimensionality of the mean"""
         if len(self._gaussians) > 0:
             return self._gaussians[0].dim
-        return 0
+        return self._dimensionality
 
     # alias
     dim = dimensionality
@@ -698,17 +708,301 @@ class GMM(object):
         """
         return - 2 * self.log_likelihood(x) + self.num_parameters * np.log(self.num_data)
 
+    def estimate_num_components_from_trajectory_curvature_segmentation(self, data, interpolation_method='cubic',
+                                                                       smooth_curvature=True):
+        r"""
+        Estimate the number of components / Gaussians needed to model a temporal and spatial trajectory based on
+        trajectory curvature segmentation. This only works for sequential temporal and spatial data. The first
+        dimension is assumed to be the time, and the other dimensions have to be spatial data (x [,y [,z]]).
+
+        Warnings: this initialization only makes sense with spatial trajectories, and is deterministic. It also
+        assumes that the trajectories are similar. Currently, we only accept 4D curves (t, x, y, z).
+
+        From [1], let's assume a D-dimensional curve :math:`\pmb{x}(t) \in \mathbb{R}^D`, for which we can define a
+        Frenet frame at each time step :math:`\{\pmb{e}_1(t), ..., \pmb{e}_D(t)\}`. That curve can be the mean
+        trajectory computed from all the provided trajectories. It might be necessary to align them using dynamic time
+        wrapping beforehand, The basis vectors are computed using the Gram-Schmidt orthogonalization process, where
+        the first basis is computed using:
+
+        .. math::
+
+            \pmb{q}_1(t) &= \frac{\partial \pmb{x}(t)}{\partial t} \\
+            \pmb{e}_1(t) &= \frac{\pmb{q}_1(t)}{|| \pmb{q}_1(t) ||}
+
+        and the subsequent basis are computed recursively using:
+
+        .. math::
+
+            \pmb{q}_j(t) &= \frac{\partial^j \pmb{x}(t)}{\partial t^j} - \sum_{i=1}^{j-1}
+                \pmb{e}_i(t)^\top \left( \frac{\partial^j \pmb{x}(t)}{\partial t^j} \right) \pmb{e}_i(t) \\
+            \pmb{e}_1(t) &= \frac{ \pmb{q}_j(t) }{ ||\pmb{q}_j(t)|| }
+
+        Based on these basis vectors, we can compute the generalized curvatures :math:`\{\chi_j(t)\}_{j=1}^{D-1}`,
+        where:
+
+        .. math::
+
+            \chi_j(t) = \frac{\pmb{e}_{j+1}(t)^\top \left( \frac{\partial \pmb{e}_j(t)}{\partial t}\right)}
+                {|| \frac{\partial \pmb{x}(t)}{\partial t} ||}.
+
+        Note that, this involves the computation of the jth derivative of the curve wrt to the time for each dimension
+        :math:`j \in \{1, ..., D\}`. In order to get satisfactory estimations, we can locally approximated the curve by
+        a D-dimensional polynomial function. "The derivatives can subsequently be analytically computed and are
+        re-sampled to provide trajectories of T data points" [1]. For instance, for a 3D curve we can use a Hermite
+        interpolator (a 5th order polynomial) or a 3D polynomial function.
+
+        The total norm curvature of a D-dimensional curve is finally defined as:
+
+        .. math:: \Sigma(t) = \sqrt{\sum_{i=1}^{D-2} \chi_i(t)^2}
+
+        The local maxima of :math:`\Sigma(t)` provide points for segmenting the trajectory, where the data between
+        two segmentation points represent parts of the trajectory for which directions do not vary much" [1]. The
+        number of local maxima + 1 provides the number of Gaussian needed.
+
+        Args:
+            data (np.array[N,D], list of np.array[T,D], np.array[N,T,D]): data matrix(ces). For each matrix, we assume
+                that the first dimension is the time. If only a 2D matrix is provided, the trajectory can be
+                concatenated but the time has to be relative; that is when you record a trajectory the time
+                has to between [t0, tf], and when you record another trajectory it has to be between [t0',tf'] where
+                t0' < tf. We will use that to reshape the matrix.
+            interpolation_method (str): "Specifies the kind of interpolation as a string ('linear', 'nearest', 'zero',
+                'slinear', 'quadratic', 'cubic', 'previous', 'next', where 'zero', 'slinear', 'quadratic' and 'cubic'
+                refer to a spline interpolation of zeroth, first, second or third order; 'previous' and 'next' simply
+                return the previous or next value of the point) or as an integer specifying the order of the spline
+                interpolator to use. Default is 'cubic'." from ``scipy.interpolate.interp1d`` documentation.
+            smooth_curvature (bool): if we should smooth the total norm curvature before looking for the local maxima.
+
+        Returns:
+            int: number of components needed
+
+        References:
+            - [1] "Robot Programming by Demonstration: A Probabilistic Approach", Calinon, 2009, Chap 2.8.2
+        """
+        indices = self._get_curvature_segmentation_points(data, interpolation_method=interpolation_method,
+                                                          smooth_curvature=smooth_curvature)[0]
+        return len(indices) - 1  # because the indices contain the first and end points
+
+    @staticmethod
+    def _get_curvature_segmentation_points(data, interpolation_method='cubic', smooth_curvature=True):
+        r"""
+        Get the trajectory curvature segmentation points. This only works for sequential temporal and
+        spatial data. The first dimension is assumed to be the time, and the other dimensions have to be spatial data
+        (x [,y [,z]]).
+
+        Warnings: this initialization only makes sense with spatial trajectories, and is deterministic. It also
+        assumes that the trajectories are similar. Currently, we only accept 4D curves (t, x, y, z).
+
+        From [1], let's assume a D-dimensional curve :math:`\pmb{x}(t) \in \mathbb{R}^D`, for which we can define a
+        Frenet frame at each time step :math:`\{\pmb{e}_1(t), ..., \pmb{e}_D(t)\}`. That curve can be the mean
+        trajectory computed from all the provided trajectories. It might be necessary to align them using dynamic time
+        wrapping beforehand, The basis vectors are computed using the Gram-Schmidt orthogonalization process, where
+        the first basis is computed using:
+
+        .. math::
+
+            \pmb{q}_1(t) &= \frac{\partial \pmb{x}(t)}{\partial t} \\
+            \pmb{e}_1(t) &= \frac{\pmb{q}_1(t)}{|| \pmb{q}_1(t) ||}
+
+        and the subsequent basis are computed recursively using:
+
+        .. math::
+
+            \pmb{q}_j(t) &= \frac{\partial^j \pmb{x}(t)}{\partial t^j} - \sum_{i=1}^{j-1}
+                \pmb{e}_i(t)^\top \left( \frac{\partial^j \pmb{x}(t)}{\partial t^j} \right) \pmb{e}_i(t) \\
+            \pmb{e}_1(t) &= \frac{ \pmb{q}_j(t) }{ ||\pmb{q}_j(t)|| }
+
+        Based on these basis vectors, we can compute the generalized curvatures :math:`\{\chi_j(t)\}_{j=1}^{D-1}`,
+        where:
+
+        .. math::
+
+            \chi_j(t) = \frac{\pmb{e}_{j+1}(t)^\top \left( \frac{\partial \pmb{e}_j(t)}{\partial t}\right)}
+                {|| \frac{\partial \pmb{x}(t)}{\partial t} ||}.
+
+        Note that, this involves the computation of the jth derivative of the curve wrt to the time for each dimension
+        :math:`j \in \{1, ..., D\}`. In order to get satisfactory estimations, we can locally approximated the curve by
+        a D-dimensional polynomial function. "The derivatives can subsequently be analytically computed and are
+        re-sampled to provide trajectories of T data points" [1]. For instance, for a 3D curve we can use a Hermite
+        interpolator (a 5th order polynomial) or a 3D polynomial function.
+
+        The total norm curvature of a D-dimensional curve is finally defined as:
+
+        .. math:: \Sigma(t) = \sqrt{\sum_{i=1}^{D-2} \chi_i(t)^2}
+
+        The local maxima of :math:`\Sigma(t)` provide points for segmenting the trajectory, where the data between
+        two segmentation points represent parts of the trajectory for which directions do not vary much" [1].
+        Based on them, we can then compute the mean of each Gaussian by taking the center between two segmentation
+        points, and compute the covariance matrix by looking at the variation of each trajectory along each dimension
+        (for the time dimension, we check the distance between the mean of a Gaussian and one of its associated
+        segmentation point).
+
+        Args:
+            data (np.array[N,D], list of np.array[T,D], np.array[N,T,D]): data matrix(ces). For each matrix, we assume
+                that the first dimension is the time. If only a 2D matrix is provided, the trajectory can be
+                concatenated but the time has to be relative; that is when you record a trajectory the time
+                has to between [t0, tf], and when you record another trajectory it has to be between [t0',tf'] where
+                t0' < tf. We will use that to reshape the matrix.
+            interpolation_method (str): "Specifies the kind of interpolation as a string ('linear', 'nearest', 'zero',
+                'slinear', 'quadratic', 'cubic', 'previous', 'next', where 'zero', 'slinear', 'quadratic' and 'cubic'
+                refer to a spline interpolation of zeroth, first, second or third order; 'previous' and 'next' simply
+                return the previous or next value of the point) or as an integer specifying the order of the spline
+                interpolator to use. Default is 'cubic'." from ``scipy.interpolate.interp1d`` documentation.
+            smooth_curvature (bool): if we should smooth the total norm curvature before looking for the local maxima.
+
+        Returns:
+            np.array: indices where we have local maxima in the total norm curvature; i.e. segmenting points. The
+                beginning and end points are also included in the indices. Thus, the number of needed gaussians is
+                the size of the returned array - 1.
+            np.array: reshaped trajectories of shape (N, T, D). The trajectories have been reshaped such that they
+                have the same size (T, D) where T is the maximum time length that was found in the data.
+            np.array: mean trajectory on the reshaped trajectory. It has a shape (T, D).
+
+        References:
+            - [1] "Robot Programming by Demonstration: A Probabilistic Approach", Calinon, 2009, Chap 2.8.2
+        """
+        # check shape of data
+        if isinstance(data, list):  # if data is a list of np.array[T,D]
+            for d in data:
+                if not isinstance(d, np.ndarray):
+                    raise TypeError("Expecting each element in the given data list to be a np.array, instead got: "
+                                    "{}".format(type(d)))
+                if len(d.shape) != 2:
+                    raise ValueError("Expecting each element in the given data list to be a np.array of shape 2, "
+                                     "instead got: {}".format(d.shape))
+
+        elif isinstance(data, np.ndarray):  # if data is a np.array[N,T,D] or np.array[N,D]
+            if len(data.shape) != 2 and len(data.shape) != 3:
+                raise ValueError("Expecting the given data array to have a shape of 2 or 3 (i.e. len(shape)), "
+                                 "instead got: {}".format(data.shape))
+
+            # if 2D matrix, we have to create a list of np.array[T,D]
+            # we go through each element and when the time associated with an element is smaller than the preceding
+            # time, we create a trajectory
+            if len(data.shape) == 2:
+                d = []
+                t_prec = data[0][0]
+                i_prec = 0  # index to cut the data
+                for i, step in enumerate(data):
+                    t = step[0]  # get current time
+
+                    # if current time is smaller than previous time, we assume it is a new trajectory as we can
+                    # go to the past ;)
+                    if t < t_prec or i == len(data) - 1:
+                        d.append(data[i_prec:i + 1])
+                        i_prec = i
+
+                    # update precedent time
+                    t_prec = t
+
+                # set data
+                data = d  # list of np.array[T,D]
+        else:
+            raise TypeError("Expecting the given data to be a list of 2D np.array, a 2D np.array, or 3D np.array, "
+                            "instead got: {}".format(type(data)))
+
+        # check if we have enough trajectories to compute the covariances
+        if len(data) == 0 or len(data) < data[0].shape[1]:
+            raise ValueError("Expecting to have more trajectories than the dimensionality of each trajectory.")
+
+        # fit a polynomial function to each trajectory
+        data_fcts, num_points, periods, t0s = [], [], [], []
+        for d in data:
+            period = (d[-1, 0] - d[0, 0])  # T = (tf - t0)
+            t = d[:, 0] - d[0, 0]  # t = [t0, ..., tf]  --> t = [0, ..., tf-t0]
+            t /= period  # t = [0, ..., tf-t0]  --> t= [0, ..., 1]
+
+            # compute interpolation function
+            fct = interpolate.interp1d(t, d[:, 1:], kind=interpolation_method, axis=0, assume_sorted=True)
+
+            # add useful variables
+            data_fcts.append(fct)
+            num_points.append(d.shape[0])
+            periods.append(period)
+            t0s.append(d[0, 0])
+
+        # sample trajectories (such that they have the same size)
+        num_max_points = np.max(num_points)
+        t = np.linspace(0, 1, num_max_points)
+        trajectories = np.array([fct(t) for fct in data_fcts])  # shape=(N,T,D-1); (D-1) because we removed the time
+
+        # compute mean trajectory from which we will compute the Frenet frame
+        mean_traj = np.mean(trajectories, axis=0)  # (T, D-1)
+
+        # fit polynomial function to the mean trajectory
+        # currently, we only consider cubic spline (3D) interpolation
+        if mean_traj.shape[1] > 3:
+            raise ValueError("Currently, this method doesn't accept more than 4 dimensions (time, x, y, z), "
+                             "however {} dimensions were given".format(mean_traj.shape[1] + 1))
+        interpolator = interpolate.CubicSpline(t, mean_traj, axis=0)
+        # coeffs = np.polyfit(mean_traj[:, 0], mean_traj[:, 1], deg=data.shape[2]-1)  # (T,D)
+        # interpolator = interpolate.KroghInterpolator(t, mean_traj, axis=0)
+        # derivatives = interpolator.derivatives(t)
+
+        # compute basis vectors for the Frenet frame
+        bases = []
+        generalized_curvatures = []
+        norm_first_deriv = 1
+        for i in range(mean_traj.shape[1]):
+            derivative = interpolator.derivative(nu=i + 1)
+            d = derivative(t)  # (T, D-1)
+
+            # if not first basis vector, compute orthogonal vector using Gram-Schmidt
+            if i != 0:
+                d_init = np.array(d)
+                for basis in bases:  # TODO: vectorize this
+                    d -= np.sum(basis * d_init, axis=1) * basis  # (T, D-1)
+            else:
+                norm_first_deriv = np.linalg.norm(d, axis=1)  # (T,)
+
+            # normalize basis vector
+            basis = (d.T / np.linalg.norm(d, axis=1)).T  # (T, D-1)
+            bases.append(basis)
+
+            # compute generalized curvature
+            if i != 0:
+                # compute first derivative of previous basis
+                d = interpolate.CubicSpline(t, bases[-1], axis=0).derivative(nu=1)
+                d = d(t)  # (T, D-1)
+
+                chi = np.sum(basis * d, axis=1) / norm_first_deriv  # (T,)
+                generalized_curvatures.append(chi)
+
+        generalized_curvatures = np.array(generalized_curvatures)  # (D-2, T)
+
+        # compute total curvature norm
+        total_curvature_norm = np.linalg.norm(generalized_curvatures, axis=0)  # (T,)
+
+        # the local maxima of total curvature provide points for segmenting the trajectory (+ start / end points)
+        if smooth_curvature:
+            total_curvature_norm = smooth(total_curvature_norm)  # smooth the signal
+        indices = np.diff(np.sign(np.diff(total_curvature_norm))) < 0  # (T-2,)
+        indices = np.concatenate(([True], indices, [True]))  # (T,)
+        indices = np.where(indices)[0]  # (I,)
+        # peaks_indices = scipy.signal.find_peaks(total_curvature_norm)
+        # peaks_indices = scipy.signal.find_peaks_cwt(total_curvature_norm, widths=np.arange(1,10))
+        # extrema = scipy.signal.argrelextrema(total_curvature_norm)
+
+        # append time dimension back to trajectories / mean trajectory
+        trajectories = np.dstack((t.reshape(-1, 1), trajectories))  # (N, T, D)
+        mean_traj = np.hstack((t.reshape(-1, 1), mean_traj))  # (T, D)
+
+        return indices, trajectories, mean_traj
+
     def init_random(self, data, seed=None, reg=1e-8):
         r"""
         Initialize the GMM randomly.
 
         Args:
-            data (np.array): data matrix
+            data (np.array[N,D]): data matrix
             seed (int, None): seed for random generator
             reg (float): regularization term (useful to not have singular covariance matrices)
         """
         # initialize random generator
-        np.random.seed(seed)
+        if seed is not None:
+            np.random.seed(seed)
+
+        # set dimensionality
+        self._dimensionality = data.shape[1]
 
         # uniform priors
         self._priors = np.ones(self.num_components) / self.num_components
@@ -727,84 +1021,6 @@ class GMM(object):
         # create gaussians
         self._gaussians = [Gaussian(mean=mu, covariance=cov) for mu, cov in zip(means, covariances)]
 
-    def init_linear(self, data):
-        r"""
-        Initialize the GMM uniformly and linearly in the space. This initialization scheme is deterministic.
-
-        Args:
-            data (np.array[N,D]): data matrix
-        """
-        # compute lower and upper bounds
-        lower_bound, upper_bound = np.min(data, axis=0), np.max(data, axis=0)
-
-        # distribute the means
-        means = []
-
-        # compute the covariances
-        covariances = []
-
-        # create gaussians
-        self._gaussians = [Gaussian(mean=mu, covariance=cov) for mu, cov in zip(means, covariances)]
-
-    def init_uniformly(self, data, axis=0):
-        r"""
-        Initialize the GMM uniformly in the space with respect to the axis dimension. If the data represents
-        trajectories, the first dimension is the time and it will distributed uniformly with respect to that one.
-
-        Args:
-            data (np.array[N,D]): data matrix
-            axis (int): axis specifying the dimension
-        """
-        # compute lower and upper bounds
-        lower_bound, upper_bound = np.min(data, axis=0), np.max(data, axis=0)
-
-        # distribute linearly with respect to the specified axis/dimension
-        distance = upper_bound[axis] - lower_bound[axis]
-        x = distance / (self.num_components + 1.) * np.arange(self.num_components)
-
-        # compute centers for the other dimensions
-        idx = np.arange(len(x)) != axis
-        centers = (upper_bound[idx] - lower_bound[idx]) / 2.
-
-        # compute means (combine the centers with the distribution over the specified axis)
-        means = []
-
-        # compute covariances
-        covariances = []
-
-        # create gaussians
-        self._gaussians = [Gaussian(mean=mu, covariance=cov) for mu, cov in zip(means, covariances)]
-
-    def init_curvature(self, data):
-        r"""
-        Initialize the GMM using the curvature of the trajectories. This only works for sequential spatial data.
-
-        Args:
-            data (np.array[T,D], np.array[N,T,D]): data matrix or vector
-        """
-        pass
-
-    def init_sklearn(self, data):
-        r"""
-        Initialize the GMM using the sklearn library.
-
-        Args:
-            data (np.array[T,D], np.array[N,T,D]): data matrix or vector
-        """
-        pass
-
-    def init_time_warping(self, data):
-        r"""
-        Initialize the GMM using Dynamic Time Wrapping [1]. This only works for sequential temporal and spatial data.
-
-        Args:
-            data:
-
-        References:
-            - [1] "Robot Programming by Demonstration: A Probabilistic Approach", Calinon, 2009, Chap 2.9.3
-        """
-        pass
-
     def init_kmeans(self, data, seed=None):
         r"""
         Initialize the GMM using K-means algorithm.
@@ -814,7 +1030,11 @@ class GMM(object):
             seed (int, None): seed for random generator
         """
         # initialize random generator
-        np.random.seed(seed)
+        if seed is not None:
+            np.random.seed(seed)
+
+        # set dimensionality
+        self._dimensionality = data.shape[1]
 
         # fit the data using k-means
         km = KMeans(n_clusters=self.num_components)
@@ -832,23 +1052,193 @@ class GMM(object):
         # create gaussians
         self._gaussians = [Gaussian(mean=mu, covariance=cov) for mu, cov in zip(means, covariances)]
 
-    def init(self, data, method='k-means', seed=None, reg=1e-8):
+    def init_uniformly(self, data, axis=0):
+        r"""
+        Initialize the GMM uniformly in the space with respect to the axis dimension. If the data represents
+        trajectories, the first dimension is the time and it will distributed uniformly with respect to that one by
+        default. The covariances of each Gaussian will be a spherical one.
+
+        Warnings: this initialization is deterministic (given the same data).
+
+        Args:
+            data (np.array[N,D]): data matrix
+            axis (int): axis specifying the dimension to distribute the Gaussians uniformly
+        """
+        # compute lower and upper bounds
+        lower_bound, upper_bound = np.min(data, axis=0), np.max(data, axis=0)       # shape=(D,)
+
+        # distribute uniformly with respect to the specified axis/dimension
+        total_distance = upper_bound[axis] - lower_bound[axis]      # total distance between lower and upper bounds
+        distance = total_distance / (self.num_components + 1.)      # distance between centers
+        x = distance * np.arange(1, self.num_components + 1)        # shape=(Nc,)
+
+        # compute centers for the other dimensions
+        if axis < 0:
+            axis = (len(x)-1) - (np.abs(axis + 1) % len(x))
+        idx = np.arange(len(x)) != axis
+        centers = (upper_bound[idx] - lower_bound[idx]) / 2.  # shape=(D-1,)
+
+        # compute means (combine the centers with the distribution over the specified axis)
+        means = np.array(centers * self.num_components)  # shape=(Nc, D-1)
+        means = np.hstack((means[:, :axis], x, means[:, axis:]))  # shape=(Nc, D)
+
+        # compute spherical covariances
+        radius = distance / 2.  # distance = 2*radius
+        sigma = radius / 2.     # radius = 2*sigma
+        covariances = [sigma**2 * np.identity(data.shape[1])] * self.num_components        # shape=(Nc,D,D)
+
+        # create gaussians
+        self._gaussians = [Gaussian(mean=mu, covariance=cov) for mu, cov in zip(means, covariances)]
+
+    def init_sklearn(self, data, seed=None, max_iter=10, init_params='kmeans', reg=1e-6):
+        r"""
+        Initialize the GMM by training a GMM from the sklearn library.
+
+        Args:
+            data (np.array[N,D]): data matrix
+            seed (int, None): seed for random generator
+            max_iter (int): the number of EM iterations to perform
+            init_params (str): {'kmeans', 'random'}, defaults to 'kmeans'. The method used to initialize the
+                weights, the means and the precisions.
+            reg (float): regularization term (useful to not have singular covariance matrices)
+        """
+        # check seed
+        kwargs = {}
+        if seed is not None:
+            kwargs['random_state'] = seed
+
+        # fit data to gmm
+        gmm_ = GaussianMixture(n_components=self.num_components, max_iter=max_iter, init_params=init_params,
+                               reg_covar=reg, **kwargs)
+        gmm_.fit(data)
+
+        # create gaussians
+        self._gaussians = [Gaussian(mean=mu, covariance=cov) for mu, cov in zip(gmm_.means_, gmm_.covariances_)]
+
+    def init_curvature(self, data, interpolation_method='cubic', reg=1.e-6, smooth_curvature=True):
+        r"""
+        Initialize the GMM using trajectory curvature segmentation. This only works for sequential temporal and
+        spatial data. The first dimension is assumed to be the time, and the other dimensions have to be spatial data
+        (x [,y [,z]]).
+
+        Warnings: this initialization only makes sense with spatial trajectories, and is deterministic. It also
+        assumes that the trajectories are similar. Currently, we only accept 4D curves (t, x, y, z).
+
+        From [1], let's assume a D-dimensional curve :math:`\pmb{x}(t) \in \mathbb{R}^D`, for which we can define a
+        Frenet frame at each time step :math:`\{\pmb{e}_1(t), ..., \pmb{e}_D(t)\}`. That curve can be the mean
+        trajectory computed from all the provided trajectories. It might be necessary to align them using dynamic time
+        wrapping beforehand, The basis vectors are computed using the Gram-Schmidt orthogonalization process, where
+        the first basis is computed using:
+
+        .. math::
+
+            \pmb{q}_1(t) &= \frac{\partial \pmb{x}(t)}{\partial t} \\
+            \pmb{e}_1(t) &= \frac{\pmb{q}_1(t)}{|| \pmb{q}_1(t) ||}
+
+        and the subsequent basis are computed recursively using:
+
+        .. math::
+
+            \pmb{q}_j(t) &= \frac{\partial^j \pmb{x}(t)}{\partial t^j} - \sum_{i=1}^{j-1}
+                \pmb{e}_i(t)^\top \left( \frac{\partial^j \pmb{x}(t)}{\partial t^j} \right) \pmb{e}_i(t) \\
+            \pmb{e}_1(t) &= \frac{ \pmb{q}_j(t) }{ ||\pmb{q}_j(t)|| }
+
+        Based on these basis vectors, we can compute the generalized curvatures :math:`\{\chi_j(t)\}_{j=1}^{D-1}`,
+        where:
+
+        .. math::
+
+            \chi_j(t) = \frac{\pmb{e}_{j+1}(t)^\top \left( \frac{\partial \pmb{e}_j(t)}{\partial t}\right)}
+                {|| \frac{\partial \pmb{x}(t)}{\partial t} ||}.
+
+        Note that, this involves the computation of the jth derivative of the curve wrt to the time for each dimension
+        :math:`j \in \{1, ..., D\}`. In order to get satisfactory estimations, we can locally approximated the curve by
+        a D-dimensional polynomial function. "The derivatives can subsequently be analytically computed and are
+        re-sampled to provide trajectories of T data points" [1]. For instance, for a 3D curve we can use a Hermite
+        interpolator (a 5th order polynomial) or a 3D polynomial function.
+
+        The total norm curvature of a D-dimensional curve is finally defined as:
+
+        .. math:: \Sigma(t) = \sqrt{\sum_{i=1}^{D-2} \chi_i(t)^2}
+
+        The local maxima of :math:`\Sigma(t)` provide points for segmenting the trajectory, where the data between
+        two segmentation points represent parts of the trajectory for which directions do not vary much" [1].
+        Based on them, we can then compute the mean of each Gaussian by taking the center between two segmentation
+        points, and compute the covariance matrix by looking at the variation of each trajectory along each dimension
+        (for the time dimension, we check the distance between the mean of a Gaussian and one of its associated
+        segmentation point).
+
+        Args:
+            data (np.array[N,D], list of np.array[T,D], np.array[N,T,D]): data matrix(ces). For each matrix, we assume
+                that the first dimension is the time. If only a 2D matrix is provided, the trajectory can be
+                concatenated but the time has to be relative; that is when you record a trajectory the time
+                has to between [t0, tf], and when you record another trajectory it has to be between [t0',tf'] where
+                t0' < tf. We will use that to reshape the matrix.
+            interpolation_method (str): "Specifies the kind of interpolation as a string ('linear', 'nearest', 'zero',
+                'slinear', 'quadratic', 'cubic', 'previous', 'next', where 'zero', 'slinear', 'quadratic' and 'cubic'
+                refer to a spline interpolation of zeroth, first, second or third order; 'previous' and 'next' simply
+                return the previous or next value of the point) or as an integer specifying the order of the spline
+                interpolator to use. Default is 'cubic'." from ``scipy.interpolate.interp1d`` documentation.
+            reg (float): regularization term (useful to not have singular covariance matrices)
+            smooth_curvature (bool): if we should smooth the total norm curvature before looking for the local maxima.
+
+        References:
+            - [1] "Robot Programming by Demonstration: A Probabilistic Approach", Calinon, 2009, Chap 2.8.2
+        """
+        # get the trajectory curvature segmentation points
+        ret = self._get_curvature_segmentation_points(data, interpolation_method=interpolation_method,
+                                                      smooth_curvature=smooth_curvature)
+        # get the segmentation points (I,), reshaped trajectories (N, T, D), and mean of the reshaped trajectory (T,D)
+        indices, trajectories, mean_traj = ret
+
+        # take each couple of segmenting points and compute the mean and covariance of a Gaussian
+        means, covariances = [], []
+        for i in range(len(indices) - 1):
+            idx1, idx2 = indices[i], indices[i+1]
+
+            # compute the mean
+            mean = np.mean(mean_traj[idx1:idx2], axis=0)  # (D,)
+            means.append(mean)
+
+            # compute the covariance based on all the trajectories
+            # 1. center the data
+            trajs = trajectories[:, idx1:idx2]  # (N, dT, D)
+            trajs -= mean
+
+            # 2. compute the covariance matrix (and add regularization term)
+            trajs = trajs.reshape(-1, trajs.shape[-1])  # (N*dT, D)
+            covariance = np.cov(trajs, rowvar=False)  # (D, D)
+            covariance += reg * np.identity(trajs.shape[-1])
+            covariances.append(covariance)
+
+        # create gaussians
+        self._gaussians = [Gaussian(mean=mu, covariance=cov) for mu, cov in zip(means, covariances)]
+
+    def init(self, data, method='k-means', seed=None, reg=1e-6, axis=0):
         r"""
         Initialize the GMM using the specified method
 
         Args:
             data (np.array[N,D]): data matrix
-            method (str, None): 'k-means', 'random', None. If None, it starts from where the Gaussians are placed.
+            method (str, None): method to use to initialize the GMM, select between {'random', 'k-means', 'uniform',
+                'sklearn', 'curvature', None}. If None, it starts from where the Gaussians are placed.
             seed (str): seed for random generator
             reg (float): regularization term (useful to not have singular covariance matrices)
+            axis (int): if method axis specifying the dimension to distribute the Gaussians uniformly
         """
         if method is None:
             return
         method = method.lower()
-        if method == 'random':
+        if method == 'random':  # init the Gaussian randomly
             self.init_random(data, seed, reg=reg)
-        elif method == 'k-means' or method == 'kmeans':
+        elif method == 'k-means' or method == 'kmeans':  # init the Gaussians using K-Means
             self.init_kmeans(data, seed)
+        elif method[:7] == 'uniform':  # init the Gaussians uniformly
+            self.init_uniformly(data, axis=axis)
+        elif method == 'sklearn' or method[:6] == 'scikit':  # init using sklearn
+            self.init_sklearn(data, seed=seed, reg=reg)
+        elif method == 'curvature':  # init based on the curvature of the trajectories
+            self.init_curvature(data, reg=reg, smooth_curvature=True)
         else:
             raise NotImplementedError("The given initialization method has not been implemented")
 
@@ -882,6 +1272,8 @@ class GMM(object):
 
         where :math:`N_k = \sum_{n=1}^N r_k(x_n)`, and :math:`r_k(x_n) = p(z_k = 1|x_n)` are the responsibilities.
 
+        Warnings: the initialization can affect greatly the results; this is often true with EM algorithms.
+
         Args:
             X (np.array[N,D]): data matrix
             reg (float): regularization term
@@ -902,7 +1294,7 @@ class GMM(object):
 
         # compute dictionary results
         results = {'losses': [], 'success': False, 'num_iters': 0}
-        self.N = X.shape[0]
+        self.N = len(X)
 
         # 1. Initialize
         self.init(X, method=init, seed=seed, reg=reg)
@@ -973,7 +1365,7 @@ class GMM(object):
 
         Returns:
             int, np.int[N]: component index/indices
-            float, np.float[N]: associated probability
+            float, np.array[N]: associated probability
         """
         posteriors = self.responsibilities(x) # shape NxK if data matrix, or K if data vector
         if len(posteriors.shape) == 2:
@@ -988,7 +1380,7 @@ class GMM(object):
         Note that the order in the sum is important here.
 
         Returns:
-            np.float[K]: cumulative distribution function on the prior
+            np.array[K]: cumulative distribution function on the prior
         """
         return np.cumsum(self.priors)
 
@@ -1077,27 +1469,27 @@ class GMM(object):
         """
         gaussian_pdfs = np.array([g.pdf(x) for g in self.gaussians]).T  # shape: K if 1 data point, or NxK if multiple
         joint = self.priors * gaussian_pdfs  # shape: K if 1 data point, or NxK if multiple
-        marginal = np.sum(joint, axis=1)  # shape: 1 if 1 data point, or N if multiple
+        marginal = np.sum(joint, axis=-1)  # shape: 1 if 1 data point, or N if multiple
 
         if k is None:
-            return (joint.T / marginal).T  # shape: K if 1 data point, or NxK if multiple
+            return (joint.T / marginal).T  # shape: (K,) if 1 data point, or (N,K) if multiple
         else:
             N = 1 if len(x.shape) == 1 else x.shape[0]
             if N == 1:  # one data point
-                return joint[k] / marginal  # shape: k
+                return joint[k] / marginal  # shape: (k,)
             else:  # multiple data points
                 K = self.num_components
                 if N == len(k):
                     if N <= K and axis == 1:
-                        return (joint[:, k].T / marginal).T  # shape: Nxk
-                    return joint[range(N), k] / marginal  # shape: N
-                return (joint[:,k].T / marginal).T  # shape: Nxk
+                        return (joint[:, k].T / marginal).T  # shape: (N,k)
+                    return joint[range(N), k] / marginal  # shape: (N,)
+                return (joint[:, k].T / marginal).T  # shape: (N,k)
 
     def condition(self, x_in, idx_out, idx_in=None):
         r"""
         Condition the GMM which results in GMR. Return the conditioned GMM. If the user wants to approximate it
-        by a single gaussian, he/she can call the property `gaussian` or the `approximate_by_single_gaussian()`
-        methods. These two's are equivalent.
+        by a single gaussian, he/she can call the property `gaussian` or the :func:`~approximate_by_single_gaussian`
+        method. These two's are equivalent.
 
         Gaussian Mixture Regression [1,2] consists to condition the GMM (that models the joint distribution over the
         input and output variables :math:`p(x^I, x^O)`) on a part of the variables (for instance, the input variables
@@ -1117,10 +1509,11 @@ class GMM(object):
         respectively.
 
         Args:
-            x_in (float[d2]): array of values :math:`x^I` such that we have :math:`p(x^O|x^I)`
-            idx_out (int[d1]): indices that we are interested in (indices of :math:`x^O` in :math:`x`) given
-                (i.e. conditioned on) the other ones
-            idx_in (int[d2]): indices that we conditioned on corresponding to the values. If None, it will be inferred.
+            x_in (np.array[d2]): array of values :math:`x^I` such that we have :math:`p(x^O|x^I)`
+            idx_out (list of int, np.int[d1]): indices that we are interested in (indices of :math:`x^O` in :math:`x`)
+                given (i.e. conditioned on) the other ones
+            idx_in (list of int, np.int[d2]): indices that we conditioned on corresponding to the values. If None, it
+                will be inferred.
 
         Returns:
             GMM: conditioned gaussian mixture model
@@ -1211,7 +1604,7 @@ class GMM(object):
         4. The product of a GMM by a float does nothing as we have to re-normalize it to be a proper distribution.
 
         Args:
-            other (Gaussian, GMM, np.float[D,D], float): Gaussian, GMM, square matrix (to rotate or scale), or float
+            other (Gaussian, GMM, np.array[D,D], float): Gaussian, GMM, square matrix (to rotate or scale), or float
 
         Returns:
             GMM: resulting GMM
@@ -1262,7 +1655,7 @@ class GMM(object):
         number of components.
 
         Args:
-            other (Gaussian, GMM, np.float[D,D], float): Gaussian, GMM, square matrix (to rotate or scale), or float
+            other (Gaussian, GMM, np.array[D,D], float): Gaussian, GMM, square matrix (to rotate or scale), or float
 
         Returns:
             GMM: resulting GMM
@@ -1406,10 +1799,10 @@ class GMM(object):
             raise ValueError("The given 'wrt' argument is not valid (see documentation)")
 
     def grad_log_likelihood(self, x):
-        pass
+        raise NotImplementedError
 
     def hessian(self, x, wrt='x'):
-        pass
+        raise NotImplementedError
 
     def update(self, x):
         r"""
@@ -1418,7 +1811,7 @@ class GMM(object):
         Args:
             x (np.array): data vector/matrix
         """
-        pass
+        raise NotImplementedError
 
     def approximate_by_single_gaussian(self):
         r"""
@@ -1469,7 +1862,7 @@ class GMM(object):
         Returns:
             float: differential entropy
         """
-        pass
+        raise NotImplementedError
 
     def kl_divergence(self, other):
         r"""
@@ -1488,7 +1881,26 @@ class GMM(object):
         Returns:
             float: the divergence between the 2 GMMs.
         """
-        pass
+        raise NotImplementedError
+
+    def align_trajectories_with_dynamic_time_warping(self, data):
+        r"""
+        Align the trajectories using Dynamic Time Wrapping prior to learn a GMM [1]. This only works for sequential
+        temporal and spatial data. The first dimension is assumed to be the time, and the other dimensions are assumed
+        to be spatial data (x [,y [,z]]).
+
+        Warnings: this initialization only makes sense with trajectories.
+
+        Args:
+            data (np.array[N,T,D], list of np.array[T,D]): trajectories to align.
+
+        Returns:
+            np.array[N,D]: aligned data trajectories
+
+        References:
+            - [1] "Robot Programming by Demonstration: A Probabilistic Approach", Calinon, 2009, Chap 2.9.3
+        """
+        raise NotImplementedError
 
     #############
     # Operators #
@@ -1506,7 +1918,7 @@ class GMM(object):
         data :math:`x`, it returns the joint probability :math:`p(x, z_k=1)`.
 
         Args:
-            x (np.float[N,D], np.float[D]): data matrix/vector
+            x (np.array[N,D], np.array[D]): data matrix/vector
             z (int, np.int[N], None): hidden variable (component index/indices)
             size (int, None): number of samples
 
@@ -1574,7 +1986,7 @@ class GMM(object):
             element-wise. For this one, have a look at `multiply_element_wise` method, or the `__and__` operator.
 
         Args:
-            other (GMM, Gaussian, np.float[D,D], float): GMM, Gaussian, or square matrix (to rotate or scale), or float
+            other (GMM, Gaussian, np.array[D,D], float): GMM, Gaussian, or square matrix (to rotate or scale), or float
 
         Returns:
             GMM: resulting GMM
@@ -1591,7 +2003,7 @@ class GMM(object):
         element-wise.
 
         Args:
-            other (GMM, Gaussian, np.float[D,D], float): GMM, Gaussian, or square matrix (to rotate or scale), or float
+            other (GMM, Gaussian, np.array[D,D], float): GMM, Gaussian, or square matrix (to rotate or scale), or float
 
         Returns:
             GMM: resulting GMM
@@ -1637,103 +2049,148 @@ class TPGMM(GMM):
 # Plotting functions #
 ######################
 
-def plotGMM(gmm, ax=None, title='GMM', color='b'):
+
+def plot_gmm(gmm, X=None, label=True, ax=None, title='GMM', xlim=[-6, 6], ylim=[-6, 6], option=1, color='b'):
     r"""Plot GMM"""
+    # create ax if not already created
     if ax is None:
         fig, ax = plt.subplots(1, 1)
-        ax.set(title=title, xlim=[-2, 2], ylim=[-2, 2], aspect='equal')
-    for g in gmm.gaussians:
-        plot2DEllipse(ax, g, color=color, plot_arrows=False)
+
+    # configure ax
+    ax.set(title=title, xlim=xlim, ylim=ylim, aspect='equal')
+
+    # draw the data if provided
+    if X is not None:
+        labels = gmm.predict(X)
+        if label:
+            ax.scatter(X[:, 0], X[:, 1], c=labels, s=40, cmap='viridis', zorder=2)
+        else:
+            ax.scatter(X[:, 0], X[:, 1], s=40, zorder=2)
+
+    # draw the ellipse for each gaussian
+    w_factor = 0.2 / gmm.priors.max()
+    priors = gmm.priors
+    for i, g in enumerate(gmm.gaussians):
+        if option == 1:
+            plot_2d_ellipse(ax, g, color=color, plot_arrows=False)
+        else:
+            draw_ellipse(g.mean, g.cov, ax=ax, alpha=priors[i] * w_factor)
+
+
+def draw_ellipse(position, covariance, ax=None, **kwargs):
+    """Draw an ellipse with a given position and covariance
+
+    Taken from: https://jakevdp.github.io/PythonDataScienceHandbook/05.12-gaussian-mixtures.html
+    """
+    ax = ax or plt.gca()
+
+    # Convert covariance to principal axes
+    if covariance.shape == (2, 2):
+        U, s, Vt = np.linalg.svd(covariance)
+        angle = np.degrees(np.arctan2(U[1, 0], U[0, 0]))
+        width, height = 2 * np.sqrt(s)
+    else:
+        angle = 0
+        width, height = 2 * np.sqrt(covariance)
+
+    # Draw the Ellipse
+    for nsig in range(1, 4):
+        ax.add_patch(Ellipse(position, nsig * width, nsig * height, angle, **kwargs))
+
+
+def plot_gmm_sklearn(gmm, X, label=True, ax=None, title='', xlim=None, ylim=None):
+    """Plot sklearn GMM
+
+    Taken from: https://jakevdp.github.io/PythonDataScienceHandbook/05.12-gaussian-mixtures.html
+    """
+    ax = ax or plt.gca()
+    labels = gmm.fit(X).predict(X)
+    if label:
+        ax.scatter(X[:, 0], X[:, 1], c=labels, s=40, cmap='viridis', zorder=2)
+    else:
+        ax.scatter(X[:, 0], X[:, 1], s=40, zorder=2)
+    if xlim is None and ylim is None:
+        ax.set(title=title, aspect='equal')
+    else:
+        ax.set(title=title, xlim=xlim, ylim=ylim, aspect='equal')
+
+    w_factor = 0.2 / gmm.weights_.max()
+    for pos, covar, w in zip(gmm.means_, gmm.covariances_, gmm.weights_):
+        draw_ellipse(pos, covar, alpha=w * w_factor)
 
 
 # TESTS
 if __name__ == "__main__":
-    from gaussian import plot2DEllipse
-    import matplotlib.pyplot as plt
 
     # create manually a GMM
-    dim, num_components = 2, 3
+    dim, num_components = 2, 5
     gmm = GMM(gaussians=[Gaussian(mean=np.random.uniform(-1., 1., size=dim),
                                   covariance=0.1*np.identity(dim)) for _ in range(num_components)])
-    gmm1 = GaussianMixture(n_components=num_components)
+    gmm_sklearn = GaussianMixture(n_components=num_components)
 
     # plot initial GMM
-    plotGMM(gmm, title='Initial GMM')
+    plot_gmm(gmm, title='Initial GMM')
     plt.show()
 
-    # create data
-    N, eps = 8, 0.1
-    t = np.linspace(0., 1., 100)
-    y = np.array([np.sin(2 * np.pi * t) + eps * np.random.rand(len(t)) for _ in range(N)])  # shape: NxT
+    # create data: Generate random sample following a sine curve
+    # Ref: https://scikit-learn.org/stable/auto_examples/mixture/plot_gmm_sin.html#sphx-glr-auto-examples-mixture-\
+    # plot-gmm-sin-py
+    n_samples = 100
+    np.random.seed(0)
+    X = np.zeros((n_samples, 2))
+    step = 4. * np.pi / n_samples
+
+    for i in range(X.shape[0]):
+        x = i * step - 6.
+        X[i, 0] = x + np.random.normal(0, 0.1)
+        X[i, 1] = 3. * (np.sin(x) + np.random.normal(0, .2))
+
+    xlim, ylim = [-8, 8], [-8, 8]
 
     # plot data
-    plt.plot(t, y.T)
     plt.title('Training data')
+    plt.scatter(X[:, 0], X[:, 1])
     plt.show()
 
-    # combine data (with shape: N'xD, where N' is the N'=N*T)
-    X = np.hstack((np.array([t] * N).reshape(-1, 1), y.reshape(-1, 1)))
-
     # init GMM
-    gmm.init(X, method='random')  # method='k-means')
-    plotGMM(gmm, title='GMM after K-Means')
+    init_method = 'k-means'  # 'random', 'k-means', 'uniform', 'sklearn', 'curvature'
+    gmm.init(X, method=init_method)
+    fig, ax = plt.subplots(1, 1)
+    plot_gmm(gmm, X=X, ax=ax, title='GMM after ' + init_method.capitalize(), xlim=xlim, ylim=ylim)
     plt.show()
 
     # fit a GMM using EM
     result = gmm.fit(X, init=None)
 
-    # plot losses
+    # plot EM optimization
     plt.plot(result['losses'])
+    plt.title('EM per iteration')
     plt.show()
 
     # plot trained GMM
-    fig, ax = plt.subplots(1, 1)
-    plotGMM(gmm, ax=ax, title='Trained GMM')
-    ax.plot(t, y.T)
-    plt.show()
-
-    # fit
-    from matplotlib.patches import Ellipse
-
-
-    def draw_ellipse(position, covariance, ax=None, **kwargs):
-        """Draw an ellipse with a given position and covariance"""
-        ax = ax or plt.gca()
-
-        # Convert covariance to principal axes
-        if covariance.shape == (2, 2):
-            U, s, Vt = np.linalg.svd(covariance)
-            angle = np.degrees(np.arctan2(U[1, 0], U[0, 0]))
-            width, height = 2 * np.sqrt(s)
-        else:
-            angle = 0
-            width, height = 2 * np.sqrt(covariance)
-
-        # Draw the Ellipse
-        for nsig in range(1, 4):
-            ax.add_patch(Ellipse(position, nsig * width, nsig * height,
-                                 angle, **kwargs))
-
-
-    def plot_gmm(gmm, X, label=True, ax=None):
-        ax = ax or plt.gca()
-        labels = gmm.fit(X).predict(X)
-        if label:
-            ax.scatter(X[:, 0], X[:, 1], c=labels, s=40, cmap='viridis', zorder=2)
-        else:
-            ax.scatter(X[:, 0], X[:, 1], s=40, zorder=2)
-        ax.axis('equal')
-
-        w_factor = 0.2 / gmm.weights_.max()
-        for pos, covar, w in zip(gmm.means_, gmm.covariances_, gmm.weights_):
-            draw_ellipse(pos, covar, alpha=w * w_factor)
-
-
-    plot_gmm(gmm1, X)
+    fig, ax = plt.subplots(1, 2)
+    plot_gmm(gmm, X=X, label=True, ax=ax[0], title='Our Trained GMM', option=1, xlim=xlim, ylim=ylim)
+    gmm_sklearn.fit(X)
+    plot_gmm_sklearn(gmm_sklearn, X, label=True, ax=ax[1], title="Sklearn's Trained GMM", xlim=xlim, ylim=ylim)
     plt.show()
 
     # samples from the GMM and plot
 
     # GMR: condition on the input variable and plot
+    means, std_devs = [], []
+    time_linspace = np.linspace(-6, 6, 100)
+    for t in time_linspace:
+        g = gmm.condition(np.array([t]), idx_out=1).approximate_by_single_gaussian()
+        means.append(g.mean[0])
+        std_devs.append(np.sqrt(g.covariance[0, 0]))
+
+    means, std_devs = np.asarray(means), np.asarray(std_devs)
+
+    plt.plot(time_linspace, means)
+    plt.fill_between(time_linspace, means - 2 * std_devs, means + 2 * std_devs, facecolor='green', alpha=0.3)
+    plt.fill_between(time_linspace, means - std_devs, means + std_devs, facecolor='green', alpha=0.5)
+    plt.title('GMR')
+    plt.scatter(X[:, 0], X[:, 1])
+    plt.show()
 
     # GMR: condition on the output variable and plot

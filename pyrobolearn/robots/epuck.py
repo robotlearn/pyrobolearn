@@ -20,18 +20,24 @@ class Epuck(DifferentialWheeledRobot):
     r"""Epuck robot
 
     References:
-        [1] http://www.e-puck.org/
-        [2] http://www.gctronic.com/doc/index.php/E-Puck
-        [3] https://github.com/gctronic/epuck_driver_cpp
+        - [1] http://www.e-puck.org/
+        - [2] http://www.gctronic.com/doc/index.php/E-Puck
+        - [3] https://github.com/gctronic/epuck_driver_cpp
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/epuck/epuck.urdf'):
+        """
+        Initialize the E-puck robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0)

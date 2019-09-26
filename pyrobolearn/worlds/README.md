@@ -9,12 +9,12 @@ import pyrobolearn as prl
 sim = prl.simulators.BulletSim()
 world = prl.worlds.BasicWorld(sim)
 
-coman = world.loadRobot('Coman', position=<position1>)
-wam = world.loadRobot(prl.robots.WAM, position=<position2>)
+coman = world.load_robot('Coman', position=<position1>)
+wam = world.load_robot(prl.robots.WAM, position=<position2>)
 
 # the following is not advised
 littledog = prl.robots.LittleDog(sim, init_pos=<position3>)
-world.loadRobot(littledog)  # such that the world knows about the robot is present.
+world.load_robot(littledog)  # such that the world knows about the robot is present.
 ```
 
 #### What to check/look next?

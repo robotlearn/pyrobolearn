@@ -306,18 +306,18 @@ class WorldCamera(object):
         Returns:
             int: width of the visualizer camera (in pixel)
             int: height of the visualizer camera (in pixel)
-            np.float[4,4]: view matrix [4,4]
-            np.float[4,4]: perspective projection matrix [4,4]
-            np.float[3]: camera up vector expressed in the Cartesian world space
-            np.float[3]: forward axis of the camera expressed in the Cartesian world space
-            np.float[3]: This is a horizontal vector that can be used to generate rays (for mouse picking or creating
-                a simple ray tracer for example)
-            np.float[3]: This is a vertical vector that can be used to generate rays (for mouse picking or creating a
-                simple ray tracer for example)
+            np.array[float[4,4]]: view matrix [4,4]
+            np.array[float[4,4]]: perspective projection matrix [4,4]
+            np.array[float[3]]: camera up vector expressed in the Cartesian world space
+            np.array[float[3]]: forward axis of the camera expressed in the Cartesian world space
+            np.array[float[3]]: This is a horizontal vector that can be used to generate rays (for mouse picking or
+                creating a simple ray tracer for example)
+            np.array[float[3]]: This is a vertical vector that can be used to generate rays (for mouse picking or
+                creating a simple ray tracer for example)
             float: yaw angle (in radians) of the camera, in Cartesian local space coordinates
             float: pitch angle (in radians) of the camera, in Cartesian local space coordinates
             float: distance between the camera and the camera target
-            np.float[3]: target of the camera, in Cartesian world space coordinates
+            np.array[float[3]]: target of the camera, in Cartesian world space coordinates
         """
         return self.sim.get_debug_visualizer()
 
@@ -332,8 +332,8 @@ class WorldCamera(object):
                 distance.
             yaw (float, None): camera yaw angle (in radians) left/right. If None, it will take the current yaw angle.
             pitch (float, None): camera pitch angle (in radians) up/down. If None, it will take the current pitch angle.
-            target_position (np.float[3], None): target focus point of the camera. If None, it will take the current
-                target position.
+            target_position (np.array[float[3]], None): target focus point of the camera. If None, it will take the
+                current target position.
         """
         y, p, d, t = self.sim.get_debug_visualizer()[-4:]
         if distance is None:
@@ -355,16 +355,16 @@ class WorldCamera(object):
 
         Returns:
             if inverse:
-                np.array[4,4]: view matrix
-                np.array[4,4]: projection matrix
-                np.array[4,4]: viewport matrix
-                np.array[4,4]: inverse of the view matrix
-                np.array[4,4]: inverse of the projection matrix
-                np.array[4,4]: inverse o the viewport matrix
+                np.array[float[4,4]]: view matrix
+                np.array[float[4,4]]: projection matrix
+                np.array[float[4,4]]: viewport matrix
+                np.array[float[4,4]]: inverse of the view matrix
+                np.array[float[4,4]]: inverse of the projection matrix
+                np.array[float[4,4]]: inverse o the viewport matrix
             else:
-                np.array[4,4]: view matrix
-                np.array[4,4]: projection matrix
-                np.array[4,4]: viewport matrix
+                np.array[float[4,4]]: view matrix
+                np.array[float[4,4]]: projection matrix
+                np.array[float[4,4]]: viewport matrix
         """
         width, height, V, P = self.sim.get_debug_visualizer()[:4]
         Vp = np.array([[width / 2., 0, 0, width / 2.],
@@ -383,9 +383,9 @@ class WorldCamera(object):
         Return the forward, up, and lateral vectors of the camera.
 
         Returns:
-            np.float[3]: forward vector
-            np.float[3]: up vector
-            np.float[3]: lateral vector (=cross product between forward and up vectors)
+            np.array[float[3]]: forward vector
+            np.array[float[3]]: up vector
+            np.array[float[3]]: lateral vector (=cross product between forward and up vectors)
         """
         up_vector, forward_vector = self.sim.get_debug_visualizer()[4:6]
         lateral_vector = np.cross(forward_vector, up_vector)
@@ -399,7 +399,7 @@ class WorldCamera(object):
         of turning the camera to capture what we want in the world, we keep the camera fixed and turn the world.
 
         Args:
-            target_position (np.float[3]): target focus point in Cartesian world coordinates
+            target_position (np.array[float[3]]): target focus point in Cartesian world coordinates
             distance (float): distance from eye to focus point
             yaw (float): yaw angle in radians left/right around up-axis
             pitch (float): pitch in radians up/down.
@@ -407,7 +407,7 @@ class WorldCamera(object):
             up_axis_index (int): either 1 for Y or 2 for Z axis up.
 
         Returns:
-            np.float[4,4]: the view matrix
+            np.array[float[4,4]]: the view matrix
 
         More info:
             [1] http://www.codinglabs.net/article_world_view_projection_matrix.aspx
@@ -424,12 +424,12 @@ class WorldCamera(object):
         of turning the camera to capture what we want in the world, we keep the camera fixed and turn the world.
 
         Args:
-            eye_position (np.float[3]): eye position in Cartesian world coordinates
-            target_position (np.float[3]): position of the target (focus) point in Cartesian world coordinates
-            up_vector (np.float[3]): up vector of the camera in Cartesian world coordinates
+            eye_position (np.array[float[3]]): eye position in Cartesian world coordinates
+            target_position (np.array[float[3]]): position of the target (focus) point in Cartesian world coordinates
+            up_vector (np.array[float[3]]): up vector of the camera in Cartesian world coordinates
 
         Returns:
-            np.float[4,4]: the view matrix
+            np.array[float[4,4]]: the view matrix
 
         More info:
             [1] http://www.codinglabs.net/article_world_view_projection_matrix.aspx
@@ -472,7 +472,7 @@ class WorldCamera(object):
         Return the captured RGB image.
 
         Returns:
-            np.array[W,H,C]: RGB image (width, height, RGB channels)
+            np.array[int[W,H,C]]: RGB image (width, height, RGB channels)
         """
         return self.get_rgba_image()[:, :, :3]
 
@@ -481,7 +481,7 @@ class WorldCamera(object):
         Return the captured RGBA image. 'A' stands for alpha channel (for opacity/transparency)
 
         Returns:
-            np.array[W,H,C]: RGBA image (width, height, RGBA channels)
+            np.array[int[W,H,C]]: RGBA image (width, height, RGBA channels)
         """
         width, height, view_matrix, projection_matrix = self.sim.get_debug_visualizer()[:4]
         img = np.array(self.sim.get_camera_image(width, height, view_matrix, projection_matrix)[2])
@@ -493,7 +493,7 @@ class WorldCamera(object):
         Return the depth image.
 
         Returns:
-            np.array[W,H]: depth image (width, height)
+            np.array[float[W,H,C]]: depth image (width, height)
         """
         width, height, view_matrix, projection_matrix = self.sim.get_debug_visualizer()[:4]
         img = np.array(self.sim.get_camera_image(width, height, view_matrix, projection_matrix)[3])
@@ -510,10 +510,10 @@ class WorldCamera(object):
 
         Returns:
             if concatenate:
-                np.array[W,H,C]: RGBAD image (width, height, RGBAD channels)
+                np.array[int[W,H,C]]: RGBAD image (width, height, RGBAD channels)
             else:
-                np.array[W,H,C]: RGBA image (width, height, RGBA channels)
-                np.array[W,H]: depth image (width, height)
+                np.array[int[W,H,C]]: RGBA image (width, height, RGBA channels)
+                np.array[float[W,H,C]]: depth image (width, height)
         """
         width, height, view_matrix, projection_matrix = self.sim.get_debug_visualizer()[:4]
         rgba, depth = self.sim.get_camera_image(width, height, view_matrix, projection_matrix)[2:4]
@@ -529,13 +529,13 @@ class WorldCamera(object):
         on the screen.
 
         Args:
-            x_screen (np.float[4]): augmented vector coordinates of a point on the screen
-            Vp_inv (np.float[4,4], None): inverse of viewport matrix. If None, it will be computed.
-            P_inv (np.float[4,4], None): inverse of projection matrix. If None, it will be computed.
-            V_inv (np.float[4,4], None): inverse of view matrix. If None, it will be computed.
+            x_screen (np.array[float[4]]): augmented vector coordinates of a point on the screen
+            Vp_inv (np.array[float[4,4]], None): inverse of viewport matrix. If None, it will be computed.
+            P_inv (np.array[float[4,4]], None): inverse of projection matrix. If None, it will be computed.
+            V_inv (np.array[float[4,4]], None): inverse of view matrix. If None, it will be computed.
 
         Returns:
-            np.float[4]: augmented vector coordinates of the corresponding point in the world
+            np.array[float[4]]: augmented vector coordinates of the corresponding point in the world
         """
         if Vp_inv is None:
             Vp_inv = self.Vp_inv
@@ -557,13 +557,13 @@ class WorldCamera(object):
         Return the corresponding screen coordinates from a 3D point in the world.
 
         Args:
-            x_world (float[4]): augmented vector coordinates of a point in the Cartesian world space
-            V (np.float[4,4], None): view matrix. If None, it will be computed.
-            P (np.float[4,4], None): projection matrix. If None, it will be computed.
-            Vp (np.float[4,4], None): viewport matrix. If None, it will be computed.
+            x_world (np.array[float[4]]): augmented vector coordinates of a point in the Cartesian world space
+            V (np.array[float[4,4]], None): view matrix. If None, it will be computed.
+            P (np.array[float[4,4]], None): projection matrix. If None, it will be computed.
+            Vp (np.array[float[4,4]], None): viewport matrix. If None, it will be computed.
 
         Returns:
-            np.float[4]: augmented vector coordinates of the corresponding point on the screen
+            np.array[float[4]]: augmented vector coordinates of the corresponding point on the screen
         """
         if V is None:
             V = self.V
@@ -593,18 +593,18 @@ class WorldCamera(object):
 
         int: width of the visualizer camera (in pixel)
             int: height of the visualizer camera (in pixel)
-            np.float[4,4]: view matrix [4,4]
-            np.float[4,4]: perspective projection matrix [4,4]
-            np.float[3]: camera up vector expressed in the Cartesian world space
-            np.float[3]: forward axis of the camera expressed in the Cartesian world space
-            np.float[3]: This is a horizontal vector that can be used to generate rays (for mouse picking or creating
-                a simple ray tracer for example)
-            np.float[3]: This is a vertical vector that can be used to generate rays (for mouse picking or creating a
-                simple ray tracer for example)
+            np.array[float[4,4]]: view matrix [4,4]
+            np.array[float[4,4]]: perspective projection matrix [4,4]
+            np.array[float[3]]: camera up vector expressed in the Cartesian world space
+            np.array[float[3]]: forward axis of the camera expressed in the Cartesian world space
+            np.array[float[3]]: This is a horizontal vector that can be used to generate rays (for mouse picking or
+                creating a simple ray tracer for example)
+            np.array[float[3]]: This is a vertical vector that can be used to generate rays (for mouse picking or
+                creating a simple ray tracer for example)
             float: yaw angle (in radians) of the camera, in Cartesian local space coordinates
             float: pitch angle (in radians) of the camera, in Cartesian local space coordinates
             float: distance between the camera and the camera target
-            np.float[3]: target of the camera, in Cartesian world space coordinates
+            np.array[float[3]]: target of the camera, in Cartesian world space coordinates
         """
         info = self.info
         view_inv = np.linalg.inv(info[2])

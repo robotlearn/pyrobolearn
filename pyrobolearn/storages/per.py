@@ -9,13 +9,13 @@ normalized for stability reasons) are used.
 In summary, PER can be seen as a stochastic prioritization ER which uses importance sampling.
 
 References:
-    [1] "Prioritized Experience Replay", Schaul, 2015
+    - [1] "Prioritized Experience Replay", Schaul, 2015
 """
 
 from pyrobolearn.storages.storage import PriorityQueueStorage
 
 __author__ = "Brian Delhaisse"
-__copyright__ = "Copyright 2018, PyRoboLearn"
+__copyright__ = "Copyright 2019, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
@@ -34,9 +34,11 @@ class PrioritizedExperienceReplay(PriorityQueueStorage):
 
     In summary, PER can be seen as a stochastic prioritization ER which uses importance sampling.
 
-    There are 2 stochastic prioritization schemes used in [1].
+    There are 2 stochastic prioritization schemes used in [1]:
+
     - proportional prioritization: :math:`p_i = |\delta_i| + \epsilon`, where :math:`\epsilon` is a small positive
     constant to avoid the transition to have a probability of 0.
+
     - rank-based prioritization: math:`p_i = \frac{1}{rank(i)}`, where rank(i) is the rank of transition i (that is
     they are i other keys in the priority queue that are smaller than the current key i) when the replay memory is
     sorted according to :math:`|\delta_i|`
@@ -68,9 +70,11 @@ class PrioritizedExperienceReplay(PriorityQueueStorage):
 
 
     References:
-        [1] "Prioritized Experience Replay", Schaul, 2015
+        - [1] "Prioritized Experience Replay", Schaul, 2015
     """
-    pass
+
+    def __init__(self):
+        super(PrioritizedExperienceReplay, self).__init__()
 
 
 # alias

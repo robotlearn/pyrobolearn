@@ -22,18 +22,24 @@ class KukaIIWA(Manipulator):
     end-effector. Payload of 14kg and a range of 820mm.
 
     References:
-        [1] Kuka robotics: https://www.kuka.com/en-de
-        [2] https://github.com/IFL-CAMP/iiwa_stack
-        [3] https://github.com/bulletphysics/bullet3/tree/master/data/kuka_iiwa
+        - [1] Kuka robotics: https://www.kuka.com/en-de
+        - [2] https://github.com/IFL-CAMP/iiwa_stack
+        - [3] https://github.com/bulletphysics/bullet3/tree/master/data/kuka_iiwa
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0),
-                 orientation=(0, 0, 0, 1),
-                 scale=1.,
-                 fixed_base=True,
+    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), scale=1., fixed_base=True,
                  urdf=os.path.dirname(__file__) + '/urdfs/kuka/kuka_iiwa/iiwa14.urdf'):
+        """
+        Initialize the Kuka IIWA manipulator.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.)
@@ -54,11 +60,11 @@ class KukaIIWA(Manipulator):
 if __name__ == "__main__":
     import numpy as np
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

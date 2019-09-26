@@ -2,6 +2,8 @@
 """Provide the techpod platform.
 """
 
+# TODO: finish to implement this class
+
 import os
 import json
 import numpy as np
@@ -42,8 +44,8 @@ class Wing(object):
     Python code translated from C++ code provided in [1].
 
     References:
-        [1] https://github.com/purdue-biorobotics/flappy/blob/master/flappy/envs/Wing.cpp
-        [2] "Flappy Hummingbird: An Open Source Dynamic Simulation of Flapping Wing Robots and Animals", Fei et al.,
+        - [1] https://github.com/purdue-biorobotics/flappy/blob/master/flappy/envs/Wing.cpp
+        - [2] "Flappy Hummingbird: An Open Source Dynamic Simulation of Flapping Wing Robots and Animals", Fei et al.,
             2019
     """
 
@@ -306,16 +308,27 @@ class Flappy(FlappingWingUAV):
     described in the paper and code [2,3]. The gravity is carried out by pybullet.
 
     References:
-        [1] "Design Optimization and System Integration of Robotic Hummingbird", Zhang et al., 2017
-        [2] "Flappy Hummingbird: An Open Source Dynamic Simulation of Flapping Wing Robots and Animals", Fei et al.,
+        - [1] "Design Optimization and System Integration of Robotic Hummingbird", Zhang et al., 2017
+        - [2] "Flappy Hummingbird: An Open Source Dynamic Simulation of Flapping Wing Robots and Animals", Fei et al.,
             2019
-        [3] https://github.com/purdue-biorobotics/flappy
+        - [3] https://github.com/purdue-biorobotics/flappy
     """
 
-    def __init__(self, simulator, position=(0, 0, 0.5), orientation=(0, 0, 0, 1), fixed_base=False, scaling=1.,
+    def __init__(self, simulator, position=(0, 0, 0.5), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/flappy/flappy.urdf',
                  config=os.path.dirname(__file__) + '/urdfs/flappy/config/mav_config.json'):
-        super(Flappy, self).__init__(simulator, urdf, position, orientation, fixed_base)
+        """
+        Initialize the Flappy robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
+        super(Flappy, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         with open(config) as f:
             config = json.load(f)[0]
@@ -393,10 +406,10 @@ class Flappy(FlappingWingUAV):
         right_rot_damping_moment = np.array([0, self.right_wing.rotational_damping_moment, 0])
 
         # apply aero force and moment on wing
-        # self.apply_external_force(left_normal_force, link_id=1, position=left_cop, frame=BulletSim.LINK_FRAME)
-        # self.apply_external_force(right_normal_force, link_id=3, position=right_cop, frame=BulletSim.LINK_FRAME)
-        # self.apply_external_torque(left_rot_damping_moment, link_id=1, frame=BulletSim.LINK_FRAME)
-        # self.apply_external_torque(right_rot_damping_moment, link_id=3, frame=BulletSim.LINK_FRAME)
+        # self.apply_external_force(left_normal_force, link_id=1, position=left_cop, frame=Bullet.LINK_FRAME)
+        # self.apply_external_force(right_normal_force, link_id=3, position=right_cop, frame=Bullet.LINK_FRAME)
+        # self.apply_external_torque(left_rot_damping_moment, link_id=1, frame=Bullet.LINK_FRAME)
+        # self.apply_external_torque(right_rot_damping_moment, link_id=3, frame=Bullet.LINK_FRAME)
 
         # save
         self.prev_t = t
@@ -407,11 +420,11 @@ class Flappy(FlappingWingUAV):
 if __name__ == "__main__":
     import time
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

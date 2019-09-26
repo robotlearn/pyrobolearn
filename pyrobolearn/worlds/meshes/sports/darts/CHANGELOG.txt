@@ -1,0 +1,2 @@
+
+Brian Delhaisse: Compared to the original, I split the dartboard and dart into different OBJ files, and rescaled/translated/rotated them.

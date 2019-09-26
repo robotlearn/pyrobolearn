@@ -24,6 +24,12 @@ class BatchLoss(Loss):
     r"""Loss evaluated on a batch.
     """
 
+    def __init__(self):
+        super(BatchLoss, self).__init__()
+
+        # cache the last value that was computed by the loss
+        self.value = None
+
     def _compute(self, batch):
         """Compute the loss on the given batch. This method has to be implemented in the child classes."""
         raise NotImplementedError
@@ -42,7 +48,8 @@ class BatchLoss(Loss):
         if not isinstance(batch, Batch):
             raise TypeError("Expecting the given 'batch' to be an instance of `Batch`, instead got: "
                             "{}".format(type(batch)))
-        return self._compute(batch)
+        self.value = self._compute(batch)
+        return self.value
 
 
 class FixedLoss(BatchLoss):
@@ -142,9 +149,9 @@ class HuberLoss(BatchLoss):
     :math:`a = Q(s,a) - (r + \gamma \max_a Q(s',a))` where :math:`(r + \gamma \max_a Q(s',a))` is the target function.
 
     References:
-        [1] Huber Loss (on Wikipedia): https://en.wikipedia.org/wiki/Huber_loss
-        [2] "Reinforcement Learning (DQN) Tutorial":
-            https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+        - [1] Huber Loss (on Wikipedia): https://en.wikipedia.org/wiki/Huber_loss
+        - [2] "Reinforcement Learning (DQN) Tutorial":
+          https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
     """
 
     def __init__(self, loss, delta=1.):
@@ -191,7 +198,7 @@ class PseudoHuberLoss(BatchLoss):
     While the above is the most common form, other smooth approximations of the Huber loss function also exist." [1]
 
     References:
-        [1] Huber Loss (on Wikipedia): https://en.wikipedia.org/wiki/Huber_loss#Pseudo-Huber_loss_function
+        - [1] Huber Loss (on Wikipedia): https://en.wikipedia.org/wiki/Huber_loss#Pseudo-Huber_loss_function
     """
 
     def __init__(self, loss, delta=1.):

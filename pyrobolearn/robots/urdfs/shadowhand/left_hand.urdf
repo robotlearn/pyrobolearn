@@ -31,12 +31,12 @@
     </plugin>
   </gazebo>
   <!-- hand with cylindrical base drifts in gazebo, attach it to the world -->
-  <link name="world"/>
+  <!--link name="world"/>
   <joint name="lh_world_joint" type="fixed">
     <parent link="world"/>
     <child link="lh_forearm"/>
     <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
-  </joint>
+  </joint--> <!-- in pybullet, the inertia need to be specified even for dummy links, otherwise it will put an identity inertia and a mass of 1 by default. The base link should be removed if you want the robot to not have a fixed base! -->
   <link name="lh_forearm">
     <inertial>
       <origin rpy="0 0 0" xyz="0 0 0.09"/>

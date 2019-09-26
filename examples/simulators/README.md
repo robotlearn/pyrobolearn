@@ -22,6 +22,9 @@ joint position values that were returned by the Bullet simulator on the correspo
 values from the ROS topics and change them in the simulator. This works with the `bullet_ros_publisher.py` code 
 presented above. By moving the robot with your mouse in the publisher version, you will see the robot in this 
 subscriber version moves in accordance with. This can be useful if you have access to the real platform as well.
+4. `simulators.py`: example which loads few primitive shapes and the ANYmal robot using a simulator among `Bullet`, 
+`Mujoco`, `Raisim`, and `Dart`. Only the line `sim = <SimulatorName>(render=True)` needs to be changed. Note that 
+the integration of these other simulators is ongoing.
 
 Later, a `ROS`/`ROS_RBDL` "simulator" (without passing by a real simulator like `Bullet`) will allow you to make 
 your code works on a real platform using ROS without changing any other lines of code. This is one of the big 

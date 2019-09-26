@@ -1,6 +1,7 @@
-<robot name="LittleDog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<?xml version="1.0" ?>
+<robot name="LittleDog"> <!--xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
  xsi:schemaLocation="http://drake.mit.edu drake-distro/drake/doc/drakeURDF.xsd"
- xmlns="http://drake.mit.edu">
+ xmlns="http://drake.mit.edu"-->
   
   <!-- converted from https://svn.csail.mit.edu/littledog/trunk/simulation/little_dog.sd -->
 
@@ -72,7 +73,7 @@
       <geometry>
         <mesh filename="meshes/front_left_upper.obj" scale=".0254 .0254 .0254"/>
       </geometry>
-      <!--origin xyz="-0.0265 0 -0.048" /> <!-- this has to be tuned: press `w` in pybullet -->
+      <!--origin xyz="-0.0265 0 -0.048" /--> <!-- this has to be tuned: press `w` in pybullet -->
       <!--geometry>
         <capsule radius="0.012" length="0.09" />
       </geometry-->
@@ -106,7 +107,7 @@
       <material name="black" />
     </visual>
     <!--collision group="left_lower_legs">
-      <origin xyz="-0.0265 0 -0.048" /> <!-- note this is approximate -->
+      <origin xyz="-0.0265 0 -0.048" /--> <!-- note this is approximate -->
       <!--geometry>
         <capsule radius="0.012" length="0.09" />
       </geometry>
@@ -223,7 +224,7 @@
       </geometry>
     </collision>
     <!--collision group="right_lower_legs">
-      <origin xyz="-0.0265 0 -0.048" /> <!-- note this is approximate -->
+      <origin xyz="-0.0265 0 -0.048" /--> <!-- note this is approximate -->
       <!--geometry>
         <capsule radius="0.012" length="0.09" />
       </geometry>
@@ -328,7 +329,7 @@
       <material name="black" />
     </visual>
     <!--collision group="left_lower_legs">
-      <origin xyz="0.0265 0 -0.048" /> <!-- note this is approximate -->
+      <origin xyz="0.0265 0 -0.048" /--> <!-- note this is approximate -->
       <!--geometry>
         <capsule radius="0.012" length="0.09" />
       </geometry>
@@ -439,7 +440,7 @@
       <material name="black" />
     </visual>
     <!--collision group="right_lower_legs">
-      <origin xyz="0.0265 0 -0.048" /> <!-- note this is approximate -->
+      <origin xyz="0.0265 0 -0.048" /--> <!-- note this is approximate -->
       <!--geometry>
         <capsule radius="0.012" length="0.09" />
       </geometry>

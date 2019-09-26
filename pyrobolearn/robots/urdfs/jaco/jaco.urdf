@@ -5,7 +5,7 @@
 <!-- =================================================================================== -->
 <robot name="jaco_robot" xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller" xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface" xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor" xmlns:xacro="http://ros.org/wiki/xacro">
   <!--link name="robot_root">
-  </link>
+  </link-->
   <!-- fake cylinder which is actually a box -->
   <!--xacro:macro name="cyl_inertia" params="mass r h ">
       <mass value="${mass}"/>
@@ -28,7 +28,7 @@
     <origin rpy="0 0 0" xyz="0 0 0"/>
     <parent link="robot_root"/>
     <child link="jaco_0_baseA"/>
-  </joint>
+  </joint-->
   <!-- for some reason, material only applies if full name specified...
        these only seem to work in older gazebo versions -->
   <gazebo reference="jaco_ring_">

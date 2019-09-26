@@ -20,22 +20,27 @@ class AllegroHand(Hand):
     r"""Allegro Hand
 
     References:
-        [1] http://www.simlab.co.kr/Allegro-Hand.htm
-        [2] https://github.com/simlabrobotics/allegro_hand_ros
+        - [1] http://www.simlab.co.kr/Allegro-Hand.htm
+        - [2] https://github.com/simlabrobotics/allegro_hand_ros
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0),
-                 orientation=(0, 0, 0, 1),
-                 scale=1.,
-                 left=False,
-                 fixed_base=True):
+    def __init__(self, simulator, position=(0, 0, 0.1), orientation=(0, 0, 0, 1), scale=1., fixed_base=True):
+        # left=False
+        """
+        Initialize the Allegro hand.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the hand base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the hand.
+        """
         # check parameters
         if position is None:
-            position = (0., 0., 0.)
+            position = (0., 0., 0.1)
         if len(position) == 2:  # assume x, y are given
-            position = tuple(position) + (0.,)
+            position = tuple(position) + (0.1,)
         if orientation is None:
             orientation = (0, 0, 0, 1)
         if fixed_base is None:
@@ -53,11 +58,11 @@ class AllegroHand(Hand):
 # Test
 if __name__ == "__main__":
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

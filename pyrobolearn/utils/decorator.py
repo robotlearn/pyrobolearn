@@ -2,13 +2,14 @@
 """Define the various decorators used in this framework.
 """
 
+import sys
 import numpy
 import torch
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "GNU GPLv3"
+__license__ = "MIT"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
@@ -34,3 +35,15 @@ def convert_numpy(f):
         return x
 
     return wrapper
+
+
+def keyboard_interrupt(func):
+    """Decorator to be used on a method to check if there was a keyboard interrupt error that was raised."""
+    def wrap(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except KeyboardInterrupt:
+            del self  # this will delete/close the class
+            # self.close()
+            sys.exit(0)
+    return wrap

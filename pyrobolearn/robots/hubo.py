@@ -27,19 +27,25 @@ class Hubo(BipedRobot, BiManipulator, TwoHand):
     and 1 for the waist.
 
     References:
-        [1] ROS wiki: http://wiki.ros.org/Robots/HUBO
-        [2] Hubo Lab: hubolab.kaist.ac.kr
-        [3] Rainbow Robotics: http://www.rainbow-robotics.com/new/
-        [4] URDF: https://github.com/robEllenberg/hubo-urdf
+        - [1] ROS wiki: http://wiki.ros.org/Robots/HUBO
+        - [2] Hubo Lab: hubolab.kaist.ac.kr
+        - [3] Rainbow Robotics: http://www.rainbow-robotics.com/new/
+        - [4] URDF: https://github.com/robEllenberg/hubo-urdf
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 1),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 1), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/hubo/hubo.urdf'):
+        """
+        Initialize the Hubo robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 1.)
@@ -89,11 +95,11 @@ class Hubo(BipedRobot, BiManipulator, TwoHand):
 # Test
 if __name__ == "__main__":
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

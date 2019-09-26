@@ -25,18 +25,25 @@ class Walkman(BipedRobot, BiManipulator):
     each ankle).
 
     References:
-        [1] "WALK-MAN: A High-Performance Humanoid Platform for Realistic Environments", Tsagarakis et al., 2017
-        [2] https://github.com/ADVRHumanoids/iit-walkman-ros-pkg
+        - [1] "WALK-MAN: A High-Performance Humanoid Platform for Realistic Environments", Tsagarakis et al., 2017
+        - [2] https://github.com/ADVRHumanoids/iit-walkman-ros-pkg
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 1.14),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
-                 urdf=os.path.dirname(__file__) + '/urdfs/walkman/walkman.urdf',
-                 lower_body=False):  # 'walkman_lower_body.urdf'
+    def __init__(self, simulator, position=(0, 0, 1.14), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
+                 lower_body=False, urdf=os.path.dirname(__file__) + '/urdfs/walkman/walkman.urdf'):
+        # 'walkman_lower_body.urdf'
+        """
+        Initialize the Walkman robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            lower_body (bool): if True, it will instantiate only the lower part of the robot (i.e. the legs).
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 1.14)
@@ -57,16 +64,16 @@ class Walkman(BipedRobot, BiManipulator):
         # fovx = 1.3962634rad = 80 degrees, Gaussian noise = N(0, 0.007)
         # "left_camera_frame",
         self.left_camera = CameraSensor(self.sim, self.id, 11, width=800, height=800, fovy=80, near=0.02, far=300,
-                                        rate=30)  # 11
+                                        ticks=30)  # 11
         self.right_camera = CameraSensor(self.sim, self.id, 13, width=800, height=800, fovy=80, near=0.02, far=300,
-                                         rate=30)  # 13
+                                         ticks=30)  # 13
 
         # Laser (depth) sensor: Hokuyo sensor
         # link: "head_hokuyo_frame"
         # freq=40, samples = 720, angle = [-1.570796, 1.570796] rad, range = [0.10, 30.0] m
         # Gaussian noise: N(0.0, 0.01)
         self.depth_camera = CameraSensor(self.sim, self.id, 10, width=200, height=200, fovy=80, near=0.1, far=30.0,
-                                         rate=40)
+                                         ticks=40)
 
         self.cameras = [self.left_camera, self.right_camera, self.depth_camera]
 
@@ -95,11 +102,11 @@ class Walkman(BipedRobot, BiManipulator):
 if __name__ == "__main__":
     # Imports
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # Create world
     world = BasicWorld(sim)

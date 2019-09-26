@@ -20,15 +20,10 @@ class Humanoid(BipedRobot, BiManipulator):
     r"""Humanoid Mujoco Model
 
     References:
-        [1] description: https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_data/mjcf
+        - [1] description: https://github.com/bulletphysics/bullet3/tree/master/examples/pybullet/gym/pybullet_data/mjcf
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(-0.5, 0, 1.),
-                 orientation=(0, 0.707, 0, 0.707),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(-0.5, 0, 1.), orientation=(0, 0.707, 0, 0.707), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/mjcfs/humanoid.xml'):  # humanoid_symmetric.xml
         # check parameters
         if position is None:
@@ -63,11 +58,11 @@ class Humanoid(BipedRobot, BiManipulator):
 # Test
 if __name__ == "__main__":
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

@@ -26,6 +26,7 @@ torchvision>=0.2.1
 pybullet>=2.4.1
 gym>=0.10.9
 # -e git+https://github.com/benelot/pybullet-gym#egg=pybullet-gym
+# mujoco-py<2.1,>=2.0
 
 # interfaces
 inputs>=0.5
@@ -47,6 +48,7 @@ neat-python>=0.92
 cma>=2.6.0
 # ray>=0.6.3 [rllib]
 # git+git://github.com/ikostrikov/pytorch-a2c-ppo-acktr
+stable-baselines>=2.7.0
 
 # robots
 urdf-parser-py>=0.0.3
@@ -60,9 +62,14 @@ nlopt>=2.4.2.post2
 # ipopt
 
 # control
-slycot>=0.3.3
+# slycot>=0.3.3
 
 # worlds/utils
 # gdal>=1.11.3
 
 # need to install rbdl, ipopt, tf
+
+# meshes
+trimesh>=3.1.1    # to compute volume, COM, inertia, etc.
+pyassimp>=4.1.4   # to import and export meshes in different formats
+# pymesh>=1.0.2

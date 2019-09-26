@@ -54,8 +54,8 @@ class PureRollingTask(JointVelocityTask):
 
         Args:
             model (ModelInterface): model interface.
-            weight (float, np.array[3,3]): weight scalar or matrix associated to the task.
-            constraints (list of Constraint): list of constraints associated with the task.
+            weight (float, np.array[float[3,3]]): weight scalar or matrix associated to the task.
+            constraints (list[Constraint]): list of constraints associated with the task.
         """
         super(PureRollingTask, self).__init__(model=model, weight=weight, constraints=constraints)
 

@@ -1,30 +1,36 @@
 #!/usr/bin/env python
-"""Provide the code to create meshes using the `Mayavi` library.
+"""Provide functions to create, convert, and get information from meshes, using the `trimesh` and `pyassimp` libraries.
 
-Most of the meshes in the world such as the `cone`, `ellipsoid`, and others were created using the hereby code.
+Note that some methods just wrap the methods / attributes provided by the `trimesh` library.
+
+Warnings: the meshes have to be watertight.
+
+References:
+    - Pyassimp:
+        - doc: http://www.assimp.org/index.php
+        - github: https://github.com/assimp/assimp
+    - Trimesh: https://github.com/mikedh/trimesh
+    - Pymesh: https://pymesh.readthedocs.io/en/latest/user_guide.html
 """
 
 import numpy as np
 
-try:
-    from mayavi import mlab
-except ImportError as e:
-    raise ImportError(repr(e) + '\nTry to install Mayavi: pip install mayavi')
+# import XML parser
+import xml.etree.ElementTree as ET
+from xml.dom import minidom  # to print in a pretty way the XML file
 
+# import mesh related libraries
 try:
-    import gdal
+    import trimesh  # processing triangular meshes
+    from trimesh.exchange.export import export_mesh
+    # import pymesh    # rapid prototyping platform focused on geometry processing
+    import pyassimp  # library to import and export various 3d-model-formats
 except ImportError as e:
-    pass
-    # raise ImportError(repr(e) + '\nTry to install gdal: pip install gdal')
+    raise ImportError(str(e) + "\nTry to install `pymesh` and `pyassimp`: `pip install pymesh pyassimp`")
 
-import subprocess
-import fileinput
-import sys
-import os
-import scipy.interpolate
 
 __author__ = "Brian Delhaisse"
-__copyright__ = "Copyright 2018, PyRoboLearn"
+__copyright__ = "Copyright 2019, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
@@ -33,698 +39,288 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-def recenter(coords):
+def convert_mesh(from_filename, to_filename, library='pyassimp', binary=False):
     """
-    Recenter the data.
+    Convert the given file containing the original mesh to the other specified format using the `pyassimp` library.
 
     Args:
-        coords (list of np.array[N], np.array[N]): coordinate(s) to recenter
+        from_filename (str): filename of the mesh to convert.
+        to_filename (str): filename of the converted mesh.
+        library (str): library to use to convert the meshes. Select between 'pyassimp' and 'trimesh'.
+        binary (bool): if True, it will be in a binary format. This is only valid for some formats such as STL where
+          you have the ASCII version 'stl' and the binary version 'stlb'.
+    """
+    if library == 'pyassimp':
+        scene = pyassimp.load(from_filename)
+        extension = to_filename.split('.')[-1].lower()
+        if binary:  # for binary add 'b' as a suffix. Ex: '<file>.stlb'
+            pyassimp.export(scene, to_filename, file_type=extension + 'b')
+        else:
+            pyassimp.export(scene, to_filename, file_type=extension)
+        pyassimp.release(scene)
+    elif library == 'trimesh':
+        export_mesh(trimesh.load(from_filename), to_filename)
+    else:
+        raise NotImplementedError("The given library '{}' is currently not supported, select between 'pyassimp' and "
+                                  "'trimesh'".format(library))
+
+
+def mesh_to_urdf(filename, name=None, mass=None, inertia=None, density=1000, visual=True, collision=True, scale=1.,
+                 position=None, orientation=None, color=None, texture=None, urdf_filename=None):
+    """
+    Write the given mesh to the URDF; it creates the following XML structure:
+
+    <link name="...">
+        <inertial>
+            ...
+        </inertial>
+        <visual>
+            ...
+        </visual>
+        <collision>
+            ...
+        </collision>
+    </link>
+
+    The XML element <link> is returned by this function. The inertial elements are computed given
+
+    Args:
+        filename (str): path to the mesh file.
+        name (str, None): name of the mesh. If None, it will use the name of the filename.
+        mass (float, None): mass of the mesh (in kg). If None, it will use the density.
+        inertia (np.array[float[3,3]], np.array[float[9]], np.array[float[6]], np.array[float[3]], None): body frame
+            inertia matrix relative to the center of mass. If 9 elements are given, these are assumed to be [ixx, ixy,
+            ixz, ixy, iyy, iyz, ixz, iyz, izz]. If 6 elements are given, they are assumed to be [ixx, ixy, ixz, iyy,
+            iyz, izz]. Finally, if only 3 elements are given, these are assumed to be [ixx, iyy, izz] and are
+            considered already to be the principal moments of inertia.
+        density (float): density of the mesh (in kg/m^3). By default, it uses the density of the water 1000kg / m^3.
+        visual (bool): if we should have a <visual> tag or not.
+        collision (bool): if we should have a <collision> tag or not.
+        scale (float): scaling factor. If you have a mesh in meter but you want to scale into centimeters, you need
+            to provide a scaling factor of 0.01.
+        position (np.array[float[3]]): position of the visual and collision meshes.
+        orientation (np.array[float[3]]): orientation (represented as roll-pitch-yaw angles) of the visual and
+            collision meshes.
+        color (list/tuple[float[4]], None): RGBA color.
+        texture (str, None): path to the texture to apply to the mesh.
+        urdf_filename (str, None): path to the urdf file we wish to write in.
 
     Returns:
-        list of np.array[N], np.array[N]: recentered coordinate(s)
+        ET.Element: root element <robot> containing the information about the mesh.
     """
-    if isinstance(coords, (list, tuple)) or len(coords.shape) > 1:
-        centered_coords = []
-        for coord in coords:
-            c_min, c_max = coord.min(), coord.max()
-            c_center = c_min + (c_max - c_min) / 2.
-            centered_coord = coord - c_center
-            centered_coords.append(centered_coord)
-        return np.array(centered_coords)
+    # get name if filename
+    if name is None:
+        name = filename.split('/')[-1]
 
-    c_min, c_max = coords.min(), coords.max()
-    c_center = c_min + (c_max - c_min) / 2.
-    return coords - c_center
+    # get mesh
+    mesh = get_mesh(filename)
+
+    def set_origin(tag, position=None, orientation=None):
+        origin = {}
+        if position is not None:
+            origin['xyz'] = str(np.asarray(position))[1:-1]
+        if orientation is not None:
+            origin['rpy'] = str(np.asarray(orientation))[1:-1]
+        if len(origin) > 0:
+            ET.SubElement(tag, 'origin', attrib=origin)
+
+    def set_geometry(tag):
+        geometry_tag = ET.SubElement(tag, 'geometry')
+        attrib = {'filename': filename, 'scale': str(np.asarray([scale, scale, scale]))[1:-1]}
+        ET.SubElement(geometry_tag, 'mesh', attrib=attrib)
+
+    # create root element
+    root = ET.Element('robot', attrib={'name': name})
+
+    # create <link> tag
+    link_tag = ET.SubElement(root, 'link', attrib={'name': name + '_link'})
+
+    # create <inertial> tag
+    inertial_tag = ET.SubElement(link_tag, 'inertial')
+
+    # <origin>
+    set_origin(inertial_tag, position=mesh.moment_inertia)
+
+    # <mass>
+    if mass is None:
+        mass = get_mesh_mass(mesh, density=density, scale=scale)
+    ET.SubElement(inertial_tag, 'mass', attrib={'value': str(mass)})
+
+    # <inertia>
+    if inertia is None:
+        inertia = get_mesh_body_inertia(mesh, mass=mass, density=density, scale=scale)
+    inertia = {'ixx': inertia[0, 0], 'ixy': inertia[0, 1], 'ixz': inertia[0, 2], 'iyy': inertia[1, 1],
+               'iyz': inertia[1, 2], 'izz': inertia[2, 2]}
+    ET.SubElement(inertial_tag, 'inertia', attrib=inertia)
+
+    # create <visual> tag
+    if visual:
+        visual_tag = ET.SubElement(link_tag, 'visual')
+
+        # <origin>
+        set_origin(visual_tag, position=position, orientation=orientation)
+
+        # <geometry>
+        set_geometry(visual_tag)
+
+        # <material>
+        if color is not None or texture is not None:
+            material_tag = ET.SubElement(visual_tag, 'material')
+            if color is not None:
+                ET.SubElement(material_tag, 'color', attrib={'rgba': str(np.asarray(color))[1:-1]})
+            if texture is not None:
+                ET.SubElement(material_tag, 'texture', attrib={'filename': texture})
+
+    # create <collision> tag
+    if collision:
+        collision_tag = ET.SubElement(link_tag, 'collision')
+
+        # <origin>
+        set_origin(collision_tag, position=position, orientation=orientation)
+
+        # <geometry>
+        set_geometry(collision_tag)
+
+    # save to urdf_filename
+    if urdf_filename is not None:
+        xml_str = minidom.parseString(ET.tostring(root)).toprettyxml(indent="   ")
+        with open(urdf_filename, "w") as f:
+            f.write(xml_str)  # .encode('utf-8'))
+
+    # return root element
+    return root
 
 
-def create_mesh(x, y, z, filename=None, show=False, center=True):
-    """
-    Create mesh from x,y,z arrays, and save it in the obj format.
+def get_mesh(filename):
+    r"""
+    Return the mesh instance returned by the `trimesh` library.
 
     Args:
-        x (float[N,M]): 2D array representing the x coordinates for the mesh
-        y (float[N,M]): 2D array representing the y coordinates for the mesh
-        z (float[N,M]): 2D array representing the z coordinates for the mesh
-        filename (str, None): filename to save the mesh. If None, it won't save it.
-        show (bool): if True, it will show the mesh using `mayavi.mlab`.
-        center (bool): if True, it will center the mesh
-
-    Examples:
-        # create ellipsoid
-        import numpy as np
-
-        a,b,c,n = 2., 1., 1., 100
-        theta, phi = np.meshgrid(np.linspace(-np.pi/2, np.pi/2, n), np.linspace(-np.pi, np.pi, n))
-
-        x, y, z = a * np.cos(theta) * np.cos(phi), b * np.cos(theta) * np.sin(phi), c * np.sin(theta)
-
-        create_mesh(x, y, z, show=True)
-    """
-    # if not (isinstance(x, np.ndarray) and isinstance(y, np.ndarray) and isinstance(z, np.ndarray)):
-    #     raise TypeError("Expecting x, y, and z to be numpy arrays")
-
-    if isinstance(x, list) and isinstance(y, list) and isinstance(z, list):
-        # create several 3D mesh
-        for i, j, k in zip(x, y, z):
-            # if we need to recenter
-            if center:
-                i, j, k = recenter([i, j, k])
-            mlab.mesh(i, j, k)
-    else:
-        # if we need to recenter the data
-        if center:
-            x, y, z = recenter([x, y, z])
-
-        # create 3D mesh
-        mlab.mesh(x, y, z)
-
-    # save mesh
-    if filename is not None:
-        if filename[-4:] == '.obj':  # This is because the .obj saved by Mayavi is not correct (see in Meshlab)
-            x3dfile = filename[:-4] + '.x3d'
-            mlab.savefig(x3dfile)
-            convert_x3d_to_obj(x3dfile, removeX3d=True)
-        else:
-            mlab.savefig(filename)
-
-    # show / close
-    if show:
-        mlab.show()
-    else:
-        mlab.close()
-
-
-def create_surf_mesh(surface, filename=None, show=False, subsample=None, interpolate_fct='multiquadric',
-                     lower_bound=None, upper_bound=None, dtype=None):
-    """
-    Create surface (heightmap) mesh, and save it in the obj format.
-
-    Args:
-        surface (float[M,N], str): 2D array where each value represents the height. If it is a string, it is assumed
-            that is the path to a file .tif, .geotiff or an image (.png, .jpg, etc). It will be opened using the
-            `gdal` library.
-        filename (str, None): filename to save the mesh. If None, it won't save it.
-        show (bool): if True, it will show the mesh using `mayavi.mlab`.
-        subsample (int, None): if not None, it is the number of points to sub-sample (to smooth the heightmap using
-            the specified function)
-        interpolate_fct (str, callable): "The radial basis function, based on the radius, r, given by the norm
-            (default is Euclidean distance);
-                'multiquadric': sqrt((r/self.epsilon)**2 + 1)
-                'inverse': 1.0/sqrt((r/self.epsilon)**2 + 1)
-                'gaussian': exp(-(r/self.epsilon)**2)
-                'linear': r
-                'cubic': r**3
-                'quintic': r**5
-                'thin_plate': r**2 * log(r)
-            If callable, then it must take 2 arguments (self, r). The epsilon parameter will be available as
-            self.epsilon. Other keyword arguments passed in will be available as well." [1]
-        lower_bound (int, float, None): lower bound; each value in the heightmap will be higher than or equal to
-            this bound
-        upper_bound (int, float, None): upper bound; each value in the heightmap will be lower than or equal to
-            this bound
-        dtype (np.int, np.float, None): type of the returned array for the heightmap
-
-    Examples:
-        # create heightmap
-        import numpy as np
-
-        height = np.random.rand(100,100) # in meters
-        create_surf_mesh(height, show=True)
-    """
-    if isinstance(surface, str):
-        from pyrobolearn.worlds.utils.heightmap_generator import heightmap_gdal
-        surface = heightmap_gdal(surface, subsample=subsample, interpolate_fct=interpolate_fct,
-                                 lower_bound=lower_bound, upper_bound=upper_bound, dtype=dtype)
-
-    if not isinstance(surface, np.ndarray):
-        raise TypeError("Expecting a 2D numpy array")
-    if len(surface.shape) != 2:
-        raise ValueError("Expecting a 2D numpy array")
-
-    # create surface mesh
-    mlab.surf(surface)
-
-    # save mesh
-    if filename is not None:
-        if filename[-4:] == '.obj':  # This is because the .obj saved by Mayavi is not correct (see in Meshlab)
-            x3dfile = filename[:-4] + '.x3d'
-            mlab.savefig(x3dfile)
-            convert_x3d_to_obj(x3dfile, removeX3d=True)
-        else:
-            mlab.savefig(filename)
-
-    # show / close
-    if show:
-        mlab.show()
-    else:
-        mlab.close()
-
-
-def create_3d_mesh(heightmap, x=None, y=None, depth_level=1., filename=None, show=False, subsample=None,
-                   interpolate_fct='multiquadric', lower_bound=None, upper_bound=None, dtype=None, center=True):
-    """
-    Create 3D mesh from heightmap (which can be a 2D array or an image (.tif, .png, .jpg, etc), and save it in
-    the obj format.
-
-    Args:
-        heightmap (float[M,N], str): 2D array where each value represents the height. If it is a string, it is assumed
-            that is the path to a file .tif, .geotiff or an image (.png, .jpg, etc). It will be opened using the
-            `gdal` library.
-        x (float[M,N], None): 2D array where each value represents the x position (array from meshgrid). If None, it
-            will generate it automatically from the heightmap. If `heightmap` is a string, this `x` won't be taken
-            into account.
-        y (float[M,N], None): 2D array where each value represents the y position (array from meshgrid). If None, it
-            will generate it automatically from the heightmap. If `heightmap` is a string, this `y` won't be taken
-            into account.
-        depth_level (float): the depth will be the minimum depth of the heightmap minus the given depth_level.
-        filename (str, None): filename to save the mesh. If None, it won't save it.
-        show (bool): if True, it will show the mesh using `mayavi.mlab`.
-        subsample (int, None): if not None, it is the number of points to sub-sample (to smooth the heightmap using
-            the specified function)
-        interpolate_fct (str, callable): "The radial basis function, based on the radius, r, given by the norm
-            (default is Euclidean distance);
-                'multiquadric': sqrt((r/self.epsilon)**2 + 1)
-                'inverse': 1.0/sqrt((r/self.epsilon)**2 + 1)
-                'gaussian': exp(-(r/self.epsilon)**2)
-                'linear': r
-                'cubic': r**3
-                'quintic': r**5
-                'thin_plate': r**2 * log(r)
-            If callable, then it must take 2 arguments (self, r). The epsilon parameter will be available as
-            self.epsilon. Other keyword arguments passed in will be available as well." [1]
-        lower_bound (int, float, None): lower bound; each value in the heightmap will be higher than or equal to
-            this bound
-        upper_bound (int, float, None): upper bound; each value in the heightmap will be lower than or equal to
-            this bound
-        dtype (np.int, np.float, None): type of the returned array for the heightmap
-        center (bool): if True, it will center the mesh
-
-    Examples:
-        import numpy as np
-
-        height = np.random.rand(100,100) # in meters
-        create_3d_mesh(height, show=True)
-    """
-    if isinstance(heightmap, str):
-        # load data (raster)
-        data = gdal.Open(heightmap)
-
-        gt = data.GetGeoTransform()
-        # gt is an array with:
-        # 0 = x-coordinate of the upper-left corner of the upper-left pixel
-        # 1 = width of a pixel
-        # 2 = row rotation (typically zero)
-        # 3 = y-coordinate of the of the upper-left corner of the upper-left pixel
-        # 4 = column rotation (typically zero)
-        # 5 = height of a pixel (typically negative)
-
-        # # numpy array of shape: (channel, height, width)
-        # dem = data.ReadAsArray()
-
-        # get elevation values (i.e. height values) with shape (height, width)
-        band = data.GetRasterBand(1)
-        band = band.ReadAsArray()
-
-        # generate coordinates (x,y,z)
-        xres, yres = gt[1], gt[5]
-        width, height = data.RasterXSize * xres, data.RasterYSize * yres
-        xmin = gt[0] + xres * 0.5
-        xmax = xmin + width - xres * 0.5
-        ymin = gt[3] + yres * 0.5
-        ymax = ymin + height - yres * 0.5
-
-        x, y = np.arange(xmin, xmax, xres), np.arange(ymin, ymax, yres)
-        x, y = np.meshgrid(x, y)
-        z = band
-
-        # if we need to subsample, it will smooth the heightmap
-        if isinstance(subsample, int) and subsample > 0:
-            height, width = z.shape
-            idx_x = np.linspace(0, height - 1, subsample, dtype=np.int)
-            idx_y = np.linspace(0, width - 1, subsample, dtype=np.int)
-            idx_x, idx_y = np.meshgrid(idx_x, idx_y)
-            rbf = scipy.interpolate.Rbf(x[idx_x, idx_y], y[idx_x, idx_y], z[idx_x, idx_y], function=interpolate_fct)
-            # Nx, Ny = x.shape[0] / subsample, x.shape[1] / subsample
-            # rbf = Rbf(x[::Nx, ::Ny], y[::Nx, ::Ny], z[::Nx, ::Ny], function=interpolate_fct)
-            z = rbf(x, y)
-
-        # make sure the values of the heightmap are between the bounds (in-place), and is the correct type
-        if lower_bound and upper_bound:
-            np.clip(z, lower_bound, upper_bound, z)
-        elif lower_bound:
-            np.clip(z, lower_bound, z.max(), z)
-        elif upper_bound:
-            np.clip(z, z.min(), upper_bound, z)
-        if dtype:
-            z.astype(dtype)
-
-    else:
-        # check the heightmap is a 2D array
-        if not isinstance(heightmap, np.ndarray):
-            raise TypeError("Expecting a 2D numpy array")
-        if len(heightmap.shape) != 2:
-            raise ValueError("Expecting a 2D numpy array")
-
-        z = heightmap
-        if x is None or y is None:
-            height, width = z.shape
-            x, y = np.meshgrid(np.arange(width), np.arange(height))
-
-    # center the coordinates if specified
-    if center:
-        x, y = recenter([x, y])
-
-    # create lower plane
-    z0 = np.min(z) * np.ones(z.shape) - depth_level
-
-    # create left, right, front, and back planes
-    c1 = (np.vstack((x[0], x[0])), np.vstack((y[0], y[0])), np.vstack((z0[0], z[0])))
-    c2 = (np.vstack((x[-1], x[-1])), np.vstack((y[-1], y[-1])), np.vstack((z0[-1], z[-1])))
-    c3 = (np.vstack((x[:, 0], x[:, 0])), np.vstack((y[:, 0], y[:, 0])), np.vstack((z0[:, 0], z[:, 0])))
-    c4 = (np.vstack((x[:, -1], x[:, -1])), np.vstack((y[:, -1], y[:, -1])), np.vstack((z0[:, -1], z[:, -1])))
-    c = [c1, c2, c3, c4]
-
-    # create_mesh([x, x] + [i[0] for i in c], [y, y] + [i[1] for i in c], [z, z0] + [i[2] for i in c],
-    #            filename=filename, show=show, center=False)
-    create_mesh([x, x] + [i[0] for i in c], [y, y] + [i[1] for i in c], [z, z0] + [i[2] for i in c],
-                filename=filename, show=show, center=False)
-
-
-def create_urdf_from_mesh(meshfile, filename, position=(0., 0., 0.), orientation=(0., 0., 0.), scale=(1., 1., 1.),
-                          color=(1, 1, 1, 1), texture=None, mass=0., inertia=(0., 0., 0., 0., 0., 0.),
-                          lateral_friction=0.5, rolling_friction=0., spinning_friction=0., restitution=0.,
-                          kp=None, kd=None):  # , cfm=0., erf=0.):
-    """
-    Create a URDF file and insert the specified mesh inside.
-
-    Args:
-        meshfile (str): path to the mesh file
-        filename (str): filename of the urdf
-        position (float[3]): position of the mesh
-        orientation (float[3]): orientation (roll, pitch, yaw) of the mesh
-        scale (float[3]): scale factor in the x, y, z directions
-        color (float[4]): RGBA color where rgb=(0,0,0) is for black, rgb=(1,1,1) is for white, and a=1 means opaque.
-        texture (str, None): path to the texture to be applied to the object. If None, provided it will use the
-            given color.
-        mass (float): mass in kg
-        inertia (float[6]): upper/lower triangle of the inertia matrix (read from left to right, top to bottom)
-        lateral_friction (float): friction coefficient
-        rolling_friction (float): rolling friction coefficient orthogonal to contact normal
-        spinning_friction (float): spinning friction coefficient around contact normal
-        restitution (float): restitution coefficient
-        kp (float, None): contact stiffness (useful to make surfaces soft). Set it to None/-1 if not using it.
-        kd (float, None): contact damping (useful to make surfaces soft). Set it to None/-1 if not using it.
-        #cfm: constraint force mixing
-        #erp: error reduction parameter
+        filename (str): path to the mesh file. Note that `trimesh` supports several formats such as STL, PLY, OBJ, DAE,
+            GLTF, and others.
 
     Returns:
-        None
+        trimesh.base.Trimesh: trimesh instance.
 
     References:
-        - "ROS URDF Tutorial": http://wiki.ros.org/urdf/Tutorials
-        - "URDF: Link": http://wiki.ros.org/urdf/XML/link
-        - "Tutorial: Using a URDF in Gazebo": http://gazebosim.org/tutorials/?tut=ros_urdf
-        - SDF format: http://sdformat.org/spec
+        - To load with trimesh: https://github.com/mikedh/trimesh/blob/master/trimesh/exchange/load.py
+        - To export with trimesh: https://github.com/mikedh/trimesh/blob/master/trimesh/exchange/export.py
     """
-    def get_str(lst):
-        return ' '.join([str(i) for i in lst])
-
-    position = get_str(position)
-    orientation = get_str(orientation)
-    color = get_str(color)
-    scale = get_str(scale)
-    name = meshfile.split('/')[-1][:-4]
-    ixx, ixy, ixz, iyy, iyz, izz = [str(i) for i in inertia]
-
-    with open(filename, 'w') as f:
-        f.write('<?xml version="0.0" ?>')
-        f.write('<robot name="'+name+'">')
-        f.write('\t<link name="base">')
-
-        f.write('\t\t<contact>')
-        f.write('\t\t\t<lateral_friction value="' + str(lateral_friction) + '"/>')
-        f.write('\t\t\t<rolling_friction value="' + str(rolling_friction) + '"/>')
-        f.write('\t\t\t<spinning_friction value="' + str(spinning_friction) + '"/>')
-        f.write('\t\t\t<restitution value="' + str(restitution) + '"/>')
-        if kp is not None:
-            f.write('\t\t\t<stiffness value="' + str(kp) + '"/>')
-        if kd is not None:
-            f.write('\t\t\t<damping value="' + str(kd) + '"/>')
-        # f.write('\t\t\t<contact_cfm value="' + str(cfm) + '"/>')
-        # f.write('\t\t\t<contact_erp value="' + str(erp) + '"/>')
-        # f.write('\t\t\t<inertia_scaling value="' + str(inertia_scaling) + '"/>')
-        f.write('\t\t</contact>')
-
-        f.write('\t\t<inertial>')
-        f.write('\t\t\t<origin rpy="' + orientation + '" xyz="' + position + '"/>')
-        f.write('\t\t\t<mass value="' + str(mass) + '"/>')
-        f.write('\t\t\t<inertia ixx="'+str(ixx)+'" ixy="'+str(ixy)+'" ixz="'+str(ixz)+'" iyy="'+str(iyy)+'" iyz="'+
-                str(iyz)+'" izz="'+str(izz)+'"/>')
-        f.write('\t\t</inertial>')
-
-        f.write('\t\t<visual>')
-        f.write('\t\t\t<origin rpy="' + orientation + '" xyz="' + position + '"/>')
-        f.write('\t\t\t<geometry>')
-        f.write('\t\t\t\t<mesh filename="' + meshfile + '" scale="' + scale + '"/>')
-        f.write('\t\t\t</geometry>')
-        f.write('\t\t\t<material name="color">')
-        if texture is not None:
-            f.write('\t\t\t\t<texture filename="' + texture + '"/>')
-        else:
-            f.write('\t\t\t\t<color rgba="' + color + '"/>')
-        f.write('\t\t\t</material>')
-        f.write('\t\t</visual>')
-
-        f.write('\t\t<collision>')
-        f.write('\t\t\t<origin rpy="' + orientation + '" xyz="' + position + '"/>')
-        f.write('\t\t\t<geometry>')
-        f.write('\t\t\t\t<mesh filename="' + meshfile + '" scale="' + scale + '"/>')
-        f.write('\t\t\t</geometry>')
-        f.write('\t\t</collision>')
-
-        f.write('\t</link>')
-        f.write('</robot>')
+    mesh = filename
+    if isinstance(filename, str):
+        mesh = trimesh.load(filename)
+    elif not isinstance(filename, trimesh.base.Trimesh):
+        raise TypeError("Expecting the given 'filename' to be a string, or an instance of `trimesh.base.Trimesh`, but "
+                        "instead got: {}".format(filename))
+    return mesh
 
 
-def convert_x3d_to_obj(filename, removeX3d=True):
+def get_mesh_volume(mesh, scale=1.):
     """
-    Convert a .x3d into an .obj file.
-
-    Warnings: This method use the `meshlabserver` bash command. Be sure that `meshlab` is installed on the computer.
+    Get the volume of the mesh.
 
     Args:
-        filename (str): path to the .x3d file
-        removeX3d (bool): True if it should remove the old .x3d file.
+        mesh (trimesh.base.Trimesh, str): trimesh instance, or path to the mesh file.
+        scale (float): scaling factor. If you have a mesh in meter but you want to scale into centimeters, you need
+            to provide a scaling factor of 0.01.
 
     Returns:
-        None
+        float: volume of the mesh.
     """
-    obj_filename = filename[:-4] + '.obj'
-
-    try:
-        # convert mesh (check `meshlabserver` command for more info)
-        subprocess.call(['meshlabserver', '-i', filename, '-o', obj_filename])  # same as calling Popen(...).wait()
-
-        # replace all commas by dots
-        for line in fileinput.input(obj_filename, inplace=True):
-            line = line.replace(',', '.')
-            sys.stdout.write(line)
-
-        # remove the old .x3d file if specified
-        if removeX3d:
-            subprocess.call(['rm', filename])
-    except OSError as e:
-        if e.errno == os.errno.ENOENT:
-            raise OSError(
-                "The command `meshlabserver` is not installed on this system. Verify that meshlab is installed.")
-        else:
-            raise OSError("Error while running the command `meshlabserver`: {}".format(e))
+    mesh = get_mesh(mesh)
+    return mesh.volume * scale**3  # the scale is for each dimension
 
 
-def convert_mesh(fromFilename, toFilename, removeFile=True):
+def get_mesh_convex_volume(mesh, scale=1.):
     """
-    Convert the given file containing the original mesh to the other specified format.
-    The available formats are the ones supported by `meshlab`.
+    Get the convex hull volume of the mesh.
 
     Args:
-        fromFilename (str): filename of the mesh to convert
-        toFilename (str): filename of the converted mesh
-        removeFile (bool): True if the previous file should be deleted
+        mesh (trimesh.base.Trimesh, str): trimesh instance, or path to the mesh file.
+        scale (float): scaling factor. If you have a mesh in meter but you want to scale into centimeters, you need
+            to provide a scaling factor of 0.01.
 
     Returns:
-        None
+        float: convex hull volume of the mesh.
     """
-    try:
-        # convert mesh (check `meshlabserver` command for more info)
-        subprocess.call(['meshlabserver', '-i', fromFilename, '-o', toFilename])  # same as calling Popen(...).wait()
-
-        # replace all commas by dots
-        for line in fileinput.input(toFilename, inplace=True):
-            line = line.replace(',', '.')
-            sys.stdout.write(line)
-
-        # remove the old .x3d file if specified
-        if removeFile:
-            subprocess.call(['rm', fromFilename])
-    except OSError as e:
-        if e.errno == os.errno.ENOENT:
-            raise OSError(
-                "The command `meshlabserver` is not installed on this system. Verify that meshlab is installed.")
-        else:
-            raise OSError("Error while running the command `meshlabserver`: {}".format(e))
+    mesh = get_mesh(mesh)
+    return mesh.convex_hull.volume * scale**3  # the scale is for each dimension
 
 
-def read_obj_file(filename):
-    r"""
-    Read an .obj file and returns the whole file, as well as the list of vertices, and faces.
+def get_mesh_com(mesh, scale=1.):
+    """
+    Get the mesh's center of mass.
 
     Args:
-        filename (str): path to the obj file
+        mesh (trimesh.base.Trimesh, str): trimesh instance, or path to the mesh file.
+        scale (float): scaling factor. If you have a mesh in meter but you want to scale it into centimeters, you need
+            to provide a scaling factor of 0.01.
 
     Returns:
-        list[str]: each line in the file
-        np.array[N,3]: list of vertices, where each vertex is a 3D position
-        list[list[M]]: list of faces, where each face is a list of vertex ids which composed the face. Note that the
-            first vertex id starts from 0 and not 1 like in the file.
+        np.array[float[3]]: center of mass of the mesh.
     """
-    data, vertices, faces = [], [], []
-
-    with open(filename) as f:
-        for i, line in enumerate(f):
-            data.append(line)
-            words = line.split()
-            if len(words) > 0:
-                if words[0] == 'v':  # vertex
-                    if len(words) > 3:
-                        x, y, z = words[1:4]
-                        vertices.append(np.array([float(x), float(y), float(z)]))
-                elif words[0] == 'f':  # face
-                    face = []
-                    for word in words[1:]:
-                        numbers = word.split('//')
-                        if len(numbers) > 0:
-                            face.append(int(numbers[0]) - 1)
-                    faces.append(face)
-
-    vertices = np.array(vertices)
-    return data, vertices, faces
+    mesh = get_mesh(mesh)
+    return mesh.center_mass * scale
 
 
-def flip_face_normals_in_obj(filename):
+def get_mesh_mass(mesh, density=1000, scale=1.):
     """
-    Flip all the face normals in .obj file.
+    Get the mass of the mesh using the given density, and assuming a uniform density.
 
     Args:
-        filename (str): path to the obj file
+        mesh (trimesh.base.Trimesh, str): trimesh instance, or path to the mesh file.
+        density (float): density of the mesh. By default, it is the density of the water 1000 kg / m^3.
+        scale (float): scaling factor. If you have a mesh in meter but you want to scale it into centimeters, you need
+            to provide a scaling factor of 0.01.
+
+    Returns:
+        float: mass of the mesh.
     """
-    # read (load) all the file
-    with open(filename) as f:
-        data = f.readlines()
-
-    # flip the faces
-    for i in range(len(data)):
-        words = data[i].split()
-        if len(words) > 0:
-            if words[0] == 'f':  # face
-                data[i] = words[0] + ' ' + words[-1] + ' ' + words[-2] + ' ' + words[-3] + '\n'
-
-    # rewrite the obj file
-    with open(filename, 'w') as f:
-        f.writelines(data)
+    volume = get_mesh_volume(mesh, scale=scale)
+    return density * volume
 
 
-def flip_face_normals_for_convex_obj(filename, outward=True):
+def get_mesh_body_inertia(mesh, mass=None, density=1000, scale=1.):
     """
-    Flip the face normals for convex objects, and rewrite the obj file
+    Get the full inertia matrix of the mesh relative to its center of mass.
 
     Args:
-        filename (str): the path to the obj file
-        outward (bool): if the face normals should point outward. If False, they will be flipped such that they point
-            inward the object.
+        mesh (trimesh.base.Trimesh, str): trimesh instance, or path to the mesh file.
+        mass (float, None): mass of the mesh (in kg). If None, it will use the density.
+        density (float): density of the mesh. By default, it is the density of the water 1000 kg / m^3.
+        scale (float): scaling factor. If you have a mesh in meter but you want to scale it into centimeters, you need
+            to provide a scaling factor of 0.01.
+
+    Returns:
+        np.array[float[3,3]]: full inertia matrix of the mesh relative to its center of mass.
     """
-    # read the obj file
-    data, vertices, faces = read_obj_file(filename)
+    mesh = get_mesh(mesh)
 
-    # compute the center of the object
-    center = np.mean(vertices, axis=0)
-    print('Center of object: {}'.format(center))
-
-    # flip the faces that points inward or outward
-    v = vertices
-    face_id = 0
-    for i in range(len(data)):
-        words = data[i].split()
-        if len(words) > 0:
-            if words[0] == 'f':  # face
-                # compute the center of the face
-                face = faces[face_id]
-                face_center = np.mean([v[face[i]] for i in range(len(face))], axis=0)
-                print('Face id: {}'.format(face_id))
-                print('Face center: {}'.format(face_center))
-
-                # compute the surface vector that goes from the center of the object to the face center
-                vector = face_center - center
-
-                # compute the normal vector of the face
-                normal = np.cross( (v[face[2]] - v[face[1]]), (v[face[0]] - v[face[1]]) )
-
-                # compute the dot product between the normal and the surface vector
-                direction = np.dot(vector, normal)
-
-                print('direction: {}'.format(direction))
-
-                # flip the faces that need to be flipped
-                if (direction > 0 and not outward) or (direction < 0 and outward):
-                    data[i] = words[0] + ' ' + words[-1] + ' ' + words[-2] + ' ' + words[-3] + '\n'
-
-                # increment face id
-                face_id +=1
-
-    # rewrite the obj file
-    with open(filename, 'w') as f:
-        f.writelines(data)
-
-
-def flip_face_normals_for_expanded_obj(filename, expanded_filename, outward=True, remove_expanded_file=False):
-    r"""
-    By comparing the expanded object with the original object, we can compute efficiently the normal vector to each
-    face such that it points outward. Then comparing the direction of these obtained normal vectors with the ones
-    computed for the original faces, we can correct them.
-
-    Args:
-        filename (str): the path to the original obj file
-        expanded_filename (str): the path to the expanded obj file; the file that contains the same object but which
-            has been expanded in every dimension.
-        outward (bool): if the face normals should point outward. If False, they will be flipped such that they point
-            inward the object.
-        remove_expanded_file (bool): if True, it will remove the expanded file.
-    """
-    # read the obj files
-    d1, v1, f1 = read_obj_file(filename)
-    d2, v2, f2 = read_obj_file(expanded_filename)
-
-    # check the size of the obj files (they have to match)
-    if len(v1) != len(v2) or len(f1) != len(f2):
-        raise ValueError("Expecting to have the same number of vertices and faces in each file: "
-                         "v1={}, v2={}, f1={}, f2={}".format(len(v1), len(v2), len(f1), len(f2)))
-    if len(d1) != len(d2):
-        raise ValueError("Expecting the files to have the same size, but instead we have {} and {}".format(len(d1),
-                                                                                                           len(d2)))
-
-    # flip the faces that points inward or outward
-    face_id = 0
-    for i in range(len(d1)):
-        words = d1[i].split()
-        if len(words) > 0:
-            if words[0] == 'f':  # face
-                # compute the center of the faces
-                face1, face2 = f1[face_id], f2[face_id]
-                face1_center = np.mean([v1[face1[i]] for i in range(len(face1))], axis=0)
-                face2_center = np.mean([v2[face2[i]] for i in range(len(face2))], axis=0)
-
-                # compute the surface vector that goes from the original face to the expanded one
-                vector = face2_center - face1_center
-
-                # compute the normal vector of the face
-                normal = np.cross((v1[face1[2]] - v1[face1[1]]), (v1[face1[0]] - v1[face1[1]]))
-
-                # compute the dot product between the normal and the surface vector
-                direction = np.dot(vector, normal)
-
-                # flip the faces that need to be flipped
-                if (direction < 0 and not outward) or (direction > 0 and outward):
-                    d1[i] = words[0] + ' ' + words[-1] + ' ' + words[-2] + ' ' + words[-3] + '\n'
-
-                # increment face id
-                face_id += 1
-
-    # rewrite the obj file
-    with open(filename, 'w') as f:
-        f.writelines(d1)
-
-    # remove the expanded file
-    if remove_expanded_file:
-        os.remove(expanded_filename)
-
-
-# Test
-if __name__ == '__main__':
-
-    # 1. create 3D ellipsoid mesh (see `https://en.wikipedia.org/wiki/Ellipsoid` for more info)
-    a, b, c, n = 1., 0.5, 0.5, 50
-    # a, b, c, n = .5, .5, .5, 37
-    theta, phi = np.meshgrid(np.linspace(-np.pi/2, np.pi/2, n), np.linspace(-np.pi, np.pi, n))
-
-    x = a * np.cos(theta) * np.cos(phi)
-    y = b * np.cos(theta) * np.sin(phi)
-    z = c * np.sin(theta)
-
-    create_mesh(x, y, z, show=True)
-    # create_mesh(x, y, z, filename='ellipsoid.obj', show=True)
-
-    # 2. create heightmap mesh
-    height = np.random.rand(100,100) # in meters
-    create_surf_mesh(height, show=True)
-
-    # 3. create right triangular prism
-    x = np.array([[-0.5, -0.5],
-                  [0.5, 0.5],
-                  [-0.5, -0.5],
-                  [-0.5, -0.5],
-                  [-0.5, 0.5],
-                  [0.5, -0.5],
-                  [-0.5, 0.5],
-                  [0.5, -0.5]])
-    y = np.array([[-0.5, 0.5],
-                  [-0.5, 0.5],
-                  [-0.5, 0.5],
-                  [-0.5, 0.5],
-                  [-0.5, -0.5],
-                  [-0.5, -0.5],
-                  [0.5, 0.5],
-                  [0.5, 0.5]])
-    z = np.array([[0., 0.],
-                  [0., 0.],
-                  [1., 1.],
-                  [0., 0.],
-                  [0., 0.],
-                  [0., 1.],
-                  [0., 0.],
-                  [0., 1.]])
-
-    # create_mesh(x, y, z, show=True)
-    create_mesh(x, y, z, filename='right_triangular_prism.obj', show=True)
-    flip_face_normals_for_convex_obj('right_triangular_prism.obj', outward=True)
-
-    # 4. create cone
-    radius, height, n = 0.5, 1., 50
-    [r, theta] = np.meshgrid((radius, 0.), np.linspace(0, 2*np.pi, n))
-    [h, theta] = np.meshgrid((0., height), np.linspace(0, 2*np.pi, n))
-    x, y, z = r * np.cos(theta), r * np.sin(theta), h
-    # close the cone at the bottom
-    [r, theta] = np.meshgrid((0., radius), np.linspace(0, 2*np.pi, n))
-    x = np.vstack((x, r * np.cos(theta)))
-    y = np.vstack((y, r * np.sin(theta)))
-    z = np.vstack((z, np.zeros(r.shape)))
-
-    create_mesh(x, y, z, show=True)
-    # create_mesh(x, y, z, filename='cone.obj', show=True)
-
-    # 5. create 3D heightmap
-    dx, dy, dz = 5., 5., 0.01
-    x, y = np.meshgrid(np.linspace(-dx, dx, int(2*dx)), np.linspace(-dy, dy, int(2*dy)))
-    z = np.random.rand(*x.shape) + dz
-
-    # z0 = np.zeros(x.shape)
+    # volume = mesh.volume  # in m^3  (in trimesh: mash.mass = mash.volume, i.e. density = 1)
+    # volume *= scale ** 3  # the scale is for each dimension
+    # inertia = mesh.moment_inertia * scale ** 2  # I ~ mr^2
     #
-    # w = np.dstack((x,y,z0,z)) # 2DX x 2DY x 4
+    # # the previous inertia is based on the assumption that mesh.mass = mesh.volume
+    # density = mass / volume  # density = new_mass / old_mass
+    # inertia *= density
     #
-    # c1 = (np.vstack((x[0], x[0])), np.vstack((y[0],y[0])), np.vstack((z0[0],z[0])))
-    # c2 = (np.vstack((x[-1], x[-1])), np.vstack((y[-1],y[-1])), np.vstack((z0[-1],z[-1])))
-    # c3 = (np.vstack((x[:,0], x[:,0])), np.vstack((y[:,0], y[:,0])), np.vstack((z0[:,0], z[:,0])))
-    # c4 = (np.vstack((x[:,-1], x[:,-1])), np.vstack((y[:,-1], y[:,-1])), np.vstack((z0[:,-1], z[:,-1])))
-    # c = [c1,c2,c3,c4]
-    #
-    # create_mesh([x,x]+[i[0] for i in c], [y,y]+[i[1] for i in c], [z,z0]+[i[2] for i in c], show=True)
+    # # com = mesh.center_mass * scale  # uniform density assumption
+    # # (mesh.center_mass is a bit different from mesh.centroid)
 
-    create_3d_mesh(z, x, y, dz, show=True)
+    mesh.apply_scale(scale)  # note: this is an inplace operation
+    default_density = mesh.density
+
+    # compute density
+    volume = mesh.volume
+    if mass is not None:
+        density = mass / volume
+    mesh.density = density
+
+    # compute inertia
+    inertia = mesh.moment_inertia
+
+    # because of the inplace operation, put back default values
+    mesh.density = default_density
+    mesh.apply_scale(1. / scale)
+
+    return inertia

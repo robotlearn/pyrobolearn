@@ -26,16 +26,25 @@ class Pepper(WheeledRobot, BiManipulator):
     for these joints are probably not correct.
 
     For more information:
-        [1] http://doc.aldebaran.com/2-0/home_juliette.html
+        - [1] http://doc.aldebaran.com/2-0/home_juliette.html
+
+    References:
+        - [2] https://github.com/ros-naoqi/pepper_robot
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0.9),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0.9), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/pepper/pepper.urdf'):
+        """
+        Initialize the Pepper robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.9)
@@ -55,16 +64,16 @@ class Pepper(WheeledRobot, BiManipulator):
 
         # Note that we divide width and height by 4 (otherwise the simulator is pretty slow)
         self.camera_top = CameraSensor(self.sim, self.id, 4, width=2560 / 4, height=1080 / 4, fovy=44.30,
-                                       near=0.3, far=100, rate=60)
+                                       near=0.3, far=100, ticks=60)
         self.camera_bottom = CameraSensor(self.sim, self.id, 9, width=2560 / 4, height=1080 / 4, fovy=44.30,
-                                          near=0.3, far=100, rate=60)
+                                          near=0.3, far=100, ticks=60)
 
         # 3D camera sensor
         # From [1]: "One 3D camera is located in the forehead. It provides image resolution up to 320x240 at
         # 20 frames per second. One ASUS Xtion 3D sensor is located behind the eyes. VFOV = 45 deg, HFOV = 58 deg,
         # focus = [80cm, 3.5m]."
         self.camera_depth = CameraSensor(self.sim, self.id, 6, width=320, height=240, fovy=45, near=0.3, far=3.5,
-                                         rate=120)
+                                         ticks=120)
 
         self.cameras = [self.camera_top, self.camera_bottom, self.camera_depth]
 
@@ -72,11 +81,11 @@ class Pepper(WheeledRobot, BiManipulator):
 # Test
 if __name__ == "__main__":
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

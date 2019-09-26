@@ -1,0 +1,4 @@
+
+Brian Delhaisse: 
+- For the bottles, I split them into different OBJ files, and centered them.
+- For the ikea glass, I rescaled it and converted it into an OBJ file.

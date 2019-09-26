@@ -3,8 +3,10 @@
 
 name = "pyrobolearn"
 
+import os
 import sys
 import signal
+from itertools import count
 
 # logging
 import logging
@@ -26,6 +28,9 @@ from . import robots
 # import worlds
 from . import worlds
 
+# import utils
+from . import utils
+
 # import physics randomizer
 from . import physics
 
@@ -34,6 +39,9 @@ from . import states
 
 # import actions
 from . import actions
+
+# import terminal conditions
+from . import terminal_conditions
 
 # import rewards
 from . import rewards
@@ -82,12 +90,15 @@ from . import algos
 
 # import experiments
 
+# import priority tasks
+from . import priorities
+
 
 # Meta-information about the package
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "MIT"
+__license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
@@ -102,7 +113,6 @@ def signal_handler(sig, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
-
 # https://stackoverflow.com/questions/30483246/how-to-check-if-a-python-module-has-been-imported
 # https://stackoverflow.com/questions/14050281/how-to-check-if-a-python-module-exists-without-importing-it/25045228
 def module_imported(module_name):  # TODO: improve this method
@@ -113,6 +123,11 @@ def module_imported(module_name):  # TODO: improve this method
         return True
     return False
 
+
+world_mesh_path = os.path.dirname(os.path.abspath(__file__)) + '/worlds/meshes/'
+
+__all__ = [simulators, robots, worlds, physics, states, actions, terminal_conditions, rewards, envs, models,
+           approximators, policies, values, actorcritics, dynamics, tools]
 
 # Define what submodules/classes/functions should be loaded when writing 'from pyrobolearn import *'
 # __all__ = [

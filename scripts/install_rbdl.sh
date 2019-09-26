@@ -60,15 +60,69 @@ sudo cp rbdl.so /usr/local/lib/python2.7/site-packages
 cd currentdir
 
 
-## to wrap GetBodyId() function
+## to wrap GetBodyId(), GetBodyName() function
 # 
-# Inside crbdl.pxd, add:
+# Inside crbdl.pxd,
+# - under `cdef cppclass Model`, add:
+#
 # unsigned int GetBodyId(const char *body_name)
-# inside cdef cppclass Model:
-# 
-# Inside rbdl-wrapper.pyx, add:
+#
+# string GetBodyName(unsigned int body_id)
+#
+# - under `cdef extern from "<rbdl/Kinematics.h>" namespace "RigidBodyDynamics":`, add:
+#
+# cdef void UpdateKinematics (Model& model,
+#            const VectorNd &q,
+#            const VectorNd &qdot,
+#            const VectorNd &qddot)
+#
+# cdef Matrix3d CalcBodyWorldOrientation (Model& model,
+#            const VectorNd &q,
+#            const unsigned int body_id,
+#            bool update_kinematics)
+#
+# Inside rbdl-wrapper.pyx,
+# - under `cdef class Model`, add:
+#
 # def GetBodyId (self, char* body_name):
 #      return self.thisptr.GetBodyId(body_name)
-# inside cdef class Model:
-# 
+#
+# def GetBodyName(self, unsigned int index):
+#      return self.thisptr.GetBodyName(index)
+#
+# - under `kinematics.h` comment block, add:
+#
+# def UpdateKinematics(
+#        Model model,
+#        np.ndarray[double, ndim=1, mode="c"] q,
+#        np.ndarray[double, ndim=1, mode="c"] qdot,
+#        np.ndarray[double, ndim=1, mode="c"] qddot
+#):
+#    crbdl.UpdateKinematics(
+#            model.thisptr[0],
+#            NumpyToVectorNd (q),
+#            NumpyToVectorNd (qdot),
+#            NumpyToVectorNd (qddot)
+#    )
+#
+# def CalcBodyWorldOrientation (Model model,
+#        np.ndarray[double, ndim=1, mode="c"] q,
+#        unsigned int body_id,
+#        update_kinematics=True):
+#    return Matrix3dToNumpy (crbdl.CalcBodyWorldOrientation (
+#            model.thisptr[0],
+#            NumpyToVectorNd (q),
+#            body_id,
+#            update_kinematics
+#            ))
+#
+# - under `Conversion Numpy <-> Eigen` comment block, add:
+#
+# cdef np.ndarray Matrix3dToNumpy (crbdl.Matrix3d cM):
+#    result = np.ndarray ([3, 3])
+#    for i in range (3):
+#        for j in range (3):
+#            result[i,j] = cM.coeff(i,j)
+#    return result
+#
 # then do cmake, make, install again

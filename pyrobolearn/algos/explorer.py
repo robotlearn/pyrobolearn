@@ -20,6 +20,7 @@ from pyrobolearn.exploration import Exploration
 from pyrobolearn.storages import RolloutStorage, ExperienceReplay
 
 from pyrobolearn import logger
+from pyrobolearn.metrics import Metric
 
 
 __author__ = "Brian Delhaisse"
@@ -46,7 +47,7 @@ class Explorer(object):
     storage unit.
     """
 
-    def __init__(self, task, explorer, storage, num_workers=1, backend='multiprocessing'):
+    def __init__(self, task, explorer, storage, num_workers=1, backend='multiprocessing', metrics=None):
         """
         Initialize the exploration phase.
 
@@ -64,6 +65,7 @@ class Explorer(object):
                 PyTorch has been built from source with MPI support). For more information, we refer the reader to
                 references [2,4]. If the backend is 'mpi', you have to run the code using the following command:
                 `mpirun -n 4 python <code>.py`.
+            metrics ((list of) Metric, None): metrics that are used to evaluate the algorithm.
 
         References:
             [1] Multiprocessing best practices: https://pytorch.org/docs/stable/notes/multiprocessing.html
@@ -74,6 +76,7 @@ class Explorer(object):
         self.task = task
         self.explorer = explorer
         self.storage = storage
+        self.metrics = metrics
 
         # check the number of workers
         if not isinstance(num_workers, (int, long)):
@@ -213,6 +216,31 @@ class Explorer(object):
             raise TypeError("Expecting the storage to be an instance of `RolloutStorage` or `ExperienceReplay`, "
                             "instead got: {}".format(type(storage)))
         self._storage = storage
+
+    @property
+    def metrics(self):
+        """Return the metric instances."""
+        return self._metrics
+
+    @metrics.setter
+    def metrics(self, metrics):
+        """Set the metrics."""
+        # check metrics type
+        if metrics is None:
+            metrics = []
+        elif isinstance(metrics, Metric):
+            metrics = [metrics]
+        elif not isinstance(metrics, list):
+            raise TypeError("Expecting the given 'metrics' to be an instance of `Metric` or a list of `Metric`, but "
+                            "got instead: {}".format(type(metrics)))
+
+        # check each metric type
+        for i, metric in enumerate(metrics):
+            if not isinstance(metric, Metric):
+                raise TypeError("The {}th metric is not an instance of `Metric`, but: {}".format(i, type(metric)))
+
+        # set metrics
+        self._metrics = metrics
 
     ###########
     # Methods #
@@ -523,17 +551,23 @@ class Explorer(object):
             num_rollouts (int): number of trajectories/rollouts (only valid in the on-policy case).
             deterministic (bool): if deterministic is True, then it does not explore in the environment.
             render (bool): if we should render the environment.
-            verbose (bool): If true, print information on the standard output.
+            verbose (int, bool): verbose level, select between {0=False, 1=True, 2}. If 1 or 2, it will print
+                information about the exploration process. The level 2 will print more detailed information. Do not use
+                it when the states / actions are big or high dimensional, as it could be very hard to make sense of
+                the data.
 
         Returns:
             DictStorage: updated memory storage
         """
+        if verbose:
+            print("\n#### 1. Starting the Exploration phase ####")
+
         for rollout in range(num_rollouts):
             # reset environment
             observation = self.env.reset()
 
             if verbose:
-                print("Start rollout: {}/{}".format(rollout + 1, num_rollouts))
+                print("\nStart rollout: {}/{}".format(rollout + 1, num_rollouts))
                 # print("Explorer - initial state: {}".format(observation))
 
             # reset storage
@@ -543,6 +577,7 @@ class Explorer(object):
             self.explorer.reset()
 
             # run RL task for T steps
+            step = 0
             for step in range(num_steps):
                 # if we need to render
                 if render:
@@ -578,7 +613,8 @@ class Explorer(object):
             self.storage.end(rollout)
 
             if verbose:
-                print("End rollout: {}/{}".format(rollout + 1, num_rollouts))
+                print("End rollout: {}/{} with performed step: {}/{}".format(rollout + 1, num_rollouts,
+                                                                             step + 1, num_steps))
                 # print("states: {}".format(self.storage['states']))
                 # print("actions: {}".format(self.storage['actions']))
                 # print("rewards: {}".format(self.storage['rewards']))
@@ -587,6 +623,9 @@ class Explorer(object):
 
             # # clear explorer
             # self.explorer.clear()
+
+        if verbose:
+            print("\n#### End of the Exploration phase ####")
 
         # return storage unit
         return self.storage

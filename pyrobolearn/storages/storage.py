@@ -32,19 +32,24 @@ __status__ = "Development"
 class Storage(object):
     """Main abstract storage class."""
 
-    def save(self, filename):
-        """Save the storage on the disk."""
-        pickle.dump(self, open(filename, 'wb'))
+    @property
+    def size(self):
+        """Return the size of the storage. Need to be implemented in the child class."""
+        return 0
+
+    @property
+    def filled_size(self):
+        """Return the filled size of the storage."""
+        return self.size
 
     @staticmethod
     def load(filename):
         """Load the storage from the disk."""
         return pickle.load(open(filename, 'r'))
 
-    @property
-    def size(self):
-        """Return the size of the storage. Need to be implemented in the child class."""
-        return 0
+    def save(self, filename):
+        """Save the storage on the disk."""
+        pickle.dump(self, open(filename, 'wb'))
 
     def get_batch(self, indices):
         """Return a batch of the storage as a `Storage` type.
@@ -624,7 +629,7 @@ class Batch(DictStorage):
     are filled by the exploration phase in RL algorithms (see `pyrobolearn/algos/explorer`).
     """
 
-    def __init__(self, kwargs=None, device=None, dtype=None):
+    def __init__(self, kwargs=None, device=None, dtype=None, size=None, verbose=0):
         """
         Initialize the Batch storage.
 
@@ -635,12 +640,63 @@ class Batch(DictStorage):
                to which the tensor is allocated.
             dtype (torch.dtype, None): convert the `torch.Tensor` to the specified data type. If None, it will keep
                 the original dtype
+            size (int, None): size of the batch.
+            verbose (int, bool): if True, it will print information about the batch status, such as what is being
+                inserted, removed, etc. Don't use it on states or actions that are big.
         """
+        if verbose == 1:
+            print("\nCreating batch...")
+
         super(Batch, self).__init__(kwargs=kwargs, device=device, dtype=dtype, update=False)
         # contains the current values evaluated during the update phase of RL algorithms.
         self.current = DictStorage(kwargs={}, device=device, dtype=dtype, update=False)
         # indices where the masks is different from 0 in the current batch
         self.indices = None
+        self._size = size if size is not None else len(kwargs['masks'])   # TODO: need to generalize this
+
+        if verbose > 1:
+            print("\nCreating batch with the following variables: ")
+
+            if 'states' in kwargs:
+                states = kwargs['states'][0]  # only take the first state for now
+                print("states: {}".format(torch.cat((torch.arange(len(states),
+                                                                  dtype=torch.float).view(-1, 1),
+                                                     states), dim=1)))
+
+            if 'actions' in kwargs:
+                actions = kwargs['actions'][0]  # only take the first action for now
+                print("actions: {}".format(torch.cat((torch.arange(len(actions),
+                                                                   dtype=torch.float).view(-1, 1),
+                                                      actions), dim=1)))
+
+            if 'rewards' in kwargs:
+                rewards = kwargs['rewards']
+                print("rewards: {}".format(torch.cat((torch.arange(len(rewards), dtype=torch.float).view(-1, 1),
+                                                      rewards), dim=1)))
+
+            if 'masks' in kwargs:
+                masks = kwargs['masks']
+                print("masks: {}".format(torch.cat((torch.arange(len(masks), dtype=torch.float).view(-1, 1),
+                                                    masks), dim=1)))
+
+            if 'returns' in kwargs:
+                returns =kwargs['returns']
+                print("returns: {}".format(torch.cat((torch.arange(len(returns), dtype=torch.float).view(-1, 1),
+                                                      returns), dim=1)))
+
+            # print other variables
+            tmp = {'states', 'actions', 'rewards', 'masks', 'returns'}
+            for key, value in kwargs.items():
+                if key not in tmp:
+                    print("{}: {}".format(key, value))
+
+        if verbose:
+            print("Batch created.")
+
+    @property
+    def size(self):
+        """Return the size of the batch."""
+        return self._size
 
     def get_current(self, key, default=None):
         """Try first to get the key from :attr:`current`, if not present, try to get it from the batch storage.
@@ -680,15 +736,15 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
     has its advantages, as you can for example store multiple value scalars from multiple value function approximators.
 
     Also, in contrast to [1], we do not compute the returns / estimators here. This is done by the `Estimator` class
-    which takes as input a `RolloutStorage`.
+    which takes as input a `RolloutStorage`, and will insert them inside the storage.
 
     In PRL, this storage is notably used by `RLAlgo` (`Explorator`, `Evaluator`, `Updater`), `Loss`, `Estimators`, etc.
 
     References:
-        [1] https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail/blob/master/a2c_ppo_acktr/storage.py
+        - [1] https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail/blob/master/a2c_ppo_acktr/storage.py
     """
 
-    def __init__(self, num_steps, state_shapes, action_shapes, num_trajectories=1):
+    def __init__(self, num_steps, state_shapes, action_shapes, num_trajectories=1, verbose=0):
         # , recurrent_hidden_state_size=0):
         """
         Initialize the rollout storage.
@@ -698,6 +754,9 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
             state_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an observation/state.
             action_shapes (list of tuple of int, tuple of int): each tuple represents the shape of an action.
             num_trajectories (int): number of trajectories.
+            verbose (int, bool): verbose level, if False (=0) it won't print anything. If True (=1) it will print basic
+                information. If verbose=2, it will print information about what is being inserted and removed in the
+                storage, and the batch status.
         """
         # recurrent_hidden_state_size (int): size of the internal state
         super(RolloutStorage, self).__init__()
@@ -707,7 +766,16 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
         self._state_shapes = state_shapes
         self._action_shapes = action_shapes
         self._shifts = {}  # dictionary that maps the key to the time shift; this is add to the current time step
+        self.verbose = verbose
+
+        if self.verbose:
+            print("\nCreating RolloutStorage with num_steps={} and num_rollouts={}".format(self._num_steps,
+                                                                                           self._num_trajectories))
+
         self.init(self.num_steps, state_shapes, action_shapes, self.num_trajectories)
+
+        if self.verbose:
+            print("RolloutStorage created.")
 
     ##############
     # Properties #
@@ -727,6 +795,14 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
     def size(self):
         """Return the size (=number of steps * number of processes) of the rollout storage."""
         return self._num_steps * self._num_trajectories
+
+    @property
+    def filled_size(self):
+        """Return the filled size by looking at the entries where the mask = 1."""
+        # print("Mask: {}".format(self.masks[:, :, 0]))
+        # print("Mask shape: {}".format(self.masks.shape))
+        # print("Steps: {}".format(self._step))
+        return np.minimum(len(self.masks[self.masks == 1]), self.size)
 
     @property
     def capacity(self):
@@ -760,7 +836,7 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
                 `self.num_trajectories`.
         """
         # if end of storage, go at the beginning
-        self._step[rollout_idx] = (self._step[rollout_idx] + 1) % self.num_steps
+        self._step[rollout_idx] = (self._step[rollout_idx] + 1) % (self.num_steps + 1)  # self.num_steps
 
     def create_new_entry(self, key, shapes, num_steps=None, dtype=torch.dtype):
         """Create a new entry (=tensor) in the rollout storage dictionary. The tensor will have the dimension
@@ -817,6 +893,9 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
         else:
             raise TypeError("Expecting the given shapes {} to be a list of tuple of int, a tuple of int, or an int, "
                             "instead got: {}".format({}, type(shapes)))
+
+        if self.verbose:
+            print("Storage: creating new entry for {} with shapes {}".format(key, shapes))
 
         # add shift
         self._shifts[key] = num_steps - self.num_steps
@@ -881,7 +960,8 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
         self._step[rollout_idx] = 0
 
         # reset masks
-        self.masks[:, rollout_idx].copy_(torch.ones_like(self.masks[:, rollout_idx]))
+        # self.masks[:, rollout_idx].copy_(torch.ones_like(self.masks[:, rollout_idx]))  # fill with ones
+        self.masks[:, rollout_idx].copy_(torch.zeros_like(self.masks[:, rollout_idx]))  # fill with zeros
 
         # insert initial states
         if init_states is None:
@@ -972,6 +1052,14 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
         """
         t = self._step[rollout_idx]
 
+        if self.verbose > 1:
+            print("\nStorage: rollout = {}, step = {}".format(rollout_idx, t))
+            print("Storage: insert state: {}".format(states))
+            print("Storage: insert action: {}".format(actions))
+            print("Storage: insert next state: {}".format(next_states))
+            print("Storage: insert reward: {}".format(reward))
+            print("Storage: insert mask: {}".format(mask))
+
         # check given observations/states and actions
         if not isinstance(next_states, list):
             next_states = [next_states]
@@ -1005,7 +1093,7 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
 
         # update the step if specified
         if update_step:
-            self.step()
+            self.step(rollout_idx=rollout_idx)
 
     def add_trajectory(self, trajectory, rollout_idx=0):
         r"""
@@ -1030,35 +1118,69 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
         """Return a batch of the Rollout storage in the form of a `DictStorage`.
 
         Args:
-            indices (list of int): indices. Each index must be between 0 and `num_steps * num_trajectories`.
+            indices (list of int): indices. Each index must be between 0 and `self.filled_size`-1.
 
         Returns:
             DictStorage / Batch: batch containing a part of the storage. Variables such as `states`, `actions`,
                 `rewards`, `masks`, and others can be accessed from the object.
         """
-        # In the next comments, T = number of time steps, P = number of processes, and I = number of indices
+        # In the next comments, T = number of time steps, P = number of processes, and I = number of indices, F =
+        # number of filled entries (where the mask == 1)
         batch = {}
+        size = len(indices)
+
+        # # The following sampling method was not optimal as it would sample entries where the mask == 0 (i.e. when
+        # # the episode is over)
+        # def sample(item, indices):
+        #     if isinstance(item, torch.Tensor):
+        #         if len(item) == self.num_steps + 1:  # = T+1
+        #             item = item[:-1]  # take only the T steps
+        #         return item.view(-1, *item.size()[2:])[indices]  # reshape to (T*P, *shape) and from T*P takes I
+        #
+        #     elif isinstance(item, np.ndarray):
+        #         if len(item) == self.num_steps + 1:  # = T+1
+        #             item = item[:-1]  # take only the T steps
+        #         return item.reshape(-1, *item.shape[2:])[indices]  # reshape to (T*P, *shape) and from T*P takes I
+
+        if self.verbose:
+            print("\nStorage: get batch with size: {} and indices: {}".format(len(indices), indices))
 
         def sample(item, indices):
-            if isinstance(item, torch.Tensor):
-                if len(item) == self.num_steps + 1:  # = T+1
-                    item = item[:-1]  # take only the T steps
-                return item.view(-1, *item.size()[2:])[indices]  # reshape to (T*P, *shape) and from T*P takes I
+            """Given indices where each index is between 0 and `self.filled_size` (=number of masks that are equal
+            to 1), it returns the corresponding entries in the item.
+            """
+            if isinstance(item, (torch.Tensor, np.ndarray)):
+                return item[indices[:, 0], indices[:, 1]]  # [I, *shape]
+            else:
+                raise TypeError("Expecting the given 'item' to be a torch.Tensor or np.ndarray, but got: "
+                                "{}".format(type(item)))
 
-            elif isinstance(item, np.ndarray):
-                if len(item) == self.num_steps + 1:  # = T+1
-                    item = item[:-1]  # take only the T steps
-                return item.reshape(-1, *item.shape[2:])[indices]  # reshape to (T*P, *shape) and from T*P takes I
+        # compute the step and traj indices
+        original_indices = indices
+        masks = (self.masks[:, :, 0] == 1).nonzero()  # [F, 2] --> indices for (step_idx, traj_idx)
+        masks[:, 0] -= 1  # remove 1 because indices for masks are in [1, t+1] --> [0, t]
+        indices = masks[indices]  # [I,2] --> allowed indices for (step_idx, traj_idx)
+
+        # if self.verbose:
+        #     print("Mask length: {}".format(len(masks)))
+        #     print("Indices: {}".format(indices))
 
         # go through each attribute and sample from the tensors
-        for key, value in self.iteritems():
+        for key, value in self.items():
+            # print("batch - add key: {}".format(key))
             if isinstance(value, list):  # value = list of tensors
-                batch[key] = [sample(val, indices) for val in value]
+                batch[key] = [sample(val, indices) for val in value]  # [[I, *shape] for each shape]
             else:  # value = tensor
-                batch[key] = sample(value, indices)
+                # if key == 'masks':  # TODO: need to shift masks?
+                #     m = torch.clone(masks)
+                #     m[:, 0] += 1  # indices [0, t] --> [1, t+1]
+                #     idx = m[original_indices]
+                #     batch[key] = value[idx[:, 0], idx[:, 1]]
+                # else:
+                batch[key] = sample(value, indices)  # [I, *shape]
 
         # TODO: add the following lines in the `end` method? Need to be called only one time as long we don't clear
-        # replace the zeros in the action_distributions field by dummy distributions
+        #  replace the zeros in the action_distributions field by dummy distributions
         # take the first distribution for each action distribution
         dists = [dist[dist != 0][0] for dist in self['action_distributions']]
         # replace the zeros by that first distribution
@@ -1074,8 +1196,9 @@ class RolloutStorage(DictStorage):  # TODO: think about when multiple policies: 
             distributions[i] = dist.__class__.from_list(distribution)
 
         # create Batch object
-        batch = Batch(batch, device=self.device, dtype=self.dtype)
+        batch = Batch(batch, device=self.device, dtype=self.dtype, size=size, verbose=self.verbose)
         batch.indices = torch.tensor(range(len(indices)))[batch['masks'][:, 0] != 0].tolist()
+        # print("Batch indices: {}".format(batch.indices))  # TODO: need to shift masks?
 
         # return batch (which is given to the updater (and loss))
         return batch

@@ -1,0 +1,2 @@
+
+Brian Delhaisse: Compared to the original, I rescaled/translated/rotated the conveyor, and split it into 2 parts (the conveyor and the belt).

@@ -60,9 +60,8 @@ class State(object):
         policy = NNPolicy(states, actions)
 
     References:
-        [1] "Wikipedia: Composition over Inheritance", https://en.wikipedia.org/wiki/Composition_over_inheritance
-        [2] "OpenAI gym": https://gym.openai.com/   and    https://github.com/openai/gym
-
+        - [1] "Wikipedia: Composition over Inheritance", https://en.wikipedia.org/wiki/Composition_over_inheritance
+        - [2] "OpenAI gym": https://gym.openai.com/   and    https://github.com/openai/gym
     """
 
     def __init__(self, states=(), data=None, space=None, window_size=1, axis=None, ticks=1, name=None):
@@ -386,13 +385,25 @@ class State(object):
         return torch.cat([data.reshape(-1) for data in self.merged_torch_data])
 
     @property
+    def spaces(self):
+        """
+        Get the corresponding spaces as a list of spaces.
+        """
+        if self.has_space():
+            return [self._space]
+        return [state._space for state in self._states]
+
+    @property
     def space(self):
         """
         Get the corresponding space.
         """
         if self.has_space():
-            return [self._space]
-        return [state._space for state in self._states]
+            # return [self._space]
+            # return gym.spaces.Tuple([self._space])
+            return self._space
+        # return [state._space for state in self._states]
+        return gym.spaces.Tuple([state._space for state in self._states])
 
     @space.setter
     def space(self, space):
@@ -401,6 +412,40 @@ class State(object):
         """
         if self.has_data() and not self.has_space() and isinstance(space, (gym.spaces.Box, gym.spaces.Discrete)):
             self._space = space
+
+    @property
+    def merged_space(self):
+        """
+        Get the corresponding merged space. Note that all the spaces have to be of the same type.
+        """
+        if self.has_space():
+            return self._space
+        spaces = self.spaces
+        result = []
+        dtype, prev_dtype = None, None
+        for space in spaces:
+            if isinstance(space, gym.spaces.Box):
+                dtype = 'box'
+                result.append([space.low, space.high])
+            elif isinstance(space, gym.spaces.Discrete):
+                dtype = 'discrete'
+                result.append(space.n)
+            else:
+                raise NotImplementedError
+
+            if prev_dtype is not None and dtype != prev_dtype:
+                return self.space
+
+            prev_dtype = dtype
+
+        if dtype == 'box':
+            low = np.concatenate([res[0] for res in result])
+            high = np.concatenate([res[1] for res in result])
+            return gym.spaces.Box(low=low, high=high, dtype=np.float32)
+        elif dtype == 'discrete':
+            return gym.spaces.Discrete(n=np.sum(result))
+
+        return self.space
 
     @property
     def name(self):
@@ -621,7 +666,7 @@ class State(object):
         """
         pass
 
-    def read(self):
+    def read(self, return_data=True, merged_data=False):
         """
         Read the state values from the simulator for each state, set it and return their values.
         """
@@ -639,7 +684,10 @@ class State(object):
         self._cnt += 1
 
         # return the data
-        return self.data
+        if return_data:
+            if merged_data:
+                return self.merged_data
+            return self.data
 
     def _reset(self):
         """
@@ -648,7 +696,7 @@ class State(object):
         self._cnt = 0
         self._read()
 
-    def reset(self):
+    def reset(self, return_data=True, merged_data=False):
         """
         Some states need to be reset. It returns the initial state.
         """
@@ -661,8 +709,11 @@ class State(object):
         else:  # else, reset this state
             self._reset()
 
-        # return the first state data
-        return self.data  # self.read()
+        # return the first state data if specified
+        if return_data:
+            if merged_data:
+                return self.merged_data
+            return self.data  # self.read()
 
     def max_dimension(self):
         """
@@ -690,7 +741,10 @@ class State(object):
         """
         If all the states are discrete, then it is discrete.
         """
-        return all(self.has_discrete_values())
+        values = self.has_discrete_values()
+        if len(values) == 0:
+            return False
+        return all(values)
 
     def has_continuous_values(self):
         """
@@ -743,8 +797,8 @@ class State(object):
         """
         if self.is_combined_states():
             return [state.sample() for state in self._states]
-        if self._distribution is None:
-            return
+        if self._distribution is None:  # uniform distribution
+            return self._space.sample()
         else:
             pass
         raise NotImplementedError
@@ -786,8 +840,8 @@ class State(object):
         it will be min(dimension, axis).
 
         Examples:
-            s0 = JntPositionState(robot)
-            s1 = JntVelocityState(robot)
+            s0 = JointPositionState(robot)
+            s1 = JointVelocityState(robot)
             s = s0 & s1
             print(s)
             print(s.shape)
@@ -843,7 +897,7 @@ class State(object):
             class_type (type, str): class type or name
 
         Returns:
-            State: the corresponding instance of the State class
+            State, None: the corresponding instance of the State class. None if it was not found.
         """
         # if string, lowercase it
         if isinstance(class_type, str):
@@ -883,11 +937,11 @@ class State(object):
     #         return [str(state) for state in self._states]
     #     return str(self)
 
-    def __call__(self):
+    def __call__(self, return_data=True, merged_data=False):
         """
         Compute/read the state and return it. It is an alias to the `self.read()` method.
         """
-        return self.read()
+        return self.read(return_data=return_data, merged_data=merged_data)
 
     def __len__(self):
         """

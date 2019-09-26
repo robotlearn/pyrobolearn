@@ -13,6 +13,7 @@ See Also:
 
 import queue
 import numpy as np
+from abc import ABCMeta
 
 from pyrobolearn.states import State
 
@@ -42,13 +43,15 @@ class StateGenerator(object):
     The mapping function has to return a `state` object.
     """
 
-    def __init__(self, state):
+    def __init__(self, state, fct=None):
         """Initialize the state generator.
 
         Args:
             state (State): state instance.
+            fct (callable, None): callback function to be called after generating the data.
         """
         self.state = state
+        self.fct = fct if callable(fct) else None
 
     @property
     def state(self):
@@ -63,25 +66,49 @@ class StateGenerator(object):
                             "{}".format(type(state)))
         self._state = state
 
-    def generate(self, set_data=True):
+    def generate(self, set_data=True, reset_state=True):
         """Generate the state.
 
         Args:
             set_data (bool): If True, it will set the generated data to the state.
+            reset_state (bool): If True, it will reset the state with the generated data (if `set_data` has been set
+                to True).
+
+        Returns:
+            (list of) np.array: state data
+        """
+        # generate the data
+        data = self._generate(set_data=set_data, reset_state=reset_state)
+
+        # call the user function
+        if self.fct is not None:
+            self.fct()
+
+        return data
+
+    def _generate(self, set_data=True, reset_state=True):
+        """Generate the state.
+
+        Args:
+            set_data (bool): If True, it will set the generated data to the state.
+            reset_state (bool): If True, it will reset the state with the generated data (if `set_data` has been set
+                to True).
 
         Returns:
             (list of) np.array: state data
         """
         raise NotImplementedError
 
-    def __repr__(self):
-        return self.__class__.__name__
+    # def __repr__(self):
+    #     return self.__class__.__name__
 
     def __str__(self):
+        """Return a string describing the class."""
         return self.__class__.__name__
 
-    def __call__(self, set_data=True):
-        return self.generate(set_data=set_data)
+    def __call__(self, set_data=True, reset_state=True):
+        """Call the generator."""
+        return self.generate(set_data=set_data, reset_state=reset_state)
 
 
 class FixedStateGenerator(StateGenerator):
@@ -90,26 +117,35 @@ class FixedStateGenerator(StateGenerator):
     This generator returns the same initial state each time it is called.
     """
 
-    def __init__(self, state):
+    def __init__(self, state, data=None, fct=None):
         """Initialize the fixed state generator.
 
         Args:
             state (State): state instance.
+            data (int, float, list[float/int] np.array[float/int], None): initial data. If None, it will get the data
+              from the given state, and set this last one as the initial data.
+            fct (callable, None): callback function to be called after generating the data.
         """
-        super(FixedStateGenerator, self).__init__(state)
-        self.initial_data = self.state.data
+        super(FixedStateGenerator, self).__init__(state, fct=fct)
+        if data is None:
+            data = self.state.data
+        self.initial_data = data
 
-    def generate(self, set_data=True):
+    def _generate(self, set_data=True, reset_state=True):
         """Generate the state.
 
         Args:
             set_data (bool): If True, it will set the generated data to the state.
+            reset_state (bool): If True, it will reset the state with the generated data (if `set_data` has been set
+                to True).
 
         Returns:
             (list of) np.array: state data
         """
         if set_data:
             self.state.data = self.initial_data
+        if reset_state:
+            self.state.reset()
         return self.initial_data
 
 
@@ -117,8 +153,16 @@ class QueueStateGenerator(StateGenerator):
     r"""Abstract Queue state generator
     """
 
-    def __init__(self, state, queue):
-        super(QueueStateGenerator, self).__init__(state)
+    def __init__(self, state, queue, fct=None):
+        """
+        Initialize the queue state generator.
+
+        Args:
+            state (State): initial state.
+            queue (queue.Queue): queue instance which contains the data.
+            fct (callable, None): callback function to be called after generating the data.
+        """
+        super(QueueStateGenerator, self).__init__(state, fct=fct)
         self.queue = queue
         self.initial_data = self.state.data
 
@@ -129,10 +173,11 @@ class QueueStateGenerator(StateGenerator):
 
     @queue.setter
     def queue(self, q):
+        """Set the queue instance."""
         if not isinstance(q, queue.Queue):
             raise TypeError("Expecting the given queue to be an instance of `queue.Queue`, instead got: "
                             "{}".format(type(q)))
-        self._queue = queue
+        self._queue = q
 
     def put(self, item, block=False, timeout=None):
         """Put an item into the queue.
@@ -159,7 +204,7 @@ class QueueStateGenerator(StateGenerator):
         ('timeout' is ignored in that case).
         """
         if self.queue.empty():
-           return self.initial_data
+            return self.initial_data
         return self.queue.get(block=block, timeout=timeout)
 
     # alias
@@ -177,11 +222,13 @@ class QueueStateGenerator(StateGenerator):
         """Return the approximate size of the queue (not reliable!)."""
         return self.queue.qsize()
 
-    def generate(self, set_data=True):
+    def _generate(self, set_data=True, reset_state=True):
         """Generate the state.
 
         Args:
             set_data (bool): If True, it will set the generated data to the state.
+            reset_state (bool): If True, it will reset the state with the generated data (if `set_data` has been set
+                to True).
 
         Returns:
             (list of) np.array: state data
@@ -191,6 +238,8 @@ class QueueStateGenerator(StateGenerator):
             data = data.data
         if set_data:
             self.state.data = data
+        if reset_state:
+            self.state.reset()
         return data
 
     def __len__(self):
@@ -222,15 +271,16 @@ class FIFOQueueStateGenerator(QueueStateGenerator):
     The queue is filled by the user during training.
     """
 
-    def __init__(self, state, maxsize=0):
+    def __init__(self, state, maxsize=0, fct=None):
         """Initialize the FIFO queue state generator.
 
         Args:
             state (State): state instance.
             maxsize (int): maximum size of the queue. If :attr:`maxsize` is <= 0, the queue size is infinite.
+            fct (callable, None): callback function to be called after generating the data.
         """
         q = queue.Queue(maxsize)
-        super(FIFOQueueStateGenerator, self).__init__(state, queue=q)
+        super(FIFOQueueStateGenerator, self).__init__(state, queue=q, fct=fct)
 
 
 class LIFOQueueStateGenerator(QueueStateGenerator):
@@ -240,15 +290,16 @@ class LIFOQueueStateGenerator(QueueStateGenerator):
     The queue is filled by the user during training.
     """
 
-    def __init__(self, state, maxsize=0):
+    def __init__(self, state, maxsize=0, fct=None):
         """Initialize the LIFO queue state generator.
 
         Args:
             state (State): state instance.
             maxsize (int): maximum size of the queue. If :attr:`maxsize` is <= 0, the queue size is infinite.
+            fct (callable, None): callback function to be called after generating the data.
         """
         q = queue.LifoQueue(maxsize)
-        super(LIFOQueueStateGenerator, self).__init__(state, queue=q)
+        super(LIFOQueueStateGenerator, self).__init__(state, queue=q, fct=fct)
 
 
 class PriorityQueueStateGenerator(QueueStateGenerator):
@@ -261,16 +312,17 @@ class PriorityQueueStateGenerator(QueueStateGenerator):
     poorly during the training.
     """
 
-    def __init__(self, state, maxsize=0, ascending=True):
+    def __init__(self, state, maxsize=0, ascending=True, fct=None):
         """Initialize the priority queue state generator.
 
         Args:
             state (State): state instance.
             maxsize (int): maximum size of the queue. If :attr:`maxsize` is <= 0, the queue size is infinite.
             ascending (bool): if True, the item with the lowest priority will be the first one to be retrieved.
+            fct (callable, None): callback function to be called after generating the data.
         """
         q = queue.PriorityQueue(maxsize)
-        super(PriorityQueueStateGenerator, self).__init__(state, queue=q)
+        super(PriorityQueueStateGenerator, self).__init__(state, queue=q, fct=fct)
         self.ascending = ascending
 
     def get(self, block=False, timeout=None):
@@ -315,15 +367,17 @@ class StateDistributionGenerator(StateGenerator):
     The initial states :math:`s` are generated by a probability distribution :math:`p(s)`, that is :math:`s \sim p(s)`.
     The probability distribution can be learned using generative models.
     """
+    __metaclass__ = ABCMeta
 
-    def __init__(self, state, seed=None):
+    def __init__(self, state, seed=None, fct=None):
         """Initialize the state distribution generator.
 
         Args:
             state (State): state instance.
             seed (None, int): random seed.
+            fct (callable, None): callback function to be called after generating the data.
         """
-        super(StateDistributionGenerator, self).__init__(state)
+        super(StateDistributionGenerator, self).__init__(state, fct=fct)
         self.seed = seed
 
     @property
@@ -338,8 +392,11 @@ class StateDistributionGenerator(StateGenerator):
         Args:
             seed (int): random seed
         """
+        if seed is not None and not isinstance(seed, int):
+            raise TypeError("Expecting the given 'seed' to be an integer, instead got: {}".format(type(seed)))
         if seed is not None:
             np.random.seed(seed)
+        self._seed = seed
 
 
 class UniformStateGenerator(StateDistributionGenerator):
@@ -349,15 +406,17 @@ class UniformStateGenerator(StateDistributionGenerator):
     will be set to be the range of the states.
     """
     
-    def __init__(self, state, low=None, high=None):
+    def __init__(self, state, low=None, high=None, seed=None, fct=None):
         """Initialize the state distribution generator.
 
         Args:
             state (State): state instance.
             low (None, float, np.array, list of np.array): lower bound
             high (None, float, np.array, list of np.array): upper bound
+            seed (None, int): random seed.
+            fct (callable, None): callback function to be called after generating the data.
         """
-        super(UniformStateGenerator, self).__init__(state)
+        super(UniformStateGenerator, self).__init__(state, seed=seed, fct=fct)
         self.low = low
         self.high = high
 
@@ -373,12 +432,13 @@ class UniformStateGenerator(StateDistributionGenerator):
             low = [-np.infty] * len(self.state)
         elif isinstance(low, (int, float)):
             low = [low] * len(self.state)
-        elif isinstance(low, (list, tuple)):
+        elif isinstance(low, (list, tuple, np.ndarray)):
             if len(low) != len(self.state):
                 raise ValueError("The lower bound doesn't have the same size as the number of states; len(low) = {} "
                                  "and len(state) = {}".format(len(low), len(self.state)))
         else:
-            raise TypeError
+            raise TypeError("Expecting the 'low' bound to be an int, float, or list/tuple/np.array of int/float, "
+                            "instead got: {}".format(type(low)))
         self._low = low
 
     @property
@@ -393,29 +453,38 @@ class UniformStateGenerator(StateDistributionGenerator):
             high = [-np.infty] * len(self.state)
         elif isinstance(high, (int, float)):
             high = [high] * len(self.state)
-        elif isinstance(high, (list, tuple)):
+        elif isinstance(high, (list, tuple, np.ndarray)):
             if len(high) != len(self.state):
                 raise ValueError("The higher bound doesn't have the same size as the number of states; len(high) = {} "
                                  "and len(state) = {}".format(len(high), len(self.state)))
         else:
-            raise TypeError
+            raise TypeError("Expecting the 'high' bound to be an int, float, or list/tuple/np.array of int/float, "
+                            "instead got: {}".format(type(high)))
         self._high = high
 
-    def generate(self, set_data=True):
+    def _generate(self, set_data=True, reset_state=True):
         """Generate the state.
 
         Args:
             set_data (bool): If True, it will set the generated data to the state.
+            reset_state (bool): If True, it will reset the state with the generated data (if `set_data` has been set
+                to True).
 
         Returns:
             (list of) np.array: state data
         """
-        spaces = self.state.space
-        data = [space.sample() for space in spaces]
-        for idx, datum, low, high in np.clip(zip(data, self.low, self.high)):
-            data[idx] = np.clip(datum, low, high)
+        # spaces = self.state.space
+        # data = [space.sample() for space in spaces]
+        # for idx, datum, low, high in enumerate(zip(data, self.low, self.high)):
+        #     data[idx] = np.clip(datum, low, high)
+
+        data = [np.random.uniform(low=low, high=high, size=state.total_size())
+                for state, low, high in zip(self.state, self.low, self.high)]
         if set_data:
             self.state.data = data
+            print("Generate: {}".format(self.state.data))
+        if reset_state:
+            self.state.reset()
         return data
 
 
@@ -426,19 +495,87 @@ class NormalStateGenerator(StateDistributionGenerator):
     The states are then truncated / clipped to be inside their corresponding range.
     """
 
-    def __init__(self, state, means=0, scales=1.):
+    def __init__(self, state, mean=0, covariance=1., seed=None, fct=None):
         """
         Initialize the Normal state generator.
 
         Args:
             state (State): state instance.
-            means:
-            scales:
+            mean (int, float, np.array[float[N]]): mean.
+            scale (int, float, np.array[float[N]]): covariance matrix or variance vector.
+            seed (None, int): random seed.
+            fct (callable, None): callback function to be called after generating the data.
         """
-        super(NormalStateGenerator, self).__init__(state)
+        super(NormalStateGenerator, self).__init__(state, seed=seed, fct=fct)
+        self.mean = mean
+        self.covariance = covariance
 
-    def generate(self, set_data=True):
-        pass
+    @property
+    def mean(self):
+        """Return the mean vector."""
+        return self._mean
+
+    @mean.setter
+    def mean(self, mean):
+        """Set the mean vector."""
+        if mean is None:
+            mean = [0.] * len(self.state)
+        elif isinstance(mean, (int, float)):
+            mean = [mean] * len(self.state)
+        elif isinstance(mean, (list, tuple, np.ndarray)):
+            if len(mean) != len(self.state):
+                raise ValueError("The mean vector doesn't have the same size as the number of states; len(mean) = {} "
+                                 "and len(state) = {}".format(len(mean), len(self.state)))
+        else:
+            raise TypeError("Expecting the mean vector to be an int, float, or list/tuple/np.array of int/float, "
+                            "instead got: {}".format(type(mean)))
+        self._mean = np.asarray(mean)
+
+    @property
+    def covariance(self):
+        """Return the variance vector and covariance matrix."""
+        return self._covariance
+
+    @covariance.setter
+    def covariance(self, covariance):
+        """Set the variance vector or covariance matrix."""
+        if covariance is None:
+            covariance = [1.] * len(self.state)
+        elif isinstance(covariance, (int, float)):
+            covariance = [covariance] * len(self.state)
+        elif isinstance(covariance, (list, tuple, np.ndarray)):
+            if len(covariance) != len(self.state):
+                raise ValueError("The variance vector or covariance matrix doesn't have the same size as the number of "
+                                 "states; len(covariance) = {} and len(state) = {}".format(len(covariance),
+                                                                                           len(self.state)))
+        else:
+            raise TypeError("Expecting the variance vector or covariance matrix to be an int, float, or list/tuple/"
+                            "np.array of int/float, but instead got: {}".format(type(covariance)))
+        self._covariance = np.asarray(covariance)
+
+    def _generate(self, set_data=True, reset_state=True):
+        """Generate the state.
+
+        Args:
+            set_data (bool): If True, it will set the generated data to the state.
+            reset_state (bool): If True, it will reset the state with the generated data (if `set_data` has been set
+                to True).
+
+        Returns:
+            (list of) np.array: state data
+        """
+
+        if self.covariance.ndim == 2:
+            data = [np.random.multivariate_normal(self.mean, self.covariance)]
+        else:
+            data = [np.random.normal(self.mean, scale=np.sqrt(self.covariance))]
+
+        if set_data:
+            self.state.data = data
+            # print("Generate: {}".format(self.state.data))
+        if reset_state:
+            self.state.reset()
+        return data
 
 
 class GenerativeStateGenerator(StateGenerator):
@@ -446,16 +583,18 @@ class GenerativeStateGenerator(StateGenerator):
 
     This uses a generative model that has been trained to learn a distribution to generate the initial states.
     """
+    __metaclass__ = ABCMeta
 
-    def __init__(self, state, model):
+    def __init__(self, state, model, fct=None):
         """
         Initialize the Generative initial state generator.
 
         Args:
             state (State): state instance.
             model (Model): generative model instance.
+            fct (callable, None): callback function to be called after generating the data.
         """
-        super(GenerativeStateGenerator, self).__init__(state)
+        super(GenerativeStateGenerator, self).__init__(state, fct=fct)
         self.model = model
 
 
@@ -465,14 +604,16 @@ class VAEStateGenerator(GenerativeStateGenerator):
     This uses the decoder a pretrained VAE to generate initial states.
     """
 
-    def __init__(self, state, model):
-        super(VAEStateGenerator, self).__init__(state, model)
+    def __init__(self, state, model, fct=None):
+        super(VAEStateGenerator, self).__init__(state, model, fct=fct)
 
-    def generate(self, set_data=True):
+    def _generate(self, set_data=True, reset_state=True):
         """Generate the state.
 
         Args:
             set_data (bool): If True, it will set the generated data to the state.
+            reset_state (bool): If True, it will reset the state with the generated data (if `set_data` has been set
+                to True).
 
         Returns:
             (list of) np.array: state data
@@ -486,12 +627,12 @@ class GANStateGenerator(GenerativeStateGenerator):
     This uses the generator of a trained GAN model to generate similar states.
     """
 
-    def __init__(self, state, model, distribution=None, mapping=None):
+    def __init__(self, state, model, distribution=None, mapping=None, fct=None):
         """
         Initialize the GAN initial state generator.
 
         Args:
-            states: states that need to be generated
+            state: states that need to be generated
             model: GAN or generator of GAN
             distribution: distribution over the noise vector
             mapping:
@@ -517,13 +658,15 @@ class GANStateGenerator(GenerativeStateGenerator):
         # setting mapping
         self.mapping = mapping
 
-        super(GANStateGenerator, self).__init__(state, model)
+        super(GANStateGenerator, self).__init__(state, model, fct=fct)
 
-    def generate(self, set_data=True):
+    def _generate(self, set_data=True, reset_state=True):
         """Generate the state.
 
         Args:
             set_data (bool): If True, it will set the generated data to the state.
+            reset_state (bool): If True, it will reset the state with the generated data (if `set_data` has been set
+                to True).
 
         Returns:
             (list of) np.array: state data
@@ -541,14 +684,16 @@ class GMMStateGenerator(GenerativeStateGenerator):
     This uses a pretrained GMM to generate the states.
     """
 
-    def __init__(self, state, model):
-        super(GMMStateGenerator, self).__init__(state, model)
+    def __init__(self, state, model, fct=None):
+        super(GMMStateGenerator, self).__init__(state, model, fct=fct)
 
-    def generate(self, set_data=True):
+    def _generate(self, set_data=True, reset_state=True):
         """Generate the state.
 
         Args:
             set_data (bool): If True, it will set the generated data to the state.
+            reset_state (bool): If True, it will reset the state with the generated data (if `set_data` has been set
+                to True).
 
         Returns:
             (list of) np.array: state data
@@ -559,6 +704,7 @@ class GMMStateGenerator(GenerativeStateGenerator):
 class UncertaintyStateGenerator(StateGenerator):
     r"""State generator that exploits the uncertainty of initial states.
     """
+    __metaclass__ = ABCMeta
     pass
 
 
@@ -567,6 +713,7 @@ class BOStateGenerator(UncertaintyStateGenerator):
 
     We use Bayesian Optimization to generate the initial states.
     """
+    __metaclass__ = ABCMeta
     pass
 
 
@@ -586,7 +733,7 @@ class AEBOStateGenerator(GenerativeStateGenerator):
     The exploration will then be carried out in the hyperrectangle formed by these 2 reduced state vector limits.
     """
 
-    def __init__(self, state, model, kernel_capacity=100):
+    def __init__(self, state, model, kernel_capacity=100, fct=None):
         """
         Initialize the autoencoder + bayesian optimization initial state generator.
 
@@ -597,11 +744,13 @@ class AEBOStateGenerator(GenerativeStateGenerator):
         """
         super(AEBOStateGenerator, self).__init__(state, model)
 
-    def generate(self, set_data=True):
+    def _generate(self, set_data=True, reset_state=True):
         """Generate the state.
 
         Args:
             set_data (bool): If True, it will set the generated data to the state.
+            reset_state (bool): If True, it will reset the state with the generated data (if `set_data` has been set
+                to True).
 
         Returns:
             (list of) np.array: state data

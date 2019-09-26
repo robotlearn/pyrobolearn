@@ -27,20 +27,38 @@ import pyrobolearn.actions as actions
 from pyrobolearn.rewards.reward import Reward
 
 
+__author__ = "Brian Delhaisse"
+__copyright__ = "Copyright 2018, PyRoboLearn"
+__credits__ = ["Brian Delhaisse"]
+__license__ = "GNU GPLv3"
+__version__ = "1.0.0"
+__maintainer__ = "Brian Delhaisse"
+__email__ = "briandelhaisse@gmail.com"
+__status__ = "Development"
+
+
 # class Cost(Objective):
 class Cost(Reward):
     r"""Abstract `Cost` class which inherits from the `Objective` class, and is set to be minimized.
     Every classes that defines a cost inherits from this one. A cost is defined as an objective that
     penalizes a certain behavior.
     """
-    def __init__(self):
-        super(Cost, self).__init__()
+    def __init__(self, state=None, action=None, costs=None, range=(-np.infty, np.infty)):
+        super(Cost, self).__init__(state=state, action=action, rewards=costs, range=range)
         # super(Cost, self).__init__(maximize=False)
 
 
 def logistic_kernel_function(error, alpha):
     r"""
-    The logistic kernel function :math:`K(x|\alpha) = \frac{1}{(e^{\alpha x} + 2 + e^{-\alpha x})} \in [-0.25,0)`.
+    The logistic kernel function :math:`K(x|\alpha) = \frac{1}{(e^{\alpha x} + 2 + e^{-\alpha x})} \in [-0.25,0)`,
+    where :math:`x` is an error term, and :math:`\alpha` is a sensitivity factor.
+
+    According to the authors of [1,2]: "We found the logistic kernel function to be more useful than Euclidean norm,
+    which is a more common choice. An Euclidean norm generates a high cost in the beginning of training where the
+    tracking error is high such that termination (i.e. falling) becomes more rewarding strategy. On the other hand,
+    the logistic kernel ensures that the cost is lower-bounded by zero and termination becomes less favorable. Many
+    other bell-shaped kernels (Gaussian, triweight, biweight, etc) have the same functionality and can be used instead
+    of a logistic kernel."
 
     Args:
         error (Cost, float): cost (e.g. error term)
@@ -48,6 +66,10 @@ def logistic_kernel_function(error, alpha):
 
     Return:
         callable, float: logistic kernel function
+
+    References:
+        - [1] "Learning agile and dynamic motor skills for legged robots", Hwangbo et al., 2019
+        - [2] Supp: https://robotics.sciencemag.org/content/robotics/suppl/2019/01/14/4.26.eaau5872.DC1/aau5872_SM.pdf
     """
     if callable(error):
         y = copy.copy(error)  # shallow copy
@@ -55,20 +77,6 @@ def logistic_kernel_function(error, alpha):
         return y
     else:
         return 1. / (np.exp(alpha * error) + 2. + np.exp(- alpha * error))
-
-
-def min_angle_difference(q1, q2):
-    r"""
-    Return the minimum angle difference between two angles.
-
-    Args:
-        q1 (Cost, float): first angle
-        q2 (Cost, float): second angle
-
-    Returns:
-        callable, float: minimum angle difference
-    """
-    return
 
 
 class AngularVelocityErrorCost(Cost):
@@ -80,7 +88,7 @@ class AngularVelocityErrorCost(Cost):
     the sensitivity factor, and :math:`\hat{\omega}` and :math:`\omega` being the target and current angular velocity.
 
     References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
+        - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
     """
 
     def __init__(self, angular_velocity_state, target_angular_velocity_state, sensitivity):
@@ -89,7 +97,7 @@ class AngularVelocityErrorCost(Cost):
         self.target_state = target_angular_velocity_state
         self.sensitivity = sensitivity
 
-    def compute(self):
+    def _compute(self):
         error = np.linalg.norm(self.target_state.data - self.state.data)
         return - logistic_kernel_function(error, self.sensitivity)
 
@@ -103,7 +111,7 @@ class LinearVelocityErrorCost(Cost):
     the sensitivity factor, and :math:`\hat{v}` and :math:`v` being the target and current linear velocity.
 
     References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
+        - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
     """
 
     def __init__(self, velocity_state, velocity_target_state, sensitivity):
@@ -112,7 +120,7 @@ class LinearVelocityErrorCost(Cost):
         self.target_state = velocity_target_state
         self.sensitivity = sensitivity
 
-    def compute(self):
+    def _compute(self):
         error = np.linalg.norm(self.target_state.data - self.state.data)
         return - logistic_kernel_function(error, self.sensitivity)
 
@@ -123,7 +131,7 @@ class HeightCost(Cost):
     Height cost defined in [1] as :math:`cost = 1.0` if height < threshold, otherwise 0.
 
     References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
+        - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
     """
 
     def __init__(self, height_state, threshold):
@@ -131,158 +139,61 @@ class HeightCost(Cost):
         self.height = height_state
         self.threshold = threshold
 
-    def compute(self):
+    def _compute(self):
         if self.height.data < self.threshold:
             return -1.
         return 0
-
-
-class JointPositionErrorCost(Cost):
-    r"""Joint Position Error Cost
-
-    Return the joint position error as defined in [1] as :math:`d(\hat{\phi}, \phi) \in [0, \pi]` where :math:`d(.,.)`
-    is the minimum angle difference between two angles, and :math:`\hat{\phi}` and :math:`\phi` are the target and
-    current angles.
-
-    References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
-    """
-
-    def __init__(self, joint_state, target_joint_state):
-        super(JointPositionErrorCost, self).__init__()
-        self.state = joint_state
-        self.target_state = target_joint_state
-
-    def compute(self):
-        return - min_angle_difference(self.state.data, self.target_state.data)
 
 
 class OrientationGravityCost(Cost):
     r"""Orientation Gravity Cost
 
     References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
+        - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
     """
 
-    def __init__(self, gravity_state, gravity_vector=[0., 0., -1.]):
+    def __init__(self, state, gravity_vector=[0., 0., -1.]):
         super(OrientationGravityCost, self).__init__()
-        self.gravity_state = gravity_state
-        self.gravity = np.array(gravity_vector)
+        self.gravity_state = state
+        self.gravity = np.asarray(gravity_vector)
 
-    def compute(self):
-        return np.linalg.norm(self.gravity_state.data - self.gravity)
-
-
-class TorqueCost(Cost):
-    r"""Torque Cost
-
-    Return the cost due to the torques; :math:`cost = ||\tau||^2`.
-
-    References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
-    """
-    def __init__(self, torque_state):
-        super(TorqueCost, self).__init__()
-        self.tau = torque_state
-
-    def compute(self):
-        return - np.sum(self.tau.data[0]**2)
+    def _compute(self):
+        return np.linalg.norm(self.gravity_state.data[0] - self.gravity)
 
 
 class PowerCost(Cost):
     r"""Power Consumption Cost
 
-    Return the power consumption cost, where the power is computed as the torque times the velocity.
+    Return the power consumption cost, where the power is computed as the torque times the velocity. This is given by
+    [1] as:
+
+    .. math:: \sum
 
     References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
+        - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
     """
+
     def __init__(self, torque_state, velocity_state):
         super(PowerCost, self).__init__()
         self.tau = torque_state
         self.vel = velocity_state
 
-    def compute(self):
+    def _compute(self):
         return - np.sum(np.maximum(self.tau.data[0] * self.vel.data[0], 0))
 
 
-class JointPowerConsumptionCost(Cost):
-    r"""Joint Power Consumption Cost
+class PowerAbsoluteCost(Cost):
+    r"""Power Consumption Cost
 
-    Return the joint power consumption cost, where the power is computed as the torque times the velocity.
     """
 
-    def __init__(self, state, joint_ids=None, update_state=False):
-        """
-        Initialize the Joint Power Consumption cost.
+    def __init__(self, torque_state, velocity_state):
+        super(PowerCost, self).__init__()
+        self.tau = torque_state
+        self.vel = velocity_state
 
-        Args:
-            torque (Robot, State): robot instance, or the state. The state must contains the `JointForceTorqueState`
-                and the `JointVelocityState`.
-            joint_ids (None, int, list of int): joint ids. This used if `torque` is a `Robot` instance.
-            update_state (bool): If True, it will update the state.
-        """
-        self.update_state = update_state
-        if isinstance(state, Robot):
-            torque = states.JointForceTorqueState(state, joint_ids=joint_ids)
-            velocity = states.JointVelocityState(state, joint_ids=joint_ids)
-            self.update_state = True
-            # state = torque + velocity
-        elif isinstance(state, states.State):
-            # check if they have the correct state
-            torque = state.lookfor(states.JointForceTorqueState)
-            if torque is None:
-                raise ValueError("Didn't find a `JointForceTorqueState` instance in the given states.")
-            velocity = state.lookfor(states.JointVelocityState)
-            if velocity is None:
-                raise ValueError("Didn't find a `JointVelocityState` instance in the given states.")
-        else:
-            raise TypeError("Expecting the state to be an instance of `State` or `Robot`.")
-        super(JointPowerConsumptionCost, self).__init__()  # state=state)
-        self.tau = torque
-        self.vel = velocity
-        self.update_state = update_state
-
-    def compute(self):
-        if self.update_state:
-            self.tau()
-            self.vel()
-        return - np.sum((self.tau.data[0] * self.vel.data[0])**2)
-
-
-class JointAccelerationCost(Cost):
-    r"""Joint Acceleration Cost
-
-    Return the joint acceleration cost defined notably in [1] as :math:`cost = ||\ddot{q}||^2`
-
-    References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
-    """
-    def __init__(self, joint_acceleration_state):
-        super(JointAccelerationCost, self).__init__()
-        self.ddq = joint_acceleration_state
-
-    def compute(self):
-        return - np.sum(self.ddq.data**2)
-
-
-class JointSpeedCost(Cost):
-    r"""Joint Speed Cost
-
-    Return the joint speed cost as computed in [1].
-
-    References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
-    """
-    def __init__(self, joint_velocity_state, max_joint_speed=None):
-        super(JointSpeedCost, self).__init__()
-        self.dq = joint_velocity_state
-        self.dq_max = max_joint_speed
-        if max_joint_speed is None:
-            self.dq_max = joint_velocity_state.max
-
-    def compute(self):
-        return - np.sum(np.maximum(self.dq_max - np.abs(self.dq.data), 0)**2)
+    def _compute(self):
+        return - np.sum(np.maximum(self.tau.data[0] * self.vel.data[0], 0))
 
 
 class BodyImpulseCost(Cost):
@@ -291,21 +202,21 @@ class BodyImpulseCost(Cost):
     Return the body impulse cost as computed in [1].
 
     References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
+        - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
     """
     def __init__(self, robot):
         super(BodyImpulseCost, self).__init__()
         self.robot = robot
 
     def compute(self):
-        return
+        pass
 
 
 class BodySlippageCost(Cost):
     r"""Body Slippage Cost
 
     References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
+        - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
     """
     def __init__(self):
         super(BodySlippageCost, self).__init__()
@@ -322,8 +233,8 @@ class FootSlippageCost(Cost):
     measures the distance between the two bodies and a contact force' [2]
 
     References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
-        [2] Unilateral Contact (Wikipedia): https://en.wikipedia.org/wiki/Unilateral_contact
+        - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
+        - [2] Unilateral Contact (Wikipedia): https://en.wikipedia.org/wiki/Unilateral_contact
     """
     def __init__(self):
         super(FootSlippageCost, self).__init__()
@@ -340,8 +251,8 @@ class FootClearanceCost(Cost):
     measures the distance between the two bodies and a contact force' [2]
 
     References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
-        [2] Unilateral Contact (Wikipedia): https://en.wikipedia.org/wiki/Unilateral_contact
+        - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
+        - [2] Unilateral Contact (Wikipedia): https://en.wikipedia.org/wiki/Unilateral_contact
     """
     def __init__(self):
         super(FootClearanceCost, self).__init__()
@@ -354,7 +265,7 @@ class SelfCollisionCost(Cost):
     r"""Self Collision Cost
 
     References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
+        - [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
     """
     def __init__(self):
         super(SelfCollisionCost, self).__init__()
@@ -363,27 +274,14 @@ class SelfCollisionCost(Cost):
         pass
 
 
-class ActionDifferenceCost(Cost):
-    r"""Action Difference Cost
-
-    References:
-        [1] "Robust Recovery Controller for a Quadrupedal Robot using Deep Reinforcement Learning", Lee et al., 2019
-    """
-    def __init__(self, action):
-        super(ActionDifferenceCost, self).__init__()
-        self.action = action
-
-    def compute(self):
-        return - (self.action.data - self.action.prev_data)**2
-
-
 class PhysicsViolationCost(Cost):
     """Physics Violation Cost.
 
     This cost defines ...
     It was formally defined in [1]. It accepts two arguments.
 
-    [1] 'Automated Discovery and Learning of Complex Movement Behaviors' (PhD thesis), Mordatch, 2015
+    References:
+    - [1] 'Automated Discovery and Learning of Complex Movement Behaviors' (PhD thesis), Mordatch, 2015
 
     .. seealso: `cio.py` in 'pyrobolearn/optim' which uses this cost.
     """
@@ -407,105 +305,16 @@ class ContactInvariantCost(Cost):
         super(ContactInvariantCost, self).__init__()
 
 
-class DistanceCost(Cost):
-    """Distance Cost.
-
-    It penalizes the distance between 2 objects. One of the 2 objects must be movable in order for this
-    cost to change.
-
-    Mathematically, the cost is given by:
-
-    .. math:: c(l1, l2) = d(l1, l2) = - || l1 - l2 ||_2
-
-    where :math:`l1` represents a link attached to the first body, and :math:`l2` represents a link attached on the
-    second body. The distance function used is the Euclidean distance (=L2 norm).
-    """
-
-    def __init__(self, body1, body2, link_id1=-1, link_id2=-1):
-        r"""
-        Initialize the distance cost.
-
-        Args:
-            body1 (BasePositionState, PositionState, LinkWorldPositionState, Body, Robot): first position state. If
-                Body, it will wrap it with a `PositionState`. If Robot, it will wrap it with a `PositionState` or
-                `LinkPositionState` depending on the value of :attr:`link_id1`.
-            body2 (BasePositionState, PositionState, LinkWorldPositionState, Body, Robot): second position state. If
-                Body, it will wrap it with a `PositionState`. If Robot, it will wrap it with a `PositionState` or
-                `LinkPositionState` depending on the value of :attr:`link_id1`.
-            link_id1 (int): link id associated with the first body that we are interested in. This is only used if
-                the given :attr:`body1` is not a state.
-            link_id2 (int): link id associated with the second body that we are interested in. This is only used if
-                the given :attr:`body2` is not a state.
-        """
-        super(DistanceCost, self).__init__()
-
-        def check_body_type(body, id_, link_id):
-            update_state = False
-            if isinstance(body, prl.robots.Body):
-                body = states.PositionState(body)
-                update_state = True
-            elif isinstance(body, Robot):
-                if link_id == -1:
-                    body = states.PositionState(body)
-                else:
-                    body = states.LinkWorldPositionState(body, link_ids=link_id)
-                update_state = True
-            elif not isinstance(body, (states.BasePositionState, states.PositionState, states.LinkWorldPositionState)):
-                raise TypeError("Expecting the given 'body"+str(id_)+"' to be an instance of `Body`, `Robot`, "
-                                "`BasePositionState`, `PositionState` or `LinkWorldPositionState`, instead got: "
-                                "{}".format(type(body), id_))
-            return body, update_state
-
-        self.body1, self.update_state1 = check_body_type(body1, id_=1, link_id=link_id1)
-        self.body2, self.update_state2 = check_body_type(body2, id_=2, link_id=link_id2)
-
-    def compute(self):
-        if self.update_state1:
-            self.body1()
-        if self.update_state2:
-            self.body2()
-        p1 = self.body1.data[0]
-        p2 = self.body2.data[0]
-        print("P1: {}".format(p1))
-        print("P2: {}".format(p2))
-        return - np.linalg.norm(p1 - p2)
-
-
 class ImpactCost(Cost):
     """Impact cost.
 
     Calculates the impact force using the kinetic energy.
     """
 
-    def __init__(self):
+    def __init__(self, body1, body2):
         super(ImpactCost, self).__init__()
 
-    def compute(self, object1, object2):
-        pass
-
-
-class DriftCost(Cost):
-    """Drift cost.
-
-    Calculates the drift of a moving object wrt a direction.
-    """
-
-    def __init__(self):
-        super(DriftCost, self).__init__()
-
-    def compute(self, object, direction):
-        pass
-
-
-class ShakeCost(Cost):
-    """Shake cost.
-
-    Calculates the
-    """
-    def __init__(self):
-        super(ShakeCost, self).__init__()
-
-    def compute(self, object, direction):
+    def _compute(self):
         pass
 
 

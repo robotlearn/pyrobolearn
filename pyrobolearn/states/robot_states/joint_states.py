@@ -6,6 +6,8 @@ This includes notably the joint positions, velocities, and force/torque states.
 
 import copy
 from abc import ABCMeta
+import numpy as np
+from gym import spaces
 
 from pyrobolearn.states.robot_states.robot_states import RobotState, Robot
 
@@ -111,9 +113,63 @@ class JointPositionState(JointState):
         """
         super(JointPositionState, self).__init__(robot, joint_ids, window_size=window_size, axis=axis, ticks=ticks)
 
+        # define the space based on the joint type  # TODO
+
     def _read(self):
         """Read the next joint position state."""
         self.data = self.robot.get_joint_positions(self.joints)
+
+    def _reset(self):
+        """Reset the state."""
+        # reset counter
+        self.cnt = 0.
+
+        # reset the robot joint position based on the data
+        if len(self.data) > 0:
+            self.robot.reset_joint_states(q=self.data[0], joint_ids=self.joints)
+
+        # read the next data
+        self._read()
+
+
+class JointTrigonometricPositionState(JointState):
+    r"""Joint Trigonometric Position State
+
+    Return the trigonometric joint positions as the state. That is, it returns
+    :math:`[\cos(q_1), \sin(q_1), ..., \cos(q_n), \sin(q_n)]`. All the values are between -1 and 1.
+    """
+
+    def __init__(self, robot, joint_ids=None, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the trigonometric joint position state.
+
+        Args:
+            robot (Robot): robot instance.
+            joint_ids (int, int[N]): joint id or list of joint ids.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
+        super(JointTrigonometricPositionState, self).__init__(robot, joint_ids, window_size=window_size, axis=axis,
+                                                              ticks=ticks)
+
+        high = np.ones(2 * len(self.joints))
+        self._space = spaces.Box(low=-high, high=high, dtype=np.float32)
+
+    def _read(self):
+        """Read the next joint position state."""
+        q = self.robot.get_joint_positions(self.joints)
+        self.data = np.vstack((np.cos(q), np.sin(q))).T.reshape(-1)
 
 
 class JointVelocityState(JointState):
@@ -145,9 +201,29 @@ class JointVelocityState(JointState):
         """
         super(JointVelocityState, self).__init__(robot, joint_ids, window_size=window_size, axis=axis, ticks=ticks)
 
+        # define space
+        max_vel = self.robot.get_joint_max_velocities(joint_ids=self.joints)
+        if np.allclose(max_vel, 0):
+            print("WARNING: joint max velocities are 0, setting low=-10 and high=10.")
+            max_vel = 10 * np.ones(len(self.joints))  # TODO: np.infty instead of 10?
+        self._space = spaces.Box(low=-max_vel, high=max_vel, dtype=np.float32)
+
     def _read(self):
         """Read the next joint velocity state."""
         self.data = self.robot.get_joint_velocities(self.joints)
+
+    def _reset(self):
+        """Reset the state."""
+        # reset counter
+        self.cnt = 0.
+
+        # reset the robot joint position based on the data
+        if len(self.data) > 0:
+            print("reset data: ", self.data[0])
+            self.robot.reset_joint_states(dq=self.data[0], joint_ids=self.joints)
+
+        # read the next data
+        self._read()
 
 
 class JointForceTorqueState(JointState):

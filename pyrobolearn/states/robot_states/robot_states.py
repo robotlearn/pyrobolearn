@@ -15,6 +15,8 @@ import numpy as np
 from pyrobolearn.states import State
 from pyrobolearn.robots import Robot
 
+from pyrobolearn.utils.transformation import get_matrix_from_quaternion
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -182,6 +184,50 @@ class BaseOrientationState(RobotState):
         self.data = self.robot.get_base_orientation()
 
 
+class BaseAxisState(RobotState):
+    r"""Base axis state
+
+    This is the state that returns the specified axis computed from the base orientation with respect to the world
+    frame. From the orientation expressed as a quaternion, this is first transformed as a rotation matrix from which a
+    column is then extracted (that column represents one of its axis).
+    """
+
+    def __init__(self, robot, base_axis=2, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the base orientation state.
+
+        Args:
+            robot (Robot): instance of Robot which allows to access to the robot state.
+            base_axis (int): base axis index which is x=0, y=1, or z=2.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
+        # check basis axis
+        if base_axis < 0:
+            base_axis = 0
+        elif base_axis > 2:
+            base_axis = 2
+        self._base_axis = int(base_axis)
+
+        # call parent class
+        super(BaseAxisState, self).__init__(robot, window_size=window_size, axis=axis, ticks=ticks)
+
+    def _read(self):
+        """Read the orientation state data."""
+        self.data = get_matrix_from_quaternion(self.robot.get_base_orientation())[:, self._base_axis]
+
+
 class BasePoseState(RobotState):
     r"""Base pose state
 
@@ -213,7 +259,7 @@ class BasePoseState(RobotState):
 
     def _read(self):
         """Read the base position state data."""
-        self.data = self.robot.get_base_pose()
+        self.data = self.robot.get_base_pose(concatenate=True)
 
 
 class BaseLinearVelocityState(RobotState):
@@ -222,12 +268,15 @@ class BaseLinearVelocityState(RobotState):
     This is the state that returns the base linear velocity with respect to the world frame.
     """
 
-    def __init__(self, robot, window_size=1, axis=None, ticks=1):
+    def __init__(self, robot, link_frame=None, window_size=1, axis=None, ticks=1):
         """
         Initialize the base linear velocity state.
 
         Args:
-            robot (Robot): instance of Robot which allows to access to the robot state
+            robot (Robot): instance of Robot which allows to access to the robot state.
+            link_frame (None, int): the frame in which the base linear velocity is represented. If None, it will be
+                the world frame, if -1, it will be the base, and if another int, it will be the corresponding link
+                frame.
             window_size (int): window size of the state. This is the total number of states we should remember. That
                 is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
                 the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
@@ -255,12 +304,15 @@ class BaseAngularVelocityState(RobotState):
     This is the state that returns the base angular velocity with respect to the world frame.
     """
 
-    def __init__(self, robot, window_size=1, axis=None, ticks=1):
+    def __init__(self, robot, link_frame=None, window_size=1, axis=None, ticks=1):
         """
         Initialize the base position state.
 
         Args:
-            robot (Robot): instance of Robot which allows to access to the robot state
+            robot (Robot): instance of Robot which allows to access to the robot state.
+            link_frame (None, int): the frame in which the base angular velocity is represented. If None, it will be
+                the world frame, if -1, it will be the base, and if another int, it will be the corresponding link
+                frame.
             window_size (int): window size of the state. This is the total number of states we should remember. That
                 is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
                 the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
@@ -313,4 +365,4 @@ class BaseVelocityState(RobotState):
 
     def _read(self):
         """Read the base linear velocity state data."""
-        self.data = self.robot.get_base_velocity()
+        self.data = self.robot.get_base_velocity(concatenate=True)

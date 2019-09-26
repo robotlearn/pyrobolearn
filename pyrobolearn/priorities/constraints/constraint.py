@@ -8,12 +8,12 @@ A quadratic program (QP) is written in standard form [1]_ as:
 .. math::
 
     x^* =& \arg \min_x \; \frac{1}{2} x^T Q x + p^T x \\
-    & \text{subj. to } \; \begin{array}{c} Gx \leq h \\ Fx = c \end{array}
+    & \text{subj. to } \; \begin{array}{c} Gx \leq h \\ Fx = k \end{array}
 
 
 where :math:`x` is the vector being optimized (in robotics, it can be joint positions, velocities, torques, ...),
 "the matrix :math:`Q` and vector :math:`p` are used to define any quadratic objective function of these variables,
-while the matrix-vector couples :math:`(G,h)` and :math:`(F,c)` respectively define inequality and equality
+while the matrix-vector couples :math:`(G,h)` and :math:`(F,k)` respectively define inequality and equality
 constraints" [1]_. Inequality constraints can include the lower bounds and upper bounds of :math:`x` by setting
 :math:`G` to be the identity matrix or minus this one, and :math:`h` to be the upper or minus the lower bounds.
 
@@ -52,7 +52,7 @@ the identity matrix and :math:`b=0` is the zero/null vector).
 
       \begin{array}{c}
       x^* = \arg \min_x ||A_1 x - b_1||_{W_1}^2 + ||A_2 x - b_2 ||_{W_2}^2 + ... + ||A_n x - b_n ||_{W_n}^2 \\
-      \text{subj. to } \; \begin{array}{c} Gx \leq h \\ Fx = c \end{array}
+      \text{subj. to } \; \begin{array}{c} Gx \leq h \\ Fx = k \end{array}
       \end{array}
 
   Often, the weight PSD matrices :math:`W_i` are just positive scalars :math:`w_i`. This problem can notably be solved
@@ -67,18 +67,20 @@ the identity matrix and :math:`b=0` is the zero/null vector).
   .. math::
 
        x_1^* =& \arg \min_x \; ||A_1 x - b_1||^2 \\
-       & \text{subj. to } \; \begin{array}{c} G_1 x \leq h_1 \\ F_1 x = c_1 \end{array}
+       & \text{subj. to } \; \begin{array}{c} G_1 x \leq h_1 \\ F_1 x = k_1 \end{array}
 
   while the second next most important task that would be solved is given by:
 
   .. math::
 
       x_2^* =& \arg \min_x \; ||A_2 x - b_2||^2 \\
-      &  \begin{array}{cc} \text{subj. to } & G_2 x \leq h_2 \\
-                & F_2 x = c_2 \\
+      &  \begin{array}{cc} \text{subj. to }
+                & G_2 x \leq h_2 \\
+                & F_2 x = k_2 \\
                 & A_1 x = A_1 x_1^* \\
                 & G_1 x \leq h_1 \\
-                & F_1 x = c_1, \end{array}
+                & F_1 x = k_1,
+        \end{array}
 
   until the :math:`n` most important task, given by:
 
@@ -91,9 +93,9 @@ the identity matrix and :math:`b=0` is the zero/null vector).
                 & G_1 x \leq h_1 \\
                 & ... \\
                 & G_n x \leq h_n \\
-                & F_1 x = c_1 \\
+                & F_1 x = k_1 \\
                 & ... \\
-                & F_n x = c_n. \end{array}
+                & F_n x = k_n. \end{array}
 
   By setting the previous :math:`A_{i-1} x = A_{i-1} x_{i-1}^*` as equality constraints, the current solution
   :math:`x_i^*` won't change the optimality of all higher priority tasks.
@@ -109,6 +111,7 @@ References:
 
 import numpy as np
 
+import pyrobolearn as prl
 from pyrobolearn.priorities.models import ModelInterface
 
 
@@ -130,7 +133,7 @@ class Constraint(object):
     1. inequality constraints
         - bounds: math:`lb \leq x \leq ub`.
         - bilateral: :math:`b_l \leq A_{ineq} x \leq b_u`
-        - unilateral: math:`b_l \leq A_{ineq} x` xor :math:`A_{ineq} x \leq b_u`
+        - unilateral: math:`b_l \leq A_{ineq} x`, or :math:`A_{ineq} x \leq b_u`
     2. equality constraints: math:`A_{eq} = b_{eq}`.
 
     In the robotics case, they can also be divided into 2 groups on another axis:
@@ -154,14 +157,30 @@ class Constraint(object):
             [old code](https://github.com/songcheng/OpenSoT), LGPLv2), Rocchi et al., 2015
     """
 
-    def __init__(self, model):
+    def __init__(self, model=None, constraints=[]):
         """
         Initialize the Constraint.
 
         Args:
-            model (ModelInterface): model interface.
+            model (ModelInterface): robotic model interface.
+            constraints (list[Constraint], None): inner constraints. By providing a list of constraints, they can be
+              combined easily.
         """
+        self.constraints = constraints
         self.model = model
+
+        # if the constraint is enabled or not, by default it is. This allows to dynamically enable and disable
+        # constraints.
+        self._enabled = True
+
+        # variables to be set in the corresponding child classes
+        self._lower_bound = None
+        self._upper_bound = None
+        self._A_eq = None
+        self._b_eq = None
+        self._A_ineq = None
+        self._b_lower_bound = None
+        self._b_upper_bound = None
 
     ##############
     # Properties #
@@ -175,109 +194,365 @@ class Constraint(object):
     @model.setter
     def model(self, model):
         """Set the model interface."""
-        if not isinstance(model, ModelInterface):
+        if model is not None and not isinstance(model, ModelInterface):
             raise TypeError("Expecting the given 'model' to be an instance of `ModelInterface`, instead got: "
                             "{}".format(model))
         self._model = model
 
     @property
+    def x_size(self):
+        """Return the number of variables being optimized."""
+        # return self._x_size
+        if self.model is not None:
+            return self.model.num_actuated_joints
+        return 0
+
+    @property
+    def constraints(self):
+        """Return the dict of inner constraints."""
+        return self._constraints
+
+    @constraints.setter
+    def constraints(self, constraints):
+        if constraints is None:
+            constraints = dict()
+        elif isinstance(constraints, dict):
+            equality_constraints = constraints.get(EqualityConstraint, [])
+            inequality_constraints = constraints.get(InequalityConstraint, [])
+            constraints = equality_constraints + inequality_constraints
+        elif not isinstance(constraints, (list, tuple)):
+            constraints = [constraints]
+
+        constraint_dict = dict()
+        for i, constraint in enumerate(constraints):
+            if isinstance(constraint, EqualityConstraint):
+                constraint_dict.setdefault(EqualityConstraint, []).append(constraint)
+            elif isinstance(constraint, InequalityConstraint):
+                constraint_dict.setdefault(InequalityConstraint, []).append(constraint)
+                if isinstance(constraint, BoundConstraint):
+                    constraint_dict.setdefault(BoundConstraint, []).append(constraint)
+                elif isinstance(constraint, UnilateralConstraint):
+                    constraint_dict.setdefault(UnilateralConstraint, []).append(constraint)
+                    if isinstance(constraint, LowerUnilateralConstraint):
+                        constraint_dict.setdefault(LowerUnilateralConstraint, []).append(constraint)
+                    elif isinstance(constraint, UpperUnilateralConstraint):
+                        constraint_dict.setdefault(UpperUnilateralConstraint, []).append(constraint)
+                elif isinstance(constraint, BilateralConstraint):
+                    constraint_dict.setdefault(BilateralConstraint, []).append(constraint)
+                else:
+                    raise TypeError("Expecting the {}th inequality constraint to be an instance of `BoundConstraint`,"
+                                    " `UnilateralConstraint`, `BilateralConstraint`, but got: "
+                                    "{}".format(i, type(constraint)))
+            elif isinstance(constraint, prl.priorities.tasks.Task):
+                constraint = prl.priorities.constraints.ConstraintFromTask(constraint)
+                constraint_dict.setdefault(EqualityConstraint, []).append(constraint)
+            else:
+                raise TypeError("Expecting the {}th constraint to be an instance of `EqualityConstraint` or "
+                                "`InequalityConstraint`, but got: {}".format(i, type(constraint)))
+
+        self._constraints = constraint_dict
+
+    @property
     def lower_bound(self):
-        r"""Return the lower bound of the optimization variables: :math:`b_l \leq x`."""
+        r"""Return the lower bound of the optimization variables: :math:`b_l \leq x`.
+
+        Returns:
+            np.array[float[N]]: lower bound.
+        """
+        if self.constraints:
+            constraints = self.constraints.get(BoundConstraint, [])
+            return [constraint.lower_bound for constraint in constraints if constraint.enabled]
         return self._lower_bound
 
     @property
     def upper_bound(self):
-        r"""Return the upper bound of the optimization variables: :math:`x \leq b_u`."""
+        r"""Return the upper bound of the optimization variables: :math:`x \leq b_u`.
+
+        Returns:
+            np.array[float[N]]: upper bound.
+        """
+        if self.constraints:
+            constraints = self.constraints.get(BoundConstraint, [])
+            return [constraint.lower_bound for constraint in constraints if constraint.enabled]
         return self._upper_bound
 
     @property
     def A_eq(self):
-        r"""Return the equality constraint matrix :math:`A_{eq}`, such that :math:`A_{eq} x = b_{eq}`."""
+        r"""Return the equality constraint matrix :math:`A_{eq}`, such that :math:`A_{eq} x = b_{eq}`.
+
+        Returns:
+            np.array[float[N,N]]: equality constraint matrix.
+        """
+        if self.constraints:
+            constraints = self.constraints.get(EqualityConstraint, [])
+            return [constraint.A_eq for constraint in constraints if constraint.enabled]
         return self._A_eq
 
     @property
     def b_eq(self):
-        r"""Return the equality constraint vector :math:`b_{eq}`, such that :math:`A_{eq} x = b_{eq}`."""
+        r"""Return the equality constraint vector :math:`b_{eq}`, such that :math:`A_{eq} x = b_{eq}`.
+
+        Returns:
+            np.array[float[N]]: equality constraint vector.
+        """
+        if self.constraints:
+            constraints = self.constraints.get(EqualityConstraint, [])
+            return [constraint.b_eq for constraint in constraints if constraint.enabled]
         return self._b_eq
 
     @property
     def A_ineq(self):
-        r"""Return the inequality constraint matrix :math:`A_{ineq}`, such that :math:`b_l \leq A_{ineq} x \leq b_u`."""
+        r"""Return the inequality constraint matrix :math:`A_{ineq}`, such that :math:`b_l \leq A_{ineq} x \leq b_u`.
+
+        Returns:
+            np.array[float[N,N]]: inequality constraint matrix.
+        """
+        if self.constraints:
+            unilateral_constraints = self.constraints.get(UnilateralConstraint, [])
+            bilateral_constraints = self.constraints.get(BilateralConstraint, [])
+            constraints = unilateral_constraints + bilateral_constraints
+            return [constraint.A_ineq for constraint in constraints if constraint.enabled]
         return self._A_ineq
 
     @property
     def b_lower_bound(self):
-        r"""Return the lower bound of the inequality constraint: :math:`b_l \leq A_{ineq} x`."""
-        return self._b_lower_bound
+        r"""Return the lower bound of the inequality constraint: :math:`b_l \leq A_{ineq} x`.
 
-    # alias
-    b_ineq_lower = b_lower_bound
+        Returns:
+            np.array[float[N]]: inequality constraint lower bound vector.
+        """
+        if self.constraints:
+            unilateral_constraints = self.constraints.get(LowerUnilateralConstraint, [])
+            bilateral_constraints = self.constraints.get(BilateralConstraint, [])
+            constraints = unilateral_constraints + bilateral_constraints
+            return [constraint.b_lower_bound for constraint in constraints if constraint.enabled]
+        return self._b_lower_bound
 
     @property
     def b_upper_bound(self):
-        r"""Return the upper bound of the inequality constraint: :math:`A_{ineq} x \leq b_u`."""
+        r"""Return the upper bound of the inequality constraint: :math:`A_{ineq} x \leq b_u`.
+
+        Returns:
+            np.array[float[N]]: inequality constraint upper bound vector.
+        """
+        if self.constraints:
+            unilateral_constraints = self.constraints.get(UpperUnilateralConstraint, [])
+            bilateral_constraints = self.constraints.get(BilateralConstraint, [])
+            constraints = unilateral_constraints + bilateral_constraints
+            return [constraint.b_upper_bound for constraint in constraints if constraint.enabled]
         return self._b_upper_bound
 
     @property
     def G(self):
-        r"""Return the inequality constraint matrix :math:`G` used in inequality constraints :math:`Gx \leq h` in QP."""
-        pass
+        r"""Return the inequality constraint matrix :math:`G` used in inequality constraints :math:`Gx \leq h` in QP.
+
+        Returns:
+            np.array[float[N,N]]: inequality constraint matrix.
+        """
+        if self.constraints:
+            results = []
+            bound_constraints = self.constraints.get(BoundConstraint, [])
+            for constraint in bound_constraints:
+                if constraint.enabled:
+                    x_size = len(constraint.lower_bound)
+                    results.append(-np.identity(x_size))
+                    results.append(np.identity(x_size))
+            bilateral_constraints = self.constraints.get(BilateralConstraint, [])
+            for constraint in bilateral_constraints:
+                if constraint.enabled:
+                    results.append(-constraint.A_ineq)
+                    results.append(constraint.A_ineq)
+            lower_unilateral_constraints = self.constraints.get(LowerUnilateralConstraint, [])
+            for constraint in lower_unilateral_constraints:
+                if constraint.enabled:
+                    results.append(-constraint.A_ineq)
+            upper_unilateral_constraints = self.constraints.get(UpperUnilateralConstraint, [])
+            for constraint in upper_unilateral_constraints:
+                if constraint.enabled:
+                    results.append(constraint.A_ineq)
+
+            if results:
+                return np.concatenate(results)
+        else:
+            if isinstance(self, BoundConstraint) and self.enabled:
+                x_size = len(self._lower_bound)
+                return np.concatenate((-np.identity(x_size), np.identity(x_size)))
+            elif isinstance(self, BilateralConstraint) and self.enabled:
+                return np.concatenate((-self._A_ineq, self._A_ineq))
+            elif isinstance(self, LowerUnilateralConstraint) and self.enabled:
+                return -self._A_ineq
+            elif isinstance(self, UpperUnilateralConstraint) and self.enabled:
+                return self._A_ineq
 
     @property
     def h(self):
-        r"""Return the inequality constraint vector :math:`h` used in inequality constraints :math:`Gx \leq h` in QP."""
-        pass
+        r"""Return the inequality constraint vector :math:`h` used in inequality constraints :math:`Gx \leq h` in QP.
+
+        Returns:
+            np.array[float[N]]: inequality constraint vector.
+        """
+        if self.constraints:
+            results = []
+            bound_constraints = self.constraints.get(BoundConstraint, [])
+            for constraint in bound_constraints:
+                if constraint.enabled:
+                    results.append(-constraint.lower_bound)
+                    results.append(constraint.upper_bound)
+            bilateral_constraints = self.constraints.get(BilateralConstraint, [])
+            for constraint in bilateral_constraints:
+                if constraint.enabled:
+                    results.append(-constraint.b_lower_bound)
+                    results.append(constraint.b_upper_bound)
+            lower_unilateral_constraints = self.constraints.get(LowerUnilateralConstraint, [])
+            for constraint in lower_unilateral_constraints:
+                if constraint.enabled:
+                    results.append(-constraint.b_lower_bound)
+            upper_unilateral_constraints = self.constraints.get(UpperUnilateralConstraint, [])
+            for constraint in upper_unilateral_constraints:
+                if constraint.enabled:
+                    results.append(constraint.b_upper_bound)
+
+            if results:
+                return np.concatenate(results)
+        else:
+            if isinstance(self, BoundConstraint) and self.enabled:
+                return np.concatenate((-self._lower_bound, self._upper_bound))
+            elif isinstance(self, BilateralConstraint) and self.enabled:
+                return np.concatenate((-self._b_lower_bound, self._upper_bound))
+            elif isinstance(self, LowerUnilateralConstraint) and self.enabled:
+                return -self._b_lower_bound
+            elif isinstance(self, UpperUnilateralConstraint) and self.enabled:
+                return self._b_upper_bound
 
     @property
     def F(self):
-        r"""Return the equality constraint matrix :math:`F` used in equality constraints :math:`Fx = c` in QP."""
-        pass
+        r"""Return the equality constraint matrix :math:`F` used in equality constraints :math:`Fx = k` in QP.
+
+        Returns:
+            np.array[float[N,N]]: equality constraint matrix.
+        """
+        return self.A_eq
 
     @property
-    def c(self):
-        r"""Return the equality constraint vector :math:`c` used in equality constraints :math:`Fx = c` in QP."""
+    def k(self):
+        r"""Return the equality constraint vector :math:`c` used in equality constraints :math:`Fx = k` in QP.
+
+        Returns:
+            np.array[float[N]]: equality constraint vector.
+        """
+        return self.b_eq
+
+    @property
+    def enabled(self):
+        """Return if the task is enabled or not."""
+        return self._enabled
 
     ##################
     # Static methods #
     ##################
 
-    @staticmethod
-    def is_equality_constraint():
-        r"""Return True if it is an equality constraint: :math:`A_{eq} x = b_{eq}`."""
-        return False
-
-    @staticmethod
-    def is_inequality_constraint():
-        r"""Return True if it is an inequality constraint: :math:`b_l \leq A_{ineq} x \leq b_u`."""
-        return False
-
-    @staticmethod
-    def has_bounds():
-        r"""Return True if it is a bound constraint: math:`b_l \leq x \leq b_u`."""
-        return False
-
-    @staticmethod
-    def is_unilateral_constraint():
-        r"""Return True if it is a unilateral constraint: math:`b_l \leq A_{ineq} x` xor :math:`A_{ineq} x \leq b_u`."""
-        return False
-
-    @staticmethod
-    def is_bilateral_constraint():
-        r"""Return True if it is a bilateral constraint: :math:`b_l \leq A_{ineq} x \leq b_u`."""
-        return False
+    # @staticmethod
+    # def is_equality_constraint():
+    #     r"""Return True if it is an equality constraint: :math:`A_{eq} x = b_{eq}`."""
+    #     return False
+    #
+    # @staticmethod
+    # def is_inequality_constraint():
+    #     r"""Return True if it is an inequality constraint: :math:`b_l \leq A_{ineq} x \leq b_u`."""
+    #     return False
+    #
+    # @staticmethod
+    # def has_bounds():
+    #     r"""Return True if it is a bound constraint: math:`b_l \leq x \leq b_u`."""
+    #     return False
+    #
+    # @staticmethod
+    # def is_unilateral_constraint():
+    #     r"""Return True if it is a unilateral constraint: math:`b_l \leq A_{ineq} x` xor :math:`A_{ineq} x
+    #     \leq b_u`."""
+    #     return False
+    #
+    # @staticmethod
+    # def is_bilateral_constraint():
+    #     r"""Return True if it is a bilateral constraint: :math:`b_l \leq A_{ineq} x \leq b_u`."""
+    #     return False
 
     ###########
     # Methods #
     ###########
 
-    def update(self, x):
+    def enable(self, enable=True):
+        """Enable the single constraint, or each inner constraint."""
+        if not self.is_single_constraint():
+            for constraint in self.constraints:
+                constraint.enable(enable=enable)
+        else:
+            self._enabled = enable
+
+    def disable(self, disable=True):
+        """Disable the single constraint, or each inner constraint."""
+        self.enable(not disable)
+
+    def has_constraints(self):
+        """Return True if it has inner constraints."""
+        return len(self.constraints) > 0
+
+    def is_single_constraint(self):
+        """Return True if single constraint."""
+        return len(self.constraints) == 0
+
+    def append(self, constraint):
         r"""
-        Update the various constraint matrices and vectors: :math:`A_{eq}, b_{eq}, A_{ineq}, b_l, b_u, ...`.
+        Append a constraint to the list of inner constraints.
 
         Args:
-            x (np.array): current optimization variables values.
+            constraint (Constraint): constraint to append to the list.
         """
+        # check type
+        if not isinstance(constraint, Constraint):
+            raise TypeError("Expecting the given 'constraint' to be an instance of `Constraint` but got instead: "
+                            "{}".format(type(constraint)))
+        if not constraint.is_single_constraint():
+            raise ValueError("Expecting to append a single constraint, but the given constraint has a list of "
+                             "inner constraints")
+
+        if isinstance(constraint, EqualityConstraint):
+            self.constraints.setdefault(EqualityConstraint, []).append(constraint)
+        elif isinstance(constraint, InequalityConstraint):
+            self.constraints.setdefault(InequalityConstraint, dict())
+            if isinstance(constraint, BoundConstraint):
+                self.constraints.setdefault(BoundConstraint, []).append(constraint)
+            elif isinstance(constraint, UnilateralConstraint):
+                self.constraints.setdefault(UnilateralConstraint, []).append(constraint)
+                if isinstance(constraint, LowerUnilateralConstraint):
+                    self.constraints.setdefault(LowerUnilateralConstraint, []).append(constraint)
+                elif isinstance(constraint, UpperUnilateralConstraint):
+                    self.constraints.setdefault(UpperUnilateralConstraint, []).append(constraint)
+            elif isinstance(constraint, BilateralConstraint):
+                self.constraints.setdefault(BilateralConstraint, []).append(constraint)
+            else:
+                raise TypeError("Expecting the inequality constraint to be an instance of `BoundConstraint`, "
+                                "`UnilateralConstraint`, `BilateralConstraint`, but got: {}".format(type(constraint)))
+        elif isinstance(constraint, prl.priorities.tasks.Task):
+            constraint = prl.priorities.constraints.ConstraintFromTask(constraint)
+            self.constraints.setdefault(EqualityConstraint, []).append(constraint)
+        else:
+            raise TypeError("The given type of constraint is not currently supported.")
+
+    def _update(self):
+        """Update the constraint variables. This has to be implemented in the child classes."""
         pass
+
+    def update(self):
+        r"""
+        Update the various constraint matrices and vectors: :math:`A_{eq}, b_{eq}, A_{ineq}, b_l, b_u, ...`.
+        """
+        if self.constraints:
+            for constraint in self.constraints:
+                constraint.update()
+        else:
+            if self._enabled:  # update only if enabled
+                self._update()
 
     #############
     # Operators #
@@ -290,18 +565,61 @@ class Constraint(object):
         """Return a string describing the class."""
         return self.__class__.__name__
 
-    def __call__(self, x):
+    def __call__(self):
         """
-        Update the constraint (i.e. update the various constraint matrices and vectors.
+        Update the constraint (i.e. update the various constraint matrices and vectors).
+        """
+        return self.update()
+
+    def __len__(self):
+        """
+        Return the number of inner constraints.
+
+        Returns:
+            int: number of inner constraints.
+        """
+        if self.constraints:
+            return len(self.constraints)
+        return 1
+
+    def __add__(self, other):
+        """
+        Add a constraint to the list of inner constraints.
 
         Args:
-            x (np.array): current optimization variable values.
+            other (Constraint): the other constraint.
+
+        Returns:
+            Constraint: the combined constraints.
         """
-        return self.update(x)
+        # check other type
+        if not isinstance(other, Constraint):
+            raise TypeError("Expecting 'other' to be an instance of `Constraint` but got instead: "
+                            "{}".format(type(other)))
+
+        if self.constraints:
+            constraints = dict(self.constraints)  # copy inner constraints
+            if other.constraints:
+                for key, value in other.constraints.items():
+                    if isinstance(key, (EqualityConstraint, BoundConstraint, UnilateralConstraint,
+                                        BilateralConstraint)):
+                        constraints.setdefault(key, []).append(value)
+
+        # TODO: finish to implement this
+
+        return Constraint()
+
+
+class NullConstraint(Constraint):
+    r"""Null constraint.
+
+    This is a dummy constraint which is used to specify that no constraints are used.
+    """
+    pass
 
 
 class EqualityConstraint(Constraint):
-    r"""Equality constraint"""
+    r"""Equality constraint."""
     pass
 
 
@@ -312,6 +630,16 @@ class InequalityConstraint(Constraint):
 
 class UnilateralConstraint(InequalityConstraint):
     r"""Unilateral inequality constraint"""
+    pass
+
+
+class LowerUnilateralConstraint(UnilateralConstraint):
+    r"""Lower unilateral inequality constraint."""
+    pass
+
+
+class UpperUnilateralConstraint(UnilateralConstraint):
+    r"""Upper unilateral inequality constraint."""
     pass
 
 
@@ -347,4 +675,14 @@ class JointAccelerationConstraint(DynamicConstraint):
 
 class JointEffortConstraint(DynamicConstraint):
     r"""Joint effort constraint."""
+    pass
+
+
+class JointTorqueConstraint(DynamicConstraint):
+    r"""Joint torque constraint."""
+    pass
+
+
+class ForceConstraint(DynamicConstraint):
+    r"""Force constraint."""
     pass

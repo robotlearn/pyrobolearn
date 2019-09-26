@@ -7,6 +7,7 @@ import os
 from pyrobolearn.robots.robot import Robot
 from pyrobolearn.utils.transformation import get_rpy_from_quaternion
 
+
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __license__ = "GNU GPLv3"
@@ -20,24 +21,31 @@ class Cubli(Robot):
     r"""Cubli robot
 
     References:
-        [1] "The Cubli: a Cube that can Jump Up and Balance", Gajamohan et al., 2012
-        [2] "The Cubli: a Reaction Wheel Based 3D Inverted Pendulum", Gajamohan et al., 2013
-        [3] "Nonlinear Analysis and Control of a Reaction Wheel-based 3D Inverted Pendulum", Muehlebach et al., 2017
-        [4] "Balancing Control of a Cubical Robot Balancing on its Corner", Chen et al., 2018
+        - [1] "The Cubli: a Cube that can Jump Up and Balance", Gajamohan et al., 2012
+        - [2] "The Cubli: a Reaction Wheel Based 3D Inverted Pendulum", Gajamohan et al., 2013
+        - [3] "Nonlinear Analysis and Control of a Reaction Wheel-based 3D Inverted Pendulum", Muehlebach et al., 2017
+        - [4] "Balancing Control of a Cubical Robot Balancing on its Corner", Chen et al., 2018
+        - [5] Cubli Robot: https://github.com/xinsongyan/cubli
 
     Also, check about M-Blocks:
-        [1] "M-Blocks: Momentum-driven, Magnetic Modular Robots", Romanishin et al., 2013
-        [2] "3D M-Blocks: Self-reconfiguring Robots Capable of Locomtion via Pivoting in 3 Dimensions", Romanishin
-            et al., 2015
+        - [1] "M-Blocks: Momentum-driven, Magnetic Modular Robots", Romanishin et al., 2013
+        - [2] "3D M-Blocks: Self-reconfiguring Robots Capable of Locomotion via Pivoting in 3 Dimensions", Romanishin
+              et al., 2015
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0.5),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 0.5), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/cubli/cubli.urdf'):
+        """
+        Initialize the Cubli robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.5)
@@ -59,11 +67,11 @@ class Cubli(Robot):
 if __name__ == "__main__":
     import numpy as np
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

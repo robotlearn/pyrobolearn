@@ -20,17 +20,23 @@ class Laikago(QuadrupedRobot):
     r"""Laikago robot
 
     References:
-        [1] Laikago: http://www.unitree.cc/e/action/ShowInfo.php?classid=6&id=1
-        [2] https://github.com/erwincoumans/pybullet_robots/tree/master/data/laikago
+        - [1] Laikago: http://www.unitree.cc/e/action/ShowInfo.php?classid=6&id=1
+        - [2] https://github.com/erwincoumans/pybullet_robots/tree/master/data/laikago
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, .5),
-                 orientation=(0.5, 0.5, 0.5, 0.5),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, .5), orientation=(0.5, 0.5, 0.5, 0.5), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/laikago/laikago.urdf'):
+        """
+        Initialize the Laikago robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.5)
@@ -61,11 +67,11 @@ class Laikago(QuadrupedRobot):
 # Test
 if __name__ == "__main__":
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)
@@ -82,5 +88,5 @@ if __name__ == "__main__":
     # run simulator
     for _ in count():
         # robot.update_joint_slider()
-        robot.move_joint_home_positions()
+        robot.move_home_joint_positions()
         world.step(sleep_dt=1./240)

@@ -145,11 +145,46 @@ class LinkWorldPositionState(LinkState):
 
     def _read(self):
         """Read the next link world position state."""
-        self.data = self.robot.get_link_positions(self.links)
+        self.data = self.robot.get_link_world_positions(self.links, flatten=True)
 
 
 class LinkOrientationState(LinkState):
     r"""Link Orientation state
+    """
+
+    def __init__(self, robot, link_ids=None, wrt_link_id=None, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the link world orientation state.
+
+        Args:
+            robot (Robot): robot instance
+            link_ids (int, int[N]): link id or list of link ids
+            wrt_link_id (int, None): link with respect to which we compute the position of the other links. If None,
+                it will be the base.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
+        self.wrt_link_id = wrt_link_id
+        super(LinkOrientationState, self).__init__(robot, link_ids, window_size=window_size, axis=axis, ticks=ticks)
+
+    def _read(self):  # TODO: convert
+        """Read the next link orientation state."""
+        self.data = self.robot.get_link_orientations(self.links, wrt_link_id=self.wrt_link_id, flatten=True)
+
+
+class LinkWorldOrientationState(LinkState):
+    r"""Link World Orientation state
     """
 
     def __init__(self, robot, link_ids=None, window_size=1, axis=None, ticks=1):
@@ -173,15 +208,51 @@ class LinkOrientationState(LinkState):
                 state is not a combination of states, but is given some :attr:`data`.
             ticks (int): number of ticks to sleep before getting the next state data.
         """
-        super(LinkOrientationState, self).__init__(robot, link_ids, window_size=window_size, axis=axis, ticks=ticks)
+        super(LinkWorldOrientationState, self).__init__(robot, link_ids, window_size=window_size, axis=axis,
+                                                        ticks=ticks)
 
     def _read(self):  # TODO: convert
-        """Read the next link orientation state."""
-        self.data = self.robot.get_link_orientations(self.links)
+        """Read the next link world orientation state."""
+        self.data = self.robot.get_link_world_orientations(self.links, flatten=True)
 
 
 class LinkVelocityState(LinkState):
     r"""Link velocity state
+    """
+
+    def __init__(self, robot, link_ids=None, wrt_link_id=None, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the link velocity state.
+
+        Args:
+            robot (Robot): robot instance
+            link_ids (int, int[N]): link id or list of link ids
+            wrt_link_id (int, None): link with respect to which we compute the position of the other links. If None,
+                it will be the base.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
+        self.wrt_link_id = wrt_link_id
+        super(LinkVelocityState, self).__init__(robot, link_ids, window_size=window_size, axis=axis, ticks=ticks)
+
+    def _read(self):
+        """Read the next link velocity state."""
+        self.data = self.robot.get_link_velocities(self.links, wrt_link_id=self.wrt_link_id, flatten=True)
+
+
+class LinkWorldVelocityState(LinkState):
+    r"""Link world velocity state
     """
 
     def __init__(self, robot, link_ids=None, window_size=1, axis=None, ticks=1):
@@ -205,15 +276,50 @@ class LinkVelocityState(LinkState):
                 state is not a combination of states, but is given some :attr:`data`.
             ticks (int): number of ticks to sleep before getting the next state data.
         """
-        super(LinkVelocityState, self).__init__(robot, link_ids, window_size=window_size, axis=axis, ticks=ticks)
+        super(LinkWorldVelocityState, self).__init__(robot, link_ids, window_size=window_size, axis=axis, ticks=ticks)
 
     def _read(self):
-        """Read the next link velocity state."""
-        self.data = self.robot.get_link_velocities(self.links)
+        """Read the next link world velocity state."""
+        self.data = self.robot.get_link_world_velocities(self.links, flatten=True)
 
 
 class LinkLinearVelocityState(LinkState):
     r"""Link linear velocity state
+    """
+
+    def __init__(self, robot, link_ids=None, wrt_link_id=None, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the link linear velocity state.
+
+        Args:
+            robot (Robot): robot instance
+            link_ids (int, int[N]): link id or list of link ids
+            wrt_link_id (int, None): link with respect to which we compute the position of the other links. If None,
+                it will be the base.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
+        self.wrt_link_id = wrt_link_id
+        super(LinkLinearVelocityState, self).__init__(robot, link_ids, window_size=window_size, axis=axis, ticks=ticks)
+
+    def _read(self):
+        """Read the next link linear velocity state."""
+        self.data = self.robot.get_link_linear_velocities(self.links, wrt_link_id=self.wrt_link_id, flatten=True)
+
+
+class LinkWorldLinearVelocityState(LinkState):
+    r"""Link world linear velocity state
     """
 
     def __init__(self, robot, link_ids=None, window_size=1, axis=None, ticks=1):
@@ -237,15 +343,51 @@ class LinkLinearVelocityState(LinkState):
                 state is not a combination of states, but is given some :attr:`data`.
             ticks (int): number of ticks to sleep before getting the next state data.
         """
-        super(LinkLinearVelocityState, self).__init__(robot, link_ids, window_size=window_size, axis=axis, ticks=ticks)
+        super(LinkWorldLinearVelocityState, self).__init__(robot, link_ids, window_size=window_size, axis=axis,
+                                                           ticks=ticks)
 
     def _read(self):
-        """Read the next link linear velocity state."""
-        self.data = self.robot.get_link_linear_velocities(self.links)
+        """Read the next link world linear velocity state."""
+        self.data = self.robot.get_link_world_linear_velocities(self.links, flatten=True)
 
 
 class LinkAngularVelocityState(LinkState):
     r"""Link angular velocity state
+    """
+
+    def __init__(self, robot, link_ids=None, wrt_link_id=None, window_size=1, axis=None, ticks=1):
+        """
+        Initialize the link angular velocity state.
+
+        Args:
+            robot (Robot): robot instance
+            link_ids (int, int[N]): link id or list of link ids
+            wrt_link_id (int, None): link with respect to which we compute the position of the other links. If None,
+                it will be the base.
+            window_size (int): window size of the state. This is the total number of states we should remember. That
+                is, if the user wants to remember the current state :math:`s_t` and the previous state :math:`s_{t-1}`,
+                the window size is 2. By default, the :attr:`window_size` is one which means we only remember the
+                current state. The window size has to be bigger than 1. If it is below, it will be set automatically
+                to 1. The :attr:`window_size` attribute is only valid when the state is not a combination of states,
+                but is given some :attr:`data`.
+            axis (int, None): axis to concatenate or stack the states in the current window. If you have a state with
+                shape (n,), then if the axis is None (by default), it will just concatenate it such that resulting
+                state has a shape (n*w,) where w is the window size. If the axis is an integer, then it will just stack
+                the states in the specified axis. With the example, for axis=0, the resulting state has a shape of
+                (w,n), and for axis=-1 or 1, it will have a shape of (n,w). The :attr:`axis` attribute is only when the
+                state is not a combination of states, but is given some :attr:`data`.
+            ticks (int): number of ticks to sleep before getting the next state data.
+        """
+        self.wrt_link_id = wrt_link_id
+        super(LinkAngularVelocityState, self).__init__(robot, link_ids, window_size=window_size, axis=axis, ticks=ticks)
+
+    def _read(self):
+        """Read the next link angular velocity state."""
+        self.data = self.robot.get_link_angular_velocities(self.links, wrt_link_id=self.wrt_link_id, flatten=True)
+
+
+class LinkWorldAngularVelocityState(LinkState):
+    r"""Link world angular velocity state
     """
 
     def __init__(self, robot, link_ids=None, window_size=1, axis=None, ticks=1):
@@ -269,8 +411,9 @@ class LinkAngularVelocityState(LinkState):
                 state is not a combination of states, but is given some :attr:`data`.
             ticks (int): number of ticks to sleep before getting the next state data.
         """
-        super(LinkAngularVelocityState, self).__init__(robot, link_ids, window_size=window_size, axis=axis, ticks=ticks)
+        super(LinkWorldAngularVelocityState, self).__init__(robot, link_ids, window_size=window_size, axis=axis,
+                                                            ticks=ticks)
 
     def _read(self):
-        """Read the next link angular velocity state."""
-        self.data = self.robot.get_link_angular_velocities(self.links)
+        """Read the next link world angular velocity state."""
+        self.data = self.robot.get_link_world_angular_velocities(self.links, flatten=True)

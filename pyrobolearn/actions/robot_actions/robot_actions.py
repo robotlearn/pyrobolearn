@@ -34,20 +34,31 @@ class RobotAction(Action):
     __metaclass__ = ABCMeta
 
     def __init__(self, robot):
+        """Initialize the abstract robot action.
+
+        Args:
+            robot (Robot): a robot instance.
+        """
         super(RobotAction, self).__init__()
+
+        # check robot instance
         if not isinstance(robot, Robot):
-            raise TypeError("The 'robot' parameter has to be an instance of Robot")
+            raise TypeError("The 'robot' parameter has to be an instance of Robot, but instead got: "
+                            "{}".format(type(robot)))
         self._robot = robot
 
     @property
     def robot(self):
+        """Return the robot instance."""
         return self._robot
 
-    def is_discrete(self):
-        return False
-
-    def is_continuous(self):
-        return True
+    # def is_discrete(self):
+    #     """By default, robot actions are continuous."""
+    #     return False
+    #
+    # def is_continuous(self):
+    #     """By default, robot actions are continuous."""
+    #     return True
 
     def __copy__(self):
         """Return a shallow copy of the action. This can be overridden in the child class."""

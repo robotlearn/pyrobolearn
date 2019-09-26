@@ -20,17 +20,22 @@ class SoftHand(Hand):
     r"""Pisa-IIT Soft Hand
 
     References:
-        [1] https://github.com/CentroEPiaggio/pisa-iit-soft-hand
-        [2] "Adaptive Synergies for the Design and Control of the Pisa/IIT SoftHand", Catalano et al., 2014
+        - [1] https://github.com/CentroEPiaggio/pisa-iit-soft-hand
+        - [2] "Adaptive Synergies for the Design and Control of the Pisa/IIT SoftHand", Catalano et al., 2014
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0),
-                 orientation=(0, 0, 0, 1),
-                 scale=1.,
-                 left=True,
-                 fixed_base=True):
+    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0, 1), fixed_base=True, scale=1., left=True):
+        """
+        Initialize the Soft hand robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            left (bool): if we should create a left hand, or right hand.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.)
@@ -55,11 +60,11 @@ class SoftHand(Hand):
 # Test
 if __name__ == "__main__":
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

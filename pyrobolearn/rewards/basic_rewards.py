@@ -35,7 +35,7 @@ class FixedReward(Reward):
 
         Args:
             value (int, float): initial value.
-            range (None, tuple of float/int): A tuple corresponding to the min and max possible rewards. By default,
+            range (None, tuple[float/int]): A tuple corresponding to the min and max possible rewards. By default,
                 it is [value, value]. The initial value must be included in the given range.
         """
         super(FixedReward, self).__init__()
@@ -71,67 +71,6 @@ class FixedReward(Reward):
 #
 #     def _compute(self):
 #         return self.function()
-
-
-class ForwardProgressReward(Reward):
-    r"""Forward progress reward
-
-    Compute the forward progress based on a forward direction, a previous and current positions.
-    """
-
-    def __init__(self, state, direction=(1, 0, 0), normalize=False, update_state=False):
-        """
-        Initialize the Forward Progress Reward.
-
-        Args:
-            state (BasePositionState, PositionState, Robot): robot or base position state.
-            direction (np.float[3], None): forward direction vector. If None, it will take the initial forward vector.
-            normalize (bool): if we should normalize the direction vector.
-            update_state (bool): if we should call the state and update its value.
-        """
-        # check state argument
-        self.update_state = update_state
-        if isinstance(state, Robot):
-            state = states.BasePositionState(state)
-            self.update_state = True
-        elif not isinstance(state, (states.BasePositionState, states.PositionState)):
-            raise TypeError("Expecting the state to be an instance of `BasePositionState`, `PositionState`, or `Robot`"
-                            ", instead got: {}".format(type(state)))
-        super(ForwardProgressReward, self).__init__(state=state)
-
-        # if no direction specified, take the body forward vector
-        if direction is None:
-            self.direction = state.body.forward_vector
-        else:
-            self.direction = np.array(direction)
-
-        # normalize the direction vector if specified
-        if normalize:
-            self.direction = self.normalize(self.direction)
-
-        # remember current position
-        self.prev_pos = np.copy(self.state.data[0])
-        self.value = 0
-
-    @staticmethod
-    def normalize(x):
-        """
-        Normalize the given vector.
-        """
-        if np.allclose(x, 0):
-            return x
-        return x / np.linalg.norm(x)
-
-    def _compute(self):
-        """Compute the difference vector between the current and previous position (i.e. ~ velocity vector), and
-        compute the dot product between this velocity vector and the direction vector."""
-        if self.update_state:
-            self.state()
-        curr_pos = self.state.data[0]
-        velocity = curr_pos - self.prev_pos
-        self.value = self.direction.dot(velocity)
-        self.prev_pos = np.copy(curr_pos)
-        return self.value
 
 
 class DirectiveReward(Reward):

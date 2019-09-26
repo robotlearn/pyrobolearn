@@ -1,6 +1,19 @@
 #!/usr/bin/env python
 r"""Provide the center of mass velocity task.
 
+The CoM task tries to impose a desired position and (linear) velocity of the CoM with respect to the world frame.
+
+.. math:: ||J_{CoM} \dot{q} - (K_p (x_d - x) + \dot{x}_d)||^2
+
+where :math:`J_{CoM}` is the CoM Jacobian, :math:`\dot{q}` are the joint velocities being optimized, :math:`K_p`
+is the stiffness gain, :math:`x_d` and :math:`x` are the desired and current cartesian CoM position
+respectively, and :math:`\dot{x}_d` is the desired linear velocity of the CoM.
+
+This is equivalent to the QP objective function :math:`||Ax - b||^2`, by setting :math:`A=J_{CoM}`,
+:math:`x=\dot{q}`, and :math:`b = K_p (x_d - x) + \dot{x}_d`.
+
+Note that you can only specify the center of mass linear velocity if you wish.
+
 
 The implementation of this class is inspired by [1] (which is licensed under the LGPLv2).
 
@@ -26,7 +39,7 @@ __status__ = "Development"
 class CoMTask(JointVelocityTask):
     r"""Center of Mass Velocity Task
 
-    The CoM task tries to impose a desired position of the CoM with respect to the world frame.
+    The CoM task tries to impose a desired position and (linear) velocity of the CoM with respect to the world frame.
 
     .. math:: ||J_{CoM} \dot{q} - (K_p (x_d - x) + \dot{x}_d)||^2
 
@@ -36,19 +49,26 @@ class CoMTask(JointVelocityTask):
 
     This is equivalent to the QP objective function :math:`||Ax - b||^2`, by setting :math:`A=J_{CoM}`,
     :math:`x=\dot{q}`, and :math:`b = K_p (x_d - x) + \dot{x}_d`.
+
+    Note that you can only specify the center of mass linear velocity if you wish.
+
+    The implementation of this class is inspired by [1] (which is licensed under the LGPLv2).
+
+    References:
+        - [1] "OpenSoT: A whole-body control library for the compliant humanoid robot COMAN", Rocchi et al., 2015
     """
 
-    def __init__(self, model, x_desired=None, dx_desired=None, kp=1., weight=1., constraints=[]):
+    def __init__(self, model, desired_position=None, desired_velocity=None, kp=1., weight=1., constraints=[]):
         """
         Initialize the task.
 
         Args:
             model (ModelInterface): model interface.
-            x_desired (np.array[3], None): desired CoM position. If None, it will be set to 0.
-            dx_desired (np.array[3], None): desired CoM linear velocity. If None, it will be set to 0.
-            kp (float, np.array[3,3]): stiffness gain.
-            weight (float, np.array[3,3]): weight scalar or matrix associated to the task.
-            constraints (list of Constraint): list of constraints associated with the task.
+            desired_position (np.array[float[3]], None): desired CoM position. If None, it will be set to 0.
+            desired_velocity (np.array[float[3]], None): desired CoM linear velocity. If None, it will be set to 0.
+            kp (float, np.array[float[3,3]]): stiffness gain.
+            weight (float, np.array[float[3,3]]): weight scalar or matrix associated to the task.
+            constraints (list[Constraint]): list of constraints associated with the task.
         """
         super(CoMTask, self).__init__(model=model, weight=weight, constraints=constraints)
 
@@ -56,8 +76,8 @@ class CoMTask(JointVelocityTask):
         self.kp = kp
 
         # define desired references
-        self.x_desired = x_desired
-        self.dx_desired = dx_desired
+        self.desired_position = desired_position
+        self.desired_velocity = desired_velocity
 
         # first update
         self.update()
@@ -67,40 +87,61 @@ class CoMTask(JointVelocityTask):
     ##############
 
     @property
+    def desired_position(self):
+        """Get the desired CoM position."""
+        return self._des_pos
+
+    @desired_position.setter
+    def desired_position(self, position):
+        """Set the desired CoM position."""
+        if position is not None:
+            if not isinstance(position, (np.ndarray, list, tuple)):
+                raise TypeError("Expecting the given desired position to be a np.array, instead got: "
+                                "{}".format(type(position)))
+            position = np.asarray(position)
+            if len(position) != 3:
+                raise ValueError("Expecting the given desired position array to be of length 3, but instead got: "
+                                 "{}".format(len(position)))
+        self._des_pos = position
+
+    @property
+    def desired_velocity(self):
+        """Get the desired CoM linear velocity."""
+        return self._des_vel
+
+    @desired_velocity.setter
+    def desired_velocity(self, velocity):
+        """Set the desired CoM linear velocity."""
+        if velocity is None:
+            velocity = np.zeros(3)
+        elif not isinstance(velocity, (np.ndarray, list, tuple)):
+            raise TypeError("Expecting the given desired linear velocity to be a np.array, instead got: "
+                            "{}".format(type(velocity)))
+        velocity = np.asarray(velocity)
+        if len(velocity) != 3:
+            raise ValueError("Expecting the given desired linear velocity array to be of length 3, but instead "
+                             "got: {}".format(len(velocity)))
+        self._des_vel = velocity
+
+    @property
     def x_desired(self):
         """Get the desired CoM position."""
-        return self._x_d
+        return self._des_pos
 
     @x_desired.setter
     def x_desired(self, x_d):
         """Set the desired CoM position."""
-        if x_d is None:
-            x_d = np.zeros(3)
-        if not isinstance(x_d, np.ndarray):
-            raise TypeError("Expecting the given desired CoM position to be a np.array, instead got: "
-                            "{}".format(type(x_d)))
-        if len(x_d) != 3:
-            raise ValueError("Expecting the given desired CoM position array to be of length 3, instead got a length "
-                             "of: {}".format(len(x_d)))
-        self._x_d = x_d
+        self.desired_position = x_d
 
     @property
     def dx_desired(self):
         """Get the desired CoM linear velocity."""
-        return self._dx_d
+        return self._des_vel
 
     @dx_desired.setter
     def dx_desired(self, dx_d):
         """Set the desired CoM linear velocity."""
-        if dx_d is None:
-            dx_d = np.zeros(3)
-        if not isinstance(dx_d, np.ndarray):
-            raise TypeError("Expecting the given desired CoM linear velocity to be a np.array, instead got: "
-                            "{}".format(type(dx_d)))
-        if len(dx_d) != 3:
-            raise ValueError("Expecting the given desired CoM linear velocity array to be of length 3, instead got a "
-                             "length of: {}".format(len(dx_d)))
-        self._dx_d = dx_d
+        self.desired_velocity = dx_d
 
     @property
     def kp(self):
@@ -126,8 +167,8 @@ class CoMTask(JointVelocityTask):
         """Set the desired references.
 
         Args:
-            x_des (np.array[3], None): desired CoM position. If None, it will be set to 0.
-            dx_des (np.array[3], None): desired CoM linear velocity. If None, it will be set to 0.
+            x_des (np.array[float[3]], None): desired CoM position. If None, it will be set to 0.
+            dx_des (np.array[float[3]], None): desired CoM linear velocity. If None, it will be set to 0.
         """
         self.x_desired = x_des
         self.dx_desired = dx_des
@@ -136,15 +177,19 @@ class CoMTask(JointVelocityTask):
         """Return the desired references.
 
         Returns:
-            np.array[3]: desired CoM position.
-            np.array[3]: desired CoM linear velocity.
+            np.array[float[3]]: desired CoM position.
+            np.array[float[3]]: desired CoM linear velocity.
         """
         return self.x_desired, self.dx_desired
 
-    def _update(self):
+    def _update(self, x=None):
         """
         Update the task by computing the A matrix and b vector that will be used by the task solver.
         """
-        x = self.model.get_com_position()
-        self._A = self.model.get_com_jacobian()  # shape: (3, N)
-        self._b = np.dot(self.kp, (self._x_d - x)) + self._dx_d  # shape: (3,)
+
+        self._A = self.model.get_com_jacobian(full=False)  # shape: (3, N)
+        if self._des_pos is not None:
+            x = self.model.get_com_position()
+            self._b = np.dot(self.kp, (self._des_pos - x)) + self._des_vel  # shape: (3,)
+        else:
+            self._b = self._des_vel  # shape: (3,)

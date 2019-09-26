@@ -1,6 +1,7 @@
 
 # import task
 from .task import *
+from .task_from_constraint import TaskFromConstraint
 
 # import velocity tasks
 from . import velocity

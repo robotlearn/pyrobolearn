@@ -2,8 +2,8 @@
 """Provides the experience replay (ER) storage.
 
 References:
-    [1] "Reinforcement Learning for robots using neural networks", Lin, 1993
-    [2] "Playing Atari with Deep Reinforcement Learning", Mnih et al., 2013
+    - [1] "Reinforcement Learning for robots using neural networks", Lin, 1993
+    - [2] "Playing Atari with Deep Reinforcement Learning", Mnih et al., 2013
 """
 
 import random
@@ -37,8 +37,8 @@ __status__ = "Development"
 #     The following code is inspired by [3] but modified such that it uses a PyTorch list storage.
 #
 #     References:
-#         [1] "Reinforcement Learning for robots using neural networks", Lin, 1993
-#         [2] "Playing Atari with Deep Reinforcement Learning", Mnih et al., 2013
+#         - [1] "Reinforcement Learning for robots using neural networks", Lin, 1993
+#         - [2] "Playing Atari with Deep Reinforcement Learning", Mnih et al., 2013
 #     """
 #
 #     def __init__(self, capacity=10000, device=None, dtype=torch.float):
@@ -172,8 +172,8 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
     The following code is inspired by [3] but modified such that it uses a PyTorch list storage.
 
     References:
-        [1] "Reinforcement Learning for robots using neural networks", Lin, 1993
-        [2] "Playing Atari with Deep Reinforcement Learning", Mnih et al., 2013
+        - [1] "Reinforcement Learning for robots using neural networks", Lin, 1993
+        - [2] "Playing Atari with Deep Reinforcement Learning", Mnih et al., 2013
     """
 
     def __init__(self, state_shapes, action_shapes, capacity=10000, *args, **kwargs):
@@ -207,6 +207,13 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
         #     return self.capacity
         # return self.position
         return self.capacity
+
+    @property
+    def filled_size(self):
+        """Return the filled sized of the experience replay storage."""
+        if self.full:
+            return self.capacity
+        return self.position
 
     ###########
     # Methods #
@@ -364,7 +371,7 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
         """Return a batch of the experience replay storage in the form of a `DictStorage`.
 
         Args:
-            indices (list of int): indices. Each index must be between 0 and `self.size`.
+            indices (list of int): indices. Each index must be between 0 and `self.filled_size`.
 
         Returns:
             DictStorage / Batch: batch containing a part of the storage. Variables such as `states`, `actions`,
@@ -373,7 +380,7 @@ class ExperienceReplay(DictStorage):  # ExperienceReplayStorage(DictStorage):
         batch = {}
 
         # go through each attribute in the  and sample from the tensors
-        for key, value in self.iteritems():
+        for key, value in self.items():
             if isinstance(value, list):  # value = list of tensors
                 batch[key] = [val[indices] for val in value]
             else:  # value = tensor

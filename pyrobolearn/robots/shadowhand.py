@@ -19,18 +19,24 @@ class ShadowHand(Hand):
     r"""Shadow Hand
 
     References:
-        [1] https://www.shadowrobot.com/products/dexterous-hand/
-        [2] Shadow hand description: https://github.com/shadow-robot/sr_common
-        [3] Documentation: https://dexterous-hand.readthedocs.io/en/latest/index.html
+        - [1] https://www.shadowrobot.com/products/dexterous-hand/
+        - [2] Shadow hand description: https://github.com/shadow-robot/sr_common
+        - [3] Documentation: https://dexterous-hand.readthedocs.io/en/latest/index.html
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 0),
-                 orientation=(0, 0, 0.707, 0.707),
-                 scale=1.,
-                 left=True,
-                 fixed_base=True):
+    def __init__(self, simulator, position=(0, 0, 0), orientation=(0, 0, 0.707, 0.707), fixed_base=True, scale=1.,
+                 left=True):
+        """
+        Initialize the Shadow hand robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            left (bool): if we should create a left hand, or right hand.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 0.)
@@ -55,11 +61,11 @@ class ShadowHand(Hand):
 # Test
 if __name__ == "__main__":
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)

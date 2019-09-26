@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """Define the Nvidia FleX Simulator API.
 
+DEPRECATED: See `isaac.py`.
+
 This is the main interface that communicates with the FleX simulator [1]. By defining this interface, it allows to
 decouple the PyRoboLearn framework from the simulator. It also converts some data types to the ones required by
 FleX.

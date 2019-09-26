@@ -1,0 +1,2 @@
+
+Brian Delhaisse: Compared to the original, I split the various elements (cues, balls, triangle and table) into different OBJ files. I also removed the table legs. Finally, I rescaled, translated, and rotated everything.

@@ -24,6 +24,17 @@ class WheeledRobot(Robot):
     """
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        """
+        Initialize the wheeled robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(WheeledRobot, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
 
         self.wheels = []
@@ -122,15 +133,26 @@ class DifferentialWheeledRobot(WheeledRobot):
         \omega_L &= v - \frac{d}{2r} \omega
 
     References:
-        [1] Wikipedia: https://en.wikipedia.org/wiki/Differential_wheeled_robot
-        [2] "Pros and cons for different types of drive selection":
+        - [1] Wikipedia: https://en.wikipedia.org/wiki/Differential_wheeled_robot
+        - [2] "Pros and cons for different types of drive selection":
             https://robohub.org/pros-and-cons-for-different-types-of-drive-selection/
-        [3] Wheel Control Theory:
+        - [3] Wheel Control Theory:
             http://www.robotplatform.com/knowledge/Classification_of_Robots/wheel_control_theory.html
-        [4] "Robotics: Modelling, Planning and Control" (section 11.2), Siciliano et al., 2010
+        - [4] "Robotics: Modelling, Planning and Control" (section 11.2), Siciliano et al., 2010
     """
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        """
+        Initialize the differential wheeled robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(DifferentialWheeledRobot, self).__init__(simulator, urdf, position, orientation, fixed_base,
                                                        scale)
 
@@ -170,14 +192,25 @@ class AckermannWheeledRobot(WheeledRobot):
     Check also [2] for the different types of drive.
 
     References:
-        [1] Wikipedia: https://en.wikipedia.org/wiki/Ackermann_steering_geometry
-        [2] "Pros and cons for different types of drive selection":
+        - [1] Wikipedia: https://en.wikipedia.org/wiki/Ackermann_steering_geometry
+        - [2] "Pros and cons for different types of drive selection":
             https://robohub.org/pros-and-cons-for-different-types-of-drive-selection/
-        [3] Wheel Control Theory:
+        - [3] Wheel Control Theory:
             http://www.robotplatform.com/knowledge/Classification_of_Robots/wheel_control_theory.html
     """
 
     def __init__(self, simulator, urdf, position=None, orientation=None, fixed_base=False, scale=1.):
+        """
+        Initialize the Ackermann wheeled robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+        """
         super(AckermannWheeledRobot, self).__init__(simulator, urdf, position, orientation, fixed_base,
                                                     scale)
 

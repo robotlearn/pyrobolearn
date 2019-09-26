@@ -64,16 +64,27 @@ class ECAA9(UUVRobot):
     For a submarine, the coefficient is approximately around 0.04 (see [3]).
 
     References:
-        [1] https://www.ecagroup.com/en/solutions/a9-s-auv-autonomous-underwater-vehicle
-        [2] UUV Simulator: https://uuvsimulator.github.io/
-        [3] Aerodynamics (Nasa - check for equation): https://www.grc.nasa.gov/www/k-12/airplane/short.html
-        [4] https://s2.smu.edu/propulsion/Pages/navigation.htm
-        [5] Introduction to Ocean Waves: http://pordlabs.ucsd.edu/rsalmon/111.textbook.pdf
-        [6] https://fenicsproject.org/
+        - [1] https://www.ecagroup.com/en/solutions/a9-s-auv-autonomous-underwater-vehicle
+        - [2] UUV Simulator: https://uuvsimulator.github.io/
+        - [3] Aerodynamics (Nasa - check for equation): https://www.grc.nasa.gov/www/k-12/airplane/short.html
+        - [4] https://s2.smu.edu/propulsion/Pages/navigation.htm
+        - [5] Introduction to Ocean Waves: http://pordlabs.ucsd.edu/rsalmon/111.textbook.pdf
+        - [6] https://fenicsproject.org/
     """
 
-    def __init__(self, simulator, position=(0, 0, 1.), orientation=(0, 0, 0, 1), fixed_base=False, scaling=1.,
-                 urdf_path=os.path.dirname(__file__) + '/urdfs/ecaa9/eca_a9.urdf'):
+    def __init__(self, simulator, position=(0, 0, 1.), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
+                 urdf=os.path.dirname(__file__) + '/urdfs/ecaa9/eca_a9.urdf'):
+        """
+        Initialize the ECAA9 vehicle.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the vehicle base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the vehicle.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
         # check parameters
         if position is None:
             position = (0., 0., 1.)
@@ -84,10 +95,10 @@ class ECAA9(UUVRobot):
         if fixed_base is None:
             fixed_base = False
 
-        super(ECAA9, self).__init__(simulator, urdf_path, position, orientation, fixed_base, scaling)
+        super(ECAA9, self).__init__(simulator, urdf, position, orientation, fixed_base, scale)
         self.name = 'eca_a9'
 
-        self.volume = 0.0679998770412 * scaling**3  # from urdf
+        self.volume = 0.0679998770412 * scale ** 3  # from urdf
         self.sea_water_density = 1027
         self.center_buoyancy = np.array([0.000106, 0., 0.6])  # from urdf
 
@@ -100,7 +111,7 @@ class ECAA9(UUVRobot):
             g (gravity): gravity value in the z direction.
 
         Returns:
-            np.array[3]: buoyancy force
+            np.array[float[3]]: buoyancy force
         """
         # currently, we assume that the whole body is submerged in the
         if fluid_density is None:
@@ -115,7 +126,7 @@ class ECAA9(UUVRobot):
 
         Args:
             mass (float): mass that will be added to the base link.
-            local_inertia_diagonal (np.array[3]): local inertia diagonal around the CoM of the base link.
+            local_inertia_diagonal (np.array[float[3]]): local inertia diagonal around the CoM of the base link.
         """
         info = self.sim.get_dynamics_info(body_id=self.id, link_id=-1)
         mass += info[0]
@@ -126,11 +137,11 @@ class ECAA9(UUVRobot):
 # Test
 if __name__ == "__main__":
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)
@@ -152,7 +163,7 @@ if __name__ == "__main__":
         pos = robot.get_base_position()
         # apply force in the simulation
         robot.apply_external_force(force=fb, link_id=-1, position=pos+robot.center_buoyancy,
-                                   frame=BulletSim.WORLD_FRAME)
+                                   frame=Bullet.WORLD_FRAME)
         # robot.update_joint_slider()
         # robot.set_joint_velocities([10], [4])
         # step in simulation

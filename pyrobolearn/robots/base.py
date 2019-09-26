@@ -323,6 +323,12 @@ class Body(object):
     # Methods #
     ###########
 
+    def step(self):
+        """
+        Perform a step. This can be implemented in the child classes.
+        """
+        pass
+
     def set_color(self, color, link_id=-1):
         """Set the given RGBA color to the specified link. This is only valid in the simulator.
 
@@ -341,10 +347,10 @@ class Body(object):
             - this does not work when using `sim.setRealTimeSimulation(1)`.
 
         Args:
-            force (np.array[3]): Cartesian forces to be applied on the body
+            force (np.array[float[3]]): Cartesian forces to be applied on the body
             link_id (int): link id to apply the force, if -1 it will apply the force on the base
-            position (np.array[3], None): position on the link where the force is applied (expressed in the given
-                cartesian frame, see next attribute :attr:`frame`). If None, it is the center of mass of the body
+            position (np.array[float[3]], None): position on the link where the force is applied (expressed in the
+                given cartesian frame, see next attribute :attr:`frame`). If None, it is the center of mass of the body
                 (or the link if specified).
             frame (int): allows to specify the coordinate system of force/position. sim.LINK_FRAME (=1) for local
                 link frame, and sim.WORLD_FRAME (=2) for world frame. By default, it is the world frame.
@@ -376,10 +382,10 @@ class Body(object):
         Returns:
             float: mass in kg
             float: lateral friction coefficient
-            np.float[3]: local inertia diagonal. Note that links and base are centered around the center of mass and
-                aligned with the principal axes of inertia.
-            np.float[3]: position of inertial frame in local coordinates of the joint frame
-            np.float[4]: orientation of inertial frame in local coordinates of joint frame
+            np.array[float[3]]: local inertia diagonal. Note that links and base are centered around the center of
+                mass and aligned with the principal axes of inertia.
+            np.array[float[3]]: position of inertial frame in local coordinates of the joint frame
+            np.array[float[4]]: orientation of inertial frame in local coordinates of joint frame
             float: coefficient of restitution
             float: rolling friction coefficient orthogonal to contact normal
             float: spinning friction coefficient around contact normal
@@ -411,7 +417,7 @@ class Body(object):
                 section.
             friction_anchor (int): enable or disable a friction anchor: positional friction correction (disabled by
                 default, unless set in the URDF contact section)
-            local_inertia_diagonal (np.float[3]): diagonal elements of the inertia tensor. Note that the base and
+            local_inertia_diagonal (np.array[float[3]]): diagonal elements of the inertia tensor. Note that the base and
                 links are centered around the center of mass and aligned with the principal axes of inertia so there
                 are no off-diagonal elements in the inertia tensor.
             joint_damping (float): joint damping coefficient applied at each joint. This coefficient is read from URDF
@@ -439,14 +445,15 @@ class Body(object):
                 int: object unique id.
                 int: link id.
                 int: geometry type; GEOM_BOX (=3), GEOM_SPHERE (=2), GEOM_CAPSULE (=7), GEOM_MESH (=5), GEOM_PLANE (=6)
-                np.float[3]: depends on geometry type:
+                np.array[float[3]]: depends on geometry type:
                     for GEOM_BOX: extents,
                     for GEOM_SPHERE: dimensions[0] = radius,
                     for GEOM_CAPSULE and GEOM_CYLINDER: dimensions[0] = height (length), dimensions[1] = radius.
                     For GEOM_MESH: dimensions is the scaling factor.
                 str: Only for GEOM_MESH: file name (and path) of the collision mesh asset.
-                np.float[3]: Local position of the collision frame with respect to the center of mass/inertial frame
-                np.float[4]: Local orientation of the collision frame with respect to the inertial frame
+                np.array[float[3]]: Local position of the collision frame with respect to the center of mass/inertial
+                    frame
+                np.array[float[4]]: Local orientation of the collision frame with respect to the inertial frame
         """
         return self.sim.get_collision_shape_data(self.id, link_id=link_id)
 
@@ -462,12 +469,12 @@ class Body(object):
                 int: object unique id.
                 int: link index or -1 for the base
                 int: visual geometry type (TBD)
-                np.float[3]: dimensions (size, local scale) of the geometry
+                np.array[float[3]]: dimensions (size, local scale) of the geometry
                 str: path to the triangle mesh, if any. Typically relative to the URDF, SDF or MJCF file location, but
                     could be absolute
-                np.float[3]: position of local visual frame, relative to link/joint frame
-                np.float[4]: orientation of local visual frame relative to link/joint frame
-                list of 4 floats: URDF color (if any specified) in Red / Green / Blue / Alpha
+                np.array[float[3]]: position of local visual frame, relative to link/joint frame
+                np.array[float[4]]: orientation of local visual frame relative to link/joint frame
+                list[float[4]]: URDF color (if any specified) in Red / Green / Blue / Alpha
                 int: texture unique id of the shape or -1 if None. This field only exists if using
                     VISUAL_SHAPE_DATA_TEXTURE_UNIQUE_IDS (=1) flag.
         """
@@ -513,22 +520,22 @@ class Body(object):
         Warning: note that we do not convert the data here.
 
         Args:
-            link_ids (int, list of int): link id, or list of desired link ids.
+            link_ids (int, list[int]): link id, or list of desired link ids.
             compute_link_velocity (bool): if True, the Cartesian world velocity will be computed and returned.
             compute_forward_kinematics (bool): if True, the Cartesian world position/orientation will be recomputed
                 using forward kinematics.
 
         Returns:
             if 1 link:
-                [0] np.array[3]: Cartesian position of center of mass
-                [1] np.array[4]: Cartesian orientation of center of mass
-                [2] np.array[3]: local position offset of inertial frame (CoM) expressed in the URDF link frame
-                [3] np.array[4]: local orientation (quat. [x,y,z,w]) offset of the inertial frame expressed in URDF
-                    link frame
-                [4] np.array[3]: world position of the URDF link frame
-                [5] np.array[4]: world orientation of the URDF link frame
-                [6] np.array[3]: Cartesian world linear velocity
-                [7] np.array[3]: Cartesian world angular velocity
+                [0] np.array[float[3]]: Cartesian position of center of mass
+                [1] np.array[float[4]]: Cartesian orientation of center of mass
+                [2] np.array[float[3]]: local position offset of inertial frame (CoM) expressed in the URDF link frame
+                [3] np.array[float[4]]: local orientation (quat. [x,y,z,w]) offset of the inertial frame expressed in
+                    URDF link frame
+                [4] np.array[float[3]]: world position of the URDF link frame
+                [5] np.array[float[4]]: world orientation of the URDF link frame
+                [6] np.array[float[3]]: Cartesian world linear velocity
+                [7] np.array[float[3]]: Cartesian world angular velocity
             if multiple links: list of above
         """
         if isinstance(link_ids, int):  # one link
@@ -543,7 +550,7 @@ class Body(object):
         Get the state of the given joint(s).
 
         Args:
-            joint_ids (int, list of int): id of the joint, or list of joint ids.
+            joint_ids (int, list[int]): id of the joint, or list of joint ids.
 
         Returns:
             for 1 joint:
@@ -565,7 +572,7 @@ class Body(object):
         only the desired information. Also, note that we do not convert the data here.
 
         Args:
-            joint_ids (int, list of int): joint id, or list of joint ids.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
@@ -586,9 +593,9 @@ class Body(object):
                 [11] float:     maximum velocity specified in URDF. Note that this value is not used in actual
                                 motor control commands at the moment.
                 [12] str:       name of the link (as specified in the URDF/SDF/etc file)
-                [13] np.array[3]:  joint axis in local frame (ignored for JOINT_FIXED)
-                [14] np.array[3]:  joint position in parent frame
-                [15] np.array[4]:  joint orientation in parent frame (x, y, z, w)
+                [13] np.array[float[3]]:  joint axis in local frame (ignored for JOINT_FIXED)
+                [14] np.array[float[3]]:  joint position in parent frame
+                [15] np.array[float[4]]:  joint orientation in parent frame (x, y, z, w)
                 [16] int:       parent link index, -1 for base
 
             if multiple joints: list of joint information (i.e. list of above)

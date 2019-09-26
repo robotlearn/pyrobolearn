@@ -231,13 +231,13 @@ class BulletROS(Bullet):  # , ROS):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: joint position [rad]
             if multiple joints:
-                np.float[N]: joint positions [rad]
+                np.array[float[N]]: joint positions [rad]
         """
         if body_id in self.subscribers:
             q = self.subscribers[body_id].get_joint_positions(joint_ids)
@@ -258,12 +258,12 @@ class BulletROS(Bullet):  # , ROS):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
-            positions (float, np.float[N]): desired position, or list of desired positions [rad]
-            velocities (None, float, np.float[N]): desired velocity, or list of desired velocities [rad/s]
-            kps (None, float, np.float[N]): position gain(s)
-            kds (None, float, np.float[N]): velocity gain(s)
-            forces (None, float, np.float[N]): maximum motor force(s)/torque(s) used to reach the target values.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            positions (float, np.array[float[N]]): desired position, or list of desired positions [rad]
+            velocities (None, float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
+            kps (None, float, np.array[float[N]]): position gain(s)
+            kds (None, float, np.array[float[N]]): velocity gain(s)
+            forces (None, float, np.array[float[N]]): maximum motor force(s)/torque(s) used to reach the target values.
         """
         super(BulletROS, self).set_joint_positions(body_id, joint_ids, positions, velocities, kps, kds, forces)
         if body_id in self.publishers:
@@ -276,13 +276,13 @@ class BulletROS(Bullet):  # , ROS):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: joint velocity [rad/s]
             if multiple joints:
-                np.float[N]: joint velocities [rad/s]
+                np.array[float[N]]: joint velocities [rad/s]
         """
         if body_id in self.subscribers:
             dq = self.subscribers[body_id].get_joint_velocities(joint_ids)
@@ -303,9 +303,9 @@ class BulletROS(Bullet):  # , ROS):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
-            velocities (float, np.float[N]): desired velocity, or list of desired velocities [rad/s]
-            max_force (None, float, np.float[N]): maximum motor forces/torques
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            velocities (float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
+            max_force (None, float, np.array[float[N]]): maximum motor forces/torques
         """
         super(BulletROS, self).set_joint_velocities(body_id, joint_ids, velocities, max_force)
         if body_id in self.publishers:
@@ -320,13 +320,13 @@ class BulletROS(Bullet):  # , ROS):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: torque [Nm]
             if multiple joints:
-                np.float[N]: torques associated to the given joints [Nm]
+                np.array[float[N]]: torques associated to the given joints [Nm]
         """
         if body_id in self.subscribers:
             torques = self.subscribers[body_id].get_joint_torques(joint_ids)
@@ -347,8 +347,8 @@ class BulletROS(Bullet):  # , ROS):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
-            torques (float, list of float): desired torque(s) to apply to the joint(s) [N].
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            torques (float, list[float]): desired torque(s) to apply to the joint(s) [N].
         """
         super(BulletROS, self).set_joint_torques(body_id, joint_ids, torques)
         if body_id in self.publishers:

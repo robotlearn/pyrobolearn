@@ -23,17 +23,23 @@ class Blackbird(BipedRobot):
     roughly 15 kg" [1].
 
     References:
-        [1] https://hackaday.io/project/160882-blackbird-bipedal-robot
-        [2] https://github.com/G-Levine
+        - [1] https://hackaday.io/project/160882-blackbird-bipedal-robot
+        - [2] https://github.com/G-Levine
     """
 
-    def __init__(self,
-                 simulator,
-                 position=(0, 0, 1.2),
-                 orientation=(0, 0, 0, 1),
-                 fixed_base=False,
-                 scale=1.,
+    def __init__(self, simulator, position=(0, 0, 1.2), orientation=(0, 0, 0, 1), fixed_base=False, scale=1.,
                  urdf=os.path.dirname(__file__) + '/urdfs/blackbird/blackbird_biped.urdf'):
+        """
+        Initialize the Blackbird robot.
+
+        Args:
+            simulator (Simulator): simulator instance.
+            position (np.array[float[3]]): Cartesian world position.
+            orientation (np.array[float[4]]): Cartesian world orientation expressed as a quaternion [x,y,z,w].
+            fixed_base (bool): if True, the robot base will be fixed in the world.
+            scale (float): scaling factor that is used to scale the robot.
+            urdf (str): path to the urdf. Do not change it unless you know what you are doing.
+        """
 
         self.height = 1.2
         self.base_height = self.height
@@ -64,7 +70,7 @@ class Blackbird(BipedRobot):
         # self.feet = [self.get_link_ids(link) for link in ['left_toe', 'right_toe'] if link in self.link_names]
         #
         # # set joint angles to home position
-        # self.set_joint_home_positions()
+        # self.set_home_joint_positions()
 
     def get_home_joint_positions(self):
         """Return the joint positions for the home position"""
@@ -73,11 +79,11 @@ class Blackbird(BipedRobot):
 
 if __name__ == "__main__":
     from itertools import count
-    from pyrobolearn.simulators import BulletSim
+    from pyrobolearn.simulators import Bullet
     from pyrobolearn.worlds import BasicWorld
 
     # Create simulator
-    sim = BulletSim()
+    sim = Bullet()
 
     # create world
     world = BasicWorld(sim)
@@ -94,5 +100,5 @@ if __name__ == "__main__":
     # run simulator
     for _ in count():
         # robot.update_joint_slider()
-        # robot.move_joint_home_positions()
+        # robot.move_home_joint_positions()
         world.step(sleep_dt=1./240)

@@ -108,6 +108,7 @@ class Reward(object):
         self.action = action
         self.rewards = rewards
         self.range = range
+        self.value = None  # cache the last float value computed by the reward
 
         # # create automatically binary operator methods
         # op_names = ['__add__', '__div__', '__floordiv__', '__iadd__', '__idiv__', '__ifloordiv__', '__imod__',

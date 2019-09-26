@@ -15,11 +15,11 @@
   <!-- One servo has a weight of approximately 0.055kg -->
   <link name="thorax">
     <inertial> <!-- these inertia are calculated based on the visual meshes using Meshlab, and using a density of 1kg/m^3 (http://gazebosim.org/tutorials?tut=inertia) -->
-      <!--mass value="1"/> <!-- volume = 0.061867e-3 -->
+      <!--mass value="1"/--> <!-- volume = 0.061867e-3 -->
       <mass value="0.16765957"/> <!-- volume = 0.061867e-3m^3, density = 2,710kg/m^3 -->
       <origin xyz="0.000137 0.000006 0.002405"/>
       <!--inertia ixx="0.011935e-5" ixy="0.0" ixz="-0.000021e-5" iyy="0.022562e-5" iyz="-0.000001e-5" izz="0.026533e-5"/-->
-      <!--inertia ixx="0.00192913831" ixy="0.0" ixz="-0.00000339437" iyy="0.00364685535" iyz="-1.6163706e-7" izz="0.00428871611"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00192913831" ixy="0.0" ixz="-0.00000339437" iyy="0.00364685535" iyz="-1.6163706e-7" izz="0.00428871611"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="0.00032343849" ixy="0.0" ixz="-5.69098615e-7" iyy="0.00061143019" iyz="-2.71e-8" izz="0.00071904429"/> <!-- divided by the volume and multiplied by the mass -->
     </inertial>
     <visual>
@@ -66,7 +66,7 @@
       <mass value="0.120"/> <!-- volume = 0.033302e-3, mass of 2 servos = 0,110kg + mass of a little bit of alloy = 0.010kg (approx) -->
       <origin xyz="0.014769 -0.007977 0.004815"/>
       <!--inertia ixx="0.001380e-5" ixy="-0.000093e-5" ixz="-0.000177e-5" iyy="0.001442e-5" iyz="-0.000030e-5" izz="0.001371e-5"/-->
-      <!--inertia ixx="0.00041438952" ixy="-0.00002792625" ixz="-0.00005314996" iyy="0.00043300702" iyz="-0.00000900846" izz="0.00041168698"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00041438952" ixy="-0.00002792625" ixz="-0.00005314996" iyy="0.00043300702" iyz="-0.00000900846" izz="0.00041168698"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="0.00004972674" ixy="-0.00000335115" ixz="-0.00000637799" iyy="0.00005196084" iyz="-0.00000108101" izz="0.00004940243"/> <!-- divided by the volume and multiplied by the mass -->
     </inertial>
     <visual>
@@ -97,7 +97,7 @@
       <mass value="0.00834951"/> <!-- volume = 0.003081e-3, density = 2,710kg/m^3 -->
       <origin xyz="0.0400002 0.0017746 0.0213350"/>
       <!--inertia ixx="0.000012e-5" ixy="0.0e-5" ixz="0.0e-5" iyy="0.000319e-5" iyz="0.0e-5" izz="0.000330e-5"/-->
-      <!--inertia ixx="0.00003894839" ixy="0.0" ixz="0.0" iyy="0.00103537812" iyz="0.0" izz="0.00107108081"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00003894839" ixy="0.0" ixz="0.0" iyy="0.00103537812" iyz="0.0" izz="0.00107108081"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="3.25199972e-7" ixy="0.0" ixz="0.0" iyy="0.00000864489" iyz="0.0" izz="0.00000894299"/> <!-- divided by the volume and multiplied by the mass -->
     </inertial>
     <visual>
@@ -128,7 +128,7 @@
       <mass value="0.05564726"/> <!-- volume = 0.016106e-3, density = 2,710kg + 0.013kg for the servo (a little bit random) -->
       <origin xyz="-0.0025176 0.0017559 0.0028322"/>
       <!--inertia ixx="0.000317e-5" ixy="-0.000054e-5" ixz="0.000061e-5" iyy="0.001368e-5" iyz="0.000011e-5" izz="0.001244e-5"/-->
-      <!--inertia ixx="0.00019682106" ixy="-0.00003352787" ixz="0.00003787408" iyy="0.0008493729" iyz="0.00000682975" izz="0.00077238296"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00019682106" ixy="-0.00003352787" ixz="0.00003787408" iyy="0.0008493729" iyz="0.00000682975" izz="0.00077238296"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="0.00001095255" ixy="-0.00000186573" ixz="0.00000210758" iyy="0.00004726527" iyz="3.80056874e-7" izz="0.00004298099"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
@@ -183,7 +183,7 @@
       <mass value="0.120"/> <!-- volume = 0.033302e-3, mass of 2 servos = 0,110kg + mass of a little bit of alloy = 0.010kg (approx) -->
       <origin xyz="0.014769 -0.007977 0.004815"/>
       <!--inertia ixx="0.001380e-5" ixy="-0.000093e-5" ixz="-0.000177e-5" iyy="0.001442e-5" iyz="-0.000030e-5" izz="0.001371e-5"/-->
-      <!--inertia ixx="0.00041438952" ixy="-0.00002792625" ixz="-0.00005314996" iyy="0.00043300702" iyz="-0.00000900846" izz="0.00041168698"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00041438952" ixy="-0.00002792625" ixz="-0.00005314996" iyy="0.00043300702" iyz="-0.00000900846" izz="0.00041168698"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="0.00004972674" ixy="-0.00000335115" ixz="-0.00000637799" iyy="0.00005196084" iyz="-0.00000108101" izz="0.00004940243"/> <!-- divided by the volume and multiplied by the mass -->
     </inertial>
     <visual>
@@ -214,7 +214,7 @@
       <mass value="0.00834951"/> <!-- volume = 0.003081e-3, density = 2,710kg/m^3 -->
       <origin xyz="0.0400002 0.0017746 0.0213350"/>
       <!--inertia ixx="0.000012e-5" ixy="0.0e-5" ixz="0.0e-5" iyy="0.000319e-5" iyz="0.0e-5" izz="0.000330e-5"/-->
-      <!--inertia ixx="0.00003894839" ixy="0.0" ixz="0.0" iyy="0.00103537812" iyz="0.0" izz="0.00107108081"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00003894839" ixy="0.0" ixz="0.0" iyy="0.00103537812" iyz="0.0" izz="0.00107108081"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="3.25199972e-7" ixy="0.0" ixz="0.0" iyy="0.00000864489" iyz="0.0" izz="0.00000894299"/> <!-- divided by the volume and multiplied by the mass -->
     </inertial>
     <visual>
@@ -245,7 +245,7 @@
       <mass value="0.05564726"/> <!-- volume = 0.016106e-3, density = 2,710kg + 0.013kg for the servo (a little bit random) -->
       <origin xyz="-0.0025176 0.0017559 0.0028322"/>
       <!--inertia ixx="0.000317e-5" ixy="-0.000054e-5" ixz="0.000061e-5" iyy="0.001368e-5" iyz="0.000011e-5" izz="0.001244e-5"/-->
-      <!--inertia ixx="0.00019682106" ixy="-0.00003352787" ixz="0.00003787408" iyy="0.0008493729" iyz="0.00000682975" izz="0.00077238296"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00019682106" ixy="-0.00003352787" ixz="0.00003787408" iyy="0.0008493729" iyz="0.00000682975" izz="0.00077238296"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="0.00001095255" ixy="-0.00000186573" ixz="0.00000210758" iyy="0.00004726527" iyz="3.80056874e-7" izz="0.00004298099"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
@@ -300,7 +300,7 @@
       <mass value="0.120"/> <!-- volume = 0.033302e-3, mass of 2 servos = 0,110kg + mass of a little bit of alloy = 0.010kg (approx) -->
       <origin xyz="0.014769 -0.007977 0.004815"/>
       <!--inertia ixx="0.001380e-5" ixy="-0.000093e-5" ixz="-0.000177e-5" iyy="0.001442e-5" iyz="-0.000030e-5" izz="0.001371e-5"/-->
-      <!--inertia ixx="0.00041438952" ixy="-0.00002792625" ixz="-0.00005314996" iyy="0.00043300702" iyz="-0.00000900846" izz="0.00041168698"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00041438952" ixy="-0.00002792625" ixz="-0.00005314996" iyy="0.00043300702" iyz="-0.00000900846" izz="0.00041168698"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="0.00004972674" ixy="-0.00000335115" ixz="-0.00000637799" iyy="0.00005196084" iyz="-0.00000108101" izz="0.00004940243"/> <!-- divided by the volume and multiplied by the mass -->
     </inertial>
     <visual>
@@ -331,7 +331,7 @@
       <mass value="0.00834951"/> <!-- volume = 0.003081e-3, density = 2,710kg/m^3 -->
       <origin xyz="0.0400002 0.0017746 0.0213350"/>
       <!--inertia ixx="0.000012e-5" ixy="0.0e-5" ixz="0.0e-5" iyy="0.000319e-5" iyz="0.0e-5" izz="0.000330e-5"/-->
-      <!--inertia ixx="0.00003894839" ixy="0.0" ixz="0.0" iyy="0.00103537812" iyz="0.0" izz="0.00107108081"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00003894839" ixy="0.0" ixz="0.0" iyy="0.00103537812" iyz="0.0" izz="0.00107108081"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="3.25199972e-7" ixy="0.0" ixz="0.0" iyy="0.00000864489" iyz="0.0" izz="0.00000894299"/> <!-- divided by the volume and multiplied by the mass -->
     </inertial>
     <visual>
@@ -362,7 +362,7 @@
       <mass value="0.05564726"/> <!-- volume = 0.016106e-3, density = 2,710kg + 0.013kg for the servo (a little bit random) -->
       <origin xyz="-0.0025176 0.0017559 0.0028322"/>
       <!--inertia ixx="0.000317e-5" ixy="-0.000054e-5" ixz="0.000061e-5" iyy="0.001368e-5" iyz="0.000011e-5" izz="0.001244e-5"/-->
-      <!--inertia ixx="0.00019682106" ixy="-0.00003352787" ixz="0.00003787408" iyy="0.0008493729" iyz="0.00000682975" izz="0.00077238296"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00019682106" ixy="-0.00003352787" ixz="0.00003787408" iyy="0.0008493729" iyz="0.00000682975" izz="0.00077238296"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="0.00001095255" ixy="-0.00000186573" ixz="0.00000210758" iyy="0.00004726527" iyz="3.80056874e-7" izz="0.00004298099"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
@@ -417,7 +417,7 @@
       <mass value="0.120"/> <!-- volume = 0.033302e-3, mass of 2 servos = 0,110kg + mass of a little bit of alloy = 0.010kg (approx) -->
       <origin xyz="0.014769 0.007977 0.004815"/>
       <!--inertia ixx="0.001380e-5" ixy="0.000093e-5" ixz="-0.000177e-5" iyy="0.001442e-5" iyz="0.000030e-5" izz="0.001371e-5"/-->
-      <!--inertia ixx="0.00041438952" ixy="0.00002792625" ixz="-0.00005314996" iyy="0.00043300702" iyz="0.00000900846" izz="0.00041168698"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00041438952" ixy="0.00002792625" ixz="-0.00005314996" iyy="0.00043300702" iyz="0.00000900846" izz="0.00041168698"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="0.00004972674" ixy="0.00000335115" ixz="-0.00000637799" iyy="0.00005196084" iyz="0.00000108101" izz="0.00004940243"/> <!-- divided by the volume and multiplied by the mass -->
     </inertial>
     <visual>
@@ -448,7 +448,7 @@
       <mass value="0.00834951"/> <!-- volume = 0.003081e-3, density = 2,710kg/m^3 -->
       <origin xyz="0.0400002 0.0017746 -0.0213350"/>
       <!--inertia ixx="0.000012e-5" ixy="0.0e-5" ixz="0.0e-5" iyy="0.000319e-5" iyz="0.0e-5" izz="0.000330e-5"/-->
-      <!--inertia ixx="0.00003894839" ixy="0.0" ixz="0.0" iyy="0.00103537812" iyz="0.0" izz="0.00107108081"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00003894839" ixy="0.0" ixz="0.0" iyy="0.00103537812" iyz="0.0" izz="0.00107108081"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="3.25199972e-7" ixy="0.0" ixz="0.0" iyy="0.00000864489" iyz="0.0" izz="0.00000894299"/> <!-- divided by the volume and multiplied by the mass -->
     </inertial>
     <visual>
@@ -479,7 +479,7 @@
       <mass value="0.05564726"/> <!-- volume = 0.016106e-3, density = 2,710kg + 0.013kg for the servo (a little bit random) -->
       <origin xyz="-0.0025176 0.0017559 -0.0028322"/>
       <!--inertia ixx="0.000317e-5" ixy="-0.000054e-5" ixz="-0.000061e-5" iyy="0.001368e-5" iyz="-0.000011e-5" izz="0.001244e-5"/-->
-      <!--inertia ixx="0.00019682106" ixy="-0.00003352787" ixz="-0.00003787408" iyy="0.0008493729" iyz="-0.00000682975" izz="0.00077238296"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00019682106" ixy="-0.00003352787" ixz="-0.00003787408" iyy="0.0008493729" iyz="-0.00000682975" izz="0.00077238296"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="0.00001095255" ixy="-0.00000186573" ixz="-0.00000210758" iyy="0.00004726527" iyz="-3.80056874e-7" izz="0.00004298099"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
@@ -534,7 +534,7 @@
       <mass value="0.120"/> <!-- volume = 0.033302e-3, mass of 2 servos = 0,110kg + mass of a little bit of alloy = 0.010kg (approx) -->
       <origin xyz="0.014769 0.007977 0.004815"/>
       <!--inertia ixx="0.001380e-5" ixy="0.000093e-5" ixz="-0.000177e-5" iyy="0.001442e-5" iyz="0.000030e-5" izz="0.001371e-5"/-->
-      <!--inertia ixx="0.00041438952" ixy="0.00002792625" ixz="-0.00005314996" iyy="0.00043300702" iyz="0.00000900846" izz="0.00041168698"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00041438952" ixy="0.00002792625" ixz="-0.00005314996" iyy="0.00043300702" iyz="0.00000900846" izz="0.00041168698"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="0.00004972674" ixy="0.00000335115" ixz="-0.00000637799" iyy="0.00005196084" iyz="0.00000108101" izz="0.00004940243"/> <!-- divided by the volume and multiplied by the mass -->
     </inertial>
     <visual>
@@ -565,7 +565,7 @@
       <mass value="0.00834951"/> <!-- volume = 0.003081e-3, density = 2,710kg/m^3 -->
       <origin xyz="0.0400002 0.0017746 -0.0213350"/>
       <!--inertia ixx="0.000012e-5" ixy="0.0e-5" ixz="0.0e-5" iyy="0.000319e-5" iyz="0.0e-5" izz="0.000330e-5"/-->
-      <!--inertia ixx="0.00003894839" ixy="0.0" ixz="0.0" iyy="0.00103537812" iyz="0.0" izz="0.00107108081"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00003894839" ixy="0.0" ixz="0.0" iyy="0.00103537812" iyz="0.0" izz="0.00107108081"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="3.25199972e-7" ixy="0.0" ixz="0.0" iyy="0.00000864489" iyz="0.0" izz="0.00000894299"/> <!-- divided by the volume and multiplied by the mass -->
     </inertial>
     <visual>
@@ -596,7 +596,7 @@
       <mass value="0.05564726"/> <!-- volume = 0.016106e-3, density = 2,710kg + 0.013kg for the servo (a little bit random) -->
       <origin xyz="-0.0025176 0.0017559 -0.0028322"/>
       <!--inertia ixx="0.000317e-5" ixy="-0.000054e-5" ixz="-0.000061e-5" iyy="0.001368e-5" iyz="-0.000011e-5" izz="0.001244e-5"/-->
-      <!--inertia ixx="0.00019682106" ixy="-0.00003352787" ixz="-0.00003787408" iyy="0.0008493729" iyz="-0.00000682975" izz="0.00077238296"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00019682106" ixy="-0.00003352787" ixz="-0.00003787408" iyy="0.0008493729" iyz="-0.00000682975" izz="0.00077238296"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="0.00001095255" ixy="-0.00000186573" ixz="-0.00000210758" iyy="0.00004726527" iyz="-3.80056874e-7" izz="0.00004298099"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>
@@ -651,7 +651,7 @@
       <mass value="0.120"/> <!-- volume = 0.033302e-3, mass of 2 servos = 0,110kg + mass of a little bit of alloy = 0.010kg (approx) -->
       <origin xyz="0.014769 0.007977 0.004815"/>
       <!--inertia ixx="0.001380e-5" ixy="0.000093e-5" ixz="-0.000177e-5" iyy="0.001442e-5" iyz="0.000030e-5" izz="0.001371e-5"/-->
-      <!--inertia ixx="0.00041438952" ixy="0.00002792625" ixz="-0.00005314996" iyy="0.00043300702" iyz="0.00000900846" izz="0.00041168698"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00041438952" ixy="0.00002792625" ixz="-0.00005314996" iyy="0.00043300702" iyz="0.00000900846" izz="0.00041168698"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="0.00004972674" ixy="0.00000335115" ixz="-0.00000637799" iyy="0.00005196084" iyz="0.00000108101" izz="0.00004940243"/> <!-- divided by the volume and multiplied by the mass -->
     </inertial>
     <visual>
@@ -682,7 +682,7 @@
       <mass value="0.00834951"/> <!-- volume = 0.003081e-3, density = 2,710kg/m^3 -->
       <origin xyz="0.0400002 0.0017746 -0.0213350"/>
       <!--inertia ixx="0.000012e-5" ixy="0.0e-5" ixz="0.0e-5" iyy="0.000319e-5" iyz="0.0e-5" izz="0.000330e-5"/-->
-      <!--inertia ixx="0.00003894839" ixy="0.0" ixz="0.0" iyy="0.00103537812" iyz="0.0" izz="0.00107108081"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00003894839" ixy="0.0" ixz="0.0" iyy="0.00103537812" iyz="0.0" izz="0.00107108081"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="3.25199972e-7" ixy="0.0" ixz="0.0" iyy="0.00000864489" iyz="0.0" izz="0.00000894299"/> <!-- divided by the volume and multiplied by the mass -->
     </inertial>
     <visual>
@@ -713,7 +713,7 @@
       <mass value="0.05564726"/> <!-- volume = 0.016106e-3, density = 2,710kg + 0.013kg for the servo (a little bit random) -->
       <origin xyz="-0.0025176 0.0017559 -0.0028322"/>
       <!--inertia ixx="0.000317e-5" ixy="-0.000054e-5" ixz="-0.000061e-5" iyy="0.001368e-5" iyz="-0.000011e-5" izz="0.001244e-5"/-->
-      <!--inertia ixx="0.00019682106" ixy="-0.00003352787" ixz="-0.00003787408" iyy="0.0008493729" iyz="-0.00000682975" izz="0.00077238296"/> <!-- divided by the volume, just need to be multiplied by the mass -->
+      <!--inertia ixx="0.00019682106" ixy="-0.00003352787" ixz="-0.00003787408" iyy="0.0008493729" iyz="-0.00000682975" izz="0.00077238296"/--> <!-- divided by the volume, just need to be multiplied by the mass -->
       <inertia ixx="0.00001095255" ixy="-0.00000186573" ixz="-0.00000210758" iyy="0.00004726527" iyz="-3.80056874e-7" izz="0.00004298099"/> <!-- divided by the volume, just need to be multiplied by the mass -->
     </inertial>
     <visual>

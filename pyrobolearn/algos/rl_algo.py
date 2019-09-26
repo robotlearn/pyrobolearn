@@ -15,6 +15,8 @@ from pyrobolearn.algos.explorer import Explorer
 from pyrobolearn.algos.evaluator import Evaluator
 from pyrobolearn.algos.updater import Updater
 
+from pyrobolearn.metrics import Metric
+
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -148,7 +150,7 @@ class RLAlgo(object):  # Algo):
         [5] OpenAI - Spinning Up: https://spinningup.openai.com/
     """
 
-    def __init__(self, explorer, evaluator, updater, dynamic_model=None):
+    def __init__(self, explorer, evaluator, updater, dynamic_model=None, metrics=None):
         """
         Initialize the reinforcement learning algorithm.
 
@@ -157,6 +159,7 @@ class RLAlgo(object):  # Algo):
             evaluator (Evaluator): evaluate the actions
             updater (Updater): update the approximators (rl, value-functions,...)
             dynamic_model (None): dynamical model
+            metrics ((list of) Metric, None): metrics that are used to evaluate the algorithm.
         """
 
         super(RLAlgo, self).__init__()
@@ -171,6 +174,8 @@ class RLAlgo(object):  # Algo):
 
         self.best_reward = -np.infty
         self.best_parameters = None
+
+        self.metrics = metrics
 
     ##############
     # Properties #
@@ -265,6 +270,31 @@ class RLAlgo(object):  # Algo):
         """Return the losses."""
         return self.updater.losses
 
+    @property
+    def metrics(self):
+        """Return the metric instances."""
+        return self._metrics
+
+    @metrics.setter
+    def metrics(self, metrics):
+        """Set the metrics."""
+        # check metrics type
+        if metrics is None:
+            metrics = []
+        elif isinstance(metrics, Metric):
+            metrics = [metrics]
+        elif not isinstance(metrics, list):
+            raise TypeError("Expecting the given 'metrics' to be an instance of `Metric` or a list of `Metric`, but "
+                            "got instead: {}".format(type(metrics)))
+
+        # check each metric type
+        for i, metric in enumerate(metrics):
+            if not isinstance(metric, Metric):
+                raise TypeError("The {}th metric is not an instance of `Metric`, but: {}".format(i, type(metric)))
+
+        # set metrics
+        self._metrics = metrics
+
     ###########
     # Methods #
     ###########
@@ -298,7 +328,7 @@ class RLAlgo(object):  # Algo):
     #     self.evaluator = evaluator
     #     self.updater = updater
 
-    def train(self, num_steps, num_rollouts=1, num_episodes=1, verbose=False, seed=None):
+    def train(self, num_steps, num_rollouts=1, num_episodes=1, verbose=0, seed=None):
         """
         Train the policy in the provided environment.
 
@@ -306,11 +336,14 @@ class RLAlgo(object):  # Algo):
             num_steps (int): number of step per rollout/trajectory
             num_rollouts (int): number of rollouts/trajectories per episode (default: 1)
             num_episodes (int): number of episodes (default: 1)
-            verbose (bool): if True, print details about the optimization process
+            verbose (int, bool): verbose level, select between {0=False, 1=True, 2}. If 1 or 2, it will print
+                information about the training process. The level 2 will print more detailed information. Do not use
+                it when the states / actions are big or high dimensional, as it could be very hard to make sense of
+                the data.
             seed (int): random seed
 
         Returns:
-            dict: history
+           Metric, list of Metric: metric instance(s).
         """
         history = {}
 
@@ -323,8 +356,15 @@ class RLAlgo(object):  # Algo):
         # set the policy in training mode
         self.policy.train()
 
+        # compute metrics  # TODO
+
         # for each episode
         for episode in range(num_episodes):
+
+            if verbose:
+                print("\n#####################")
+                print("#### Episode {}/{} ####".format(episode+1, num_episodes))
+                print("#####################")
 
             # # for each rollout
             # for rollout in range(num_rollouts):
@@ -344,16 +384,25 @@ class RLAlgo(object):  # Algo):
             # 3. update
             losses = self.updater.update(verbose=verbose)
 
+            # compute metrics
+            for metric in self.metrics:
+                metric.end_episode_update(episode_idx=episode, num_episodes=num_episodes)
+
             # add the loss in the history
             history.setdefault('losses', []).append(losses)
 
         # set the policy in test mode
         self.policy.eval()
 
+        # compute metrics  # TODO
+
         if verbose:
             print("\n#### End of the RL algo ####")
 
-        return history
+        # return history
+        if len(self.metrics) == 1:
+            return self.metrics[0]
+        return self.metrics
 
     def test(self, num_steps, dt=0., use_terminating_condition=False, render=True):  # , storage):
         """
@@ -400,13 +449,24 @@ class GradientRLAlgo(RLAlgo):
         TD residual,...)
     """
 
-    def __init__(self, explorer, evaluator, updater, dynamic_model=None):  # hyperparameters=None)
-        super(GradientRLAlgo, self).__init__(explorer, evaluator, updater, dynamic_model)
+    def __init__(self, explorer, evaluator, updater, dynamic_model=None, metrics=None):  # hyperparameters=None)
+        """
+        Initialize the gradient reinforcement learning algorithm.
+
+        Args:
+            explorer (Explorer): explorer that specifies how to explore in the environment
+            evaluator (Evaluator): evaluate the actions
+            updater (Updater): update the approximators (rl, value-functions,...)
+            dynamic_model (None): dynamical model
+            metrics ((list of) Metric, None): metrics that are used to evaluate the algorithm.
+        """
+        super(GradientRLAlgo, self).__init__(explorer, evaluator, updater, dynamic_model=dynamic_model, metrics=metrics)
 
 
 class EMRLAlgo(RLAlgo):
     r"""Expectation-Maximization reinforcement learning algorithm.
     """
 
-    def __init__(self, task, exploration_strategy, storage, dynamic_model=None):  # hyperparameters=None)
-        super(EMRLAlgo, self).__init__(task, exploration_strategy, storage, dynamic_model)
+    def __init__(self, task, exploration_strategy, storage, dynamic_model=None, metrics=None):  # hyperparameters=None)
+        super(EMRLAlgo, self).__init__(task, exploration_strategy, storage, dynamic_model=dynamic_model,
+                                       metrics=metrics)

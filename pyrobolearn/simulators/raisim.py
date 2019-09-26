@@ -1,34 +1,60 @@
 #!/usr/bin/env python
 """Define the RaiSim Simulator API.
 
-Warnings: Currently, the RaiSim simulator is closed-source and is only available for researchers at RSL and ETH Zurich.
+This is the main interface that communicates with the RaiSim simulator [1-5]. By defining this interface, it
+allows to decouple the PyRoboLearn framework from the simulator. It also converts some data types to the ones required
+by RaiSim. Because it didn't have a Python wrapper, one has been written using ``pybind11`` [6] and is available at:
+https://github.com/robotlearn/raisimpy
 
-This is the main interface that communicates with the RaiSim simulator [1, 2]. By defining this interface, it allows to
-decouple the PyRoboLearn framework from the simulator. It also converts some data types to the ones required by
-RaiSim.
+The signature of each method defined here are inspired by [1,2] but in accordance with the PEP8 style guide [7].
+Parts of the documentation for the methods have been copied-pasted from [2-5] for completeness purposes.
 
-The signature of each method defined here are inspired by [1,2] but in accordance with the PEP8 style guide [3].
-Parts of the documentation for the methods have been copied-pasted from [2] for completeness purposes.
+RaiSim is distributed under the End-User License Agreement (EULA) [8], and officially works on Ubuntu 16.04 and 18.04.
+
+- Supported Python versions: Python 2.7 and 3.5
+- Python wrappers: Pybind11 [10]
 
 Dependencies in PRL:
 * `pyrobolearn.simulators.simulator.Simulator`
 
 References:
-    [1] "Per-Contact Iteration Method for Solving Contact Dynamics", Hwangbo et al., 2018
-    [2] RaiSim: https://leggedrobotics.github.io/SimBenchmark/about/sims.html
-    [3] PEP8: https://www.python.org/dev/peps/pep-0008/
+    - [1] "Per-Contact Iteration Method for Solving Contact Dynamics", Hwangbo et al., 2018
+    - [2] RaiSim benchmarks: https://leggedrobotics.github.io/SimBenchmark/about/sims.html
+    - [3] RaiSim, a physics engine for robotics and AI research: https://github.com/leggedrobotics/raisimLib
+    - [4] raisimOgre - Visualizer for raisim: https://github.com/leggedrobotics/raisimOgre
+    - [5] raisimGym - RL examples using raisim: https://github.com/leggedrobotics/raisimGym
+    - [6] pybind11 (documentation): https://pybind11.readthedocs.io/en/stable/
+    - [7] PEP8: https://www.python.org/dev/peps/pep-0008/
+    - [8] RaiSim license: https://github.com/leggedrobotics/raisimLib/blob/master/LICENSE.md
+    - [9] RaiSimPy - A Python wrapper for Raisim: https://github.com/robotlearn/raisimpy
+    - [10] Pybind11: https://pybind11.readthedocs.io/en/stable/
+        - Cython, pybind11, cffi – which tool should you choose?:
+          http://blog.behnel.de/posts/cython-pybind11-cffi-which-tool-to-choose.html
 """
 
-# TODO:
-#  1. wait for ETH to release the simulator (not sure if they will ever do it...)
-#  2. check if a Python wrapper is provided, if not, will have to implement it
+import os
+import time
+from collections import OrderedDict
+import numpy as np
+
+
+# import raisim
+try:
+    import raisimpy as raisim
+except ImportError as e:
+    print(e.__str__() + "\nHINT: you need to install `raisimLib` and `raisimOgre`, and build the Python wrappers "
+                        "that are located in the `raisim_wrapper` folder.")
 
 # import PRL simulator
 from pyrobolearn.simulators.simulator import Simulator
+from pyrobolearn.utils.decorator import keyboard_interrupt
+from pyrobolearn.utils.mesh import convert_mesh
+from pyrobolearn.utils.parsers.robots import URDFParser
+
 
 __author__ = "Brian Delhaisse"
-__copyright__ = "Copyright 2018, PyRoboLearn"
-__credits__ = ["RaiSim (ETHz)", "Brian Delhaisse"]
+__copyright__ = "Copyright 2019, PyRoboLearn"
+__credits__ = ["RaiSim (ETHz, Hwangbo, Kang, Lee)", "Brian Delhaisse (raisimpy + PRL)"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
@@ -39,21 +65,51 @@ __status__ = "Development"
 class Raisim(Simulator):
     r"""RaiSim
 
-    This is a wrapper around the RaiSim simulator [1,2]. Currently, the simulator is closed-source and is only
-    available for researchers at RSL and ETH Zurich.
+    This is a wrapper around ``raisimpy`` [6] which is a Python around the RaiSim simulator [1-5].
 
     Examples:
         sim = Raisim()
 
     References:
-        [1] "Per-Contact Iteration Method for Solving Contact Dynamics", Hwangbo et al., 2018
-        [2] RaiSim: https://leggedrobotics.github.io/SimBenchmark/about/sims.html
+        - [1] "Per-Contact Iteration Method for Solving Contact Dynamics", Hwangbo et al., 2018
+        - [2] RaiSim, a physics engine for robotics and AI research: https://github.com/leggedrobotics/raisimLib
+        - [3] raisimOgre - Visualizer for raisim: https://github.com/leggedrobotics/raisimOgre
+        - [4] raisimGym - RL examples using raisim: https://github.com/leggedrobotics/raisimGym
+        - [5] RaiSim benchmark:  https://leggedrobotics.github.io/SimBenchmark/about/sims.html
+        - [6] RaiSimPy - A Python wrapper for Raisim: https://github.com/robotlearn/raisimpy
     """
 
-    def __init__(self, render=True, **kwargs):
-        super(Raisim, self).__init__(render, **kwargs)
-        raise NotImplementedError("The RaiSim simulator is not currently available as it has not been released for "
-                                  "the moment")
+    def __init__(self, render=True, num_instances=1, middleware=None, **kwargs):
+        """
+        Initialize the Raisim simulator.
+
+        Args:
+            render (bool): if True, it will open the GUI, otherwise, it will just run the server.
+            num_instances (int): number of simulator instances.
+            middleware (MiddleWare, None): middleware instance.
+            **kwargs (dict): optional arguments (this is not used here).
+        """
+        super(Raisim, self).__init__(render=render, num_instances=num_instances, middleware=middleware, **kwargs)
+
+        # create world
+        self.world = raisim.World()
+        self.sim = self.world  # alias
+
+        # define default timestep
+        self.default_timestep = self.world.get_time_step()  # 0.005
+        self.dt = self.default_timestep
+
+        # create visualizer and render if specified
+        self.visualizer = None
+        self._desired_fps = 60
+        self.visualization_cnt = 0
+
+        if self._render:
+            self._init_visualization()
+
+        # keep track of the loaded bodies
+        self._bodies = OrderedDict()  # {body_id: Body}
+        self._body_cnt = 0  # 0 is for the world
 
     ##############
     # Properties #
@@ -67,17 +123,22 @@ class Raisim(Simulator):
     @property
     def gravity(self):
         """Return the gravity in the simulator."""
-        return self.get_gravity()
+        return self.world.get_gravity()
 
     @gravity.setter
     def gravity(self, gravity):
         """Set the gravity in the simulator."""
-        self.set_gravity(gravity)
+        self.world.set_gravity(gravity)
 
     @property
     def camera(self):
         """Return the camera (yaw, pitch, distance, target_position) or None."""
         return self._camera
+
+    @property
+    def timestep(self):
+        """Return the simulator time step."""
+        return self.dt
 
     #############
     # Operators #
@@ -111,11 +172,209 @@ class Raisim(Simulator):
         memo[self] = sim
         return sim
 
+    ##################
+    # Static methods #
+    ##################
+
+    @staticmethod
+    def in_simulation():
+        """Return True if we are running in simulation instead of the real-world."""
+        return True
+
+    @staticmethod
+    def simulate_gas_dynamics():
+        """Return True if the simulator can simulate gases."""
+        return False
+
+    @staticmethod
+    def simulate_liquid_dynamics():
+        """Return True if the simulator can simulate liquids."""
+        return False
+
+    @staticmethod
+    def simulate_fluid_dynamics():
+        """Return True if the simulator can simulate fluids (gases and liquids)."""
+        return Simulator.simulate_gas_dynamics() and Simulator.simulate_liquid_dynamics()
+
+    @staticmethod
+    def simulate_soft_bodies():
+        """Return True if the simulator can simulate soft bodies."""
+        return False
+
+    @staticmethod
+    def has_middleware_communication_layer():
+        """Return True if the simulator has a middleware communication layer (like ROS, YARP, etc)."""
+        return False
+
+    @staticmethod
+    def supports_dynamic_loading():
+        """Return True if the simulator supports the dynamic loading of models."""
+        return True
+
+    @staticmethod
+    def supports_acceleration():
+        """Return True if the simulator provides acceleration (dynamic) information (such as joint accelerations, link
+        Cartesian accelerations, etc). If not, the `Robot` class will have to implement these using finite
+        difference."""
+        return False
+
+    @staticmethod
+    def supports_sensors(sensor_type=None):
+        """Return True if the simulator provides supports for the specified sensor."""
+        return False
+
+    @staticmethod
+    def supports_urdf():
+        """Return True if we can use URDFs."""
+        return True
+
+    @staticmethod
+    def supports_light():
+        """Return True if we can define and access to the lights in the simulator."""
+        return True
+
+    @staticmethod
+    def supports_depth_image():
+        """Return True if we can get depth images from the simulator."""
+        return False
+
+    @staticmethod
+    def supports_segmentation_images():
+        """Return True if we can get segmentation images from the simulator."""
+        return False
+
+    @staticmethod
+    def supports_visualization():
+        """Return True if there is a graphical user interface (GUI)."""
+        return True
+
+    @staticmethod
+    def supports_interactive_gui():
+        """Return True if the simulator has an interactive GUI."""
+        return True
+
+    @staticmethod
+    def supports_mousekeyboard_events():
+        """Return True if the simulator allows to capture mouse and keyboard events."""
+        return True  # however this requires some code
+
+    @staticmethod
+    def supports_visual_objects():
+        """Return True if we can simulate objects that do not have collision shapes."""
+        return True  # however it has to be coded in the wrapper
+
+    @staticmethod
+    def supports_plugins():
+        """Return True if we can use plugins."""
+        return False
+
+    @staticmethod
+    def supports_constraints(constraint_type):
+        """Return True if we can support the specified constraint type."""
+        if constraint_type == 'wire':
+            return True
+        return False
+
+    @staticmethod
+    def supports_realtime():
+        """Return True if the simulator supports real-time (meaning we don't need to step manually in the simulator).
+        Note that if we can step in the simulator, we can use threads to simulate the real-time. So the return value
+        should always be True."""
+        return True
+
+    @staticmethod
+    def supports_ray_casting():
+        """Return True if the simulator supports ray casting."""
+        return False
+
+    @staticmethod
+    def can_step():
+        """Return True if we can step manually in the simulator."""
+        return True
+
+    @staticmethod
+    def can_load_heightmap():
+        """Return True if the simulator can load a heightmap."""
+        return True
+
     ###########
     # Methods #
     ###########
 
-    # Simulators
+    def _init_visualization(self):
+
+        def normalize(array):
+            return np.asarray(array) / np.linalg.norm(array)
+
+        def setup_callback():
+            vis = raisim.OgreVis.get()
+
+            # light
+            light = vis.get_light()
+            light.set_diffuse_color(1, 1, 1)
+            light.set_cast_shadows(True)
+            # light.set_direction(normalize([-3., -3., -0.5]))
+            vis.get_light_node().set_position(3, 3, 3)
+
+            # load textures
+            vis.add_resource_directory(vis.get_resource_dir() + "/material/gravel")
+            vis.load_material("gravel.material")
+
+            vis.add_resource_directory(vis.get_resource_dir() + "/material/checkerboard")
+            vis.load_material("checkerboard.material")
+
+            # shadow setting
+            manager = vis.get_scene_manager()
+            manager.set_shadow_technique(raisim.ogre.ShadowTechnique.SHADOWTYPE_TEXTURE_ADDITIVE)
+            manager.set_shadow_texture_settings(2048, 3)
+
+            # scale related settings!! Please adapt it depending on your map size
+            # beyond this distance, shadow disappears
+            manager.set_shadow_far_distance(10)
+            # size of contact points and contact forces
+            vis.set_contact_visual_object_size(0.03, 0.6)
+            # speed of camera motion in freelook mode
+            vis.get_camera_man().set_top_speed(10)
+
+        # these methods must be called before initApp
+        vis = raisim.OgreVis.get()
+        vis.set_world(self.world)
+        vis.set_window_size(1800, 1000)
+        vis.set_default_callbacks()
+        vis.set_setup_callback(setup_callback)
+        vis.set_anti_aliasing(2)
+
+        # init
+        vis.init_app()
+
+        # set visualizer
+        self.visualizer = vis
+
+        # camera
+        camera = self.visualizer.get_camera_man().get_camera()
+        camera.set_position(8, -12, 6)
+        camera.pitch(1.2)
+        camera.yaw(0.6, raisim.ogre.Node.TransformSpace.TS_WORLD)
+
+    #################
+    # utils methods #
+    #################
+
+    @staticmethod
+    def _convert_wxyz_to_xyzw(q):
+        """Convert a quaternion in the (w,x,y,z) format to (x,y,z,w)."""
+        q = np.asarray(q)
+        return np.roll(q, shift=-1, axis=q.ndim - 1)
+
+    @staticmethod
+    def _convert_xyzw_to_wxyz(q):
+        """Convert a quaternion in the (x,y,z,w) format to (w,x,y,z)."""
+        q = np.asarray(q)
+        return np.roll(q, shift=1, axis=q.ndim - 1)
+
+    #############
+    # Simulator #
+    #############
 
     def reset(self, *args, **kwargs):
         """Reset the simulator."""
@@ -123,19 +382,43 @@ class Raisim(Simulator):
 
     def close(self):
         """Close the simulator."""
-        pass
+        if self.visualizer is not None:
+            self.visualizer.close_app()
+            self.visualizer = None
 
     def seed(self, seed=None):
         """Set the given seed in the simulator."""
+        # if seed is not None:
+        #     self.world.set_seed(seed)
         pass
 
+    @keyboard_interrupt
     def step(self, sleep_time=0):
         """Perform a step in the simulator, and sleep the specified amount of time.
 
         Args:
             sleep_time (float): amount of time to sleep after performing one step in the simulation.
         """
-        pass
+        # update world/simulator
+        self.world.integrate()
+
+        # if we need to render
+        if self._render:  # TODO: should we create the visualizer in a thread??
+            # if the visualizer is not defined, create one
+            if self.visualizer is None:
+                self._init_visualization()
+
+            # update the frame if time to update it
+            vis_decimation = int(1. / (self._desired_fps * self.dt) + 1.e-10)
+            if self.visualization_cnt % vis_decimation == 0:
+                self.visualizer.render_one_frame()
+                self.visualization_cnt = 0
+
+            # update visualization counter
+            self.visualization_cnt += 1
+
+        # if sleep_time:
+        #     time.sleep(sleep_time)
 
     def is_rendering(self):
         """Return True if the simulator is in the render mode."""
@@ -162,13 +445,22 @@ class Raisim(Simulator):
         """Hide the GUI."""
         self.render(False)
 
+    def get_time_step(self):
+        """Get the time step in the simulator.
+
+        Returns:
+            float: time step in the simulator
+        """
+        return self.world.get_time_step()
+
     def set_time_step(self, time_step):
         """Set the time step in the simulator.
 
         Args:
             time_step (float): Each time you call 'step' the time step will proceed with 'time_step'.
         """
-        pass
+        self.dt = time_step
+        self.world.set_time_step(time_step)
 
     def set_real_time(self, enable=True):
         """Enable real time in the simulator.
@@ -176,15 +468,19 @@ class Raisim(Simulator):
         Args:
             enable (bool): If True, it will enable the real-time simulation. If False, it will disable it.
         """
-        pass
+        self.real_time = True
+
+    def use_real_time(self):
+        """Return True if the simulator is in real-time mode."""
+        return self.real_time
 
     def pause(self):
         """Pause the simulator if in real-time."""
-        pass
+        raisim.gui.manual_stepping = True
 
     def unpause(self):
         """Unpause the simulator if in real-time."""
-        pass
+        raisim.gui.manual_stepping = False
 
     def get_physics_properties(self):
         """Get the physics engine parameters."""
@@ -204,7 +500,7 @@ class Raisim(Simulator):
 
     def get_gravity(self):
         """Return the gravity set in the simulator."""
-        pass
+        return self.world.get_gravity()
 
     def set_gravity(self, gravity=(0, 0, -9.81)):
         """Set the gravity in the simulator with the given acceleration.
@@ -212,7 +508,7 @@ class Raisim(Simulator):
         Args:
             gravity (list, tuple of 3 floats): acceleration in the x, y, z directions.
         """
-        pass
+        self.world.set_gravity(gravity)
 
     def save(self, filename=None, *args, **kwargs):
         """Save the state of the simulator.
@@ -234,54 +530,88 @@ class Raisim(Simulator):
         """
         pass
 
-    def load_plugin(self, plugin_path, name, *args, **kwargs):
-        """Load a certain plugin in the simulator.
+    ######################################
+    # Loading URDFs, SDFs, MJCFs, meshes #
+    ######################################
 
-        Args:
-            plugin_path (str): path, location on disk where to find the plugin
-            name (str): postfix name of the plugin that is appended to each API
+    @staticmethod
+    def _convert_mesh(filename, format='obj'):
+        extension = filename.split('.')[-1]
+        if extension.lower() != format:  # if different file format than obj convert it
+            basename = os.path.basename(filename)
+            basename_without_extension = ''.join(basename.split('.')[:-1])
+            # dirname = os.path.dirname(os.path.abspath(__file__)) + '/meshes/'  # Raisim uses relative paths
+            new_filename = basename_without_extension + '.' + format
+            if not os.path.isfile(new_filename):
+                convert_mesh(filename, 'meshes/' + new_filename, library='pyassimp')
+            return True, new_filename
+        return False, filename
 
-        Returns:
-             int: unique plugin id. If this id is negative, the plugin is not loaded. Once a plugin is loaded, you can
-                send commands to the plugin using `execute_plugin_commands`
-        """
-        pass
-
-    def execute_plugin_commands(self, plugin_id, *args, **kwargs):
-        """Execute the commands on the specified plugin.
-
-        Args:
-            plugin_id (int): unique plugin id.
-            *args (list): list of argument values to be interpreted by the plugin. One can be a string, while the
-                others must be integers or float.
-        """
-        pass
-
-    def unload_plugin(self, plugin_id, *args, **kwargs):
-        """Unload the specified plugin from the simulator.
-
-        Args:
-            plugin_id (int): unique plugin id.
-        """
-        pass
-
-    # loading URDFs, SDFs, MJCFs
-
-    def load_urdf(self, filename, position, orientation, use_fixed_base=0, scale=1.0, *args, **kwargs):
+    def load_urdf(self, filename, position, orientation=None, use_fixed_base=0, scale=1.0, *args, **kwargs):
         """Load a URDF file in the simulator.
 
         Args:
             filename (str): a relative or absolute path to the URDF file on the file system of the physics server.
-            position (vec3): create the base of the object at the specified position in world space coordinates [x,y,z]
-            orientation (quat): create the base of the object at the specified orientation as world space quaternion
-                [x,y,z,w]
+            position (np.array[float[3]]): create the base of the object at the specified position in world space
+              coordinates [x,y,z].
+            orientation (np.array[float[4]]): create the base of the object at the specified orientation as world
+              space quaternion [x,y,z,w].
             use_fixed_base (bool): force the base of the loaded object to be static
             scale (float): scale factor to the URDF model.
 
         Returns:
             int (non-negative): unique id associated to the load model.
         """
-        pass
+        # parse the URDF file
+        urdf_parser = URDFParser(filename=filename)
+        tree = urdf_parser.tree
+
+        # Raisim only accepts collision bodies in the obj format, so check that each mesh is in the correct format.
+        # If not, convert them.
+        urdf_changed = False
+        for body in tree.bodies.values():
+            for visual in body.visuals:
+                if visual.dtype == 'mesh':
+                    urdf_changed, new_filename = self._convert_mesh(visual.filename)
+                    visual.filename = new_filename
+            for collision in body.collisions:
+                if collision.dtype == 'mesh':
+                    urdf_changed, new_filename = self._convert_mesh(collision.filename)
+                    collision.filename = new_filename
+
+        # if we had to convert some meshes, just create a new URDF with the converted meshes
+        if urdf_changed:
+            root = urdf_parser.generate(tree)
+            basename = os.path.basename(filename)
+            dirname = os.path.dirname(os.path.abspath(__file__)) + '/meshes/'
+            filename = dirname + 'prl_generated_' + basename
+            urdf_parser.write(filename, root=root)
+
+        # load body
+        body = self.world.add_articulated_system(filename)
+
+        # set the position and orientation
+        body.set_base_position(position)
+        if orientation is not None:
+            body.set_base_orientation(orientation)
+
+        # set initial gains
+        num_dof = body.get_dof()
+        body.set_control_mode(raisim.ControlMode.PD_PLUS_FEEDFORWARD_TORQUE)
+        joint_p_gain, joint_d_gain = np.zeros(num_dof), np.zeros(num_dof)
+        joint_p_gain[-num_dof+6:] = 200.
+        joint_d_gain[-num_dof+6:] = 10.
+        body.set_pd_gains(joint_p_gain, joint_d_gain)
+
+        # increment body counter and remember the body
+        self._body_cnt += 1
+        self._bodies[self._body_cnt] = body
+
+        # if we need to render create visual shape
+        if self._render:
+            self.visualizer.create_graphical_object(body, name="body_" + str(self._body_cnt))
+
+        return self._body_cnt
 
     def load_sdf(self, filename, scaling=1., *args, **kwargs):
         """Load a SDF file in the simulator.
@@ -329,47 +659,109 @@ class Raisim(Simulator):
         """
         pass
 
-    @staticmethod
-    def get_available_sdfs(fullpath=False):
-        """Return the list of available SDFs in the simulator.
+    ##########
+    # Bodies #
+    ##########
+
+    def create_primitive_object(self, shape_type, position, mass, orientation=(0., 0., 0., 1.), radius=0.5,
+                                half_extents=(.5, .5, .5), height=1., filename=None, mesh_scale=(1., 1., 1.),
+                                plane_normal=(0., 0., 1.), rgba_color=None, specular_color=None, frame_position=None,
+                                frame_orientation=None, vertices=None, indices=None, uvs=None, normals=None, flags=-1):
+        """Create a primitive object in the simulator. This is basically the combination of `create_visual_shape`,
+        `create_collision_shape`, and `create_body`.
 
         Args:
-            fullpath (bool): If True, it will return the full path to the SDFs. If False, it will just return the
-                name of the SDF files (without the extension).
-        """
-        return []
+            shape_type (int): type of shape; GEOM_SPHERE (=2), GEOM_BOX (=3), GEOM_CAPSULE (=7), GEOM_CYLINDER (=4),
+                GEOM_PLANE (=6), GEOM_MESH (=5)
+            position (np.array[float[3]]): Cartesian world position of the base
+            mass (float): mass of the base, in kg (if using SI units)
+            orientation (np.array[float[4]]): Orientation of base as quaternion [x,y,z,w]
+            radius (float): only for GEOM_SPHERE, GEOM_CAPSULE, GEOM_CYLINDER
+            half_extents (np.array[float[3]], list/tuple of 3 floats): only for GEOM_BOX.
+            height (float): only for GEOM_CAPSULE, GEOM_CYLINDER (height = length).
+            filename (str): Filename for GEOM_MESH, currently only Wavefront .obj. Will create convex hulls for each
+                object (marked as 'o') in the .obj file.
+            mesh_scale (np.array[float[3]], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
+            plane_normal (np.array[float[3]], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
+            rgba_color (list/tuple of 4 floats): color components for red, green, blue and alpha, each in range [0..1].
+            specular_color (list/tuple of 3 floats): specular reflection color, red, green, blue components in range
+                [0..1]
+            frame_position (np.array[float[3]]): translational offset of the visual and collision shape with respect
+              to the link frame.
+            frame_orientation (np.array[float[4]]): rotational offset (quaternion x,y,z,w) of the visual and collision
+              shape with respect to the link frame.
+            vertices (list[np.array[float[3]]]): Instead of creating a mesh from obj file, you can provide vertices,
+              indices, uvs and normals
+            indices (list[int]): triangle indices, should be a multiple of 3.
+            uvs (list of np.array[2]): uv texture coordinates for vertices. Use `changeVisualShape` to choose the
+              texture image. The number of uvs should be equal to number of vertices.
+            normals (list[np.array[float[3]]]): vertex normals, number should be equal to number of vertices.
+            flags (int): unused / to be decided
 
-    @staticmethod
-    def get_available_urdfs(fullpath=False):
-        """Return the list of available URDFs in the simulator.
+        Returns:
+            int: non-negative unique id for primitive object, or -1 for failure
+        """
+        material = "white"
+        if rgba_color is not None:
+            rgb = rgba_color[:3]
+            if rgb == (1, 0, 0):
+                material = "red"
+            elif rgb == (0, 1, 0):
+                material = "green"
+            elif rgb == (0, 0, 1):
+                material = "blue"
+            elif rgb == (1, 1, 1):
+                material = "white"
+            else:
+                print("Material not defined for the given color")
+
+        if shape_type == self.GEOM_BOX:
+            x, y, z = half_extents
+            body = self.world.add_box(2*x, 2*y, 2*z, mass=mass, material=material)
+        elif shape_type == self.GEOM_SPHERE:
+            body = self.world.add_sphere(radius=radius, mass=mass, material=material)
+        elif shape_type == self.GEOM_CAPSULE:
+            body = self.world.add_capsule(radius=radius, height=height, mass=mass, material=material)
+        elif shape_type == self.GEOM_CYLINDER:
+            body = self.world.add_cylinder(radius=radius, height=height, mass=mass, material=material)
+        elif shape_type == self.GEOM_CONE:
+            body = self.world.add_cone(radius=radius, height=height, mass=mass, material=material)
+        # elif shape_type == self.GEOM_MESH:
+            # body = self.world.add_mesh(file_name=filename, mass=mass)
+        else:
+            raise NotImplementedError("Primitive object not defined for the given shape type.")
+
+        # set the position and orientation
+        body.set_position(position)
+        if orientation is not None:
+            body.set_orientation(orientation)
+
+        # increment body counter and remember the body
+        self._body_cnt += 1
+        self._bodies[self._body_cnt] = body
+
+        # if we need to render create visual shape
+        if self._render:
+            self.visualizer.create_graphical_object(body, name="body_" + str(self._body_cnt), material=material)
+
+        return self._body_cnt
+
+    def load_floor(self, dimension=20):
+        """Load a floor in the simulator.
 
         Args:
-            fullpath (bool): If True, it will return the full path to the URDFs. If False, it will just return the
-                name of the URDF files (without the extension).
+            dimension (float): dimension of the floor.
+
+        Returns:
+            int: non-negative unique id for the floor, or -1 for failure.
         """
-        return []
-
-    @staticmethod
-    def get_available_mjcfs(fullpath=False):
-        """Return the list of available MJCFs in the simulator.
-
-        Args:
-            fullpath (bool): If True, it will return the full path to the MJCFs. If False, it will just return the
-            name of the MJCF files (without the extension).
-        """
-        return []
-
-    @staticmethod
-    def get_available_objs(fullpath=False):
-        """Return the list of available OBJs in the simulator.
-
-        Args:
-            fullpath (bool): If True, it will return the full path to the OBJs. If False, it will just return the
-                name of the OBJ files (without the extension).
-        """
-        return []
-
-    # bodies
+        ground = self.world.add_ground()
+        if self._render:
+            self.visualizer.create_graphical_object(ground, dimension=dimension, name="floor",
+                                                    material="checkerboard_green")
+        self._body_cnt += 1
+        self._bodies[self._body_cnt] = ground
+        return self._body_cnt
 
     def create_body(self, visual_shape_id=-1, collision_shape_id=-1, mass=0., position=(0., 0., 0.),
                     orientation=(0., 0., 0., 1.), *args, **kwargs):
@@ -380,8 +772,8 @@ class Raisim(Simulator):
             collision_shape_id (int): unique id from createCollisionShape or -1. You can re-use the collision shape
                 for multiple multibodies (instancing)
             mass (float): mass of the base, in kg (if using SI units)
-            position (np.float[3]): Cartesian world position of the base
-            orientation (np.float[4]): Orientation of base as quaternion [x,y,z,w]
+            position (np.array[float[3]]): Cartesian world position of the base
+            orientation (np.array[float[4]]): Orientation of base as quaternion [x,y,z,w]
 
         Returns:
             int: non-negative unique id or -1 for failure.
@@ -394,7 +786,14 @@ class Raisim(Simulator):
         Args:
             body_id (int): unique body id.
         """
-        pass
+        body = self._bodies.pop(body_id)
+
+        # remove body from the world
+        self.world.remove_object(body)
+
+        # remove body from visualization
+        if self._render:
+            self.visualizer.remove(body)
 
     def num_bodies(self):
         """Return the number of bodies present in the simulator.
@@ -402,7 +801,9 @@ class Raisim(Simulator):
         Returns:
             int: number of bodies
         """
-        pass
+        # return len(self._bodies)
+        # return len(self.world.get_object_list)
+        return self.world.get_configuration_number()
 
     def get_body_info(self, body_id):
         """Get the specified body information.
@@ -426,7 +827,9 @@ class Raisim(Simulator):
         """
         pass
 
-    # constraint
+    ###############
+    # Constraints #
+    ###############
 
     def create_constraint(self, parent_body_id, parent_link_id, child_body_id, child_link_id, joint_type,
                           joint_axis, parent_frame_position, child_frame_position,
@@ -443,13 +846,13 @@ class Raisim(Simulator):
             child_link_id (int): child link index, or -1 for the base
             joint_type (int): joint type: JOINT_PRISMATIC (=1), JOINT_FIXED (=4), JOINT_POINT2POINT (=5),
                 JOINT_GEAR (=6)
-            joint_axis (np.float[3]): joint axis, in child link frame
-            parent_frame_position (np.float[3]): position of the joint frame relative to parent CoM frame.
-            child_frame_position (np.float[3]): position of the joint frame relative to a given child CoM frame (or
-                world origin if no child specified)
-            parent_frame_orientation (np.float[4]): the orientation of the joint frame relative to parent CoM
+            joint_axis (np.array[float[3]]): joint axis, in child link frame
+            parent_frame_position (np.array[float[3]]): position of the joint frame relative to parent CoM frame.
+            child_frame_position (np.array[float[3]]): position of the joint frame relative to a given child CoM frame
+                (or world origin if no child specified)
+            parent_frame_orientation (np.array[float[4]]): the orientation of the joint frame relative to parent CoM
                 coordinate frame
-            child_frame_orientation (np.float[4]): the orientation of the joint frame relative to the child CoM
+            child_frame_orientation (np.array[float[4]]): the orientation of the joint frame relative to the child CoM
                 coordinate frame (or world origin frame if no child specified)
 
         Returns:
@@ -520,7 +923,9 @@ class Raisim(Simulator):
         """
         pass
 
-    # objects
+    ###########
+    # Objects #
+    ###########
 
     def get_mass(self, body_id):
         """
@@ -532,7 +937,10 @@ class Raisim(Simulator):
         Returns:
             float: total mass of the robot [kg]
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_mass(0)
+        return sum(body.get_masses())
 
     def get_base_mass(self, body_id):
         """Return the base mass of the robot.
@@ -540,7 +948,10 @@ class Raisim(Simulator):
         Args:
             body_id (int): unique object id.
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_mass(0)
+        return body.get_masses()[0]
 
     def get_base_name(self, body_id):
         """
@@ -552,7 +963,10 @@ class Raisim(Simulator):
         Returns:
             str: base name
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_name()
+        return body.get_body_names()[0]  # body.get_name()
 
     def get_center_of_mass_position(self, body_id, link_ids=None):
         """
@@ -560,13 +974,16 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): link ids associated with the given body id. If None, it will take all the links
+            link_ids (list[int]): link ids associated with the given body id. If None, it will take all the links
                 of the specified body.
 
         Returns:
-            np.float[3]: center of mass position in the Cartesian world coordinates
+            np.array[float[3]]: center of mass position in the Cartesian world coordinates
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_com_position()
+        return body.get_composite_com()
 
     def get_center_of_mass_velocity(self, body_id, link_ids=None):
         """
@@ -574,13 +991,16 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): link ids associated with the given body id. If None, it will take all the links
+            link_ids (list[int]): link ids associated with the given body id. If None, it will take all the links
                 of the specified body.
 
         Returns:
-            np.float[3]: center of mass linear velocity.
+            np.array[float[3]]: center of mass linear velocity.
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_linear_velocity()
+        return body.get_world_linear_velocity(body_id=body_id, body_pos=np.zeros(3))  # TODO: correct body_id
 
     def get_base_pose(self, body_id):
         """
@@ -590,10 +1010,14 @@ class Raisim(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: base position
-            np.float[4]: base orientation (quaternion [x,y,z,w])
+            np.array[float[3]]: base position
+            np.array[float[4]]: base orientation (quaternion [x,y,z,w])
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_position(), self._convert_wxyz_to_xyzw(body.get_quaternion())
+        pos, quat = body.get_body_pose(0)
+        return pos, self._convert_wxyz_to_xyzw(quat)
 
     def get_base_position(self, body_id):
         """
@@ -603,9 +1027,12 @@ class Raisim(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: base position.
+            np.array[float[3]]: base position.
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_position()
+        return body.get_world_position(0)
 
     def get_base_orientation(self, body_id):
         """
@@ -615,9 +1042,12 @@ class Raisim(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[4]: base orientation in the form of a quaternion (x,y,z,w)
+            np.array[float[4]]: base orientation in the form of a quaternion (x,y,z,w)
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return self._convert_wxyz_to_xyzw(body.get_quaternion())
+        return self._convert_wxyz_to_xyzw(body.get_base_quaternion())
 
     def reset_base_pose(self, body_id, position, orientation):
         """
@@ -625,10 +1055,16 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique object id.
-            position (np.float[3]): new base position.
-            orientation (np.float[4]): new base orientation (expressed as a quaternion [x,y,z,w])
+            position (np.array[float[3]]): new base position.
+            orientation (np.array[float[4]]): new base orientation (expressed as a quaternion [x,y,z,w])
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            body.set_position(position)
+            body.set_orientation(self._convert_xyzw_to_wxyz(orientation))
+        else:
+            body.set_base_position(position)
+            body.set_base_orientation(self._convert_xyzw_to_wxyz(orientation))
 
     def reset_base_position(self, body_id, position):
         """
@@ -636,9 +1072,13 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique object id.
-            position (np.float[3]): new base position.
+            position (np.array[float[3]]): new base position.
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            body.set_position(position)
+        else:
+            body.set_base_position(position)
 
     def reset_base_orientation(self, body_id, orientation):
         """
@@ -646,9 +1086,13 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique object id.
-            orientation (np.float[4]): new base orientation (expressed as a quaternion [x,y,z,w])
+            orientation (np.array[float[4]]): new base orientation (expressed as a quaternion [x,y,z,w])
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            body.set_orientation(self._convert_xyzw_to_wxyz(orientation))
+        else:
+            body.set_base_orientation(self._convert_xyzw_to_wxyz(orientation))
 
     def get_base_velocity(self, body_id):
         """
@@ -658,10 +1102,13 @@ class Raisim(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: linear velocity of the base in Cartesian world space coordinates
-            np.float[3]: angular velocity of the base in Cartesian world space coordinates
+            np.array[float[3]]: linear velocity of the base in Cartesian world space coordinates
+            np.array[float[3]]: angular velocity of the base in Cartesian world space coordinates
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_linear_velocity(), body.get_angular_velocity()
+        return body.get_world_linear_velocity(0), body.get_world_angular_velocity(0)
 
     def get_base_linear_velocity(self, body_id):
         """
@@ -671,9 +1118,12 @@ class Raisim(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: linear velocity of the base in Cartesian world space coordinates
+            np.array[float[3]]: linear velocity of the base in Cartesian world space coordinates
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_linear_velocity()
+        return body.get_world_linear_velocity(0)
 
     def get_base_angular_velocity(self, body_id):
         """
@@ -683,9 +1133,12 @@ class Raisim(Simulator):
             body_id (int): object unique id, as returned from `load_urdf`.
 
         Returns:
-            np.float[3]: angular velocity of the base in Cartesian world space coordinates
+            np.array[float[3]]: angular velocity of the base in Cartesian world space coordinates
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_angular_velocity()
+        return body.get_world_angular_velocity(0)
 
     def reset_base_velocity(self, body_id, linear_velocity=None, angular_velocity=None):
         """
@@ -693,10 +1146,15 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique object id.
-            linear_velocity (np.float[3]): new linear velocity of the base.
-            angular_velocity (np.float[3]): new angular velocity of the base.
+            linear_velocity (np.array[float[3]]): new linear velocity of the base.
+            angular_velocity (np.array[float[3]]): new angular velocity of the base.
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            body.set_velocity(linear_velocity, angular_velocity)
+        else:
+            # TODO: request feature on Raisim github
+            pass
 
     def reset_base_linear_velocity(self, body_id, linear_velocity):
         """
@@ -704,9 +1162,14 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique object id.
-            linear_velocity (np.float[3]): new linear velocity of the base
+            linear_velocity (np.array[float[3]]): new linear velocity of the base
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            body.set_velocity(linear_velocity, np.zeros(3))
+        else:
+            # TODO: request feature on Raisim github
+            pass
 
     def reset_base_angular_velocity(self, body_id, angular_velocity):
         """
@@ -714,24 +1177,53 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique object id.
-            angular_velocity (np.float[3]): new angular velocity of the base
+            angular_velocity (np.array[float[3]]): new angular velocity of the base
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            body.set_velocity(np.zeros(3), angular_velocity)
+        else:
+            # TODO: request feature on Raisim github
+            pass
 
-    def apply_external_force(self, body_id, link_id=-1, force=(0., 0., 0.), position=(0., 0., 0.), frame=1):
+    def get_base_acceleration(self, body_id):
+        """
+        Get the base acceleration. This is only valid if the simulator `supports_acceleration`.
+
+        Args:
+            body_id (int): unique object id.
+
+        Returns:
+            np.array[float[3]]: linear acceleration [m/s^2]
+            np.array[float[3]]: angular acceleration [rad/s^2]
+        """
+        pass  # Raisim does not support accelerations
+
+    def apply_external_force(self, body_id, link_id=-1, force=(0., 0., 0.), position=(0., 0., 0.),
+                             frame=Simulator.LINK_FRAME):
         """
         Apply the specified external force on the specified position on the body / link.
 
         Args:
             body_id (int): unique body id.
             link_id (int): unique link id. If -1, it will be the base.
-            force (np.float[3]): external force to be applied.
-            position (np.float[3]): position on the link where the force is applied. See `flags` for coordinate
+            force (np.array[float[3]]): external force to be applied.
+            position (np.array[float[3]]): position on the link where the force is applied. See `flags` for coordinate
                 systems. If None, it is the center of mass of the body (or the link if specified).
             frame (int): if frame = 1, then the force / position is described in the link frame. If frame = 2, they
                 are described in the world frame.
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            body.setExternalForce(link_id + 1, force)
+        else:
+            if frame == Simulator.LINK_FRAME:
+                frame = raisim.ArticulatedSystem.Frame.BODY_FRAME
+            elif frame == Simulator.WORLD_FRAME:
+                frame = raisim.ArticulatedSystem.Frame.WORLD_FRAME
+            else:
+                raise ValueError("Unknown specified frame.")
+            body.setExternalForce(link_id + 1, frame, force, frame, position)
 
     def apply_external_torque(self, body_id, link_id=-1, torque=(0., 0., 0.), frame=1):
         """
@@ -745,9 +1237,12 @@ class Raisim(Simulator):
             frame (int): Specify the coordinate system of force/position: either `pybullet.WORLD_FRAME` (=2) for
                 Cartesian world coordinates or `pybullet.LINK_FRAME` (=1) for local link coordinates.
         """
-        pass
+        body = self._bodies[body_id]
+        body.setExternalTorque(link_id + 1, torque)
 
-    # robots (joints and links)
+    #############################
+    # Robots (joints and links) #
+    #############################
 
     def num_joints(self, body_id):
         """
@@ -759,7 +1254,10 @@ class Raisim(Simulator):
         Returns:
             int: number of joints with the associated body id.
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return 0
+        return len(body.get_body_names())
 
     def num_actuated_joints(self, body_id):
         """
@@ -771,7 +1269,10 @@ class Raisim(Simulator):
         Returns:
             int: number of actuated joints of the specified body.
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return 0
+        return body.get_num_dof()
 
     def num_links(self, body_id):
         """
@@ -812,7 +1313,7 @@ class Raisim(Simulator):
         Returns:
             float: The position value of this joint.
             float: The velocity value of this joint.
-            np.float[6]: These are the joint reaction forces, if a torque sensor is enabled for this joint it is
+            np.array[float[6]]: These are the joint reaction forces, if a torque sensor is enabled for this joint it is
                 [Fx, Fy, Fz, Mx, My, Mz]. Without torque sensor, it is [0, 0, 0, 0, 0, 0].
             float: This is the motor torque applied during the last stepSimulation. Note that this only applies in
                 VELOCITY_CONTROL and POSITION_CONTROL. If you use TORQUE_CONTROL then the applied joint motor torque
@@ -826,21 +1327,21 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (list of int): list of joint ids.
+            joint_ids (list[int]): list of joint ids.
 
         Returns:
             list:
                 float: The position value of this joint.
                 float: The velocity value of this joint.
-                np.float[6]: These are the joint reaction forces, if a torque sensor is enabled for this joint it is
-                    [Fx, Fy, Fz, Mx, My, Mz]. Without torque sensor, it is [0, 0, 0, 0, 0, 0].
+                np.array[float[6]]: These are the joint reaction forces, if a torque sensor is enabled for this joint
+                    it is [Fx, Fy, Fz, Mx, My, Mz]. Without torque sensor, it is [0, 0, 0, 0, 0, 0].
                 float: This is the motor torque applied during the last `step`. Note that this only applies in
                     VELOCITY_CONTROL and POSITION_CONTROL. If you use TORQUE_CONTROL then the applied joint motor
                     torque is exactly what you provide, so there is no need to report it separately.
         """
         pass
 
-    def reset_joint_state(self, body_id, joint_id, position, velocity=0.):
+    def reset_joint_state(self, body_id, joint_id, position, velocity=None):
         """
         Reset the state of the joint. It is best only to do this at the start, while not running the simulation:
         `reset_joint_state` overrides all physics simulation.
@@ -866,7 +1367,7 @@ class Raisim(Simulator):
 
     def set_joint_motor_control(self, body_id, joint_ids, control_mode=2, positions=None,
                                 velocities=None, forces=None, kp=None, kd=None, max_velocity=None):
-        """
+        r"""
         Set the joint motor control.
 
         In position control:
@@ -882,17 +1383,17 @@ class Raisim(Simulator):
             joint_ids (int): joint/link id, or list of joint ids.
             control_mode (int): POSITION_CONTROL (=2) (which is in fact CONTROL_MODE_POSITION_VELOCITY_PD),
                 VELOCITY_CONTROL (=0), TORQUE_CONTROL (=1) and PD_CONTROL (=3).
-            positions (float, np.float[N]): target joint position(s) (used in POSITION_CONTROL).
-            velocities (float, np.float[N]): target joint velocity(ies). In VELOCITY_CONTROL and POSITION_CONTROL,
-                the target velocity(ies) is(are) the desired velocity of the joint. Note that the target velocity(ies)
-                is(are) not the maximum joint velocity(ies). In PD_CONTROL and
+            positions (float, np.array[float[N]]): target joint position(s) (used in POSITION_CONTROL).
+            velocities (float, np.array[float[N]]): target joint velocity(ies). In VELOCITY_CONTROL and
+                POSITION_CONTROL, the target velocity(ies) is(are) the desired velocity of the joint. Note that the
+                target velocity(ies) is(are) not the maximum joint velocity(ies). In PD_CONTROL and
                 POSITION_CONTROL/CONTROL_MODE_POSITION_VELOCITY_PD, the final target velocities are computed using:
                 `kp*(erp*(desiredPosition-currentPosition)/dt)+currentVelocity+kd*(m_desiredVelocity - currentVelocity)`
-            forces (float, list of float): in POSITION_CONTROL and VELOCITY_CONTROL, these are the maximum motor
+            forces (float, list[float]): in POSITION_CONTROL and VELOCITY_CONTROL, these are the maximum motor
                 forces used to reach the target values. In TORQUE_CONTROL these are the forces / torques to be applied
                 each simulation step.
-            kp (float, list of float): position (stiffness) gain(s) (used in POSITION_CONTROL).
-            kd (float, list of float): velocity (damping) gain(s) (used in POSITION_CONTROL).
+            kp (float, list[float]): position (stiffness) gain(s) (used in POSITION_CONTROL).
+            kd (float, list[float]): velocity (damping) gain(s) (used in POSITION_CONTROL).
             max_velocity (float): in POSITION_CONTROL this limits the velocity to a maximum.
         """
         pass
@@ -909,15 +1410,16 @@ class Raisim(Simulator):
                 using forward kinematics.
 
         Returns:
-            np.float[3]: Cartesian position of CoM
-            np.float[4]: Cartesian orientation of CoM, in quaternion [x,y,z,w]
-            np.float[3]: local position offset of inertial frame (center of mass) expressed in the URDF link frame
-            np.float[4]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed in URDF link
+            np.array[float[3]]: Cartesian world position of CoM
+            np.array[float[4]]: Cartesian world orientation of CoM, in quaternion [x,y,z,w]
+            np.array[float[3]]: local position offset of inertial frame (center of mass) expressed in the URDF link
                 frame
-            np.float[3]: world position of the URDF link frame
-            np.float[4]: world orientation of the URDF link frame
-            np.float[3]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
-            np.float[3]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
+            np.array[float[4]]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed in
+                URDF link frame
+            np.array[float[3]]: world position of the URDF link frame
+            np.array[float[4]]: world orientation of the URDF link frame
+            np.array[float[3]]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
+            np.array[float[3]]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
         """
         pass
 
@@ -927,22 +1429,23 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): body unique id.
-            link_ids (list of int): list of link index.
+            link_ids (list[int]): list of link index.
             compute_velocity (bool): If True, the Cartesian world velocity will be computed and returned.
             compute_forward_kinematics (bool): if True, the Cartesian world position/orientation will be recomputed
                 using forward kinematics.
 
         Returns:
             list:
-                np.float[3]: Cartesian position of CoM
-                np.float[4]: Cartesian orientation of CoM, in quaternion [x,y,z,w]
-                np.float[3]: local position offset of inertial frame (center of mass) expressed in the URDF link frame
-                np.float[4]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed in URDF
+                np.array[float[3]]: Cartesian position of CoM
+                np.array[float[4]]: Cartesian orientation of CoM, in quaternion [x,y,z,w]
+                np.array[float[3]]: local position offset of inertial frame (center of mass) expressed in the URDF
                     link frame
-                np.float[3]: world position of the URDF link frame
-                np.float[4]: world orientation of the URDF link frame
-                np.float[3]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
-                np.float[3]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
+                np.array[float[4]]: local orientation (quaternion [x,y,z,w]) offset of the inertial frame expressed
+                    in URDF link frame
+                np.array[float[3]]: world position of the URDF link frame
+                np.array[float[4]]: world orientation of the URDF link frame
+                np.array[float[3]]: Cartesian world linear velocity. Only returned if `compute_velocity` is True.
+                np.array[float[3]]: Cartesian world angular velocity. Only returned if `compute_velocity` is True.
         """
         pass
 
@@ -952,7 +1455,7 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            link_ids (int, list of int): link id, or list of link ids.
+            link_ids (int, list[int]): link id, or list of link ids.
 
         Returns:
             if 1 link:
@@ -960,7 +1463,13 @@ class Raisim(Simulator):
             if multiple links:
                 str[N]: link names
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_name()
+        names = body.get_body_names()
+        if isinstance(link_ids, int):
+            return names[link_ids]
+        return np.asarray(names)[link_ids]
 
     def get_link_masses(self, body_id, link_ids):
         """
@@ -968,7 +1477,7 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            link_ids (int, list of int): link id, or list of link ids.
+            link_ids (int, list[int]): link id, or list of link ids.
 
         Returns:
             if 1 link:
@@ -976,10 +1485,33 @@ class Raisim(Simulator):
             else:
                 float[N]: mass of each link
         """
-        pass
+        body = self._bodies[body_id]
+        if isinstance(body, raisim.SingleBodyObject):
+            return body.get_mass(0)
+        masses = body.get_masses()
+        if isinstance(link_ids, int):
+            return masses[link_ids]
+        return np.asarray(masses)[link_ids]
 
     def get_link_frames(self, body_id, link_ids):
-        pass
+        r"""
+        Return the link world frame position(s) and orientation(s).
+
+        Args:
+            body_id (int): body id.
+            link_ids (int, int[N]): link id, or list of desired link ids.
+
+        Returns:
+            if 1 link:
+                np.array[float[3]]: the link frame position in the world space
+                np.array[float[4]]: Cartesian orientation of the link frame [x,y,z,w]
+            if multiple links:
+                np.array[float[N,3]]: link frame position of each link in world space
+                np.array[float[N,4]]: orientation of each link frame [x,y,z,w]
+        """
+        body = self._bodies[body_id]
+        # get_frame_world_position
+        # get_frame_world_quaternion
 
     def get_link_world_positions(self, body_id, link_ids):
         """
@@ -987,15 +1519,17 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
-                np.float[3]: the link CoM position in the world space
+                np.array[float[3]]: the link CoM position in the world space
             if multiple links:
-                np.float[N,3]: CoM position of each link in world space
+                np.array[float[N,3]]: CoM position of each link in world space
         """
-        pass
+        body = self._bodies[body_id]
+        # get_link_coms  # in body frame
+        # get_frame_world_position
 
     def get_link_positions(self, body_id, link_ids):
         pass
@@ -1006,13 +1540,13 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
-                np.float[4]: Cartesian orientation of the link CoM (x,y,z,w)
+                np.array[float[4]]: Cartesian orientation of the link CoM (x,y,z,w)
             if multiple links:
-                np.float[N,4]: CoM orientation of each link (x,y,z,w)
+                np.array[float[N,4]]: CoM orientation of each link (x,y,z,w)
         """
         pass
 
@@ -1025,15 +1559,17 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
-                np.float[3]: linear velocity of the link in the Cartesian world space
+                np.array[float[3]]: linear velocity of the link in the Cartesian world space
             if multiple links:
-                np.float[N,3]: linear velocity of each link
+                np.array[float[N,3]]: linear velocity of each link
         """
-        pass
+        body = self._bodies[body_id]
+        # get_frame_linear_velocity
+        # get_world_linear_velocity
 
     def get_link_world_angular_velocities(self, body_id, link_ids):
         """
@@ -1041,15 +1577,17 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
-                np.float[3]: angular velocity of the link in the Cartesian world space
+                np.array[float[3]]: angular velocity of the link in the Cartesian world space
             if multiple links:
-                np.float[N,3]: angular velocity of each link
+                np.array[float[N,3]]: angular velocity of each link
         """
-        pass
+        body = self._bodies[body_id]
+        # get_frame_angular_velocity
+        # get_world_angular_velocity
 
     def get_link_world_velocities(self, body_id, link_ids):
         """
@@ -1058,18 +1596,71 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            link_ids (list of int): list of link indices.
+            link_ids (int, list[int]): link index, or list of link indices.
 
         Returns:
             if 1 link:
-                np.float[6]: linear and angular velocity of the link in the Cartesian world space
+                np.array[float[6]]: linear and angular velocity of the link in the Cartesian world space
             if multiple links:
-                np.float[N,6]: linear and angular velocity of each link
+                np.array[float[N,6]]: linear and angular velocity of each link
         """
-        pass
+        body = self._bodies[body_id]
+        # get_frame_linear_velocity
+        # get_world_linear_velocity
+        # get_frame_angular_velocity
+        # get_world_angular_velocity
 
     def get_link_velocities(self, body_id, link_ids):
         pass
+
+    def get_link_world_linear_accelerations(self, body_id, link_ids):
+        """
+        Return the linear acceleration of the link(s) expressed in the Cartesian world space coordinates.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[3]]: linear acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[float[N,3]]: linear acceleration of each link
+        """
+        pass  # Raisim does not support accelerations
+
+    def get_link_world_angular_accelerations(self, body_id, link_ids):
+        """
+        Return the angular acceleration of the link(s) in the Cartesian world space coordinates.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[3]]: angular acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[float[N,3]]: angular acceleration of each link
+        """
+        pass  # Raisim does not support accelerations
+
+    def get_link_world_accelerations(self, body_id, link_ids):
+        """
+        Return the linear and angular accelerations (expressed in the Cartesian world space coordinates) for the given
+        link(s). This is only valid if the simulator `supports_acceleration`.
+
+        Args:
+            body_id (int): unique body id.
+            link_ids (int, list[int]): link index, or list of link indices.
+
+        Returns:
+            if 1 link:
+                np.array[float[6]]: linear and angular acceleration of the link in the Cartesian world space
+            if multiple links:
+                np.array[float[N,6]]: linear and angular acceleration of each link
+        """
+        pass  # Raisim does not support accelerations
 
     def get_q_indices(self, body_id, joint_ids):
         """
@@ -1077,13 +1668,13 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 int: q index
             if multiple joints:
-                np.int[N]: q indices
+                list[int]: q indices
         """
         pass
 
@@ -1095,7 +1686,7 @@ class Raisim(Simulator):
             body_id (int): unique body id.
 
         Returns:
-            list of int: actuated joint ids.
+            list[int]: actuated joint ids.
         """
         pass
 
@@ -1105,7 +1696,7 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
@@ -1121,7 +1712,7 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
@@ -1136,7 +1727,7 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
@@ -1151,13 +1742,13 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: damping coefficient of the given joint
             if multiple joints:
-                np.float[N]: damping coefficient for each specified joint
+                np.array[float[N]]: damping coefficient for each specified joint
         """
         pass
 
@@ -1167,13 +1758,13 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: friction coefficient of the given joint
             if multiple joints:
-                np.float[N]: friction coefficient for each specified joint
+                np.array[float[N]]: friction coefficient for each specified joint
         """
         pass
 
@@ -1183,13 +1774,13 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
-                np.float[2]: lower and upper limit
+                np.array[float[2]]]: lower and upper limit
             if multiple joints:
-                np.float[N,2]: lower and upper limit for each specified joint
+                np.array[N,2]: lower and upper limit for each specified joint
         """
         pass
 
@@ -1201,13 +1792,13 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: maximum force [N]
             if multiple joints:
-                np.float[N]: maximum force for each specified joint [N]
+                np.array[float[N]]: maximum force for each specified joint [N]
         """
         pass
 
@@ -1219,13 +1810,13 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: maximum velocity [rad/s]
             if multiple joints:
-                np.float[N]: maximum velocities for each specified joint [rad/s]
+                np.array[float[N]]: maximum velocities for each specified joint [rad/s]
         """
         pass
 
@@ -1235,13 +1826,13 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
-                np.float[3]: joint axis
+                np.array[float[3]]: joint axis
             if multiple joint:
-                np.float[N,3]: list of joint axis
+                np.array[float[N,3]]: list of joint axis
         """
         pass
 
@@ -1251,12 +1842,12 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
-            positions (float, np.float[N]): desired position, or list of desired positions [rad]
-            velocities (None, float, np.float[N]): desired velocity, or list of desired velocities [rad/s]
-            kps (None, float, np.float[N]): position gain(s)
-            kds (None, float, np.float[N]): velocity gain(s)
-            forces (None, float, np.float[N]): maximum motor force(s)/torque(s) used to reach the target values.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            positions (float, np.array[float[N]]): desired position, or list of desired positions [rad]
+            velocities (None, float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
+            kps (None, float, np.array[float[N]]): position gain(s)
+            kds (None, float, np.array[float[N]]): velocity gain(s)
+            forces (None, float, np.array[float[N]]): maximum motor force(s)/torque(s) used to reach the target values.
         """
         pass
 
@@ -1266,13 +1857,13 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: joint position [rad]
             if multiple joints:
-                np.float[N]: joint positions [rad]
+                np.array[float[N]]: joint positions [rad]
         """
         pass
 
@@ -1282,9 +1873,9 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
-            velocities (float, np.float[N]): desired velocity, or list of desired velocities [rad/s]
-            max_force (None, float, np.float[N]): maximum motor forces/torques
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            velocities (float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
+            max_force (None, float, np.array[float[N]]): maximum motor forces/torques
         """
         pass
 
@@ -1294,13 +1885,13 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: joint velocity [rad/s]
             if multiple joints:
-                np.float[N]: joint velocities [rad/s]
+                np.array[float[N]]: joint velocities [rad/s]
         """
         pass
 
@@ -1311,28 +1902,25 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
-            accelerations (float, np.float[N]): desired joint acceleration, or list of desired joint accelerations
-                [rad/s^2]
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            accelerations (float, np.array[float[N]]): desired joint acceleration, or list of desired joint
+                accelerations [rad/s^2]
         """
         pass
 
-    def get_joint_accelerations(self, body_id, joint_ids, q=None, dq=None):
+    def get_joint_accelerations(self, body_id, joint_ids):  # , q=None, dq=None):
         """
-        Get the acceleration at the given joint(s). This is carried out by first getting the joint torques, then
-        performing forward dynamics to get the joint accelerations from the joint torques.
+        Get the acceleration of the specified joint(s). This is only valid if the simulator `supports_acceleration`.
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
-            q (list of int, None): all the joint positions. If None, it will compute it.
-            dq (list of int, None): all the joint velocities. If None, it will compute it.
+            joint_ids (int, list[int]): joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: joint acceleration [rad/s^2]
             if multiple joints:
-                np.float[N]: joint accelerations [rad/s^2]
+                np.array[float[N]]: joint accelerations [rad/s^2]
         """
         pass
 
@@ -1342,8 +1930,8 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): joint id, or list of joint ids.
-            torques (float, list of float): desired torque(s) to apply to the joint(s) [N].
+            joint_ids (int, list[int]): joint id, or list of joint ids.
+            torques (float, list[float], np.array[float]): desired torque(s) to apply to the joint(s) [N].
         """
         pass
 
@@ -1353,13 +1941,13 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            joint_ids (int, list of int): a joint id, or list of joint ids.
+            joint_ids (int, list[int]): a joint id, or list of joint ids.
 
         Returns:
             if 1 joint:
                 float: torque [Nm]
             if multiple joints:
-                np.float[N]: torques associated to the given joints [Nm]
+                np.array[float[N]]: torques associated to the given joints [Nm]
         """
         pass
 
@@ -1373,9 +1961,9 @@ class Raisim(Simulator):
 
         Returns:
             if 1 joint:
-                np.float[6]: joint reaction force (fx,fy,fz,mx,my,mz) [N,Nm]
+                np.array[float[6]]: joint reaction force (fx,fy,fz,mx,my,mz) [N,Nm]
             if multiple joints:
-                np.float[N,6]: joint reaction forces [N, Nm]
+                np.array[float[N,6]]: joint reaction forces [N, Nm]
         """
         pass
 
@@ -1390,507 +1978,21 @@ class Raisim(Simulator):
             if 1 joint:
                 float: joint power [W]
             if multiple joints:
-                np.float[N]: power at each joint [W]
+                np.array[float[N]]: power at each joint [W]
         """
         pass
 
-    # visualization
-
-    def create_visual_shape(self, shape_type, radius=0.5, half_extents=(1., 1., 1.), length=1., filename=None,
-                            mesh_scale=(1., 1., 1.), plane_normal=(0., 0., 1.), flags=-1, rgba_color=None,
-                            specular_color=None, visual_frame_position=None, vertices=None, indices=None, uvs=None,
-                            normals=None, visual_frame_orientation=None):
-        """
-        Create a visual shape in the simulator.
-
-        Args:
-            shape_type (int): type of shape; GEOM_SPHERE (=2), GEOM_BOX (=3), GEOM_CAPSULE (=7), GEOM_CYLINDER (=4),
-                GEOM_PLANE (=6), GEOM_MESH (=5)
-            radius (float): only for GEOM_SPHERE, GEOM_CAPSULE, GEOM_CYLINDER
-            half_extents (np.float[3], list/tuple of 3 floats): only for GEOM_BOX.
-            length (float): only for GEOM_CAPSULE, GEOM_CYLINDER (length = height).
-            filename (str): Filename for GEOM_MESH, currently only Wavefront .obj. Will create convex hulls for each
-                object (marked as 'o') in the .obj file.
-            mesh_scale (np.float[3], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
-            plane_normal (np.float[3], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
-            flags (int): unused / to be decided
-            rgba_color (list/tuple of 4 floats): color components for red, green, blue and alpha, each in range [0..1].
-            specular_color (list/tuple of 3 floats): specular reflection color, red, green, blue components in range
-                [0..1]
-            visual_frame_position (np.float[3]): translational offset of the visual shape with respect to the link frame
-            vertices (list of np.float[3]): Instead of creating a mesh from obj file, you can provide vertices, indices,
-                uvs and normals
-            indices (list of int): triangle indices, should be a multiple of 3.
-            uvs (list of np.float[2]): uv texture coordinates for vertices. Use changeVisualShape to choose the
-                texture image. The number of uvs should be equal to number of vertices
-            normals (list of np.float[3]): vertex normals, number should be equal to number of vertices.
-            visual_frame_orientation (np.float[4]): rotational offset (quaternion x,y,z,w) of the visual shape with
-                respect to the link frame
-
-        Returns:
-            int: The return value is a non-negative int unique id for the visual shape or -1 if the call failed.
-        """
-        pass
-
-    def get_visual_shape_data(self, object_id, flags=-1):
-        """
-        Get the visual shape data associated with the given object id. It will output a list of visual shape data.
-
-        Args:
-            object_id (int): object unique id.
-            flags (int, None): VISUAL_SHAPE_DATA_TEXTURE_UNIQUE_IDS (=1) will also provide `texture_unique_id`.
-
-        Returns:
-            list:
-                int: object unique id.
-                int: link index or -1 for the base
-                int: visual geometry type (TBD)
-                np.float[3]: dimensions (size, local scale) of the geometry
-                str: path to the triangle mesh, if any. Typically relative to the URDF, SDF or MJCF file location, but
-                    could be absolute
-                np.float[3]: position of local visual frame, relative to link/joint frame
-                np.float[4]: orientation of local visual frame relative to link/joint frame
-                list of 4 floats: URDF color (if any specified) in Red / Green / Blue / Alpha
-                int: texture unique id of the shape or -1 if None. This field only exists if using
-                    VISUAL_SHAPE_DATA_TEXTURE_UNIQUE_IDS (=1) flag.
-        """
-        pass
-
-    def change_visual_shape(self, object_id, link_id, shape_id=None, texture_id=None, rgba_color=None,
-                            specular_color=None):
-        """
-        Allows to change the texture of a shape, the RGBA color and other properties.
-
-        Args:
-            object_id (int): unique object id.
-            link_id (int): link id.
-            shape_id (int): shape id.
-            texture_id (int): texture id.
-            rgba_color (float[4]): RGBA color. Each is in the range [0..1]. Alpha has to be 0 (invisible) or 1
-                (visible) at the moment.
-            specular_color (int[3]): specular color components, RED, GREEN and BLUE, can be from 0 to large number
-                (>100).
-        """
-        pass
-
-    def load_texture(self, filename):
-        """
-        Load a texture from file and return a non-negative texture unique id if the loading succeeds.
-        This unique id can be used with changeVisualShape.
-
-        Args:
-            filename (str): path to the file.
-
-        Returns:
-            int: texture unique id. If non-negative, the texture was loaded successfully.
-        """
-        pass
-
-    def compute_view_matrix(self, eye_position, target_position, up_vector):
-        """Compute the view matrix.
-
-        The view matrix is the 4x4 matrix that maps the world coordinates into the camera coordinates. Basically,
-        it applies a rotation and translation such that the world is in front of the camera. That is, instead
-        of turning the camera to capture what we want in the world, we keep the camera fixed and turn the world.
-
-        Args:
-            eye_position (np.float[3]): eye position in Cartesian world coordinates
-            target_position (np.float[3]): position of the target (focus) point in Cartesian world coordinates
-            up_vector (np.float[3]): up vector of the camera in Cartesian world coordinates
-
-        Returns:
-            np.float[4,4]: the view matrix
-        """
-        pass
-
-    def compute_view_matrix_from_ypr(self, target_position, distance, yaw, pitch, roll, up_axis_index=2):
-        """Compute the view matrix from the yaw, pitch, and roll angles.
-
-        The view matrix is the 4x4 matrix that maps the world coordinates into the camera coordinates. Basically,
-        it applies a rotation and translation such that the world is in front of the camera. That is, instead
-        of turning the camera to capture what we want in the world, we keep the camera fixed and turn the world.
-
-        Args:
-            target_position (np.float[3]): target focus point in Cartesian world coordinates
-            distance (float): distance from eye to focus point
-            yaw (float): yaw angle in radians left/right around up-axis
-            pitch (float): pitch in radians up/down.
-            roll (float): roll in radians around forward vector
-            up_axis_index (int): either 1 for Y or 2 for Z axis up.
-
-        Returns:
-            np.float[4,4]: the view matrix
-        """
-        pass
-
-    def compute_projection_matrix(self, left, right, bottom, top, near, far):
-        """Compute the orthographic projection matrix.
-
-        The projection matrix is the 4x4 matrix that maps from the camera/eye coordinates to clipped coordinates.
-        It is applied after the view matrix.
-
-        There are 2 projection matrices:
-        * orthographic projection
-        * perspective projection
-
-        For the perspective projection, see `computeProjectionMatrixFOV(self)`.
-
-        Args:
-            left (float): left screen (canvas) coordinate
-            right (float): right screen (canvas) coordinate
-            bottom (float): bottom screen (canvas) coordinate
-            top (float): top screen (canvas) coordinate
-            near (float): near plane distance
-            far (float): far plane distance
-
-        Returns:
-            np.float[4,4]: the perspective projection matrix
-        """
-        pass
-
-    def compute_projection_matrix_fov(self, fov, aspect, near, far):
-        """Compute the perspective projection matrix using the field of view (FOV).
-
-        Args:
-            fov (float): field of view
-            aspect (float): aspect ratio
-            near (float): near plane distance
-            far (float): far plane distance
-
-        Returns:
-            np.float[4,4]: the perspective projection matrix
-        """
-        pass
-
-    def get_camera_image(self, width, height, view_matrix=None, projection_matrix=None, light_direction=None,
-                         light_color=None, light_distance=None, shadow=None, light_ambient_coeff=None,
-                         light_diffuse_coeff=None, light_specular_coeff=None, renderer=None, flags=None):
-        """
-        The `get_camera_image` API will return a RGB image, a depth buffer and a segmentation mask buffer with body
-        unique ids of visible objects for each pixel.
-
-        Args:
-            width (int): horizontal image resolution in pixels
-            height (int): vertical image resolution in pixels
-            view_matrix (np.float[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.float[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.float[3]): `light_direction` specifies the world position of the light source,
-                the direction is from the light source position to the origin of the world frame.
-            light_color (np.float[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
-            light_distance (float): distance of the light along the normalized `light_direction`
-            shadow (bool): True for shadows, False for no shadows
-            light_ambient_coeff (float): light ambient coefficient
-            light_diffuse_coeff (float): light diffuse coefficient
-            light_specular_coeff (float): light specular coefficient
-            renderer (int): renderer
-            flags (int): flags
-
-        Returns:
-            int: width image resolution in pixels (horizontal)
-            int: height image resolution in pixels (vertical)
-            np.int[width, height, 4]: RBGA pixels (each pixel is in the range [0..255] for each channel R, G, B, A)
-            np.float[width, heigth]: Depth buffer.
-            np.int[width, height]: Segmentation mask buffer. For each pixels the visible object unique id.
-        """
-        pass
-
-    def get_rgba_image(self, width, height, view_matrix=None, projection_matrix=None, light_direction=None,
-                       light_color=None, light_distance=None, shadow=None, light_ambient_coeff=None,
-                       light_diffuse_coeff=None, light_specular_coeff=None, renderer=None, flags=None):
-        """
-        The `get_rgba_image` API will return a RGBA image.
-
-        Args:
-            width (int): horizontal image resolution in pixels
-            height (int): vertical image resolution in pixels
-            view_matrix (np.float[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.float[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.float[3]): `light_direction` specifies the world position of the light source,
-                the direction is from the light source position to the origin of the world frame.
-            light_color (np.float[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
-            light_distance (float): distance of the light along the normalized `light_direction`
-            shadow (bool): True for shadows, False for no shadows
-            light_ambient_coeff (float): light ambient coefficient
-            light_diffuse_coeff (float): light diffuse coefficient
-            light_specular_coeff (float): light specular coefficient
-            renderer (int): renderer.
-            flags (int): flags.
-
-        Returns:
-            np.int[width, height, 4]: RBGA pixels (each pixel is in the range [0..255] for each channel R, G, B, A)
-        """
-        pass
-
-    def get_depth_image(self, width, height, view_matrix=None, projection_matrix=None, light_direction=None,
-                        light_color=None, light_distance=None, shadow=None, light_ambient_coeff=None,
-                        light_diffuse_coeff=None, light_specular_coeff=None, renderer=None, flags=None):
-        """
-        The `get_depth_image` API will return a depth buffer.
-
-        Args:
-            width (int): horizontal image resolution in pixels
-            height (int): vertical image resolution in pixels
-            view_matrix (np.float[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.float[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.float[3]): `light_direction` specifies the world position of the light source,
-                the direction is from the light source position to the origin of the world frame.
-            light_color (np.float[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
-            light_distance (float): distance of the light along the normalized `light_direction`
-            shadow (bool): True for shadows, False for no shadows
-            light_ambient_coeff (float): light ambient coefficient
-            light_diffuse_coeff (float): light diffuse coefficient
-            light_specular_coeff (float): light specular coefficient
-            renderer (int): renderer.
-            flags (int): flags.
-
-        Returns:
-            np.float[width, heigth]: Depth buffer.
-        """
-        pass
-
-    def get_segmentation_image(self, width, height, view_matrix=None, projection_matrix=None, light_direction=None,
-                               light_color=None, light_distance=None, shadow=None, light_ambient_coeff=None,
-                               light_diffuse_coeff=None, light_specular_coeff=None, renderer=None, flags=None):
-        """
-        The `get_segmentation_image` API will return a segmentation mask buffer with body unique ids of visible objects
-        for each pixel.
-
-        Args:
-            width (int): horizontal image resolution in pixels
-            height (int): vertical image resolution in pixels
-            view_matrix (np.float[4,4]): 4x4 view matrix, see `compute_view_matrix`
-            projection_matrix (np.float[4,4]): 4x4 projection matrix, see `compute_projection`
-            light_direction (np.float[3]): `light_direction` specifies the world position of the light source,
-                the direction is from the light source position to the origin of the world frame.
-            light_color (np.float[3]): directional light color in [RED,GREEN,BLUE] in range 0..1
-            light_distance (float): distance of the light along the normalized `light_direction`
-            shadow (bool): True for shadows, False for no shadows
-            light_ambient_coeff (float): light ambient coefficient
-            light_diffuse_coeff (float): light diffuse coefficient
-            light_specular_coeff (float): light specular coefficient
-            renderer (int): renderer
-            flags (int): flags
-
-        Returns:
-            np.int[width, height]: Segmentation mask buffer. For each pixels the visible object unique id.
-        """
-        pass
-
-    # collisions
-
-    def create_collision_shape(self, shape_type, radius=0.5, half_extents=(1., 1., 1.), height=1., filename=None,
-                               mesh_scale=(1., 1., 1.), plane_normal=(0., 0., 1.), flags=-1,
-                               collision_frame_position=None, collision_frame_orientation=None):
-        """
-        Create collision shape in the simulator.
-
-        Args:
-            shape_type (int): type of shape; GEOM_SPHERE (=2), GEOM_BOX (=3), GEOM_CAPSULE (=7), GEOM_CYLINDER (=4),
-                GEOM_PLANE (=6), GEOM_MESH (=5)
-            radius (float): only for GEOM_SPHERE, GEOM_CAPSULE, GEOM_CYLINDER
-            half_extents (np.float[3], list/tuple of 3 floats): only for GEOM_BOX.
-            height (float): only for GEOM_CAPSULE, GEOM_CYLINDER (length = height).
-            filename (str): Filename for GEOM_MESH, currently only Wavefront .obj. Will create convex hulls for each
-                object (marked as 'o') in the .obj file.
-            mesh_scale (np.float[3], list/tuple of 3 floats): scale of mesh (only for GEOM_MESH).
-            plane_normal (np.float[3], list/tuple of 3 floats): plane normal (only for GEOM_PLANE).
-            flags (int): unused / to be decided
-            collision_frame_position (np.float[3]): translational offset of the collision shape with respect to the
-                link frame
-            collision_frame_orientation (np.float[4]): rotational offset (quaternion x,y,z,w) of the collision shape
-                with respect to the link frame
-
-        Returns:
-            int: The return value is a non-negative int unique id for the collision shape or -1 if the call failed.
-        """
-        pass
-
-    def get_collision_shape_data(self, object_id, link_id=-1):
-        """
-        Get the collision shape data associated with the specified object id and link id.
-
-        Args:
-            object_id (int): object unique id.
-            link_id (int): link index or -1 for the base.
-
-        Returns:
-            int: object unique id.
-            int: link id.
-            int: geometry type; GEOM_BOX (=3), GEOM_SPHERE (=2), GEOM_CAPSULE (=7), GEOM_MESH (=5), GEOM_PLANE (=6)
-            np.float[3]: depends on geometry type:
-                for GEOM_BOX: extents,
-                for GEOM_SPHERE: dimensions[0] = radius,
-                for GEOM_CAPSULE and GEOM_CYLINDER: dimensions[0] = height (length), dimensions[1] = radius.
-                For GEOM_MESH: dimensions is the scaling factor.
-            str: Only for GEOM_MESH: file name (and path) of the collision mesh asset.
-            np.float[3]: Local position of the collision frame with respect to the center of mass/inertial frame
-            np.float[4]: Local orientation of the collision frame with respect to the inertial frame
-        """
-        pass
-
-    def get_overlapping_objects(self, aabb_min, aabb_max):
-        """
-        This query will return all the unique ids of objects that have Axis Aligned Bounding Box (AABB) overlap with
-        a given axis aligned bounding box. Note that the query is conservative and may return additional objects that
-        don't have actual AABB overlap. This happens because the acceleration structures have some heuristic that
-        enlarges the AABBs a bit (extra margin and extruded along the velocity vector).
-
-        Args:
-            aabb_min (np.float[3]): minimum coordinates of the aabb
-            aabb_max (np.float[3]): maximum coordinates of the aabb
-
-        Returns:
-            list of int: list of object unique ids.
-        """
-        pass
-
-    def get_aabb(self, body_id, link_id=-1):
-        """
-        You can query the axis aligned bounding box (in world space) given an object unique id, and optionally a link
-        index. (when you don't pass the link index, or use -1, you get the AABB of the base).
-
-        Args:
-            body_id (int): object unique id as returned by creation methods
-            link_id (int): link index in range [0..`getNumJoints(..)]
-
-        Returns:
-            np.float[3]: minimum coordinates of the axis aligned bounding box
-            np.float[3]: maximum coordinates of the axis aligned bounding box
-        """
-        pass
-
-    def get_contact_points(self, body1, body2=None, link1_id=None, link2_id=None):
-        """
-        Returns the contact points computed during the most recent call to `step`.
-
-        Args:
-            body1 (int): only report contact points that involve body A
-            body2 (int, None): only report contact points that involve body B. Important: you need to have a valid
-                body A if you provide body B
-            link1_id (int, None): only report contact points that involve link index of body A
-            link2_id (int, None): only report contact points that involve link index of body B
-
-        Returns:
-            list:
-                int: contact flag (reserved)
-                int: body unique id of body A
-                int: body unique id of body B
-                int: link index of body A, -1 for base
-                int: link index of body B, -1 for base
-                np.float[3]: contact position on A, in Cartesian world coordinates
-                np.float[3]: contact position on B, in Cartesian world coordinates
-                np.float[3]: contact normal on B, pointing towards A
-                float: contact distance, positive for separation, negative for penetration
-                float: normal force applied during the last `step`
-                float: lateral friction force in the first lateral friction direction (see next returned value)
-                np.float[3]: first lateral friction direction
-                float: lateral friction force in the second lateral friction direction (see next returned value)
-                np.float[3]: second lateral friction direction
-        """
-        pass
-
-    def get_closest_points(self, body1, body2, distance, link1_id=None, link2_id=None):
-        """
-        Computes the closest points, independent from `step`. This also lets you compute closest points of objects
-        with an arbitrary separating distance. In this query there will be no normal forces reported.
-
-        Args:
-            body1 (int): only report contact points that involve body A
-            body2 (int): only report contact points that involve body B. Important: you need to have a valid body A
-                if you provide body B
-            distance (float): If the distance between objects exceeds this maximum distance, no points may be returned.
-            link1_id (int): only report contact points that involve link index of body A
-            link2_id (int): only report contact points that involve link index of body B
-
-        Returns:
-            list:
-                int: contact flag (reserved)
-                int: body unique id of body A
-                int: body unique id of body B
-                int: link index of body A, -1 for base
-                int: link index of body B, -1 for base
-                np.float[3]: contact position on A, in Cartesian world coordinates
-                np.float[3]: contact position on B, in Cartesian world coordinates
-                np.float[3]: contact normal on B, pointing towards A
-                float: contact distance, positive for separation, negative for penetration
-                float: normal force applied during the last `step`. Always equal to 0.
-                float: lateral friction force in the first lateral friction direction (see next returned value)
-                np.float[3]: first lateral friction direction
-                float: lateral friction force in the second lateral friction direction (see next returned value)
-                np.float[3]: second lateral friction direction
-        """
-        pass
-
-    def ray_test(self, from_position, to_position):
-        """
-        Performs a single raycast to find the intersection information of the first object hit.
-
-        Args:
-            from_position (np.float[3]): start of the ray in world coordinates
-            to_position (np.float[3]): end of the ray in world coordinates
-
-        Returns:
-            list:
-                int: object unique id of the hit object
-                int: link index of the hit object, or -1 if none/parent
-                float: hit fraction along the ray in range [0,1] along the ray.
-                np.float[3]: hit position in Cartesian world coordinates
-                np.float[3]: hit normal in Cartesian world coordinates
-        """
-        pass
-
-    def ray_test_batch(self, from_positions, to_positions, parent_object_id=None, parent_link_id=None):
-        """Perform a batch of raycasts to find the intersection information of the first objects hit.
-
-        This is similar to the ray_test, but allows you to provide an array of rays, for faster execution. The size of
-        'rayFromPositions' needs to be equal to the size of 'rayToPositions'. You can one ray result per ray, even if
-        there is no intersection: you need to use the objectUniqueId field to check if the ray has hit anything: if
-        the objectUniqueId is -1, there is no hit. In that case, the 'hit fraction' is 1.
-
-        Args:
-            from_positions (np.array[N,3]): list of start points for each ray, in world coordinates
-            to_positions (np.array[N,3]): list of end points for each ray in world coordinates
-            parent_object_id (int): ray from/to is in local space of a parent object
-            parent_link_id (int): ray from/to is in local space of a parent object
-
-        Returns:
-            list:
-                int: object unique id of the hit object
-                int: link index of the hit object, or -1 if none/parent
-                float: hit fraction along the ray in range [0,1] along the ray.
-                np.float[3]: hit position in Cartesian world coordinates
-                np.float[3]: hit normal in Cartesian world coordinates
-        """
-        pass
-
-    def set_collision_filter_group_mask(self, body_id, link_id, filter_group, filter_mask):
-        """
-        Enable/disable collision detection between groups of objects. Each body is part of a group. It collides with
-        other bodies if their group matches the mask, and vise versa. The following check is performed using the group
-        and mask of the two bodies involved. It depends on the collision filter mode.
-
-        Args:
-            body_id (int): unique id of the body to be configured
-            link_id (int): link index of the body to be configured
-            filter_group (int): bitwise group of the filter
-            filter_mask (int): bitwise mask of the filter
-        """
-        pass
-
-    def set_collision_filter_pair(self, body1, body2, link1=-1, link2=-1, enable=True):
-        """
-        Enable/disable collision between two bodies/links.
-
-        Args:
-            body1 (int): unique id of body A to be filtered
-            body2 (int): unique id of body B to be filtered, A==B implies self-collision
-            link1 (int): link index of body A
-            link2 (int): link index of body B
-            enable (bool): True to enable collision, False to disable collision
-        """
-        pass
-
-    # kinematics and dynamics
+    #################
+    # Visualization #
+    #################
+
+    ##############
+    # Collisions #
+    ##############
+
+    ###########################
+    # Kinematics and Dynamics #
+    ###########################
 
     def get_dynamics_info(self, body_id, link_id=-1):
         """
@@ -1903,10 +2005,10 @@ class Raisim(Simulator):
         Returns:
             float: mass in kg
             float: lateral friction coefficient
-            np.float[3]: local inertia diagonal. Note that links and base are centered around the center of mass and
-                aligned with the principal axes of inertia.
-            np.float[3]: position of inertial frame in local coordinates of the joint frame
-            np.float[4]: orientation of inertial frame in local coordinates of joint frame
+            np.array[float[3]]: local inertia diagonal. Note that links and base are centered around the center of
+                mass and aligned with the principal axes of inertia.
+            np.array[float[3]]: position of inertial frame in local coordinates of the joint frame
+            np.array[float[4]]: orientation of inertial frame in local coordinates of joint frame
             float: coefficient of restitution
             float: rolling friction coefficient orthogonal to contact normal
             float: spinning friction coefficient around contact normal
@@ -1918,7 +2020,8 @@ class Raisim(Simulator):
     def change_dynamics(self, body_id, link_id=-1, mass=None, lateral_friction=None, spinning_friction=None,
                         rolling_friction=None, restitution=None, linear_damping=None, angular_damping=None,
                         contact_stiffness=None, contact_damping=None, friction_anchor=None,
-                        local_inertia_diagonal=None, joint_damping=None):
+                        local_inertia_diagonal=None, inertia_position=None, inertia_orientation=None,
+                        joint_damping=None, joint_friction=None):
         """
         Change dynamic properties of the given body (or link) such as mass, friction and restitution coefficients, etc.
 
@@ -1929,21 +2032,25 @@ class Raisim(Simulator):
             lateral_friction (float): lateral (linear) contact friction
             spinning_friction (float): torsional friction around the contact normal
             rolling_friction (float): torsional friction orthogonal to contact normal
-            restitution (float): bouncyness of contact. Keep it a bit less than 1.
+            restitution (float): bounciness of contact. Keep it a bit less than 1.
             linear_damping (float): linear damping of the link (0.04 by default)
             angular_damping (float): angular damping of the link (0.04 by default)
             contact_stiffness (float): stiffness of the contact constraints, used together with `contact_damping`
             contact_damping (float): damping of the contact constraints for this body/link. Used together with
-                `contact_stiffness`. This overrides the value if it was specified in the URDF file in the contact
-                section.
+              `contact_stiffness`. This overrides the value if it was specified in the URDF file in the contact
+              section.
             friction_anchor (int): enable or disable a friction anchor: positional friction correction (disabled by
-                default, unless set in the URDF contact section)
-            local_inertia_diagonal (np.float[3]): diagonal elements of the inertia tensor. Note that the base and
-                links are centered around the center of mass and aligned with the principal axes of inertia so there
-                are no off-diagonal elements in the inertia tensor.
+              default, unless set in the URDF contact section)
+            local_inertia_diagonal (np.array[float[3]]): diagonal elements of the inertia tensor. Note that the base
+              and links are centered around the center of mass and aligned with the principal axes of inertia so
+              there are no off-diagonal elements in the inertia tensor.
+            inertia_position (np.array[float[3]]): new inertia position with respect to the link frame.
+            inertia_orientation (np.array[float[4]]): new inertia orientation (expressed as a quaternion [x,y,z,w]
+              with respect to the link frame.
             joint_damping (float): joint damping coefficient applied at each joint. This coefficient is read from URDF
-                joint damping field. Keep the value close to 0.
-                `joint_damping_force = -damping_coefficient * joint_velocity`.
+              joint damping field. Keep the value close to 0.
+              `joint_damping_force = -damping_coefficient * joint_velocity`.
+            joint_friction (float): joint friction coefficient.
         """
         pass
 
@@ -1961,15 +2068,15 @@ class Raisim(Simulator):
         Args:
             body_id (int): unique body id.
             link_id (int): link id.
-            local_position (np.float[3]): the point on the specified link to compute the Jacobian (in link local
+            local_position (np.array[float[3]]): the point on the specified link to compute the Jacobian (in link local
                 coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
-            q (np.float[N]): joint positions of size N, where N is the number of DoFs.
-            dq (np.float[N]): joint velocities of size N, where N is the number of DoFs.
-            des_ddq (np.float[N]): desired joint accelerations of size N.
+            q (np.array[float[N]]): joint positions of size N, where N is the number of DoFs.
+            dq (np.array[float[N]]): joint velocities of size N, where N is the number of DoFs.
+            des_ddq (np.array[float[N]]): desired joint accelerations of size N.
 
         Returns:
-            np.float[6,N], np.float[6,(6+N)]: full geometric (linear and angular) Jacobian matrix. The number of
-                columns depends if the base is fixed or floating.
+            np.array[float[6,N]], np.array[float[6,6+N]]: full geometric (linear and angular) Jacobian matrix. The
+                number of columns depends if the base is fixed or floating.
         """
         pass
 
@@ -1989,17 +2096,17 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): body unique id.
-            q (np.float[N]): joint positions of size N, where N is the total number of DoFs.
+            q (np.array[float[N]]): joint positions of size N, where N is the total number of DoFs.
 
         Returns:
-            np.float[N,N], np.float[6+N,6+N]: inertia matrix
+            np.array[float[N,N]], np.array[float[6+N,6+N]]: inertia matrix
         """
         pass
 
     def calculate_inverse_kinematics(self, body_id, link_id, position, orientation=None, lower_limits=None,
                                      upper_limits=None, joint_ranges=None, rest_poses=None, joint_dampings=None,
                                      solver=None, q_curr=None, max_iters=None, threshold=None):
-        """
+        r"""
         Compute the FULL Inverse kinematics; it will return a position for all the actuated joints.
 
         "You can compute the joint angles that makes the end-effector reach a given target position in Cartesian world
@@ -2012,28 +2119,28 @@ class Raisim(Simulator):
         Args:
             body_id (int): body unique id, as returned by `load_urdf`, etc.
             link_id (int): end effector link index.
-            position (np.float[3]): target position of the end effector (its link coordinate, not center of mass
+            position (np.array[float[3]]): target position of the end effector (its link coordinate, not center of mass
                 coordinate!). By default this is in Cartesian world space, unless you provide `q_curr` joint angles.
-            orientation (np.float[4]): target orientation in Cartesian world space, quaternion [x,y,w,z]. If not
+            orientation (np.array[float[4]]): target orientation in Cartesian world space, quaternion [x,y,w,z]. If not
                 specified, pure position IK will be used.
-            lower_limits (np.float[N], list of N floats): lower joint limits. Optional null-space IK.
-            upper_limits (np.float[N], list of N floats): upper joint limits. Optional null-space IK.
-            joint_ranges (np.float[N], list of N floats): range of value of each joint.
-            rest_poses (np.float[N], list of N floats): joint rest poses. Favor an IK solution closer to a given rest
-                pose.
-            joint_dampings (np.float[N], list of N floats): joint damping factors. Allow to tune the IK solution using
-                joint damping factors.
+            lower_limits (np.array[float[N]], list of N floats): lower joint limits. Optional null-space IK.
+            upper_limits (np.array[float[N]], list of N floats): upper joint limits. Optional null-space IK.
+            joint_ranges (np.array[float[N]], list of N floats): range of value of each joint.
+            rest_poses (np.array[float[N]], list of N floats): joint rest poses. Favor an IK solution closer to a
+                given rest pose.
+            joint_dampings (np.array[float[N]], list of N floats): joint damping factors. Allow to tune the IK solution
+                using joint damping factors.
             solver (int): p.IK_DLS (=0) or p.IK_SDLS (=1), Damped Least Squares or Selective Damped Least Squares, as
                 described in the paper by Samuel Buss "Selectively Damped Least Squares for Inverse Kinematics".
-            q_curr (np.float[N]): list of joint positions. By default PyBullet uses the joint positions of the body.
-                If provided, the target_position and targetOrientation is in local space!
+            q_curr (np.array[float[N]]): list of joint positions. By default PyBullet uses the joint positions of the
+                body. If provided, the target_position and targetOrientation is in local space!
             max_iters (int): maximum number of iterations. Refine the IK solution until the distance between target
                 and actual end effector position is below this threshold, or the `max_iters` is reached.
             threshold (float): residual threshold. Refine the IK solution until the distance between target and actual
                 end effector position is below this threshold, or the `max_iters` is reached.
 
         Returns:
-            np.float[N]: joint positions (for each actuated joint).
+            np.array[float[N]]: joint positions (for each actuated joint).
         """
         pass
 
@@ -2069,18 +2176,18 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): body unique id.
-            q (np.float[N]): joint positions
-            dq (np.float[N]): joint velocities
-            des_ddq (np.float[N]): desired joint accelerations
+            q (np.array[float[N]]): joint positions
+            dq (np.array[float[N]]): joint velocities
+            des_ddq (np.array[float[N]]): desired joint accelerations
 
         Returns:
-            np.float[N]: joint torques computed using the rigid-body equation of motion
+            np.array[float[N]]: joint torques computed using the rigid-body equation of motion
 
         References:
-            [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
-            [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
-            [3] "Springer Handbook of Robotics", Siciliano et al., 2008
-            [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+            - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            - [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            - [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            - [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
                 http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
         pass
@@ -2117,306 +2224,50 @@ class Raisim(Simulator):
 
         Args:
             body_id (int): unique body id.
-            q (np.float[N]): joint positions
-            dq (np.float[N]): joint velocities
-            torques (np.float[N]): desired joint torques
+            q (np.array[float[N]]): joint positions
+            dq (np.array[float[N]]): joint velocities
+            torques (np.array[float[N]]): desired joint torques
 
         Returns:
-            np.float[N]: joint accelerations computed using the rigid-body equation of motion
+            np.array[float[N]]: joint accelerations computed using the rigid-body equation of motion
 
         References:
-            [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
-            [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
-            [3] "Springer Handbook of Robotics", Siciliano et al., 2008
-            [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
+            - [1] "Rigid Body Dynamics Algorithms", Featherstone, 2008, chap1.1
+            - [2] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
+            - [3] "Springer Handbook of Robotics", Siciliano et al., 2008
+            - [4] Lecture on "Impedance Control" by Prof. De Luca, Universita di Roma,
                 http://www.diag.uniroma1.it/~deluca/rob2_en/15_ImpedanceControl.pdf
         """
         pass
 
-    # debug
 
-    def add_user_debug_line(self, from_pos, to_pos, rgb_color=None, width=None, lifetime=None, parent_object_id=None,
-                            parent_link_id=None, line_id=None):
-        """Add a user debug line in the simulator.
+# Tests
+if __name__ == '__main__':
+    from itertools import count
 
-        You can add a 3d line specified by a 3d starting point (from) and end point (to), a color [red,green,blue],
-        a line width and a duration in seconds.
+    sim = Raisim(render=True)
+    print("Gravity: {}".format(sim.get_gravity()))
 
-        Args:
-            from_pos (np.float[3]): starting point of the line in Cartesian world coordinates
-            to_pos (np.float[3]): end point of the line in Cartesian world coordinates
-            rgb_color (np.float[3]): RGB color (each channel in range [0,1])
-            width (float): line width (limited by OpenGL implementation).
-            lifetime (float): use 0 for permanent line, or positive time in seconds (afterwards the line with be
-                removed automatically)
-            parent_object_id (int): draw line in local coordinates of a parent object.
-            parent_link_id (int): draw line in local coordinates of a parent link.
-            line_id (int): replace an existing line item (to avoid flickering of remove/add).
+    # load floor
+    floor = sim.load_floor(dimension=20)
 
-        Returns:
-            int: unique user debug line id.
-        """
-        pass
+    # create box
+    box = sim.create_primitive_object(sim.GEOM_BOX, position=(0, 0, 2), mass=1, rgba_color=(1, 0, 0, 1))
+    sphere = sim.create_primitive_object(sim.GEOM_SPHERE, position=(2, 0, 2), mass=1, rgba_color=(0, 1, 0, 1))
+    capsule = sim.create_primitive_object(sim.GEOM_CAPSULE, position=(0, -2, 2), mass=1, rgba_color=(0, 0, 1, 1))
+    cylinder = sim.create_primitive_object(sim.GEOM_CYLINDER, position=(0, 2, 2), mass=1)
 
-    def add_user_debug_text(self, text, position, rgb_color=None, size=None, lifetime=None, orientation=None,
-                            parent_object_id=None, parent_link_id=None, text_id=None):
-        """
-        Add 3D text at a specific location using a color and size.
+    # load robot
+    path = os.path.dirname(os.path.abspath(__file__)) + '/../robots/urdfs/anymal/anymal.urdf'
+    # path = os.path.dirname(os.path.abspath(__file__)) + '/../robots/urdfs/kuka/kuka_iiwa/iiwa14.urdf'
+    robot = sim.load_urdf(path, position=(3, -3, 2))
 
-        Args:
-            text (str): text.
-            position (np.float[3]): 3d position of the text in Cartesian world coordinates.
-            rgb_color (list/tuple of 3 floats): RGB color; each component in range [0..1]
-            size (float): text size
-            lifetime (float): use 0 for permanent text, or positive time in seconds (afterwards the text with be
-                removed automatically)
-            orientation (np.float[4]): By default, debug text will always face the camera, automatically rotation.
-                By specifying a text orientation (quaternion), the orientation will be fixed in world space or local
-                space (when parent is specified). Note that a different implementation/shader is used for camera
-                facing text, with different appearance: camera facing text uses bitmap fonts, text with specified
-                orientation uses TrueType font.
-            parent_object_id (int): draw text in local coordinates of a parent object.
-            parent_link_id (int): draw text in local coordinates of a parent link.
-            text_id (int): replace an existing text item (to avoid flickering of remove/add).
+    print(sim.get_base_name(box))
+    print(sim.get_mass(sphere))
+    print(sim.get_mass(capsule))
+    print(sim.get_mass(cylinder))
+    print(sim.get_base_name(robot))
 
-        Returns:
-            int: unique user debug text id.
-        """
-        pass
-
-    def add_user_debug_parameter(self, name, min_range, max_range, start_value):
-        """
-        Add custom sliders to tune parameters.
-
-        Args:
-            name (str): name of the parameter.
-            min_range (float): minimum value.
-            max_range (float): maximum value.
-            start_value (float): starting value.
-
-        Returns:
-            int: unique user debug parameter id.
-        """
-        pass
-
-    def read_user_debug_parameter(self, parameter_id):
-        """
-        Read the value of the parameter / slider.
-
-        Args:
-            parameter_id: unique user debug parameter id.
-
-        Returns:
-            float: reading of the parameter.
-        """
-        pass
-
-    def remove_user_debug_item(self, item_id):
-        """
-        Remove the specified user debug item (line, text, parameter) from the simulator.
-
-        Args:
-            item_id (int): unique id of the debug item to be removed (line, text etc)
-        """
-        pass
-
-    def remove_all_user_debug_items(self):
-        """
-        Remove all user debug items from the simulator.
-        """
-        pass
-
-    def set_debug_object_color(self, object_id, link_id, rgb_color=(1, 0, 0)):
-        """
-        Override the color of a specific object and link.
-
-        Args:
-            object_id (int): unique object id.
-            link_id (int): link id.
-            rgb_color (float[3]): RGB debug color.
-        """
-        pass
-
-    def add_user_data(self, object_id, key, value):
-        """
-        Add user data (at the moment text strings) attached to any link of a body. You can also override a previous
-        given value. You can add multiple user data to the same body/link.
-
-        Args:
-            object_id (int): unique object/link id.
-            key (str): key string.
-            value (str): value string.
-
-        Returns:
-            int: user data id.
-        """
-        pass
-
-    def num_user_data(self, object_id):
-        """
-        Return the number of user data associated with the specified object/link id.
-
-        Args:
-            object_id (int): unique object/link id.
-
-        Returns:
-            int: the number of user data
-        """
-        pass
-
-    def get_user_data(self, user_data_id):
-        """
-        Get the specified user data value.
-
-        Args:
-            user_data_id (int): unique user data id.
-
-        Returns:
-            str: value string.
-        """
-        pass
-
-    def get_user_data_id(self, object_id, key):
-        """
-        Get the specified user data id.
-
-        Args:
-            object_id (int): unique object/link id.
-            key (str): key string.
-
-        Returns:
-            int: user data id.
-        """
-        pass
-
-    def get_user_data_info(self, object_id, index):
-        """
-        Get the user data info associated with the given object and index.
-
-        Args:
-            object_id (int): unique object id.
-            index (int): index (should be between [0, self.num_user_data(object_id)]).
-
-        Returns:
-            int: user data id.
-            str: key.
-            int: body id.
-            int: link index
-            int: visual shape index.
-        """
-        pass
-
-    def remove_user_data(self, user_data_id):
-        """
-        Remove the specified user data.
-
-        Args:
-            user_data_id (int): user data id.
-        """
-        pass
-
-    def sync_user_data(self):
-        """
-        Synchronize the user data.
-        """
-        pass
-
-    def configure_debug_visualizer(self, flag, enable):
-        """Configure the debug visualizer camera.
-
-        Configure some settings of the built-in OpenGL visualizer, such as enabling or disabling wireframe,
-        shadows and GUI rendering.
-
-        Args:
-            flag (int): The feature to enable or disable, such as
-                        COV_ENABLE_WIREFRAME (=3): show/hide the collision wireframe
-                        COV_ENABLE_SHADOWS (=2): show/hide shadows
-                        COV_ENABLE_GUI (=1): enable/disable the GUI
-                        COV_ENABLE_VR_PICKING (=5): enable/disable VR picking
-                        COV_ENABLE_VR_TELEPORTING (=4): enable/disable VR teleporting
-                        COV_ENABLE_RENDERING (=7): enable/disable rendering
-                        COV_ENABLE_TINY_RENDERER (=12): enable/disable tiny renderer
-                        COV_ENABLE_VR_RENDER_CONTROLLERS (=6): render VR controllers
-                        COV_ENABLE_KEYBOARD_SHORTCUTS (=9): enable/disable keyboard shortcuts
-                        COV_ENABLE_MOUSE_PICKING (=10): enable/disable mouse picking
-                        COV_ENABLE_Y_AXIS_UP (Z is default world up axis) (=11): enable/disable Y axis up
-                        COV_ENABLE_RGB_BUFFER_PREVIEW (=13): enable/disable RGB buffer preview
-                        COV_ENABLE_DEPTH_BUFFER_PREVIEW (=14): enable/disable Depth buffer preview
-                        COV_ENABLE_SEGMENTATION_MARK_PREVIEW (=15): enable/disable segmentation mark preview
-            enable (bool): False (disable) or True (enable)
-        """
-        pass
-
-    def get_debug_visualizer(self):
-        """Get information about the debug visualizer camera.
-
-        Returns:
-            float: width of the visualizer camera
-            float: height of the visualizer camera
-            np.float[4,4]: view matrix [4,4]
-            np.float[4,4]: perspective projection matrix [4,4]
-            np.float[3]: camera up vector expressed in the Cartesian world space
-            np.float[3]: forward axis of the camera expressed in the Cartesian world space
-            np.float[3]: This is a horizontal vector that can be used to generate rays (for mouse picking or creating
-                a simple ray tracer for example)
-            np.float[3]: This is a vertical vector that can be used to generate rays (for mouse picking or creating a
-                simple ray tracer for example)
-            float: yaw angle (in radians) of the camera, in Cartesian local space coordinates
-            float: pitch angle (in radians) of the camera, in Cartesian local space coordinates
-            float: distance between the camera and the camera target
-            np.float[3]: target of the camera, in Cartesian world space coordinates
-        """
-        pass
-
-    def reset_debug_visualizer(self, distance, yaw, pitch, target_position):
-        """Reset the debug visualizer camera.
-
-        Reset the 3D OpenGL debug visualizer camera distance (between eye and camera target position), camera yaw and
-        pitch and camera target position
-
-        Args:
-            distance (float): distance from eye to camera target position
-            yaw (float): camera yaw angle (in radians) left/right
-            pitch (float): camera pitch angle (in radians) up/down
-            target_position (np.float[3]): target focus point of the camera
-        """
-        pass
-
-    # events (mouse, keyboard)
-
-    def get_keyboard_events(self):
-        """Get the key events.
-
-        Returns:
-            dict: {keyId: keyState}
-                * `keyID` is an integer (ascii code) representing the key. Some special keys like shift, arrows,
-                and others are are defined in pybullet such as `B3G_SHIFT`, `B3G_LEFT_ARROW`, `B3G_UP_ARROW`,...
-                * `keyState` is an integer. 3 if the button has been pressed, 1 if the key is down, 2 if the key has
-                been triggered.
-        """
-        pass
-
-    def get_mouse_events(self):
-        """Get the mouse events.
-
-        Returns:
-            list of mouse events:
-                eventType (int): 1 if the mouse is moving, 2 if a button has been pressed or released
-                mousePosX (float): x-coordinates of the mouse pointer
-                mousePosY (float): y-coordinates of the mouse pointer
-                buttonIdx (int): button index for left/middle/right mouse button. It is -1 if nothing,
-                                 0 if left button, 1 if scroll wheel (pressed), 2 if right button
-                buttonState (int): 0 if nothing, 3 if the button has been pressed, 4 is the button has been released,
-                                   1 if the key is down (never observed), 2 if the key has been triggered (never
-                                   observed).
-        """
-        pass
-
-    def get_mouse_and_keyboard_events(self):
-        """Get the mouse and key events.
-
-        Returns:
-            list: list of mouse events
-            dict: dictionary of key events
-        """
-        pass
+    # perform step
+    for t in count():
+        sim.step(sleep_time=sim.dt)

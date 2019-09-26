@@ -79,7 +79,8 @@ class KMP(object):
     practical for high-dimensional inputs.
 
     KMP is a non-parametric (but a semi-parametric approach is used to initialize it) probabilistic discriminative
-    model.
+    model. The performance of the KMP depends thus on the underlying probabilistic distribution from which it learns
+    from (which is often a GMM, and thus it depends on the GMM initialization).
 
     References:
         - [1] "Kernelized Movement Primitives", Huang et al., 2017
@@ -197,8 +198,9 @@ class KMP(object):
 
     @staticmethod
     def create_reference_database(X, Y, gmm=None, gmm_num_components=10, dist=None, database_threshold=1e-3,
-            database_size_limit=100, sample_from_gmm=False, gmm_init='kmeans', gmm_reg=1e-8, gmm_num_iters=1000,
-            gmm_convergence_threshold=1e-4, seed=None, verbose=True, block=True):
+                                  database_size_limit=100, sample_from_gmm=False, gmm_init='kmeans', gmm_reg=1e-8,
+                                  gmm_num_iters=1000, gmm_convergence_threshold=1e-4, seed=None, verbose=True,
+                                  block=True):
         r"""
         Create reference database from the data. This database contains a list of input data with their
         corresponding predicted output distribution by the reference model (which in this case is a GMM).
@@ -224,7 +226,7 @@ class KMP(object):
             seed (int, None): random seed for the initialization and training of the GMM, and when sampling
             verbose (bool): if we should print details during the optimization process
             block (bool): if the size of the kernel matrix is bigger than 1000, it will ask for confirmation to
-                continue. The kernel matrix has to be inversed, which has a time complexity of `O(N^3)` where
+                continue. The kernel matrix has to be inverted, which has a time complexity of `O(N^3)` where
                 `N` is the size of the kernel matrix.
 
         Returns:
