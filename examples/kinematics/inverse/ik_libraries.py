@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """In this file, we use and compare several IK libraries using the Kuka robot.
 

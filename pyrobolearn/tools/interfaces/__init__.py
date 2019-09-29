@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import the interfaces
 from .interface import *

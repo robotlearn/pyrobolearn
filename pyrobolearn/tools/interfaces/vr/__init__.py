@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # general interface
 from .vr import VRInterface

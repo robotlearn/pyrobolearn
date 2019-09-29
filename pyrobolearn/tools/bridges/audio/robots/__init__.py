@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # # bridge between audio and wheeled robot
 # from .bridge_speech_wheeled import *

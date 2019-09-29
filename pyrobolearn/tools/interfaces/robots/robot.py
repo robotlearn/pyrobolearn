@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # Import general interface
 from pyrobolearn.tools.interfaces.interface import Interface, InputInterface, OutputInterface, InputOutputInterface

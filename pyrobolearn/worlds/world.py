@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Define the `World` class which allows to specify what constitutes the world (i.e. what elements are in the world).
 

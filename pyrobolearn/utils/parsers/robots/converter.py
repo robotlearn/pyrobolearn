@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Define the Converter class which allows to convert from one type of file (urdf, sdf, mjcf, and others) to another
 format.

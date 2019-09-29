@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Define the `LinkPhysicsRandomizer` class which randomizes the physical attributes / properties of a link or
 multiple links of a specific body.

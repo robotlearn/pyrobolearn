@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import constraint
 from .constraint import *

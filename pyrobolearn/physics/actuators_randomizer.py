@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Define the `ActuatorRandomizer` class which randomizes the physical attributes / properties of an actuator.
 

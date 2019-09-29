@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # Bridge for controller interfaces #
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import canonical system
 from .canonical_systems import LinearCS

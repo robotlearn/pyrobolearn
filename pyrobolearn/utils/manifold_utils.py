@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Util methods for operations on manifolds (e.g. Riemannian manifolds)
 """

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import state
 from .state import State

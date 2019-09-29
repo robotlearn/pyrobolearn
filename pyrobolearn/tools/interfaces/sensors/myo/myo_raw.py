@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """
 Original by dzhu: https://github.com/dzhu/myo-raw

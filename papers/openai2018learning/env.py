@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """
 Provide the environment (world, states, actions, rewards, terminal conditions, etc) defined in the paper [1] using the

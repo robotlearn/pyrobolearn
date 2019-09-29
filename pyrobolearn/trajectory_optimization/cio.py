@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """This file implements the 'Contact Invariant Optimization' framework developed by Igor Mordatch.
 

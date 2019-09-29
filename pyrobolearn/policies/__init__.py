@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import general policy
 from .policy import Policy

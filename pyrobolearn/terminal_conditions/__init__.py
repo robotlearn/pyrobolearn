@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import terminal conditions
 from .terminal_condition import TerminalCondition, HasFallenCondition, HasReachedCondition

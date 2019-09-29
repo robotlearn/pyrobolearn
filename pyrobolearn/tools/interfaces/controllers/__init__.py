@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import general game controller interface
 from .controller import GameControllerInterface

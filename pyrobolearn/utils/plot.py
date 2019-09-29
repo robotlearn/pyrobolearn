@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Matplotlib
 # Check also Visdom: https://github.com/facebookresearch/visdom
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TELEGRAM:
 # - https://telegram.org/
 # - https://github.com/telegramdesktop/tdesktop

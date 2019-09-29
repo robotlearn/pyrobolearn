@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import data structures
 from . import data_structures

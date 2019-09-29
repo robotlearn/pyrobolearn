@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Computes the various returns evaluated on batches of transitions (used in RL).
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provide the common data structures that are shared among the various parsers, generators, and converters.
 """

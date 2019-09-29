@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # This file defines the `PoseGenerator` class which generates possible or plausible poses for a robot.
 # A pose is defined as:
 # - the link positions/orientations, and the base position/orientation.

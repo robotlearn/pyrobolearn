@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Once in the pyrobolearn folder, type one of the following command: 
 # $ pip install -e .
 # $ pip install --user -e .

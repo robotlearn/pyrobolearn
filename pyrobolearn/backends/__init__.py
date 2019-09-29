@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # The various backends allows to specify which framework we want to use
 
 import os

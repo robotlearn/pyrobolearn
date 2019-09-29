@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provide the abstract control environment from which all the other control environments inherit from.
 """

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # uncompyle6 version 3.3.5
 # Python bytecode 2.7 (62211)
 # Decompiled from: Python 2.7.12 (default, Nov 12 2018, 14:36:49) 

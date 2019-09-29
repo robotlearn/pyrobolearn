@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provide converter classes which allows to convert from one certain data type to another.
 """

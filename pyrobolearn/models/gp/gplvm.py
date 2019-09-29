@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provide the Gaussian Process Latent Variable Model (GPLVM)
 

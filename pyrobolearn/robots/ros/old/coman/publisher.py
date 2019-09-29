@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import rospy
 from std_msgs import msg as stdMsg
 

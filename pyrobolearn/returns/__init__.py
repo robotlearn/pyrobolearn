@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import the various returns
 from .estimators import *

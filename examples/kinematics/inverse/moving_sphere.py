@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Inverse kinematics with the Kuka robot where the goal is to follow a moving sphere.
 """

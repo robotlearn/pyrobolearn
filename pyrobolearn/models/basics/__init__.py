@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # Linear
 from .linear import Linear

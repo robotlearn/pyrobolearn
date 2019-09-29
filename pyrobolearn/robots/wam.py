@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provide the WAM robotic platform and the Barrett hand gripper.
 """
