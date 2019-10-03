@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Demonstrate the various features (operations) you can use with the ``Reward`` class.
 

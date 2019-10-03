@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import model interface
 from . import models

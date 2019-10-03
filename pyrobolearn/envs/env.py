@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Define the `Env` class which defines the world, states, and possible rewards. This is the main object
 a policy interacts with.

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provides the various basic dynamic transition function approximators (e.g. table and linear approximators)
 

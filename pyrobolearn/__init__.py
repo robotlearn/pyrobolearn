@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """PyRoboLearn: a Python framework in Robot Learning for Education and Research.
 """
 

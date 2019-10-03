@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Example on how to use the 'Cartpole' OpenAI Gym environments in PyRoboLearn using NEAT.
 """

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Define the various speech interfaces allowing to perform speech recognition, translation, and synthesization.
 """

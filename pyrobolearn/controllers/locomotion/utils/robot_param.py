@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 from urdf_parser_py.urdf import URDF
 

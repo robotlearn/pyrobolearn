@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # MPC: Model Predictive Control
 
 class MPC(object):

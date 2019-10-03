@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # This file provides the most common probability distributions
 
 # References:

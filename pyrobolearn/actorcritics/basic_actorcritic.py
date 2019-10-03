@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Defines basic actor-critic models (such as linear models) which combine a policy and value function.
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Demonstrate how the reward function that measures how much a robot has moved forward increases / decreases based on
 the robot velocity. Use the arrow keys on your keyboard to move the robot, and observe how the computed reward value

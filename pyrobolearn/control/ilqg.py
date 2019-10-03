@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # This file describes the iterative Linear Quadratic Gaussian (iLQG)
 
 

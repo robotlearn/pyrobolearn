@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # a bridge links an interface with something else
 
 # general bridge import

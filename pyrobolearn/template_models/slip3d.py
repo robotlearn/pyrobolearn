@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provide the 3D Spring Loaded Inverted Pendulum (SLIP) model.
 """

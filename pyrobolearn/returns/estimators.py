@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Describes the various `Estimators` / `Returns` used in reinforcement learning.
 

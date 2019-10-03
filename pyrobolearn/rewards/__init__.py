@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import abstract reward class and operations
 from .reward import Reward, ceil, cos, cosh, degrees, exp, expm1, floor, frexp, isinf, isnan, log, log10, log1p, \

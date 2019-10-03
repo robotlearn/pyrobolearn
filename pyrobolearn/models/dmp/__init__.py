@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import canonical systems
 from .canonical_systems import *

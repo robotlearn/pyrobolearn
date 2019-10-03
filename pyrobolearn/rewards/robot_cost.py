@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Define some basic robot costs used in reinforcement learning and optimization.
 

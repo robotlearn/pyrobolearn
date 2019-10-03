@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import RL algo
 from .rl_algo import *

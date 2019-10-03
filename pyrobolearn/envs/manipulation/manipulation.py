@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provide the abstract manipulation environment from which all the other manipulation environments inherit from.
 """

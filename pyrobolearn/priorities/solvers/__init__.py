@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import abstract task solver
 from .task_solver import TaskSolver

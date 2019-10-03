@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 from pyrobolearn.tools.interfaces.sensors import BioSensorInterface
 

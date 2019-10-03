@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import distributions
 from .bernoulli import Bernoulli

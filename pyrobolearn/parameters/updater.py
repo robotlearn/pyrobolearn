@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 r"""Provide the various update schemes to update optimization parameters and model parameters.
 

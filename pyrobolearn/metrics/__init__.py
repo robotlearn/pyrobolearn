@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import the metrics
 from .metric import Metric

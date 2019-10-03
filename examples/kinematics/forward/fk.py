@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """In this file, we perform forward kinematics using the Kuka robot.
 

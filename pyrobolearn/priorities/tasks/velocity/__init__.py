@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 from .angular_momentum import AngularMomentumTask
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import processors
 from .processor import Processor

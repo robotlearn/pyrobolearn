@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Distribute several e-pucks in the world and make them move forward.
 

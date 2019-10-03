@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 r"""Provide the abstract task solver class from which all the other task solvers inherit from.
 

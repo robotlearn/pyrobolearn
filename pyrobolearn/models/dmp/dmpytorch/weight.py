@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Define weights used in the forcing terms in dynamic movement primitives
 """

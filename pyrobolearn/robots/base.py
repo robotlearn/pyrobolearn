@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Define the various basic bodies / objects that are present in the simulator / world.
 

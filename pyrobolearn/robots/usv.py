@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Provide the Unmanned Surface Vehicle (USV) robot abstract classes.
 """

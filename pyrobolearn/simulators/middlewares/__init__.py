@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # import middleware abstract class
 from .middleware import MiddleWare

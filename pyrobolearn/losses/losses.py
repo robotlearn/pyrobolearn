@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Defines the common loss functions that are used by the learning algorithm / optimizer.
 
