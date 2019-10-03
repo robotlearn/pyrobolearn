@@ -1,18 +1,25 @@
 #!/bin/sh
-# This bash installs the 'sloccount' command which counts source lines of code, and provides several statisticsabout this last one.
+# This bash installs the 'sloccount' and 'cloc' commands which provide statistics such as the number of lines of code,
+# and others of a certain software.
 # Once installed, go to the pyrobolearn package and type:
-# $ sloccount *.py */*.py
+# $ sloccount .
+# or
+# $ cloc .
 
 # define variables
 origindir=$PWD
 scriptdir=`dirname $0`
 
-# install package
+# install packages
 sudo apt install sloccount -y
+sudo apt install cloc -y
 
 # compute statistics for pyrobolearn software
 cd $scriptdir; cd ..
-sloccount *.py */*.py
+echo "\n\nUsing Sloccount:"
+sloccount .
+echo "\n\nUsing clock:"
+cloc .
 
 # return to the original directory
 cd $origindir
