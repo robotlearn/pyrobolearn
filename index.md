@@ -13,8 +13,8 @@ This is achieved by abstracting each key concept, undertaking a modular programm
 different modules, and favoring composition over inheritance for better flexibility. We demonstrate the different features and 
 utility of our framework through different use cases."
 
-- Link to paper: arxiv
-- Link to Github repository: https://github.com/robotlearn/pyrobolearn
-- Link to documentation: doc
-- Link to videos: youtube
+- Link to paper
+- Link to [Github repository](https://github.com/robotlearn/pyrobolearn)
+- Link to [documentation](https://github.com/robotlearn/pyrobolearn/tree/master/docs)
 - Link to [examples](https://github.com/robotlearn/pyrobolearn/tree/master/examples)
+- Link to [videos](https://www.youtube.com/playlist?list=PL7luWwjSAezVxBTindZWUo7hn-Dj9w3gL)
