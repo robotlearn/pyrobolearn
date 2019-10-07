@@ -1,5 +1,3 @@
 theme: jekyll-theme-cayman
 title: PyRoboLearn
 description: A Python Framework for Robot Learning Practitioners
-examples: https://github.com/robotlearn/pyrobolearn/tree/master/examples
-  
