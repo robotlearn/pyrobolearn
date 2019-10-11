@@ -97,7 +97,24 @@ class URDFParser(RobotParser):
             child_body = joint.child
             child_body.parent_joints[joint.name] = joint
 
-        # TODO: check sensor, plugins, transmission, etc
+        # check transmissions (for control)
+        for i, transmission_tag in enumerate(root.findall('transmission')):
+            # get transmission instance
+            transmission = self._parse_transmission(transmission_tag, idx=i, tree=tree)
+
+            # add transmission
+            tree.add_transmission(transmission)
+
+        # check sensors
+        for i, sensor_tag in enumerate(root.findall('gazebo')):
+            # get sensor instance
+            sensor = self._parse_sensor(sensor_tag, idx=i, tree=tree)
+
+            # add sensor in tree
+            if sensor is not None:
+                tree.add_sensor(sensor)
+
+        # TODO: check plugins
 
         # set the root element
         key = next(iter(tree.bodies))
@@ -247,7 +264,7 @@ class URDFParser(RobotParser):
         Args:
             joint_tag (ET.Element): joint XML element.
             idx (int): joint index.
-            tree (Tree): tree data structure.
+            tree (Tree): MultiBody data structure.
 
         Returns:
             Joint: joint data structure.
@@ -294,6 +311,186 @@ class URDFParser(RobotParser):
                 joint.limits = [lower_limit, upper_limit]
 
         return joint
+
+    @staticmethod
+    def _parse_transmission(transmission_tag, idx, tree):
+        """
+        Return the transmission data structure instance from a <transmission> tag. See `ros_control` for more info.
+
+        Args:
+            transmission_tag (ET.Element): transmission XML element.
+            idx (int): joint/motor index.
+            tree (Tree): tree data structure.
+
+        Returns:
+            Transmission: transmission data structure.
+        """
+        transmission = Transmission(name=transmission_tag.attrib.get('name'))
+
+        # get type tag
+        type_tag = transmission_tag.find('type')
+        if type_tag is not None:
+            transmission.type = type_tag.text
+
+        # get joint
+        joint_tag = transmission_tag.find('joint')
+        if joint_tag is not None:
+            transmission.joint = tree.joints[joint_tag.attrib.get('name')]
+
+        # get actuator
+        actuator_tag = transmission_tag.find('actuator')
+        if actuator_tag is not None:
+            hardware_interface = actuator_tag.find('hardwareInterface').text
+            mechanical_reduction = actuator_tag.find('mechanicalReduction').text
+            actuator = MotorJointActuator(actuator_id=idx, joint=transmission.joint,
+                                          name=actuator_tag.attrib.get('name'), hardware_interface=hardware_interface,
+                                          mechanical_reduction=mechanical_reduction)
+            transmission.actuator = actuator
+            tree.add_actuator(actuator)
+
+        return transmission
+
+    @staticmethod
+    def _parse_sensor(gazebo_tag, idx, tree):
+        """
+        Return the sensor data structure instance from a <gazebo> tag.
+
+        Args:
+            gazebo_tag (ET.Element): gazebo sensor XML element.
+            idx (int): joint/motor index.
+            tree (Tree): tree data structure.
+
+        Returns:
+            Sensor: sensor data structure.
+        """
+        reference = gazebo_tag.attrib.get('reference')
+
+        # get sensor
+        sensor_tag = gazebo_tag.find('sensor')
+        if sensor_tag is None:
+            return None
+
+        sensor_type = sensor_tag.attrib.get('type')
+
+        # define set_attribute text function
+        def set_attribute(obj, attribute_name, parent_tag, tag=None):
+            """Set XML tag text to object's attribute."""
+            if tag is None:
+                tag = attribute_name
+            tag = parent_tag.find(tag)
+            if tag is not None:
+                setattr(obj, attribute_name, tag.text)
+
+        # define check_noise tag function
+        def check_noise(tag):
+            """Check the <noise> tag and returns the Noise instance or None if no noise tags were found."""
+            noise_tag = tag.find('noise')
+            noise = None
+            if noise_tag is not None:
+                type_tag = noise_tag.find('type')
+                if type_tag is not None:
+                    noise_type = type_tag.text
+                    if noise_type == 'gaussian':
+                        noise = GaussianNoise()
+                        for t in ['mean', 'stddev']:
+                            set_attribute(noise, t, noise_tag)
+            return noise
+
+        # check sensor type #
+        sensor = None
+
+        if sensor_type == 'camera':  # CAMERA sensor
+            sensor = CameraSensor(sensor_id=idx, link=tree.bodies[reference], name=sensor_tag.attrib.get('name'))
+
+            # check <update_rate> tag
+            set_attribute(sensor, 'update_rate', sensor_tag)
+
+            # check <camera> tag
+            camera_tag = sensor_tag.find('camera')
+            if camera_tag is not None:
+
+                # check <image> tag
+                image_tag = camera_tag.find('image')
+                if image_tag is not None:
+                    image = Image()
+                    for tag in ['width', 'height', 'format']:
+                        set_attribute(image, tag, image_tag)
+                    sensor.image = image
+
+                # check <clip> tag
+                clip_tag = camera_tag.find('clip')
+                if clip_tag is not None:
+                    for tag in ['near', 'far']:
+                        set_attribute(sensor, tag, clip_tag)
+                            
+                # check <noise> tag
+                sensor.noise = check_noise(camera_tag)
+
+            # check <plugin> tag
+            plugin_tag = sensor_tag.find('plugin')
+            if plugin_tag is not None:
+                sensor.plugin_filename = plugin_tag.attrib.get('filename')
+                sensor.plugin_name = plugin_tag.attrib.get('name')
+
+                attributes = ['camera_base_topic', 'image_topic', 'camera_info_topic', 'frame_name', 'hack_baseline',
+                              'distortion_k1', 'distortion_k2', 'distortion_k3', 'distortion_t1', 'distortion_t2',
+                              'focal_length', 'cx_prime', 'cx', 'cy']
+                tags = ['cameraName', 'imageTopicName', 'cameraInfoTopicName', 'frameName', 'hackBaseline',
+                        'distortionK1', 'distortionK2', 'distortionK3', 'distortionT1', 'distortionT2', 'focalLength',
+                        'CxPrime', 'Cx', 'Cy']
+                for attrib, tag in zip(attributes, tags):
+                    set_attribute(sensor, attrib, plugin_tag, tag)
+
+        elif sensor_type == 'gpu_ray':  # GPU RAY sensor
+            sensor = GPURay(sensor_id=idx, link=tree.bodies[reference], name=sensor_tag.attrib.get('name'))
+
+            set_attribute(sensor, 'pose', sensor_tag)
+            set_attribute(sensor, 'visualize', sensor_tag)
+            set_attribute(sensor, 'update_rate', sensor_tag)
+
+            # check <ray> tag
+            ray_tag = sensor_tag.find('ray')
+            if ray_tag is not None:
+
+                # check <scan> tag
+                scan_tag = ray_tag.find('scan')
+                if scan_tag is not None:
+                    # check <horizontal> tag
+                    horizontal_tag = scan_tag.find('horizontal')
+                    if horizontal_tag is not None:
+                        attributes = ['samples', 'min_angle', 'max_angle']
+                        for attrib in attributes:
+                            set_attribute(sensor, attrib, horizontal_tag)
+                        set_attribute(sensor, 'scan_resolution', horizontal_tag, 'resolution')
+
+                # check <range> tag
+                range_tag = ray_tag.find('range')
+                if range_tag is not None:
+                    attributes = ['min_range', 'max_range', 'range_resolution']
+                    tags = ['min', 'max', 'resolution']
+                    for attrib, tag in zip(attributes, tags):
+                        set_attribute(sensor, attrib, range_tag, tag)
+
+                # check <noise> tag
+                sensor.noise = check_noise(ray_tag)
+
+            # check <plugin> tag
+            plugin_tag = sensor_tag.find('plugin')
+            if plugin_tag is not None:
+                sensor.plugin_filename = plugin_tag.attrib.get('filename')
+                sensor.plugin_name = plugin_tag.attrib.get('name')
+
+                attributes = ['topic_name', 'frame_name']
+                tags = ['topicName', 'frameName']
+
+                for attrib, tag in zip(attributes, tags):
+                    set_attribute(sensor, attrib, plugin_tag, tag)
+
+        # elif sensor_type == 'imu':  # imu sensor
+        else:
+            print("WARNING: THE SENSOR {} WAS NOT PARSED. PLEASE IMPLEMENT THE METHOD.")
+
+        return sensor
 
     def generate(self, tree=None):
         """
@@ -471,6 +668,43 @@ class URDFParser(RobotParser):
                     kwargs['lower'] = str(joint.limits[0])
                     kwargs['upper'] = str(joint.limits[1])
                 ET.SubElement(joint_tag, 'limit', attrib=kwargs)
+
+        # generate transmission
+        for transmission in tree.transmissions.values():
+            # set transmission name
+            transmission_tag = ET.SubElement(root, 'transmission', attrib={'name': transmission.name})
+
+            # set transmission type
+            type_tag = ET.SubElement(transmission_tag, 'type')
+            type_tag.text = transmission.type
+
+            # set transmission joint
+            joint_tag = ET.SubElement(transmission_tag, 'joint', attrib={'name': transmission.joint.name})
+            joint_hw_tag = ET.SubElement(joint_tag, 'hardwareInterface')
+            joint_hw_tag.text = transmission.actuator.hardware_interface
+
+            # set transmission actuator
+            actuator_tag = ET.SubElement(transmission_tag, 'actuator', attrib={'name': transmission.actuator.name})
+            hw_tag = ET.SubElement(actuator_tag, 'hardwareInterface')
+            hw_tag.text = transmission.actuator.hardware_interface
+            mechanical_reduction_tag = ET.SubElement(actuator_tag, 'mechanicalReduction')
+            mechanical_reduction_tag.text = str(transmission.actuator.mechanical_reduction)
+
+        # generate sensors
+        # for sensor in tree.sensors.values():
+        #     # set sensor reference link/joint
+        #     if isinstance(sensor, JointSensor):
+        #         attrib = {'reference': sensor.joint.name}
+        #     elif isinstance(sensor, LinkSensor):
+        #         attrib = {'reference': sensor.link.name}
+        #     else:
+        #         raise TypeError("Expecting the sensor to be a joint sensor or link sensor...")
+        #     gazebo_tag = ET.SubElement(root, 'gazebo', attrib=attrib)
+        #
+        #     # set sensor name and type
+        #     sensor_tag = set_name_and_type(gazebo_tag, 'sensor', sensor)
+        #
+        #     # depending on the sensor generate the necessary tags
 
         # return root XML element
         return root

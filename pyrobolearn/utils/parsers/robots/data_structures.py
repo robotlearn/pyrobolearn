@@ -4,6 +4,7 @@
 """
 
 import copy
+from enum import Enum
 import numpy as np
 import trimesh
 from collections import OrderedDict, Iterable
@@ -870,8 +871,10 @@ class MultiBody(object):
         self.materials = {}
         self.frame = Frame(position=position, orientation=orientation, dtype='world')
 
+        # sensors and actuators (with their transmissions)
         self.sensors = {}
         self.actuators = {}
+        self.transmissions = {}
 
     @property
     def name(self):
@@ -1068,6 +1071,13 @@ class MultiBody(object):
         """
         return len(self.actuators) > 0
 
+    def has_transmissions(self):
+        """
+        Return True if the multi-body data structure has some transmissions (transmission between joint and motor
+        actuator).
+        """
+        return len(self.transmissions) > 0
+
     def add_sensor(self, sensor):
         """
         Add a sensor to the multi-body data structure.
@@ -1091,6 +1101,18 @@ class MultiBody(object):
             raise TypeError("Expecting the given 'actuator' to be an instance of `Actuator`, but got instead: "
                             "{}".format(type(actuator)))
         self.actuators[actuator.id] = actuator
+
+    def add_transmission(self, transmission):
+        """
+        Add a transmission element (i.e. link between joint and motor actuator).
+
+        Args:
+            transmission (Transmission): transmission data structure.
+        """
+        if not isinstance(transmission, Transmission):
+            raise TypeError("Expecting the given 'transmission' to be an instance of `Transmission`, but got instead: "
+                            "{}".format(type(transmission)))
+        self.transmissions[transmission.name] = transmission
 
 
 # alias
@@ -2879,9 +2901,40 @@ class Noise(object):
 class GaussianNoise(Noise):
     """Gaussian noise distribution used in sensors and actuators."""
 
-    def __init__(self, mean, stddev):
+    def __init__(self, mean=None, stddev=None):
+        """
+        Initialize the Gaussian noise.
+
+        Args:
+            mean (float): mean value.
+            stddev (float): standard deviation value.
+        """
         self.mean = mean
         self.stddev = stddev
+
+    @property
+    def mean(self):
+        """Return the Gaussian noise mean value."""
+        return self._mean
+
+    @mean.setter
+    def mean(self, mean):
+        """Set the Gaussian noise mean value."""
+        if mean is not None:
+            mean = float(mean)
+        self._mean = mean
+
+    @property
+    def stddev(self):
+        """Return the Gaussian noise standard deviation value."""
+        return self._stddev
+
+    @stddev.setter
+    def stddev(self, stddev):
+        """Set the Gaussian noise standard deviation value."""
+        if stddev is not None:
+            stddev = float(stddev)
+        self._stddev = stddev
 
 
 class Sensor(object):
@@ -2917,6 +2970,18 @@ class Sensor(object):
         if name is not None and not isinstance(name, str):
             raise TypeError("Expecting the given 'name' to be a string, instead got: {}".format(type(name)))
         self._name = name
+
+    @property
+    def update_rate(self):
+        """Return the update rate."""
+        return self._rate
+
+    @update_rate.setter
+    def update_rate(self, rate):
+        """Set the update rate."""
+        if rate is not None:
+            rate = float(rate)
+        self._rate = rate
 
     @property
     def noise(self):
@@ -3005,6 +3070,59 @@ class LinkSensor(Sensor):
         self._link = link
 
 
+class Image(object):
+    r"""Image data structure."""
+
+    def __init__(self, width=None, height=None, format=None):
+        """
+        Initialize the image data structure.
+
+        Args:
+            width (int, None): width of the image in pixels.
+            height (int, None): height of the image in pixels.
+            format (str, None): format of the image. Ex: 'R8G8B8'.
+        """
+        self.width = width
+        self.height = height
+        self.format = format
+
+    @property
+    def width(self):
+        """Return the width of the image."""
+        return self._width
+
+    @width.setter
+    def width(self, width):
+        """Set the width of the image."""
+        if width is not None:
+            width = int(width)
+        self._width = width
+
+    @property
+    def height(self):
+        """Return the height of the image."""
+        return self._height
+
+    @height.setter
+    def height(self, height):
+        """Set the height of the image."""
+        if height is not None:
+            height = int(height)
+        self._height = height
+
+    @property
+    def format(self):
+        """Return the image format."""
+        return self._format
+
+    @format.setter
+    def format(self, format):
+        """Set the image format."""
+        if format is not None and not isinstance(format, str):
+            raise TypeError("Expecting the given 'format' to be a string, but instead got: {}".format(type(format)))
+        self._format = format
+
+
 class CameraSensor(LinkSensor):
     """Camera sensor
 
@@ -3028,10 +3146,8 @@ class CameraSensor(LinkSensor):
         self.visualize = False
 
         # intrinsic properties of camera
+        self.image = Image(width=None, height=None, format=None)
         self.horizontal_fov = None
-        self.width = None
-        self.height = None
-        self.format = None  # R8G8B8
         self.near = None
         self.far = None
 
@@ -3041,12 +3157,171 @@ class CameraSensor(LinkSensor):
         self.image_topic = None  # added to the camera_base_topic
         self.camera_info_topic = None  # added to the camera_base_topic
         self.frame_name = None  # check 'name' attribute in Frame class
+
         self.hack_baseline = None
         self.distortion_k1 = None
         self.distortion_k2 = None
         self.distortion_k3 = None
         self.distortion_t1 = None
         self.distortion_t2 = None
+        self.focal_length = None
+        self.cx_prime = None
+        self.cx = None
+        self.cy = None
+
+    @property
+    def visualize(self):
+        """Return if we should visualize in the simulator the sensor data."""
+        return self._visualize
+
+    @visualize.setter
+    def visualize(self, visualize):
+        """Set if we should visualize in the simulator the sensor data."""
+        if visualize is None:
+            visualize = False
+        self._visualize = bool(visualize)
+
+    @property
+    def image(self):
+        """Return the image data structure."""
+        return self._image
+
+    @image.setter
+    def image(self, image):
+        if image is not None and not isinstance(image, Image):
+            raise TypeError("Expecting the given 'image' to be an instance of `Image` but got instead: "
+                            "{}".format(type(image)))
+        self._image = image
+
+    @property
+    def horizontal_fov(self):
+        return self._horizontal_fov
+
+    @horizontal_fov.setter
+    def horizontal_fov(self, fov):
+        if fov is not None:
+            fov = float(fov)
+        self._horizontal_fov = fov
+
+    @property
+    def near(self):
+        return self._near
+
+    @near.setter
+    def near(self, near):
+        if near is not None:
+            near = float(near)
+        self._near = near
+
+    @property
+    def far(self):
+        return self._far
+
+    @far.setter
+    def far(self, far):
+        if far is not None:
+            far = float(far)
+        self._far = far
+
+    @property
+    def hack_baseline(self):
+        return self._hack_baseline
+
+    @hack_baseline.setter
+    def hack_baseline(self, baseline):
+        if baseline is not None:
+            baseline = float(baseline)
+        self._hack_baseline = baseline
+
+    @property
+    def distortion_k1(self):
+        return self._distortion_k1
+
+    @distortion_k1.setter
+    def distortion_k1(self, distortion_k1):
+        if distortion_k1 is not None:
+            distortion_k1 = float(distortion_k1)
+        self._distortion_k1 = distortion_k1
+
+    @property
+    def distortion_k2(self):
+        return self._distortion_k2
+
+    @distortion_k2.setter
+    def distortion_k2(self, distortion_k2):
+        if distortion_k2 is not None:
+            distortion_k2 = float(distortion_k2)
+        self._distortion_k2 = distortion_k2
+
+    @property
+    def distortion_k3(self):
+        return self._distortion_k3
+
+    @distortion_k3.setter
+    def distortion_k3(self, distortion_k3):
+        if distortion_k3 is not None:
+            distortion_k3 = float(distortion_k3)
+        self._distortion_k3 = distortion_k3
+
+    @property
+    def distortion_t1(self):
+        return self._distortion_t1
+
+    @distortion_t1.setter
+    def distortion_t1(self, distortion_t1):
+        if distortion_t1 is not None:
+            distortion_t1 = float(distortion_t1)
+        self._distortion_t1 = distortion_t1
+
+    @property
+    def distortion_t2(self):
+        return self._distortion_t2
+
+    @distortion_t2.setter
+    def distortion_t2(self, distortion_t2):
+        if distortion_t2 is not None:
+            distortion_t2 = float(distortion_t2)
+        self._distortion_t2 = distortion_t2
+
+    @property
+    def focal_length(self):
+        return self._focal_length
+
+    @focal_length.setter
+    def focal_length(self, focal_length):
+        if focal_length is not None:
+            focal_length = float(focal_length)
+        self._focal_length = focal_length
+
+    @property
+    def cx_prime(self):
+        return self._cx_prime
+
+    @cx_prime.setter
+    def cx_prime(self, cx_prime):
+        if cx_prime is not None:
+            cx_prime = float(cx_prime)
+        self._cx_prime = cx_prime
+
+    @property
+    def cx(self):
+        return self._cx
+
+    @cx.setter
+    def cx(self, cx):
+        if cx is not None:
+            cx = float(cx)
+        self._cx = cx
+
+    @property
+    def cy(self):
+        return self._cy
+
+    @cy.setter
+    def cy(self, cy):
+        if cy is not None:
+            cy = float(cy)
+        self._cy = cy
 
 
 class DepthCameraSensor(LinkSensor):
@@ -3090,7 +3365,7 @@ class GPURay(LinkSensor):
         """
         super(GPURay, self).__init__(sensor_id, link, name, update_rate, noise)
 
-        self.frame = Frame()
+        self.frame = Frame()  # pose
         self.visualize = False
 
         # <scan>
@@ -3101,13 +3376,158 @@ class GPURay(LinkSensor):
 
         # <range>
         self.range = None  # <min> and <max>
-        self.range_resolution = 0.01
+        self.range_resolution = None
 
         # plugin
         self.plugin_filename = None
         self.plugin_name = None
-        self.topic = None
+        self.topic_name = None
         self.frame_name = None  # Check 'name' attribute in Frame class
+
+    @property
+    def pose(self):
+        pose = self.frame.pose
+        if pose is not None:
+            pos, rpy = pose
+            if pos is None:
+                pos = np.zeros(3)
+            if rpy is None:
+                rpy = np.zeros(3)
+            return np.concatenate((pos, rpy))
+
+    @pose.setter
+    def pose(self, pose):
+        self.frame.pose = pose
+
+    @property
+    def visualize(self):
+        """Return if we should visualize in the simulator the sensor data."""
+        return self._visualize
+
+    @visualize.setter
+    def visualize(self, visualize):
+        """Set if we should visualize in the simulator the sensor data."""
+        if visualize is None:
+            visualize = False
+        elif isinstance(visualize, str):
+            visualize = visualize.lower()
+            if visualize == 'false':
+                visualize = False
+            elif visualize == 'true':
+                visualize = True
+        self._visualize = bool(visualize)
+
+    @property
+    def samples(self):
+        return self._samples
+
+    @samples.setter
+    def samples(self, samples):
+        if samples is not None:
+            samples = int(samples)
+        self._samples = samples
+
+    @property
+    def scan_resolution(self):
+        return self._scan_resolution
+
+    @scan_resolution.setter
+    def scan_resolution(self, resolution):
+        if resolution is not None:
+            resolution = float(resolution)
+        self._scan_resolution = resolution
+
+    @property
+    def range_angle(self):
+        return self._range_angle
+
+    @range_angle.setter
+    def range_angle(self, range_angle):
+        if range_angle is not None:
+            if not isinstance(range_angle, (tuple, list, np.ndarray)):
+                raise TypeError("Expecting the given 'range_angle' to be a tuple/list/np.array of 2 float, but got "
+                                "instead: {}".format(type(range_angle)))
+            if len(range_angle) != 2:
+                raise ValueError("Expecting the given 'range_angle' to be of length 2 but got instead a length of: "
+                                 "{}".format(len(range_angle)))
+        self._range_angle = range_angle
+
+    @property
+    def range(self):
+        return self._range
+
+    @range.setter
+    def range(self, range_distance):
+        if range_distance is not None:
+            if not isinstance(range_distance, (tuple, list, np.ndarray)):
+                raise TypeError("Expecting the given 'range' to be a tuple/list/np.array of 2 float, but got "
+                                "instead: {}".format(type(range_distance)))
+            if len(range_distance) != 2:
+                raise ValueError("Expecting the given 'range' to be of length 2 but got instead a length of: "
+                                 "{}".format(len(range_distance)))
+        self._range = range_distance
+
+    @property
+    def min_angle(self):
+        if self.range_angle is not None:
+            return self.range_angle[0]
+
+    @min_angle.setter
+    def min_angle(self, angle):
+        if angle is not None:
+            angle = float(angle)
+            if self.range_angle is None:
+                self.range_angle = (None, None)
+            self.range_angle[0] = angle
+
+    @property
+    def max_angle(self):
+        if self.range_angle is not None:
+            return self.range_angle[1]
+
+    @max_angle.setter
+    def max_angle(self, angle):
+        if angle is not None:
+            angle = float(angle)
+            if self.range_angle is None:
+                self.range_angle = (None, None)
+            self.range_angle[1] = angle
+
+    @property
+    def min_range(self):
+        if self.range is not None:
+            return self.range[0]
+
+    @min_range.setter
+    def min_range(self, dist):
+        if dist is not None:
+            dist = float(dist)
+            if self.range is None:
+                self.range = (None, None)
+            self.range[0] = dist
+
+    @property
+    def max_range(self):
+        if self.range is not None:
+            return self.range[1]
+
+    @max_range.setter
+    def max_range(self, dist):
+        if dist is not None:
+            dist = float(dist)
+            if self.range is None:
+                self.range = (None, None)
+            self.range[1] = dist
+
+    @property
+    def range_resolution(self):
+        return self._range_resolution
+
+    @range_resolution.setter
+    def range_resolution(self, resolution):
+        if resolution is not None:
+            resolution = float(resolution)
+        self._range_resolution = resolution
 
 
 class IMUSensor(LinkSensor):
@@ -3129,6 +3549,18 @@ class IMUSensor(LinkSensor):
             noise (Noise): noise distribution that is used on the sensor.
         """
         super(IMUSensor, self).__init__(sensor_id, link, name, update_rate, noise)
+
+        self.frame = Frame()  # pose
+        self.visualize = False
+        self.gravity = False
+
+        # plugin
+        self.plugin_filename = None
+        self.plugin_name = None
+        self.topic_name = None
+        self.body_name = None  # Check 'name' of link
+        self.gaussian_noise = None
+        self.frame_name = None  # Check 'name' attribute in Frame class
 
 
 class ForceTorqueSensor(JointSensor):
@@ -3164,7 +3596,7 @@ class Actuator(object):  # Motor
         Args:
             actuator_id (int): actuator unique id.
             name (str): name of the actuator/motor.
-            actuators (list[Sensor]): inner list of actuators.
+            actuators (list[Actuator]): inner list of actuators.
         """
         self.id = actuator_id
         self.name = name
@@ -3220,7 +3652,7 @@ class JointActuator(Actuator):
 class MotorJointActuator(JointActuator):
     """Motor joint actuator."""
 
-    def __init__(self, actuator_id, joint, name=None):
+    def __init__(self, actuator_id, joint, name=None, hardware_interface=None, mechanical_reduction=None):
         """
         Initialize the joint actuator.
 
@@ -3228,12 +3660,38 @@ class MotorJointActuator(JointActuator):
             actuator_id (int): unique actuator id.
             joint (Joint): joint to which the actuator is attached.
             name (str): name of the actuator.
+            hardware_interface (str): hardware interface used in ROS control.
+            mechanical_reduction (float): mechanical reduction factor.
         """
         super(MotorJointActuator, self).__init__(actuator_id, joint, name)
 
-        self.transmission_type = None
-        self.hardware_interface = None  # EffortJointInterface
-        self.mechanical_reduction = None
+        self.hardware_interface = hardware_interface  # EffortJointInterface
+        self.mechanical_reduction = mechanical_reduction
+
+    @property
+    def hardware_interface(self):
+        """Return the hardware interface."""
+        return self._hardware_interface
+
+    @hardware_interface.setter
+    def hardware_interface(self, interface):
+        """Set the hardware interface."""
+        if interface is not None and not isinstance(interface, str):
+            raise TypeError("Expecting the given 'hardware_interface' to be a string but got instead: "
+                            "{}".format(type(interface)))
+        self._hardware_interface = interface
+
+    @property
+    def mechanical_reduction(self):
+        """Get the mechanical reduction factor."""
+        return self._mechanical_reduction
+
+    @mechanical_reduction.setter
+    def mechanical_reduction(self, reduction):
+        """Set the mechanical reduction factor."""
+        if reduction is not None:
+            reduction = float(reduction)
+        self._mechanical_reduction = reduction
 
 
 class PositionJointActuator(MotorJointActuator):
@@ -3270,6 +3728,13 @@ class Constraint(object):
     pass
 
 
+class TransmissionType(Enum):
+    """Transmission type: simple, four-bar linkage, differential."""
+    SIMPLE = 1
+    FOUR_BAR_LINKAGE = 2
+    DIFFERENTIAL = 3
+
+
 class Transmission(object):
     r"""Transmission interface.
 
@@ -3294,20 +3759,250 @@ class Transmission(object):
         - [3] URDF Transmissions: https://wiki.ros.org/urdf/XML/Transmission
     """
 
-    def __init__(self, name, joint, transmission_type=None, actuator_name=None, hardware_interface=None):
+    def __init__(self, name, transmission_type=None, joint=None, actuator=None):
         """
         Initialize the transmission.
 
         Args:
             name (str): name of the transmission.
-            joint (Joint): joint to which is attached the transmission.
             transmission_type (str): transmission type; select between {'simple', 'four-bar linkage', 'differential'}.
-            actuator_name (str): name of the actuator.
-            hardware_interface (str): hardware interface.
+            joint (Joint): joint to which the transmission is related to.
+            actuator (MotorJointActuator): actuator to which the transmission is connected to.
         """
         self.name = name
         self.type = transmission_type
-        self.actuator = actuator_name
-        self.mechanical_reduction = None
         self.joint = joint
-        self.hardware_interface = hardware_interface
+        self.actuator = actuator
+
+    @property
+    def name(self):
+        """Return the transmission unique name."""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        """Set the transmission unique name."""
+        if not isinstance(name, str):
+            raise TypeError("Expecting the given 'name' to be a string, instead got: {}".format(type(name)))
+        self._name = name
+
+    @property
+    def type(self):
+        """Return the transmission type."""
+        return self._type
+
+    @type.setter
+    def type(self, dtype):
+        """Set the transmission type."""
+        # if dtype is not None:
+        #     if isinstance(dtype, str):
+        #         dtype = dtype.lower()
+        #         for t in TransmissionType:
+        #             if dtype == t.name.lower():
+        #                 dtype = t
+        #                 break
+        #     elif not isinstance(dtype, TransmissionType):
+        #         raise TypeError("Expecting the given 'transmission_type' to be an instance of a string or an "
+        #                         "instance of `TransmissionType`, but got instead: {}".format(type(dtype)))
+        if dtype is not None and not isinstance(dtype, str):
+            raise TypeError("Expecting the given 'transmission_type' to be a string, instead got: "
+                            "{}".format(type(dtype)))
+        self._type = dtype
+
+    @property
+    def joint(self):
+        """Return the joint data structure to which the transmission is related to."""
+        return self._joint
+
+    @joint.setter
+    def joint(self, joint):
+        """Set the joint data structure to which the transmission is attached."""
+        if joint is not None and not isinstance(joint, Joint):
+            raise TypeError("Expecting the given 'joint' to be an instance of `Joint`, but got instead: "
+                            "{}".format(type(joint)))
+        self._joint = joint
+
+    @property
+    def actuator(self):
+        """Return the actuator data structure to which the transmission is connected to."""
+        return self._actuator
+
+    @actuator.setter
+    def actuator(self, actuator):
+        """Set the actuator data structure to which the transmission is connected to."""
+        if actuator is not None and not isinstance(actuator, MotorJointActuator):
+            raise TypeError("Expecting the given 'actuator' to be an instance of `MotorJointActuator`, but got "
+                            "instead: {}".format(type(actuator)))
+        self._actuator = actuator
+
+
+class ControlMode(Enum):
+    """Control mode: position, velocity, effort."""
+    NULL = 0
+    POSITION = 1
+    VELOCITY = 2
+    EFFORT = 3
+
+
+class PID(object):
+    """PID control"""
+
+    def __init__(self, p=None, i=None, d=None, pid=None):
+        """
+        Initialize PID.
+
+        Args:
+            p (float, int, str): p coefficient value.
+            i (float, int, str): i coefficient value.
+            d (float, int, str): d coefficient value.
+            pid (list/tuple/np.array[float[3]], str): pid values.
+        """
+        if pid is not None:
+            self.pid = pid
+        else:
+            self.p = p
+            self.i = i
+            self.d = d
+
+    @property
+    def p(self):
+        return self._p
+
+    @p.setter
+    def p(self, p):
+        if p is not None:
+            if not isinstance(p, (float, str, int)):
+                raise TypeError("Expecting the p coefficient to be an int, float, or str, but got instead: "
+                                "{}".format(type(p)))
+            p = float(p)
+        self._p = p
+
+    @property
+    def i(self):
+        return self._i
+
+    @i.setter
+    def i(self, i):
+        if i is not None:
+            if not isinstance(i, (float, str, int)):
+                raise TypeError("Expecting the i coefficient to be an int, float, or str, but got instead: "
+                                "{}".format(type(i)))
+            i = float(i)
+        self._i = i
+
+    @property
+    def d(self):
+        return self._d
+
+    @d.setter
+    def d(self, d):
+        if d is not None:
+            if not isinstance(d, (float, str, int)):
+                raise TypeError("Expecting the d coefficient to be an int, float, or str, but got instead: "
+                                "{}".format(type(d)))
+            d = float(d)
+        self._d = d
+
+    @property
+    def pid(self):
+        pid = [self._p, self._i, self._d]
+        for i in range(len(pid)):
+            if pid[i] is None:
+                pid[i] = 0.
+        return np.array(pid)
+
+    @pid.setter
+    def pid(self, pid):
+        if pid is not None:
+            if isinstance(pid, str):
+                pid = [float(y) for x in pid.split(',') for y in x.split()]
+            elif isinstance(pid, (list, tuple, np.ndarray)):
+                if len(pid) != 3:
+                    raise ValueError("Expecting the given pid list to be of length 3, but got a length of: "
+                                     "{}".format(len(pid)))
+            else:
+                raise TypeError("Expecting the given pid to be a list/tuple/np.array of 3 floats, or a string, but "
+                                "instead got: {}".format(type(pid)))
+
+            self.p = pid[0]
+            self.i = pid[1]
+            self.d = pid[2]
+        else:
+            self.p = None
+            self.i = None
+            self.d = None
+
+
+class Control(object):
+    r"""Control
+
+    """
+
+    def __init__(self, mode=None, pid=None):
+        """
+        Initialize the control.
+
+        Args:
+            mode (ControlMode, None): control mode.
+            pid (PID, None): PID values.
+        """
+        self.mode = mode
+        self.pid = pid
+
+    @property
+    def mode(self):
+        return self._mode
+
+    @mode.setter
+    def mode(self, mode):
+        if mode is not None:
+            if isinstance(mode, str):
+                mode = mode.lower()
+                for m in ControlMode:
+                    if mode == m.name.lower():
+                        mode = m
+                        break
+            elif not isinstance(mode, ControlMode):
+                raise TypeError("Expecting the given control mode to be an instance of `ControlMode` or a string, but "
+                                "got instead: {}".format(type(mode)))
+        self._mode = mode
+
+    @property
+    def pid(self):
+        return self._pid
+
+    @pid.setter
+    def pid(self, pid):
+        if pid is None:
+            pid = PID()
+        elif isinstance(pid, (list, tuple, np.ndarray, str)):
+            pid = PID(pid=pid)
+        elif not isinstance(pid, PID):
+            raise TypeError("Expecting the given PID values to be a list/tuple/np.array of 3 float, an instance of "
+                            "`PID`, or a string, but got instead: {}".format(type(pid)))
+        self._pid = pid
+
+
+class ROSControl(object):
+    """ROS control data structure as specified in URDFs."""
+
+    def __init__(self, namespace=None, control_period=None, robot_parameters=None, robot_sim_interface=None,
+                 control_config_path=None):
+        """
+        Initialize the ROS control data structure.
+
+        Args:
+            namespace (str, None): ROS namespace, default to robot name in URDF.
+            control_period (int, None): period of the controller update (in seconds). If not specified, it will be
+              the default one.
+            robot_parameters (str, None): location of the robot_description (URDF) on the parameter server, default to
+              `/robot_description`.
+            robot_sim_interface (str, None): name of custum robot simulator interface to be used. Default to
+              `DefaultRobotHWSim`.
+            control_config_path (str, None): control configuration file path (usually it is a YAML file).
+        """
+        self.namespace = namespace
+        self.control_period = control_period
+        self.robot_parameters = robot_parameters
+        self.robot_sim_interface = robot_sim_interface
+        self.config_path = control_config_path
