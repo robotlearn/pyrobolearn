@@ -16,32 +16,43 @@ from .simulator import Simulator
 from .bullet import Bullet
 
 # Bullet ros simulator
-from .bullet_ros import BulletROS
+# from .bullet_ros import BulletROS  # Deprecated
 
 if python_version >= 3:
     # Dart simulator
     try:
+        import dartpy
         from .dart import Dart
     except ImportError as e:
-        print("Dart not found.")
+        print("Dart could not be found on this system... Skipping prl.simulators.Dart...")
 
     # MuJoCo simulator
     try:
+        import mujoco_py
         from .mujoco import Mujoco
     except ImportError as e:
-        print("MuJoCo not found.")
+        print("MuJoCo could not be found on this system... Skipping prl.simulators.Mujoco...")
 
 # Raisim simulator
 try:
+    import raisimpy
     from .raisim import Raisim
 except ImportError as e:
-    print("Raisim not found.")
+    print("Raisim could not be found on this system... Skipping prl.simulators.Raisim...")
 
-# Vrep simulator (note that there is a currently a problem when loading pybullet with pyrep)
-# from .vrep import VREP
+# # Vrep simulator (note that there is a currently a problem when loading pybullet with pyrep)
+# try:
+#     import pyrep
+#     from .vrep import VREP
+# except ImportError as e:
+#     print("V-REP not found.")
 
-# Isaac simulator
-# from .isaac import Isaac
+# # Isaac simulator
+# try:
+#     import isaacgym
+#     from .isaac import Isaac
+# except ImportError as e:
+#     print("Isaac not found.")
 
 # Gazebo simulator
 # from .gazebo import Gazebo
