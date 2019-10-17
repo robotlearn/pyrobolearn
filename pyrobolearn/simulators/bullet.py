@@ -740,7 +740,7 @@ class Bullet(Simulator):
     # loading URDFs, SDFs, MJCFs, meshes #
     ######################################
 
-    def load_urdf(self, filename, position=None, orientation=None, use_maximal_coordinates=None,
+    def _load_urdf(self, filename, position=None, orientation=None, use_maximal_coordinates=None,
                   use_fixed_base=None, flags=None, scale=None):
         """Load the given URDF file.
 

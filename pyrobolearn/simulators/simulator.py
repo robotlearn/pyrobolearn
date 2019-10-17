@@ -202,6 +202,8 @@ class Simulator(object):
         self.kwargs = kwargs
         self._num_instances = num_instances
         self.middleware = middleware
+        self._middleware_enabled = True  # by default
+        self._middleware_ids = {}  # {simulator_body_id: middleware_body_id}
 
         # main camera in the simulator
         self._camera = None
@@ -322,10 +324,9 @@ class Simulator(object):
         """Return True if the simulator can simulate soft bodies."""
         return False
 
-    @staticmethod
-    def has_middleware_communication_layer():
+    def has_middleware_communication_layer(self):
         """Return True if the simulator has a middleware communication layer (like ROS, YARP, etc)."""
-        return self._middleware is not None
+        return self.middleware is not None
 
     @staticmethod
     def supports_dynamic_loading():
@@ -420,6 +421,23 @@ class Simulator(object):
     # Methods #
     ###########
 
+    # Middleware
+
+    def enable_middleware(self, enable=True):
+        """
+        Enable the middleware.
+
+        Args:
+            enable (bool): True if we need to enable it. If False, it will disable it.
+        """
+        self._middleware_enabled = enable
+
+    def disable_middleware(self):
+        """
+        Disable the middleware.
+        """
+        self.enable_middleware(enable=False)
+
     # Simulators
 
     def reset(self, *args, **kwargs):
@@ -427,6 +445,12 @@ class Simulator(object):
         pass
 
     def close(self):
+        """Close the simulator."""
+        if self.middleware is not None:
+            self.middleware.close()
+        self._close()
+
+    def _close(self):
         """Close the simulator."""
         pass
 
@@ -584,7 +608,31 @@ class Simulator(object):
 
     # loading URDFs, SDFs, MJCFs
 
-    def load_urdf(self, filename, position, orientation, use_fixed_base=0, scale=1.0, *args, **kwargs):
+    def load_urdf(self, filename, position, orientation=(0., 0., 0., 1.), use_fixed_base=0, scale=1.0,
+                  *args, **kwargs):
+        """Load a URDF file in the simulator.
+
+        Args:
+            filename (str): a relative or absolute path to the URDF file on the file system of the physics server.
+            position (np.array[float[3]]): create the base of the object at the specified position in world space
+              coordinates [x,y,z].
+            orientation (np.array[float[4]]): create the base of the object at the specified orientation as world
+              space quaternion [x,y,z,w].
+            use_fixed_base (bool): force the base of the loaded object to be static
+            scale (float): scale factor to the URDF model.
+
+        Returns:
+            int (non-negative): unique id associated to the load model.
+        """
+        sim_body_id = self._load_urdf(filename, position, orientation, use_fixed_base=use_fixed_base, scale=scale,
+                                      *args, **kwargs)
+        if self.middleware is not None:
+            middleware_body_id = self.middleware.load_urdf(filename)
+            self._middleware_ids[sim_body_id] = middleware_body_id
+        return sim_body_id
+
+    def _load_urdf(self, filename, position, orientation=(0., 0., 0., 1.), use_fixed_base=0, scale=1.0,
+                   *args, **kwargs):
         """Load a URDF file in the simulator.
 
         Args:
@@ -1723,7 +1771,7 @@ class Simulator(object):
         self._set_joint_positions(body_id, joint_ids, positions, velocities, kps, kds, forces)
 
         # publish the joint positions through the middleware
-        if self.middleware is not None:
+        if self.middleware is not None and self._middleware_enabled:
             self.middleware.set_joint_positions(body_id, joint_ids, positions, velocities, kps, kds, forces)
 
     def _set_joint_positions(self, body_id, joint_ids, positions, velocities=None, kps=None, kds=None, forces=None):
@@ -1756,21 +1804,23 @@ class Simulator(object):
                 np.array[float[N]]: joint positions [rad]
         """
         # if a middleware is defined
-        if self.middleware is not None:
+        if self.middleware is not None and self._middleware_enabled:
+            middleware_id = self._middleware_ids[body_id]
             # get joint positions from the middleware
-            q = self.middleware.get_joint_positions(body_id, joint_ids)
+            q = self.middleware.get_joint_positions(middleware_id, joint_ids)
             if q is None:  # if we didn't get the joint positions from the middleware, get them from the simulator
                 q = self._get_joint_positions(body_id, joint_ids)
+
+                # if the middleware is set on teleoperation mode, publish the joint positions through the middleware
+                if self.middleware.is_teleoperating:
+                    self.middleware.set_joint_positions(middleware_id, joint_ids, q, check_teleoperate=True)
+
             else:  # if we got them from the middleware, set them in the simulator
                 self._set_joint_positions(body_id=body_id, joint_ids=joint_ids, positions=q)
 
         else:
             # get the joint positions from the simulator
             q = self._get_joint_positions(body_id, joint_ids)
-
-            # if the middleware is set on the teleoperation mode, publish the joint positions through the middleware
-            if self.middleware is not None:
-                self.middleware.set_joint_positions(body_id, joint_ids, q, check_teleoperate=True)
 
         return q
 
@@ -1804,7 +1854,7 @@ class Simulator(object):
         self._set_joint_velocities(body_id, joint_ids, velocities, max_force)
 
         # publish the joint velocities through the middleware
-        if self.middleware is not None:
+        if self.middleware is not None and self._middleware_enabled:
             self.middleware.set_joint_velocities(body_id, joint_ids, velocities, max_force)
 
     def _set_joint_velocities(self, body_id, joint_ids, velocities, max_force=None):
@@ -1834,7 +1884,7 @@ class Simulator(object):
                 np.array[float[N]]: joint velocities [rad/s]
         """
         # if a middleware is defined
-        if self.middleware is not None:
+        if self.middleware is not None and self._middleware_enabled:
             # get joint velocities from the middleware
             dq = self.middleware.get_joint_velocities(body_id, joint_ids)
             if dq is None:  # if we didn't get the joint velocities from the middleware, get them from the simulator
@@ -1847,7 +1897,7 @@ class Simulator(object):
             dq = self._get_joint_velocities(body_id, joint_ids)
 
             # if the middleware is set on the teleoperation mode, publish the joint velocities through the middleware
-            if self.middleware is not None:
+            if self.middleware is not None and self._middleware_enabled:
                 self.middleware.set_joint_velocities(body_id, joint_ids, dq, check_teleoperate=True)
 
         return dq
@@ -1910,7 +1960,7 @@ class Simulator(object):
         self._set_joint_torques(body_id, joint_ids, torques)
 
         # publish the joint torques through the middleware
-        if self.middleware is not None:
+        if self.middleware is not None and self._middleware_enabled:
             self.middleware.set_joint_torques(body_id, joint_ids, torques)
 
     def _set_joint_torques(self, body_id, joint_ids, torques):
@@ -1939,7 +1989,7 @@ class Simulator(object):
                 np.array[float[N]]: torques associated to the given joints [Nm]
         """
         # if a middleware is defined
-        if self.middleware is not None:
+        if self.middleware is not None and self._middleware_enabled:
             # get joint torques from the middleware
             tau = self.middleware.get_joint_torques(body_id, joint_ids)
             if tau is None:  # if we didn't get the joint torques from the middleware, get them from the simulator
@@ -1952,7 +2002,7 @@ class Simulator(object):
             tau = self._get_joint_torques(body_id, joint_ids)
 
             # if the middleware is set on the teleoperation mode, publish the joint torques through the middleware
-            if self.middleware is not None:
+            if self.middleware is not None and self._middleware_enabled:
                 self.middleware.set_joint_torques(body_id, joint_ids, tau, check_teleoperate=True)
 
         return tau

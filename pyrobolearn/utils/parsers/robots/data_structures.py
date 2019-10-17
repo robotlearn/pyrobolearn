@@ -3477,7 +3477,7 @@ class GPURay(LinkSensor):
         if angle is not None:
             angle = float(angle)
             if self.range_angle is None:
-                self.range_angle = (None, None)
+                self.range_angle = [None, None]
             self.range_angle[0] = angle
 
     @property
@@ -3490,7 +3490,7 @@ class GPURay(LinkSensor):
         if angle is not None:
             angle = float(angle)
             if self.range_angle is None:
-                self.range_angle = (None, None)
+                self.range_angle = [None, None]
             self.range_angle[1] = angle
 
     @property
@@ -3503,7 +3503,7 @@ class GPURay(LinkSensor):
         if dist is not None:
             dist = float(dist)
             if self.range is None:
-                self.range = (None, None)
+                self.range = [None, None]
             self.range[0] = dist
 
     @property
@@ -3516,7 +3516,7 @@ class GPURay(LinkSensor):
         if dist is not None:
             dist = float(dist)
             if self.range is None:
-                self.range = (None, None)
+                self.range = [None, None]
             self.range[1] = dist
 
     @property

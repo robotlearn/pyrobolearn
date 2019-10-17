@@ -6,14 +6,6 @@ Dependencies in PRL:
 * NONE
 """
 
-# TODO
-import os
-import subprocess
-import psutil
-import signal
-import importlib
-import inspect
-
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2019, PyRoboLearn"
@@ -28,7 +20,7 @@ __status__ = "Development"
 class MiddleWare(object):
     r"""Middleware (abstract) class
 
-    Middlewares can be provided to simulators which can then use them to send/receive messages.
+    Middleware can be provided to simulators which can then use them to send/receive messages.
     """
 
     def __init__(self, subscribe=False, publish=False, teleoperate=False):
@@ -43,41 +35,104 @@ class MiddleWare(object):
               previous attributes :attr:`subscribe` and :attr:`publish`.
         """
         # set variables
-        self.subscribe = subscribe
-        self.publish = publish
-        self.teleoperate = teleoperate
+        self.is_subscribing = subscribe
+        self.is_publishing = publish
+        self.is_teleoperating = teleoperate
 
     ##############
     # Properties #
     ##############
 
     @property
-    def subscribe(self):
+    def is_subscribing(self):
         return self._subscribe
 
-    @subscribe.setter
-    def subscribe(self, subscribe):
+    @is_subscribing.setter
+    def is_subscribing(self, subscribe):
         self._subscribe = bool(subscribe)
 
     @property
-    def publish(self):
+    def is_publishing(self):
         return self._publish
 
-    @publish.setter
-    def publish(self, publish):
+    @is_publishing.setter
+    def is_publishing(self, publish):
         self._publish = bool(publish)
 
     @property
-    def teleoperate(self):
+    def is_teleoperating(self):
         return self._teleoperate
 
-    @teleoperate.setter
-    def teleoperate(self, teleoperate):
+    @is_teleoperating.setter
+    def is_teleoperating(self, teleoperate):
         self._teleoperate = bool(teleoperate)
+
+    #############
+    # Operators #
+    #############
+
+    def __str__(self):
+        """Return a readable string about the class."""
+        return self.__class__.__name__
+
+    def __del__(self):
+        """Close/Delete the simulator."""
+        self.close()
+
+    def __copy__(self):
+        """Return a shallow copy of the middleware. This can be overridden in the child class."""
+        return self.__class__(subscribe=self.is_subscribing, publish=self.is_publishing,
+                              teleoperate=self.is_teleoperating)
+
+    def __deepcopy__(self, memo={}):
+        """Return a deep copy of the middleware. This can be overridden in the child class.
+
+        Args:
+            memo (dict): memo dictionary of objects already copied during the current copying pass.
+        """
+        # if the object has already been copied return the reference to the copied object
+        if self in memo:
+            return memo[self]
+
+        # create a new copy of the simulator
+        middleware = self.__class__(subscribe=self.is_subscribing, publish=self.is_publishing,
+                                    teleoperate=self.is_teleoperating)
+
+        memo[self] = middleware
+        return middleware
 
     ###########
     # Methods #
     ###########
+
+    def close(self):
+        """
+        Close the middleware.
+        """
+        pass
+
+    def reset(self):
+        """
+        Reset the middleware.
+        """
+        pass
+
+    def load_urdf(self, urdf):
+        """Load the given URDF file.
+
+        The load_urdf will send a command to the physics server to load a physics model from a Universal Robot
+        Description File (URDF). The URDF file is used by the ROS project (Robot Operating System) to describe robots
+        and other objects, it was created by the WillowGarage and the Open Source Robotics Foundation (OSRF).
+        Many robots have public URDF files, you can find a description and tutorial here:
+        http://wiki.ros.org/urdf/Tutorials
+
+        Args:
+            urdf (str): a relative or absolute path to the URDF file on the file system of the physics server.
+
+        Returns:
+            int (non-negative): unique id associated to the load model.
+        """
+        pass
 
     def has_sensor(self, body_id, name):
         """

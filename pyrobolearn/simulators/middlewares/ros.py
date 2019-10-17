@@ -41,20 +41,25 @@ import signal
 import importlib
 import inspect
 import yaml
+import numpy as np
 
 import rospy
-import rostopic
-import controller_manager.controller_manager_interface as cm_interface
 import roslaunch
 import rosparam
+import rosmsg, rosservice
+import rostopic
+import controller_manager.controller_manager_interface as cm_interface
+
 import std_msgs.msg as std_msg
 import sensor_msgs.msg as sensor_msg
 import gazebo_msgs.msg as gazebo_msg
 import geometry_msgs.msg as geometry_msg
 
 from pyrobolearn.simulators.middlewares.middleware import MiddleWare
-from pyrobolearn.simulators.middlewares.ros_publisher import Publisher, PublisherData, RobotPublisher
-from pyrobolearn.simulators.middlewares.ros_subscriber import Subscriber, SubscriberData, RobotSubscriber
+from pyrobolearn.simulators.middlewares.ros_publisher import PublisherData, Publisher, RobotPublisher
+from pyrobolearn.simulators.middlewares.ros_subscriber import SubscriberData, Subscriber, RobotSubscriber
+
+from pyrobolearn.utils.parsers.robots.urdf_parser import URDFParser
 
 
 __author__ = "Brian Delhaisse"
@@ -67,9 +72,74 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
+class Remapper(object):
+    """Remapper from old topic to a new topic.
+    """
+
+    def __init__(self, old_topic, new_topic, data_class, queue_size=10):
+        """
+        Initialize the Remapper that subscribes to the given topic.
+
+        Args:
+            old_topic (str): old topic name
+            new_topic (str): new topic name
+            data_class (class): message class for serialization.
+            queue_size (int): The queue size used for asynchronously publishing messages from different threads. A
+              size of zero means an infinite queue, which can be dangerous. When None is passed all publishing will
+              happen synchronously and a warning message will be printed.
+        """
+        # self.subscriber = rospy.Subscriber(topic, data_class, callback=self.callback)
+        # # set the message attributes to be part of this class attributes
+        # self.attributes = set([attr for attr in [attr for attr in dir(data_class) if not attr.startswith('_')]
+        #                        if not callable(getattr(data_class, attr))])
+        # self.subscriber_data = data_class()
+
+        rospy.init_node("remapper", anonymous=True)
+
+        self.old_topic = old_topic
+        self.new_topic = new_topic
+        self.subscriber = rospy.Subscriber(old_topic, data_class, callback=self.callback)
+        self.publisher = rospy.Publisher(new_topic, data_class, queue_size=queue_size)
+        self.msg = data_class()
+
+    def callback(self, data):
+        """
+        Callback function that publishes the received the data from the old topic to the new topic.
+
+        Args:
+            data (object): message class instance.
+        """
+        self.publisher.publish(data)
+
+    def unregister(self):
+        """
+        Unsubscribe from a topic. Topic instance is no longer valid after this call. Additional calls to `unregister()`
+        have no effect.
+        """
+        self.subscriber.unregister()
+        self.publisher.unregister()
+
+    def close(self):
+        """
+        Close all topics.
+        """
+        self.unregister()
+
+    def __del__(self):
+        """
+        Close all topics.
+        """
+        self.unregister()
+
+
 class RobotMiddleWare(object):
     r"""Robot middleware interface.
 
+    The robot middleware interface is an interface between a particular robot and the middleware. The middleware
+    possesses a list of Robot middleware interfaces (one for each robot).
+
+    Notably, the robot middleware has a unique id, has a list of publishers and subscribers associated with the given
+    robot.
     """
 
     def __init__(self, robot_id, urdf=None, subscribe=False, publish=False, teleoperate=False, control_file=None):
@@ -84,18 +154,109 @@ class RobotMiddleWare(object):
             publish (bool): if True, it will publish the given values to the topics associated to the loaded robot.
             teleoperate (bool): if True, it will move the robot based on the received or sent values based on the 2
               previous attributes :attr:`subscribe` and :attr:`publish`.
-            control_file (str): path to the YAML control file.
+            control_file (str, None): path to the YAML control file.
         """
+        # set variables
         self.id = robot_id
         self.urdf = urdf
         self.control_file = control_file
-        self.subscribers = {}
-        self.publishers = {}
+        self.is_subscribing = subscribe
+        self.is_publishing = publish
+        self.is_teleoperating = teleoperate
 
-        # set variables
-        self.subscribe = subscribe
-        self.publish = publish
-        self.teleoperate = teleoperate
+        print("\n Creating RobotMiddleware")
+
+        # subscriber and publisher associated with the given robot
+        if self.is_subscribing:
+            print("Creating Robot Subscriber")
+            self.subscriber = RobotSubscriber(name='robot' + str(robot_id))
+        if self.is_publishing:
+            print("Creating Robot Publisher")
+            self.publisher = RobotPublisher(name='robot' + str(robot_id))
+
+        # 1. check if topics and services related to the loaded robot (such as joint_states, joint_commands, etc) are
+        # already advertised, if yes it will create the publishers/subscribers to these topics which would allow
+        # the `Simulator` instance to write/read the values on/from these topics
+
+        # get path to the URDF folder
+        path = os.path.abspath(urdf)  # /path/to/pyrobolearn/robots/urdfs/<robot>/robot.urdf
+        dirname = str(os.path.dirname(path))  # /path/to/pyrobolearn/robots/urdfs/<robot>/
+        basename = str(os.path.basename(path).split('.')[-2])  # robot name without extension
+        config_file = dirname + basename + ".yaml"
+
+        # check for YAML control configuration file
+        if os.path.isfile(config_file):
+            # if it exists, import it
+            data = yaml.load(open(config_file, 'r'), Loader=yaml.FullLoader)
+        else:
+            data = {basename: {'joint_state_controller': {'publish_rate': 50,
+                                                          'type': 'joint_state_controller/JointStateController'}}}
+
+        # node = roslaunch.core.Node(package="controller_manager", name="controller_spawner", node_type="spawner",
+        #                            respawn="false", output="screen", namespace="/rrbot",
+        #                            args=' '.join(["joint_state_controller", "joint1_position_controller",
+        #                                           "joint2_position_controller"]))
+
+        # 2. if the topics didn't exist, it will check if a controller_manager has been loaded beforehand, and if yes,
+        # it will load the corresponding controllers.
+
+        # / rrbot / controller_manager / list_controller_types
+        # / rrbot / controller_manager / list_controllers
+        # / rrbot / controller_manager / load_controller
+        # / rrbot / controller_manager / reload_controller_libraries
+        # / rrbot / controller_manager / switch_controller
+        # / rrbot / controller_manager / unload_controller
+
+        # create YAML file and load it
+
+        # 3. if it didn't find the topics nor the controller manager, it will create by default the various topics
+        # (joint_states, joint_commands, etc) but these won't be using `ros_control`.
+
+        if self.is_publishing:
+            urdf_parser = URDFParser()
+            tree = urdf_parser.parse(urdf)
+            print("RobotMiddleware - publisher - name: ", tree.name)
+            print("Num joints: ", tree.num_joints)
+            print("Num actuated joints: ", tree.num_actuated_joints)
+            self.q_indices = np.zeros(tree.num_joints, dtype=int)
+            topics = []
+            count = 0
+            for i, joint in enumerate(tree.joints.values()):
+                if joint.dtype != 'fixed':
+                    print("Adding joint {} with type={}".format(joint.name, joint.dtype))
+                    topic = '/' + tree.name + '/joint' + str(count+1) + '_position_controller/command'
+                    self.q_indices[i] = count
+                    count += 1
+                    topics.append(topic)
+            print("Topics: ", topics)
+            publisher = self.publisher.create_publisher(name='qpos', topic=topics, data_class=std_msg.Float64)
+            self.publisher.init_set_joint_positions(publisher=publisher, msg_attribute_name='data')
+
+        # sensors
+        # /rrbot/camera1/image_raw
+        # /rrbot/laser/scan
+
+    def __del__(self):
+        """
+        Close all topics.
+        """
+        self.close()
+
+    def unregister(self):
+        """
+        Unsubscribe from a topic. Topic instance is no longer valid after this call. Additional calls to `unregister()`
+        have no effect.
+        """
+        if self.is_subscribing:
+            self.subscriber.unregister()
+        if self.is_publishing:
+            self.publisher.unregister()
+
+    def close(self):
+        """
+        Close all topics.
+        """
+        self.unregister()
 
     def get_joint_positions(self, joint_ids):
         """
@@ -110,25 +271,25 @@ class RobotMiddleWare(object):
             if multiple joints:
                 np.array[float[N]]: joint positions [rad]
         """
-        q = self.subscribers[body_id].get_joint_positions(joint_ids)
-        if self.teleoperate and body_id in self.publishers:
-            self.publishers[body_id].set_joint_positions(joint_ids, q)
-            self.publishers[body_id].publish('joint_states')
-        return q
+        if self.is_subscribing:
+            return self.subscriber.get_joint_positions(joint_ids)
 
-    def set_joint_positions(self, joint_ids, positions, velocities=None, kps=None, kds=None, forces=None):
+    def set_joint_positions(self, positions, joint_ids=None, velocities=None, kps=None, kds=None, forces=None):
         """
         Set the position of the given joint(s) (using position control).
 
         Args:
-            joint_ids (int, list[int]): joint id, or list of joint ids.
             positions (float, np.array[float[N]]): desired position, or list of desired positions [rad]
+            joint_ids (int, list[int], None): joint id, or list of joint ids.
             velocities (None, float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
             kps (None, float, np.array[float[N]]): position gain(s)
             kds (None, float, np.array[float[N]]): velocity gain(s)
             forces (None, float, np.array[float[N]]): maximum motor force(s)/torque(s) used to reach the target values.
         """
-        pass
+        if self.is_publishing:
+            q_indices = None if joint_ids is None else self.q_indices[joint_ids]
+            self.publisher.set_joint_positions(positions, q_indices=q_indices)
+            self.publisher.publish('qpos')
 
     def get_joint_velocities(self, joint_ids):
         """
@@ -143,18 +304,21 @@ class RobotMiddleWare(object):
             if multiple joints:
                 np.array[float[N]]: joint velocities [rad/s]
         """
-        pass
+        if self.is_subscribing:
+            return self.subscriber.get_joint_velocities(joint_ids)
 
-    def set_joint_velocities(self, joint_ids, velocities, max_force=None):
+    def set_joint_velocities(self, velocities, joint_ids=None, max_force=None):
         """
         Set the velocity of the given joint(s) (using velocity control).
 
         Args:
-            joint_ids (int, list[int]): joint id, or list of joint ids.
             velocities (float, np.array[float[N]]): desired velocity, or list of desired velocities [rad/s]
+            joint_ids (int, list[int], None): joint id, or list of joint ids.
             max_force (None, float, np.array[float[N]]): maximum motor forces/torques.
         """
-        pass
+        if self.is_publishing:
+            self.publisher.set_joint_velocities(velocities, q_indices=joint_ids)
+            self.publisher.publish('qvel')
 
     def get_joint_torques(self, joint_ids):
         """
@@ -171,15 +335,55 @@ class RobotMiddleWare(object):
             if multiple joints:
                 np.array[float[N]]: torques associated to the given joints [Nm]
         """
-        pass
+        if self.is_subscribing:
+            return self.subscriber.get_joint_torques(joint_ids)
 
-    def set_joint_torques(self, joint_ids, torques):
+    def set_joint_torques(self, torques, joint_ids=None):
         """
         Set the torque/force to the given joint(s) (using force/torque control).
 
         Args:
-            joint_ids (int, list[int]): joint id, or list of joint ids.
             torques (float, list[float]): desired torque(s) to apply to the joint(s) [N].
+            joint_ids (int, list[int], None): joint id, or list of joint ids.
+        """
+        if self.is_publishing:
+            self.publisher.set_joint_velocities(torques, q_indices=joint_ids)
+            self.publisher.publish('torques')
+
+    def has_sensor(self, name):
+        """
+        Check if the given robot middleware has the specified sensor.
+
+        Args:
+            name (str): name of the sensor.
+
+        Returns:
+            bool: True if the robot middleware has the sensor.
+        """
+        if self.is_subscribing:
+            return self.subscriber.has_subscriber(name)
+        return False
+
+    def get_pid(self, joint_ids):
+        """
+        Get the PID coefficients associated to the given joint ids.
+
+        Args:
+            joint_ids (list[int]): list of unique joint ids.
+
+        Returns:
+            list[np.array[float[3]]]: list of PID coefficients for each joint.
+        """
+        pass
+
+    def set_pid(self, joint_ids, pid):
+        """
+        Set the given PID coefficients to the given joint ids.
+
+        Args:
+            joint_ids (list[int]): list of unique joint ids.
+            pid (list[np.array[float[3]]]): list of PID coefficients for each joint. If one of the value is -1, it
+              will left untouched the associated PID value to the previous one.
         """
         pass
 
@@ -187,10 +391,41 @@ class RobotMiddleWare(object):
 class ROS(MiddleWare):
     r"""ROS Interface middleware
 
-    This middleware can be given to the simulator which can then interact with robots.
+    This middleware class can be given to the simulator which can then interact with the various robots, sensors, and
+    actuators through the ROS middleware. Not only that, it can also be used to create ROS nodes, publishers,
+    subscribers, topics, and services. Users can then use this middleware interface to interact with these last ones.
+
+    Basically, it is the main ROS API that is used in PyRoboLearn (PRL) to access to the various ROS components
+    including ROS software/nodes implemented by the robotics community.
+    For instance, if given to a `Simulator` instance (defined in PRL), every time a robot is loaded in simulation
+    using the `load_urdf` method, this middleware can load the corresponding publishers, subscribers and plugins like
+    controllers (defined in `ros_control`), and interact with these ones when calling the relevant methods defined
+    in the `Simulator` instance.
+
+    Examples:
+
+        import pyrobolearn as prl
+
+        # create middleware instance
+        ros = prl.middlewares.ROS(...)
+
+        # create simulator instance and gives the middleware as argument
+        sim = prl.simulators.Bullet(render=True, middleware=ros)
+
+        # load a robot in the simulator.
+        robot = prl.robots.<RobotName>(sim)
+
+        # the following command might, depending on the arguments provided to the middleware, return the joint
+        # positions published on a specific ROS topic.
+        print(robot.get_joint_positions())
+
+        # under the hood, `robot.get_joint_position`, will ask the simulator to return the joint positions related to
+        # the specified robot, which will in turn ask the middleware to return the joint positions if possible.
+
+        # Note that can also use the middleware alone to access to the various ROS nodes, publishers, subscribers.
     """
 
-    def __init__(self, subscribe=False, publish=False, teleoperate=False, master_uri=11311, **kwargs):
+    def __init__(self, subscribe=False, publish=False, teleoperate=False, master_uri=11311, init_core=True, **kwargs):
         """
         Initialize the ROS middleware.
 
@@ -201,64 +436,174 @@ class ROS(MiddleWare):
             teleoperate (bool): if True, it will move the robot based on the received or sent values based on the 2
               previous attributes :attr:`subscribe` and :attr:`publish`.
             master_uri (int): ROS master URI.
+            init_core (bool): initialize the ROS core if specified.
         """
         super(ROS, self).__init__(subscribe=subscribe, publish=publish, teleoperate=teleoperate)
 
         # Environment variable
         self.env = os.environ.copy()
-        self.env["ROS_MASTER_URI"] = "http://localhost:" + str(master_uri)
-
-        # this is for the rospy methods such as: wait_for_service(), init_node(), ...
-        os.environ['ROS_MASTER_URI'] = self.env['ROS_MASTER_URI']
 
         # run ROS core if not already running
-        self.roscore = None
-        if "roscore" not in [p.name() for p in psutil.process_iter()]:
-            # subprocess.Popen("roscore", env=self.env)
-            self.roscore = subprocess.Popen(["roscore", "-p", str(master_uri)], env=self.env,
-                                            preexec_fn=os.setsid)  # , shell=True)
+        self.core = None  # = roscore
+        self.gui = None   # = RQT
+        self.init_core(port=master_uri)
 
         # remember each publisher/subscriber
         self.subscribers = {}
         self.publishers = {}
+        self.remappers = {}
         self.models = []
 
         self._robots = {}  # {body_id: RobotMiddleware}
-
         self.count_id = -1
 
-        # roslaunch
-        self.launch = roslaunch.scriptapi.ROSLaunch()
-        self.launch.start()
+        # init roslaunch
+        # From doc: "the ROSLaunchParent represents the main 'parent' roslaunch process. It is responsible for
+        # loading the launch files, assigning machines, and then starting up any remote processes. The __main__ method
+        # delegates most of runtime to ROSLaunchParent."
+        self.launch = self.init_launch_process(start_process=True)
 
         self.processes = {}  # {Node: process}
-
-    ##############
-    # Properties #
-    ##############
-
-    @property
-    def is_subscribing(self):
-        """Return True if we are subscribing to topics."""
-        return self.subscribe
-
-    @property
-    def is_publishing(self):
-        """Return True if we are publishing to topics."""
-        return self.publish
 
     ###########
     # Methods #
     ###########
 
-    ##############
-    # ROS launch #
-    ##############
+    def close(self):
+        """
+        Close everything.
+        """
+        # delete each robot middleware
+        for robot in self._robots.values():
+            robot.close()
+
+        # delete each subscriber
+        for subscriber in self.subscribers.values():
+            subscriber.close()
+
+        # delete each publisher
+        for publisher in self.publishers.values():
+            publisher.close()
+
+        # delete each process
+        for process in self.processes.values():
+            process.stop()
+
+        # stop launch
+        if self.launch:
+            self.launch.stop()
+
+        # terminate ROS core process
+        if self.core is not None:
+            os.killpg(os.getpgid(self.core.pid), signal.SIGTERM)
+
+        # terminate RQT process
+        if self.gui is not None:
+            os.killpg(os.getpgid(self.core.pid), signal.SIGTERM)
+
+    def reset(self):
+        """
+        Reset the middleware.
+        """
+        pass
+
+    ############
+    # ROS core #
+    ############
 
     @staticmethod
-    def create_ros_node(package, node_type, name=None, namespace='/', machine_name=None, args='', respawn=False,
-                        respawn_delay=0.0, remap_args=None, env_args=None, output=None, cwd=None, launch_prefix=None,
-                        required=False, filename='<unknown>'):
+    def is_core_running():
+        """Return True if the ROS core is running."""
+        try:
+            rostopic.get_topic_class('/rosout')
+        except rostopic.ROSTopicIOException as e:
+            return False
+        return True
+
+    def init_core(self, uri='localhost', port=11311):
+        """Initialize the core if it is not running.
+
+        From [1], "the ROS core will start up:
+        - a ROS master
+        - a ROS parameter server
+        - a rosout logging node"
+
+        Args:
+            uri (str): ROS master URI. The ROS_MASTER_URI will be set to `http://<uri>:<port>/`.
+            port (int): Port to run the master on.
+
+        References:
+            - [1] roscore: http://wiki.ros.org/roscore
+        """
+        # if the core is not already running, run it
+        if not self.is_core_running():
+            # Environment variable
+            self.env["ROS_MASTER_URI"] = "http://" + uri + ":" + str(port)
+
+            # this is for the rospy methods such as: wait_for_service(), init_node(), ...
+            os.environ['ROS_MASTER_URI'] = self.env['ROS_MASTER_URI']
+
+            # run ROS core if not already running
+            # if "roscore" not in [p.name() for p in psutil.process_iter()]:
+            # subprocess.Popen("roscore", env=self.env)
+            self.core = subprocess.Popen(["roscore", "-p", str(port)], env=self.env,
+                                         preexec_fn=os.setsid)  # , shell=True)
+
+    ###################
+    # ROS launch/node #
+    ###################
+
+    def init_launch_process(self, start_process=True):
+        """
+        Initialize the roslaunch process.
+
+        From the official documentation, the "ROSLaunchParent represents the main 'parent' roslaunch process. It is
+        responsible for loading the launch files, assigning machines, and then starting up any remote processes.
+        The __main__ method delegates most of runtime to ROSLaunchParent."
+
+        Args:
+            start_process (bool): if we should start the process or not. If False, this is let to the user to start it.
+
+        Raises:
+            RLException: if it fails to initialize.
+
+        Returns:
+            roslaunch.scriptapi.ROSLaunch: ROS launch process.
+        """
+        if not self.is_core_running():
+            return roslaunch.core.RLException("ROS core has to be run before calling this method. See `init_core` "
+                                              "method.")
+        launch = roslaunch.scriptapi.ROSLaunch()
+        if start_process:
+            launch.start()
+        return launch
+
+    def load_launch_file(self, filename):
+        """
+        Load the given roslaunch file.
+
+        Args:
+            filename (str): roslaunch filename.
+        """
+        self.launch.load(filename)
+
+    def load_launch_str(self, string):
+        """
+        Load the given roslaunch string.
+
+        Args:
+            string (str): string representation of roslaunch config.
+        """
+        self.launch.load_str(string)
+
+    @staticmethod
+    def init_node(name, argv=None, anonymous=False):
+        rospy.init_node(name, argv=argv, anonymous=anonymous)
+
+    @staticmethod
+    def create_node(package, node_type, name=None, namespace='/', machine_name=None, args='', respawn=False,
+                    respawn_delay=0.0, remap_args=None, env_args=None, output=None, cwd=None, launch_prefix=None,
+                    required=False, filename='<unknown>'):
         """
         Create a ROS node; data structure for storing information about a desired node in the ROS system Corresponds
         to the 'node' tag in the launch specification.
@@ -293,6 +638,18 @@ class ROS(MiddleWare):
                                    remap_args=remap_args, env_args=env_args, output=output, cwd=cwd,
                                    launch_prefix=launch_prefix, required=required, filename=filename)
 
+    def get_node(self, node_id):
+        """
+        Get the ROS node.
+
+        Args:
+            node_id (int): ROS node id.
+
+        Returns:
+            roslaunch.core.Node: ROS node data structure associated with the given id.
+        """
+        pass
+
     def launch(self, ros_node):
         """
         Launch a ROS node.
@@ -316,85 +673,6 @@ class ROS(MiddleWare):
             str: namespace.
         """
         return rospy.get_namespace()
-
-    ################################################
-    # ROS Topics/Services + Publishers/Subscribers #
-    ################################################
-
-    def add_subscriber(self, body_id, topic_name, freq, fct, attribute):
-        pass
-
-    def add_publisher(self, body_id, topic_name, freq, fct, attribute):
-        pass
-
-    def remap(self, topic1, topic2, freq):
-        pass
-
-    def remove_publisher(self, publisher_id):
-        pass
-
-    def remove_subscriber(self, subscriber_id):
-        pass
-
-    @staticmethod
-    def get_topics(namespace='/'):
-        """
-        Get the published topics.
-
-        Returns:
-            list[list[str, str]]: list of tuples where the first is the topic and the second element is the message
-              type that topic accepts.
-        """
-        return rospy.get_published_topics(namespace=namespace)
-
-    @staticmethod
-    def has_topic(name, namespace='/'):
-        """
-        Check if the specified topic has been advertised.
-
-        Warnings: this has a O(N) time complexity.
-
-        Args:
-            name (str): name of the topic.
-            namespace (str): namespace.
-
-        Returns:
-            bool: True if the topic has been advertised.
-        """
-        topics = rospy.get_published_topics(namespace=namespace)
-        for topic_name, dtype in topics:
-            if topic_name == name:  # or topic_name.split('/')[-1] == name:
-                return True
-        return False
-
-    @staticmethod
-    def get_topic_type(name):
-        """
-        Get the topic type name of the given topic name.
-
-        This is the same as typing the following in the terminal:
-        - `rostopic type /topic_name`
-
-        Args:
-            name (str): name of the topic.
-
-        Returns:
-            str: type of the topic
-        """
-        return rostopic.get_topic_type(name)[0]
-
-    @staticmethod
-    def get_topic_class(name):
-        """
-        Get the topic class type of the given topic name.
-
-        Args:
-            name (str): name of the topic.
-
-        Returns:
-            type: topic class type. This can later be instantiated.
-        """
-        return rostopic.get_topic_class(name)
 
     ###########################
     # ROS parameters (+ YAML) #
@@ -492,7 +770,7 @@ class ROS(MiddleWare):
         """
         params = rosparam.load_file(filename, default_namespace=namespace)
         params = params[0]
-        namespace = params[1] + 'rrbot/'
+        namespace = params[1] + 'rrbot/'  # TODO: replace rrbot
         params = params[0]['rrbot']
         for key, value in params.items():
             rosparam.upload_params(ns=namespace + key, values=value)
@@ -511,15 +789,276 @@ class ROS(MiddleWare):
         """
         params = rosparam.load_str(parameters, default_namespace=namespace)
 
+    #########################
+    # ROS Messages/Services #
+    #########################
+
+    #######################
+    # ROS Topics/Services #
+    #######################
+
+    def remap_topic(self, old_topic, new_topic, msg_class, queue_size=10):
+        """
+        Remap a topic name to another topic name.
+
+        Args:
+            old_topic (str): name of the old topic.
+            new_topic (str): name of the new topic.
+            msg_class (class): message class for serialization.
+            queue_size (int): The queue size used for asynchronously publishing messages from different threads. A
+              size of zero means an infinite queue, which can be dangerous. When None is passed all publishing will
+              happen synchronously and a warning message will be printed.
+
+        Returns:
+            Remapper: remapper subscribe and publish node.
+        """
+        remapper = Remapper(old_topic, new_topic, msg_class, queue_size=queue_size)
+        self.remappers[len(self.remappers)] = remapper
+        return remapper
+
+    @staticmethod
+    def get_topics(namespace='/'):
+        """
+        Get the published topics.
+
+        Returns:
+            list[list[str, str]]: list of tuples where the first is the topic and the second element is the message
+              type that topic accepts.
+        """
+        return rospy.get_published_topics(namespace=namespace)
+
+    @staticmethod
+    def get_services(namespace=None):
+        """
+        Get the list of services.
+
+        Returns:
+            list[str]: list of services.
+        """
+        return rosservice.get_service_list(namespace=namespace)
+
+    @staticmethod
+    def has_topic(name, namespace='/'):
+        """
+        Check if the specified topic has been advertised.
+
+        Warnings: this has a O(N) time complexity.
+
+        Args:
+            name (str): name of the topic.
+            namespace (str): namespace.
+
+        Returns:
+            bool: True if the topic has been advertised.
+        """
+        topics = rospy.get_published_topics(namespace=namespace)
+        for topic_name, dtype in topics:
+            if topic_name == name:  # or topic_name.split('/')[-1] == name:
+                return True
+        return False
+
+    @staticmethod
+    def get_topic_type(name):
+        """
+        Get the topic type name of the given topic name.
+
+        This is the same as typing the following in the terminal:
+        - `rostopic type /topic_name`
+
+        Args:
+            name (str): name of the topic.
+
+        Returns:
+            str, None: type of the topic.
+        """
+        return rostopic.get_topic_type(name)[0]
+
+    @staticmethod
+    def get_topic_class(name):
+        """
+        Get the topic class type of the given topic name.
+
+        Args:
+            name (str): name of the topic.
+
+        Returns:
+            type: topic class type. This can later be instantiated.
+        """
+        return rostopic.get_topic_class(name)
+
+    @staticmethod
+    def get_service_type(name):
+        """
+        Get the service class type of the given service name.
+
+        Args:
+            name (str): name of hte service.
+
+        Returns:
+            str, None: type of the service.
+        """
+        return rosservice.get_service_type(name)
+
+    @staticmethod
+    def get_service_class(name):
+        """
+        Get the service class type of the given service name.
+
+        Args:
+            name (str): name of the service.
+
+        Returns:
+            type: service class type. This can later be instantiated.
+        """
+        return rosservice.get_service_class_by_name(name)
+
+    @staticmethod
+    def get_service_args(name):
+        """
+        Get the service arguments of the given service name.
+
+        Args:
+            name (str): name of the service.
+
+        Returns:
+            list: service arguments.
+        """
+        return rosservice.get_service_args(name)
+
+    ##############################
+    # ROS Publishers/Subscribers #
+    ##############################
+
+    def create_publisher(self, body_id, topic_name, freq, fct, attribute):
+        """
+        Create a publisher for the given body id.
+
+        Args:
+            body_id (int): unique body id.
+            topic_name (str): name of the topic to publish to.
+            freq (float): update frequency rate.
+            fct (callable): function to call each time we set the data.
+            attribute (list[object]): attributes to the callable fct.
+
+        Returns:
+            PublisherData: publisher.
+        """
+        pass
+
+    def create_subscriber(self, body_id, topic_name, freq, fct, attribute):
+        """
+        Create a subscriber for the given body id.
+
+        Args:
+            body_id (int): unique body id.
+            topic_name (str): name of the topic to subscribe to.
+            freq (float): update frequency rate.
+            fct (callable): callback function to be called each time we receive a message.
+            attribute (list[object]): attributes to the callable fct.
+
+        Returns:
+            SubscriberData: subscriber.
+        """
+        pass
+
+    def add_publisher(self, publisher):
+        """
+        Add a publisher.
+
+        Args:
+            publisher (rospy.topics.Publisher, PublisherData): publisher.
+
+        Returns:
+            int: unique publisher id.
+        """
+        pass
+
+    def add_subscriber(self, subscriber):
+        """
+        Add a subscriber.
+
+        Args:
+            subscriber (rospy.topics.Subscriber, SubscriberData): subscriber.
+
+        Returns:
+            int: unique subscriber id.
+        """
+        pass
+
+    def get_publisher(self, publisher_id):
+        """
+        Get the publisher corresponding to the given publisher id.
+
+        Args:
+            publisher_id (int): unique publisher id.
+
+        Returns:
+            rospy.topics.Publisher, PublisherData: corresponding publisher to the given id.
+        """
+        pass
+
+    def get_subscriber(self, subscriber_id):
+        """
+        Get the subscriber corresponding to the given subscriber id.
+
+        Args:
+            subscriber_id (int): unique subscriber id.
+
+        Returns:
+            rospy.topics.Subscriber, SubscriberData: corresponding subscriber to the given id.
+        """
+        pass
+
+    def remove_publisher(self, publisher_id):
+        """
+        Remove the publisher corresponding to the given publisher id.
+
+        Args:
+            publisher_id (int): unique publisher id.
+        """
+        pass
+
+    def remove_subscriber(self, subscriber_id):
+        """
+        Remove the subscriber corresponding to the given subscriber id.
+
+        Args:
+            subscriber_id (int): unique subscriber id.
+        """
+        pass
+
     ###############
     # ROS CONTROL #
     ###############
 
-    def get_pid(self, body_id):
-        pass
+    def get_pid(self, body_id, joint_ids):
+        """
+        Get the PID coefficients associated to the given body id and joint ids.
 
-    def set_pid(self, body_id, p=None, i=None, d=None):
-        pass
+        Args:
+            body_id (int): unique body id.
+            joint_ids (list[int]): list of unique joint ids.
+
+        Returns:
+            list[np.array[float[3]]]: list of PID coefficients for each joint.
+        """
+        robot = self._robots.get(body_id)
+        if robot is not None:
+            return robot.get_pid(joint_ids)
+
+    def set_pid(self, body_id, joint_ids, pid):
+        """
+        Set the given PID coefficients to the given body id and joint ids.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (list[int]): list of unique joint ids.
+            pid (list[np.array[float[3]]]): list of PID coefficients for each joint. If one of the value is -1, it
+              will left untouched the associated PID value to the previous one.
+        """
+        robot = self._robots.get(body_id)
+        if robot is not None:
+            return robot.set_pid(joint_ids, pid)
 
     @staticmethod
     def load_controller(name):
@@ -594,129 +1133,62 @@ class ROS(MiddleWare):
         resp = s.call(cm_interface.ListControllerTypesRequest())
         return [t for t in resp.types]
 
-    ##############
-    # Middleware #
-    ##############
-
-    def close(self):
+    @staticmethod
+    def is_controller_manager_loaded():
         """
-        Close everything
+        Check if the controller manager is loaded.
         """
-        # delete each subscribers
+        try:
+            rospy.wait_for_service('controller_manager/list_controllers', timeout=1)  # wait for 1sec max
+        except rospy.exceptions.ROSException:
+            return False
+        return True
 
-        # delete each publishers
+    #############
+    # RQT (GUI) #
+    #############
 
-        for process in self.processes.values():
-            process.stop()
+    def launch_gui(self):
+        """
+        Launch the GUI; in this case, it will launch `rqt`.
+        """
+        if self.gui is None:
+            self.gui = subprocess.Popen(["rqt"], env=self.env, preexec_fn=os.setsid)  # , shell=True)
 
-        # stop launch
-        if self.launch:
-            self.launch.stop()
+    ##########
+    # Robots #
+    ##########
 
-        # delete ROS
-        if self.roscore is not None:
-            os.killpg(os.getpgid(self.roscore.pid), signal.SIGTERM)
-
-    def load_urdf(self, filename, position=None, orientation=None, use_maximal_coordinates=None,
-                  use_fixed_base=None, flags=None, scale=None):
+    def load_urdf(self, urdf):
         """Load the given URDF file.
 
-        The load_urdf will send a command to the physics server to load a physics model from a Universal Robot
+        The `load_urdf` will send a command to the physics server to load a physics model from a Universal Robot
         Description File (URDF). The URDF file is used by the ROS project (Robot Operating System) to describe robots
         and other objects, it was created by the WillowGarage and the Open Source Robotics Foundation (OSRF).
         Many robots have public URDF files, you can find a description and tutorial here:
         http://wiki.ros.org/urdf/Tutorials
 
         Args:
-            filename (str): a relative or absolute path to the URDF file on the file system of the physics server.
-            position (np.array[float[3]]): create the base of the object at the specified position in world space
-              coordinates [x,y,z]
-            orientation (np.array[float[4]]): create the base of the object at the specified orientation as world
-              space quaternion [x,y,z,w]
-            use_maximal_coordinates (int): Experimental. By default, the joints in the URDF file are created using the
-                reduced coordinate method: the joints are simulated using the Featherstone Articulated Body algorithm
-                (btMultiBody in Bullet 2.x). The useMaximalCoordinates option will create a 6 degree of freedom rigid
-                body for each link, and constraints between those rigid bodies are used to model joints.
-            use_fixed_base (bool): force the base of the loaded object to be static
-            flags (int): URDF_USE_INERTIA_FROM_FILE (val=2): by default, Bullet recomputed the inertia tensor based on
-                mass and volume of the collision shape. If you can provide more accurate inertia tensor, use this flag.
-                URDF_USE_SELF_COLLISION (val=8): by default, Bullet disables self-collision. This flag let's you
-                enable it.
-                You can customize the self-collision behavior using the following flags:
-                    * URDF_USE_SELF_COLLISION_EXCLUDE_PARENT (val=16) will discard self-collision between links that
-                        are directly connected (parent and child).
-                    * URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS (val=32) will discard self-collisions between a
-                        child link and any of its ancestors (parents, parents of parents, up to the base).
-                    * URDF_USE_IMPLICIT_CYLINDER (val=128), will use a smooth implicit cylinder. By default, Bullet
-                        will tessellate the cylinder into a convex hull.
-            scale (float): scale factor to the URDF model.
+            urdf (str): a relative or absolute path to the URDF file on the file system of the physics server.
 
         Returns:
             int (non-negative): unique id associated to the load model.
         """
-        id_ = self.count_id
-        self.count_id += 1
-
-        # get path to directory of urdf
-        path = os.path.dirname(os.path.abspath(filename))           # /path/to/pyrobolearn/robots/urdfs/<robot>/
-        robot_directory_name = path.split('/')[-1]                  # <robot>
-        path = path + '/../../ros/' + robot_directory_name + '/'    # /path/to/pyrobolearn/robots/ros/<robot>/
-
-        # check if valid robot directory
-        # if os.path.isdir(path):
-        robot_path = '/'.join(path.split('/')[-5:-2])
+        # check URDF path; check if it is a valid robot directory. If not a robot, just skip
+        path = os.path.dirname(os.path.abspath(urdf))  # /path/to/pyrobolearn/robots/urdfs/<robot>/
+        robot_path = '/'.join(path.split('/')[-4:-1])
         if robot_path == 'pyrobolearn/robots/urdfs':
+            id_ = self.count_id
+            self.count_id += 1
 
-            # get corresponding subscriber/publisher
-            def check_ros(name, dictionary, id_):
-                # TODO: do I really need a class for each robot? Can I not just use RobotPublisher?
-                # if os.path.isfile(path + name + '.py'):
-                #     module = importlib.import_module('pyrobolearn.robots.ros.' + robot_directory_name + '.' + name)
-                #     classes = inspect.getmembers(module, inspect.isclass)  # list of (name, class)
-                #     length = len(name)
-                #     robot_name = ''.join(robot_directory_name.split('_'))
-                #
-                #     # go through each class and get the :attr:`name` corresponding to the robot and add it to the
-                #     # given :attr:`dictionary`
-                #     for name, cls in classes:
-                #         if name[:-length].lower() == robot_name:
-                #             dictionary[id_] = cls(id_=id_)
-                #             break
-                module = importlib.import_module('pyrobolearn.robots.ros.' + name)
-                classes = dict(inspect.getmembers(module, inspect.isclass))
-                cls = classes['Robot' + name.capitalize()]
-                dictionary[id_] = cls(name=robot_directory_name, id_=id_)
+            # create robot middleware
+            robot = RobotMiddleWare(id_, urdf=urdf, subscribe=self.is_subscribing, publish=self.is_publishing,
+                                    teleoperate=self.is_teleoperating, control_file=None)
+            self._robots[id_] = robot
 
-            # load subscriber in simulator
-            if self.subscribe:
-                check_ros('subscriber', self.subscribers, id_)
+            return id_
 
-            # load publisher in simulator
-            if self.publish:
-                check_ros('publisher', self.publishers, id_)
-
-
-        # get path to the URDF folder
-        path = os.path.abspath(filename)  # /path/to/pyrobolearn/robots/urdfs/<robot>/robot.urdf
-        dirname = str(os.path.dirname(path))   # /path/to/pyrobolearn/robots/urdfs/<robot>/
-        basename = str(os.path.basename(path).split('.')[-2])  # robot name without extension
-        config_file = dirname + basename + ".yaml"
-
-        # check for YAML control configuration file
-        if os.path.isfile(config_file):
-            # if it exists, import it
-            data = yaml.load(open(config_file, 'r'), Loader=yaml.FullLoader)
-        else:
-            data = {basename: {'joint_state_controller': {'publish_rate': 50,
-                                                          'type': 'joint_state_controller/JointStateController'}}}
-
-        node = roslaunch.core.Node(package="controller_manager", name="controller_spawner", node_type="spawner",
-                                   respawn="false", output="screen", namespace="/rrbot", args=' '.join(
-                ["joint_state_controller", "joint1_position_controller", "joint2_position_controller"]))
-
-        # create subscribers
-
-        return id_
+        return -1
 
     def get_joint_positions(self, body_id, joint_ids):
         """
@@ -755,10 +1227,8 @@ class ROS(MiddleWare):
         """
         robot = self._robots.get(body_id)
         if robot is not None:
-            if check_teleoperate and not self.teleoperate:
-                return None
-            return robot.set_joint_positions(joint_ids, positions, velocities=velocities, kps=kps, kds=kds,
-                                             forces=forces)
+            if not check_teleoperate or self.is_teleoperating:
+                robot.set_joint_positions(positions, joint_ids, velocities=velocities, kps=kps, kds=kds, forces=forces)
 
     def get_joint_velocities(self, body_id, joint_ids):
         """
@@ -793,9 +1263,8 @@ class ROS(MiddleWare):
         """
         robot = self._robots.get(body_id)
         if robot is not None:
-            if check_teleoperate and not self.teleoperate:
-                return None
-            return robot.set_joint_velocities(joint_ids, velocities, max_force=max_force)
+            if not check_teleoperate or self.is_teleoperating:
+                robot.set_joint_velocities(velocities, joint_ids, max_force=max_force)
 
     def get_joint_torques(self, body_id, joint_ids):
         """
@@ -831,9 +1300,8 @@ class ROS(MiddleWare):
         """
         robot = self._robots.get(body_id)
         if robot is not None:
-            if check_teleoperate and not self.teleoperate:
-                return None
-            return robot.set_joint_torques(joint_ids, torques)
+            if not check_teleoperate or self.is_teleoperating:
+                robot.set_joint_torques(torques, joint_ids)
 
     def get_jacobian(self, body_id, link_id, local_position=None, q=None):
         r"""
@@ -914,19 +1382,53 @@ class ROS(MiddleWare):
             return robot.get_sensor_values(name)
 
     def can_teleoperate(self, body_id):
+        """
+        Check if we can teleoperate the given body.
+
+        Args:
+            body_id (int): unique body id.
+
+        Returns:
+            bool: True if we can teleoperate it.
+        """
         robot = self._robots.get(body_id, None)
         if robot is None:
             return False
         return robot.teleoperate
 
     def can_subscribe(self, body_id):
+        """
+        Check if we can subscribe to topics with the given body.
+
+        Args:
+            body_id (int): unique body id.
+
+        Returns:
+            bool: True if we can subscribe.
+        """
         robot = self._robots.get(body_id, None)
         if robot is None:
             return False
         return robot.subscribe
 
     def can_publish(self, body_id):
+        """
+        Check if we can publish to topics with the given body.
+
+        Args:
+            body_id (int): unique body id.
+
+        Returns:
+            bool: True if we can publish.
+        """
         robot = self._robots.get(body_id, None)
         if robot is None:
             return False
         return robot.publish
+
+
+# Tests
+if __name__ == '__main__':
+
+    # check ROS
+    pass
