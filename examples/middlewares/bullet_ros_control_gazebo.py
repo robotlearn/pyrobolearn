@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Test the publisher using Gazebo with ROS control and Pybullet
 
