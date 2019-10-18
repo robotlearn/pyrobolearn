@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<!-- This file comes from https://github.com/IFL-CAMP/iiwa_stack, and has been modified by Brian Delhaisse. 
+     In order to use it, please first clone the repository above and compile it using catkin_make. -->
+<launch>
+    
+    <!-- ===================================================================================== -->
+    <!-- |    Lauch file to start Gazebo with an IIWA using various controllers.	         | -->
+    
+    <!-- |    It allows to customize the name of the robot, for each robot                   | -->
+    <!-- |	  its topics will be under a nameespace with the same name as the robot's.       | -->
+    
+    <!-- |	  One can choose to have a joint trajectory controller or                        | -->
+    <!-- |    controllers for the single joints, using the "trajectory" argument.            | -->
+    <!-- ===================================================================================== -->
+    
+    <arg name="hardware_interface" default="PositionJointInterface" />
+    <arg name="robot_name" default="iiwa14" />
+    <arg name="model" default="iiwa14"/>
+    <arg name="trajectory" default="false"/>
+    
+    <!-- Loads the Gazebo world. -->
+    <include file="iiwa_world.launch">
+        <arg name="hardware_interface" value="$(arg hardware_interface)" />
+        <arg name="robot_name" value="$(arg robot_name)" />
+        <arg name="model" value="$(arg model)" />
+    </include>
+    
+    <!-- Spawn controllers - it uses an position controller for each joint -->
+    <group ns="$(arg robot_name)">
+        
+        <include file="iiwa_control.launch">
+            <arg name="hardware_interface" value="$(arg hardware_interface)" />
+            <arg name="controllers" value="joint_state_controller
+                 joint1_position_controller
+                 joint2_position_controller
+                 joint3_position_controller
+                 joint4_position_controller
+                 joint5_position_controller
+                 joint6_position_controller
+                 joint7_position_controller"/>
+            <arg name="robot_name" value="$(arg robot_name)" />
+            <arg name="model" value="$(arg model)" />
+        </include>
+        
+    </group>
+    
+    
+</launch>

@@ -219,22 +219,52 @@ class RobotSubscriber(Subscriber):
     This Robot Subscriber class is the class from which all the robot subscribers inherit from.
     """
 
-    def __init__(self, name, id_=None):
+    def __init__(self, name, id_=None, joint_state_topics=None, joint_state_msg_class=None):
         r"""
         Initialize the robot subscriber.
 
         Args:
             name (str): name of the robot. This will be used to create the topics.
             id_ (int, None): robot id which is used when initializing the node. If None, a name will be
-                auto-generated for the name using name as the base. See the documentation for the :attr:`anonymous`
-                parameter in `rospy.init_node`.
+              auto-generated for the name using name as the base. See the documentation for the :attr:`anonymous`
+              parameter in `rospy.init_node`.
+            joint_state_topics (str, list[str]): joint state topic(s). If not provided the joint state topic will be
+              set to '/<robot_name>/joint_states'.
+            joint_state_msg_class (class): message serialization class used for the provided joint state topic. By
+              default, it will be set to 'sensor_msg.JointState'.
         """
         super(RobotSubscriber, self).__init__(subscriber_id=id_)
         self.name = name.lower()
 
-        # create Joint states (automatically)
-        self.joint_states = self.create_subscriber('joint_states', '/' + self.name + '/joint_states',
-                                                   sensor_msg.JointState)
+        # create Joint states subscriber (automatically)
+        if joint_state_topics is None:
+            joint_state_topics = '/' + self.name + '/joint_states'
+        if joint_state_msg_class is None:
+            joint_state_msg_class = sensor_msg.JointState
+        self._joint_states = self.create_subscriber('joint_states', joint_state_topics, joint_state_msg_class)
+
+    ##############
+    # Properties #
+    ##############
+
+    @property
+    def joint_states(self):
+        """Get the joint states subscriber."""
+        return self._joint_states
+
+    @joint_states.setter
+    def joint_states(self, subscriber):
+        """Set the joint states subscriber."""
+        if not isinstance(subscriber, SubscriberData):
+            raise TypeError("Expecting the given 'joint_states' subscriber to be an instance of `SubscriberData` but "
+                            "got instead: {}".format(type(subscriber)))
+        if self._joint_states is not None:
+            self._joint_states.unregister()
+        self._joint_states = subscriber
+
+    ###########
+    # Methods #
+    ###########
 
     def get_joint_positions(self, q_indices=None):
         """

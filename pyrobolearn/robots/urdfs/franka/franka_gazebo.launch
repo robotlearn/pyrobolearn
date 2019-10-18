@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<!-- This file comes from https://github.com/mkrizmancic/franka_gazebo, and has been modified by Brian Delhaisse. 
+     In order to use it, please first clone the repository above and compile it using catkin_make. -->
+<launch>
+	<param name="robot_description" command="$(find xacro)/xacro --inorder $(find franka_gazebo)/robots/panda_arm_hand.urdf.xacro"/>
+
+	<!-- GAZEBO arguments -->
+    <arg name="paused" default="false"/>
+    <arg name="use_sim_time" default="true"/>
+    <arg name="gui" default="true"/>
+    <arg name="headless" default="false"/>
+    <arg name="debug" default="false"/>
+    <arg name="load_gripper" default="false"/>
+
+    <!--launch GAZEBO with own world configuration -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <!-- <arg name="world_name" value="$(find robotics_assisted_tomography)/worlds/tomography.world"/> -->
+        <arg name="debug" value="$(arg debug)"/>
+        <arg name="gui" value="$(arg gui)"/>
+        <arg name="paused" value="$(arg paused)"/>
+        <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+        <arg name="headless" value="$(arg headless)"/>
+    </include>
+
+	<node name="spawn" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model panda"/>
+
+	<rosparam command="load" file="$(find franka_gazebo)/config/joint_states.yaml" ns="panda"/>
+	<rosparam command="load" file="$(find franka_gazebo)/config/joint_commands.yaml" ns="panda"/>
+	<rosparam command="load" file="$(find franka_gazebo)/config/gripper_commands.yaml" ns="panda"/>
+	<rosparam command="load" file="$(find franka_gazebo)/config/default.yaml"/>
+
+	<!-- ROS control -->
+	<node name="franka_controller_spawner" pkg="controller_manager" type="spawner" args=
+		"panda/joint_state_controller
+		panda/joint1_position_controller
+		panda/joint2_position_controller
+		panda/joint3_position_controller
+		panda/joint4_position_controller
+		panda/joint5_position_controller
+		panda/joint6_position_controller
+		panda/joint7_position_controller
+		panda/gripper_position_controller"/>
+
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="rob_st_pub"/> 
+
+  <node pkg="franka_gazebo" type="gripper_publisher.py" name="gripper_publisher"/>
+  <node pkg="franka_gazebo" type="example_joint_publisher.py" name="example_joint_publisher" output="screen"/>
+</launch>

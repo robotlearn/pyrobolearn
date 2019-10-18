@@ -1,0 +1,13 @@
+# this file comes from https://github.com/mkrizmancic/franka_gazebo, and is provided here just in case 
+
+gazebo_ros_control:
+  pid_gains:
+    panda_joint1: {p: 50, i: 0, d: 20}
+    panda_joint2: {p: 10000, i: 0, d: 500}
+    panda_joint3: {p: 100, i: 0, d: 10}
+    panda_joint4: {p: 1000, i: 0, d: 50}
+    panda_joint5: {p: 100, i: 0, d: 10}
+    panda_joint6: {p: 100, i: 0, d: 10}
+    panda_joint7: {p: 10, i: 0.5, d: 0.1}
+    panda_finger_joint1: {p: 100, i: 0, d: 50}
+    panda_finger_joint2: {p: 100, i: 0, d: 50}

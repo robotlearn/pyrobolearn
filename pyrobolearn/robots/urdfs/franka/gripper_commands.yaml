@@ -1,0 +1,7 @@
+# this file comes from https://github.com/mkrizmancic/franka_gazebo, and is provided here just in case
+
+gripper_position_controller:
+  type: "position_controllers/JointGroupPositionController"
+  joints:
+  - panda_finger_joint1
+  - panda_finger_joint2

@@ -20,7 +20,14 @@ $ python bullet_ros_control_gazebo.py
 
 And move the `rrbot` robot using your mouse by left-clicking on a part of the robot and moving it.
 
-Here is a video of what it should give: https://www.youtube.com/watch?v=NOybmaRHaBM
+Here is a video of what it should give: https://www.youtube.com/watch?v=OPh-NCfKKK8
+
+If you want to use 'kuka_iiwa' and 'franka', you will have to follow the same steps as above but this time by cloning:
+- https://github.com/IFL-CAMP/iiwa_stack
+- https://github.com/mkrizmancic/franka_gazebo
+
+Then run the corresponding roslaunch files (*_gazebo.launch) that are located in the corresponding
+`pyrobolearn/robots/urdfs/<robot_name>/` folder using the `roslaunch <robot>_gazebo.launch` command.
 """
 
 import pyrobolearn as prl
@@ -32,7 +39,7 @@ sim = prl.simulators.Bullet(middleware=ros)
 world = prl.worlds.BasicWorld(sim)
 
 # load robot
-robot = world.load_robot('rrbot')
+robot = world.load_robot('rrbot')  # 'kuka_iiwa', 'franka'
 
 # run simulation
 for t in prl.count():

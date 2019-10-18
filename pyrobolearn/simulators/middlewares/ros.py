@@ -54,6 +54,7 @@ import std_msgs.msg as std_msg
 import sensor_msgs.msg as sensor_msg
 import gazebo_msgs.msg as gazebo_msg
 import geometry_msgs.msg as geometry_msg
+import trajectory_msgs.msg as trajectory_msg
 
 from pyrobolearn.simulators.middlewares.middleware import MiddleWare
 from pyrobolearn.simulators.middlewares.ros_publisher import PublisherData, Publisher, RobotPublisher
@@ -76,39 +77,51 @@ class Remapper(object):
     """Remapper from old topic to a new topic.
     """
 
-    def __init__(self, old_topic, new_topic, data_class, queue_size=10):
+    def __init__(self, old_topic, new_topic, msg_class, queue_size=10, new_msg_class=None, function=None):
         """
         Initialize the Remapper that subscribes to the given topic.
 
         Args:
-            old_topic (str): old topic name
-            new_topic (str): new topic name
-            data_class (class): message class for serialization.
+            old_topic (str, list[str]): old topic name(s). If multiple topics are provided, it will group them. Note
+              that you can only group topics that use the same message class.
+            new_topic (str, list[str]): new topic name(s). If multiple topics are provided, it will group them and send
+              to each of the new topic the (converted) data.
+            msg_class (class): message class for serialization. If `new_msg_class` is provided, then `msg_class`
+              represents the message class used in the old topic(s).
             queue_size (int): The queue size used for asynchronously publishing messages from different threads. A
               size of zero means an infinite queue, which can be dangerous. When None is passed all publishing will
               happen synchronously and a warning message will be printed.
+            new_msg_class (class, None): optional new message class for serialization. This is the message associated
+              with the new topic(s).
+            function (callable, None): optional function that should accept the old message object and process it
+              and/or convert it into the new one.
         """
-        # self.subscriber = rospy.Subscriber(topic, data_class, callback=self.callback)
-        # # set the message attributes to be part of this class attributes
-        # self.attributes = set([attr for attr in [attr for attr in dir(data_class) if not attr.startswith('_')]
-        #                        if not callable(getattr(data_class, attr))])
-        # self.subscriber_data = data_class()
-
         rospy.init_node("remapper", anonymous=True)
 
+        # create subscriber and publisher
         self.old_topic = old_topic
         self.new_topic = new_topic
-        self.subscriber = rospy.Subscriber(old_topic, data_class, callback=self.callback)
-        self.publisher = rospy.Publisher(new_topic, data_class, queue_size=queue_size)
-        self.msg = data_class()
+        self.subscriber = rospy.Subscriber(old_topic, msg_class, callback=self.callback)
+        if new_msg_class is None:
+            new_msg_class = msg_class
+        self.publisher = rospy.Publisher(new_topic, new_msg_class, queue_size=queue_size)
+        # self.msg = msg_class()
+
+        # check processing function
+        if function is not None and not callable(function):
+            raise TypeError("Expecting the given 'function' to be callable...")
+        self.function = function
+        # TODO: should I test the function to make sure it returns the correct object type?
 
     def callback(self, data):
         """
         Callback function that publishes the received the data from the old topic to the new topic.
 
         Args:
-            data (object): message class instance.
+            data (object, list[object]): message class instance.
         """
+        if self.function is not None:
+            data = self.function(data)
         self.publisher.publish(data)
 
     def unregister(self):
@@ -164,25 +177,29 @@ class RobotMiddleWare(object):
         self.is_publishing = publish
         self.is_teleoperating = teleoperate
 
+        if self.is_teleoperating and self.is_publishing and self.is_subscribing:
+            raise ValueError("The three following arguments 'subscribe', 'publish', and 'teleoperate' can not be all "
+                             "true at the same time. Select maximum two.")
+
         print("\n Creating RobotMiddleware")
-
-        # subscriber and publisher associated with the given robot
-        if self.is_subscribing:
-            print("Creating Robot Subscriber")
-            self.subscriber = RobotSubscriber(name='robot' + str(robot_id))
-        if self.is_publishing:
-            print("Creating Robot Publisher")
-            self.publisher = RobotPublisher(name='robot' + str(robot_id))
-
-        # 1. check if topics and services related to the loaded robot (such as joint_states, joint_commands, etc) are
-        # already advertised, if yes it will create the publishers/subscribers to these topics which would allow
-        # the `Simulator` instance to write/read the values on/from these topics
 
         # get path to the URDF folder
         path = os.path.abspath(urdf)  # /path/to/pyrobolearn/robots/urdfs/<robot>/robot.urdf
         dirname = str(os.path.dirname(path))  # /path/to/pyrobolearn/robots/urdfs/<robot>/
         basename = str(os.path.basename(path).split('.')[-2])  # robot name without extension
         config_file = dirname + basename + ".yaml"
+
+        # subscriber and publisher associated with the given robot
+        if self.is_subscribing:
+            print("Creating Robot Subscriber")
+            self.subscriber = RobotSubscriber(name=basename)
+        if self.is_publishing:
+            print("Creating Robot Publisher")
+            self.publisher = RobotPublisher(name=basename)
+
+        # 1. check if topics and services related to the loaded robot (such as joint_states, joint_commands, etc) are
+        # already advertised, if yes it will create the publishers/subscribers to these topics which would allow
+        # the `Simulator` instance to write/read the values on/from these topics
 
         # check for YAML control configuration file
         if os.path.isfile(config_file):
@@ -1159,6 +1176,18 @@ class ROS(MiddleWare):
     # Robots #
     ##########
 
+    def get_robot_middleware(self, body_id):
+        """
+        Return the robot middleware associated with the given body id.
+
+        Args:
+            body_id (int): unique body id.
+
+        Returns:
+            RobotMiddleware, None: robot middleware corresponding to the given body id. None if it could not find it.
+        """
+        return self._robots.get(body_id)
+
     def load_urdf(self, urdf):
         """Load the given URDF file.
 
@@ -1177,7 +1206,7 @@ class ROS(MiddleWare):
         # check URDF path; check if it is a valid robot directory. If not a robot, just skip
         path = os.path.dirname(os.path.abspath(urdf))  # /path/to/pyrobolearn/robots/urdfs/<robot>/
         robot_path = '/'.join(path.split('/')[-4:-1])
-        if robot_path == 'pyrobolearn/robots/urdfs':
+        if 'pyrobolearn/robots/urdfs' in path:
             id_ = self.count_id
             self.count_id += 1
 

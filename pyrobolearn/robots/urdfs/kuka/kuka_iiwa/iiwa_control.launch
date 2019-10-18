@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<!-- This file comes from https://github.com/IFL-CAMP/iiwa_stack, and has been modified by Brian Delhaisse. 
+     In order to use it, please first clone the repository above and compile it using catkin_make. -->
+<launch>
+    
+    <!-- Launches the controllers according to the hardware interface selected -->
+    <!-- Everythings is spawned under a namespace with the same name as the robot's. -->
+    
+    <arg name="hardware_interface" default="PositionJointInterface"/>
+    <arg name="controllers" default="joint_state_controller pos_joint_trajectory_controller"/>
+    <arg name="robot_name" default="iiwa" />
+    <arg name="model" default="iiwa7" />
+    <arg name="joint_state_frequency" default="100" />
+    <arg name="robot_state_frequency" default="100" />
+    
+    <!-- Loads joint controller configurations from YAML file to parameter server -->
+    <rosparam file="iiwa_control.yaml" command="load" />
+    <param name="/$(arg robot_name)/joint_state_controller/publish_rate" value="$(arg joint_state_frequency)" />
+    
+    <!-- Loads the controllers -->
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+          output="screen" args="$(arg controllers)" />
+    
+    <!-- Converts joint states to TF transforms for rviz, etc -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"
+          respawn="false" output="screen">
+        <remap from="joint_states" to="/$(arg robot_name)/joint_states" />
+        <param name="publish_frequency" value="$(arg robot_state_frequency)" />
+    </node>
+    
+</launch>

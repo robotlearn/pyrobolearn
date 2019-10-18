@@ -1,0 +1,6 @@
+# this file comes from https://github.com/mkrizmancic/franka_gazebo, and is provided here just in case
+
+# The joint state controller handles publishing transforms for any moving joints
+joint_state_controller:
+  type: "joint_state_controller/JointStateController"
+  publish_rate: 50

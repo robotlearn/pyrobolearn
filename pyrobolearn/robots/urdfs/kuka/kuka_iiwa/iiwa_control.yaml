@@ -1,8 +1,47 @@
+# This file comes originally from https://github.com/IFL-CAMP/iiwa_stack, and has been modified by Brian Delhaisse to comply with PRL
+
 #iiwa:
   # Publish all joint states -----------------------------------
   joint_state_controller:
     type: joint_state_controller/JointStateController
-    publish_rate: 50  
+    publish_rate: 50
+
+  # positions controllers (added by Brian)
+
+  joint1_position_controller:
+    type: position_controllers/JointPositionController
+    joint: iiwa14_joint_1
+    #pid: {p: 800.0, i: 100, d: 80.0}
+
+  joint2_position_controller:
+    type: position_controllers/JointPositionController
+    joint: iiwa14_joint_2
+    #pid: {p: 800.0, i: 1000, d: 100.0}
+
+  joint3_position_controller:
+    type: position_controllers/JointPositionController
+    joint: iiwa14_joint_3
+    #pid: {p: 800.0, i: 10, d: 5.0}
+
+  joint4_position_controller:
+    type: position_controllers/JointPositionController
+    joint: iiwa14_joint_4
+    #pid: {p: 800.0, i: 10, d: 80.0}
+
+  joint5_position_controller:
+    type: position_controllers/JointPositionController
+    joint: iiwa14_joint_5
+    #pid: {p: 300.0, i: 5, d: 10.0}
+
+  joint6_position_controller:
+    type: position_controllers/JointPositionController
+    joint: iiwa14_joint_6
+    #pid: {p: 50.0, i: 1, d: 1.0}
+
+  joint7_position_controller:
+    type: position_controllers/JointPositionController
+    joint: iiwa14_joint_7
+    #pid: {p: 10.0, i: 0.1, d: 1.0}
   
   # Controllers for singular joint ------------------------------------
   # 
