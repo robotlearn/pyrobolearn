@@ -14,7 +14,7 @@ import signal
 import importlib
 import inspect
 
-from pyrobolearn.simulators.middlewares.middleware import MiddleWare
+from pyrobolearn.simulators.middlewares.middleware import Middleware
 
 
 __author__ = "Brian Delhaisse"
@@ -27,7 +27,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class YARP(MiddleWare):
+class YARP(Middleware):
     r"""YARP Interface middleware
 
     This middleware can be given to the simulator which can then interact with robots.

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # import middleware abstract class
-from .middleware import MiddleWare
+from .middleware import Middleware
 
 # import ROS
 try:

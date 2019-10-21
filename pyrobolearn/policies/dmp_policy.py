@@ -127,6 +127,19 @@ class DMPPolicy(Policy):
         else:
             print("Nothing to imitate.")
 
+    def plot_rollout(self, nrows=1, ncols=1, suptitle=None, titles=None, show=True):
+        """
+        Plot the rollouts using the DMPs.
+
+        Args:
+            nrows (int): number of rows in the subplot.
+            ncols (int): number of columns in the subplot.
+            suptitle (str): main title for the subplots.
+            titles (str, list[str]): title for each subplot.
+            show (bool): if True, it will show and block the plot.
+        """
+        self.model.plot_rollout(nrows=nrows, ncols=ncols, suptitle=suptitle, titles=titles, show=show)
+
 
 class DiscreteDMPPolicy(DMPPolicy):
     r"""Discrete DMP Policy

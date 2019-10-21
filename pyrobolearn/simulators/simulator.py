@@ -19,7 +19,7 @@ References:
 """
 
 from pyrobolearn.utils.data_structures.orderedset import OrderedSet
-from pyrobolearn.simulators.middlewares.middleware import MiddleWare
+from pyrobolearn.simulators.middlewares.middleware import Middleware
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -194,7 +194,7 @@ class Simulator(object):
         Args:
             render (bool): if True, it will open the GUI, otherwise, it will just run the server.
             num_instances (int): number of simulator instances.
-            middleware (MiddleWare, None): middleware instance.
+            middleware (Middleware, None): middleware instance.
             **kwargs (dict): optional arguments (this is not used here).
         """
         self._render = render
@@ -203,7 +203,7 @@ class Simulator(object):
         self._num_instances = num_instances
         self.middleware = middleware
         self._middleware_enabled = True  # by default
-        self._middleware_ids = {}  # {simulator_body_id: middleware_body_id}
+        self._middleware_ids = {}  # {simulator_body_id: middleware_robot_id}
 
         # main camera in the simulator
         self._camera = None
@@ -258,8 +258,8 @@ class Simulator(object):
     @middleware.setter
     def middleware(self, middleware):
         """Set the middleware."""
-        if middleware is not None and not isinstance(middleware, MiddleWare):
-            raise TypeError("Expecting the given 'middleware' to be an instance of `MiddleWare`, but got instead: "
+        if middleware is not None and not isinstance(middleware, Middleware):
+            raise TypeError("Expecting the given 'middleware' to be an instance of `Middleware`, but got instead: "
                             "{}".format(middleware))
         self._middleware = middleware
 
@@ -437,6 +437,30 @@ class Simulator(object):
         Disable the middleware.
         """
         self.enable_middleware(enable=False)
+
+    def get_middleware(self):
+        """
+        Get the middleware given to the simulator.
+
+        Returns:
+            Middleware, None: Middleware.
+        """
+        return self.middleware
+
+    def get_robot_middleware(self, robot_id):
+        """
+        Get the robot middleware associated with the given robot id.
+
+        Args:
+            robot_id (int): unique robot id.
+
+        Returns:
+            RobotMiddleware, None: robot middleware associated with the given robot id.
+        """
+        if self._middleware is not None:
+            robot_id = self._middleware_ids.get(robot_id)
+            if robot_id is not None:
+                return self._middleware.get_robot_middleware(robot_id)
 
     # Simulators
 

@@ -8,6 +8,7 @@ This file implements the DMP abstract class from which all dynamic movement prim
 import numpy as np
 import copy
 import scipy.interpolate
+import matplotlib.pyplot as plt
 
 from pyrobolearn.models.dmp.canonical_systems import CS
 from pyrobolearn.models.dmp.forcing_terms import ForcingTerm
@@ -94,17 +95,17 @@ class DMP(object):
     - it can be used with RL algorithms, notably PoWER [9] and PI^2 [10]
 
     References:
-        [1] "Dynamical movement primitives: Learning attractor models for motor behaviors", Ijspeert et al., 2013
-        [2] "Motor primitives in vertebrates and invertebrates", Flash et al., 2005
-        [3] Tutorials on DMP: https://studywolf.wordpress.com/category/robotics/dynamic-movement-primitive/
-        [4] PyDMPs (from DeWolf, 2013): https://github.com/studywolf/pydmps
-        [5] "Biologically-inspired Dynamical Systems for Movement Generation: Automatic Real-time Goal Adaptation
-            and Obstacle Avoidance", Hoffmann et al., 2009
-        [6] "Action Sequencing using Dynamic Movement Primitives", Nemec et al., 2011
-        [7] "Orientation in Cartesian Space Dynamic Movement Primitives", Ude et al., 2014
-        [8] "A Framework for Learning Biped Locomotion with Dynamical Movement Primitives", Nakanishi et al., 2004
-        [9] "Policy Search for Motor Primitives in Robotics", Kober et al., 2010
-        [10] "A Generalized Path Integral Control Approach to Reinforcement Learning", Theodorou et al., 2010
+        - [1] "Dynamical movement primitives: Learning attractor models for motor behaviors", Ijspeert et al., 2013
+        - [2] "Motor primitives in vertebrates and invertebrates", Flash et al., 2005
+        - [3] Tutorials on DMP: https://studywolf.wordpress.com/category/robotics/dynamic-movement-primitive/
+        - [4] PyDMPs (from DeWolf, 2013): https://github.com/studywolf/pydmps
+        - [5] "Biologically-inspired Dynamical Systems for Movement Generation: Automatic Real-time Goal Adaptation
+          and Obstacle Avoidance", Hoffmann et al., 2009
+        - [6] "Action Sequencing using Dynamic Movement Primitives", Nemec et al., 2011
+        - [7] "Orientation in Cartesian Space Dynamic Movement Primitives", Ude et al., 2014
+        - [8] "A Framework for Learning Biped Locomotion with Dynamical Movement Primitives", Nakanishi et al., 2004
+        - [9] "Policy Search for Motor Primitives in Robotics", Kober et al., 2010
+        - [10] "A Generalized Path Integral Control Approach to Reinforcement Learning", Theodorou et al., 2010
     """
 
     def __init__(self, canonical_system, forcing_term, y0=0, goal=1, stiffness=None, damping=None):
@@ -112,10 +113,10 @@ class DMP(object):
 
         Args:
             canonical_system (CS): canonical system which drives the DMP transformation system
-            forcing_terms (list): list of forcing terms (one forcing term for each DMP). Each forcing term can have
+            forcing_term (list): list of forcing terms (one forcing term for each DMP). Each forcing term can have
                 different number of basis functions.
-            y0 (float, float[M]): initial state of DMPs
-            goal (float, float[M]): goal state of DMPs
+            y0 (float, np.array[float[M]]): initial state of DMPs
+            goal (float, np.array[float[M]]): goal state of DMPs
             stiffness (float): stiffness term in the transformation system for DMPs
             damping (float): damping term in the transformation system for DMPs
         """
@@ -313,7 +314,7 @@ class DMP(object):
             idx += size
 
     def get_damping_ratio(self):
-        """
+        r"""
         Return the damping ratio :math:`\zeta = D / D_c` where :math:`D_c = 2 \sqrt{K}`.
 
         * if :math:`\zeta` = 0, the system is undamped (i.e. no damping)
@@ -353,8 +354,8 @@ class DMP(object):
             s (None, float): the phase value. If None, it will use the canonical system.
             tau (float): Increase tau to make the system slower, and decrease it to make it faster
             error (float): optional system feedback
-            forcing_term (float[M]): if given, it will replace the forcing term (where `M` = number of DMPs)
-            new_goal (float[M]): new goal (where `M` = number of DMPs)
+            forcing_term (np.array[float[M]]): if given, it will replace the forcing term (where `M` = number of DMPs)
+            new_goal (np.array[float[M]]): new goal (where `M` = number of DMPs)
             rescale_force (bool): if the given forcing term should be rescaled.
         """
 
@@ -411,13 +412,14 @@ class DMP(object):
             tau (float): Increase tau to make the system slower, and decrease it to make it faster
             timesteps (None, int): the number of steps to perform
             error (float): optional system feedback
-            forcing_term (np.ndarray): if given, it will replace the forcing term (shape [num_dmps, timesteps])
-            new_goal (np.ndarray): new goal (of shape [num_dmps,])
+            forcing_term (np.array[float[M,T]]): if given, it will replace the forcing term (shape [num_dmps,
+              timesteps])
+            new_goal (np.array[float[M]]): new goal (of shape [num_dmps,])
 
         Returns:
-            float[M,T]: y (position) trajectories
-            float[M,T]: dy (velocity) trajectories
-            float[M,T]: ddy (acceleration) trajectories
+            np.array[float[M,T]]: y (position) trajectories
+            np.array[float[M,T]]: dy (velocity) trajectories
+            np.array[float[M,T]]: ddy (acceleration) trajectories
         """
 
         # reset the canonical and transformation systems
@@ -460,9 +462,14 @@ class DMP(object):
         """Imitate a desired trajectory, and learn the parameters that best realizes it.
 
         Args:
-            y_des (np.array): the desired position trajectories of each DMP with shape [num_dmps, timesteps]
-            dy_des (np.array): the desired velocities with shape [num_dmps, timesteps]
-            ddy_des (np.array): the desired accelerations with shape [num_dmps, timesteps]
+            y_des (np.array[float[M,T]], np.array[float[N,M,T]]): the desired position trajectories of each DMP with
+              shape [num_dmps, timesteps] or [num_trajectories, num_dmps, timesteps]. The number of timesteps for each
+              trajectory can be different. Note that each trajectory should have the same initial state and goal. When
+              giving multiple trajectories to DMPs, they will be averaged out.
+            dy_des (np.array[float[M,T]], np.array[float[N,M,T]]): the desired velocities with shape
+              [num_dmps, timesteps] or [num_trajectories, num_dmps, timesteps].
+            ddy_des (np.array[float[M,T]], np.array[float[N,M,T]]): the desired accelerations with shape
+              [num_dmps, timesteps] or [num_trajectories, num_dmps, timesteps].
             interpolation (str): how to interpolate the data. Select between 'linear', 'cubic', and 'hermite'.
         """
 
@@ -523,7 +530,6 @@ class DMP(object):
 
         # plot
         if plot:
-            import matplotlib.pyplot as plt
             plt.figure()
             plt.plot(y_des[0], 'b', label='pos')
             plt.plot(dy_des[0], 'g', label='vel')
@@ -549,10 +555,10 @@ class DMP(object):
         Get the forcing terms based on the given phase value.
 
         Args:
-            s (float, float[T]): phase value(s)
+            s (float, np.array[float[T]]): phase value(s)
 
         Returns:
-            float[M], float[M,T]: forcing terms
+            np.array[float[M]], np.array[float[M,T]]: forcing terms
         """
         return np.array([self.f[d](s) for d in range(self.num_dmps)])
 
@@ -561,14 +567,15 @@ class DMP(object):
         Generate the goal from the initial positions, velocities, accelerations, and forces.
 
         Args:
-            y0 (float[M], None): initial positions. If None, it will take the default initial positions.
-            dy0 (float[M], None): initial velocities. If None, it will take the default initial velocities.
-            ddy0 (float[M], None): initial accelerations. If None, it will take the default initial accerelations.
-            f0 (float[M], None): initial forcing terms. If None, it will compute it based on the learned weights.
-                You can also give `dmp.f_target[:,0]` to get the correct goal.
+            y0 (np.array[float[M]], None): initial positions. If None, it will take the default initial positions.
+            dy0 (np.array[float[M]], None): initial velocities. If None, it will take the default initial velocities.
+            ddy0 (np.array[float[M]], None): initial accelerations. If None, it will take the default initial
+              accelerations.
+            f0 (np.array[float[M]], None): initial forcing terms. If None, it will compute it based on the learned
+              weights. You can also give `dmp.f_target[:,0]` to get the correct goal.
 
         Returns:
-            float[M]: goal position for each DMP.
+            np.array[float[M]]: goal position for each DMP.
         """
         if y0 is None:
             y0 = self.y0
@@ -599,6 +606,42 @@ class DMP(object):
         if not isinstance(model, DMP):
             raise TypeError("The given model is not an instance of DMP.")
         pass
+
+    def plot_rollout(self, ax=None, nrows=1, ncols=1, suptitle=None, titles=None, show=False):
+        """
+        Plot a complete rollout.
+
+        Args:
+            ax (plt.Axes.axis, None): figure axis.
+            nrows (int): number of rows in the subplot.
+            ncols (int): number of columns in the subplot.
+            suptitle (str): main title for the subplots.
+            titles (str, list[str]): title for each subplot.
+            show (bool): if True, it will show and block the plot.
+        """
+        # perform a rollout
+        y, dy, ddy = self.rollout()
+
+        # if ax is not defined
+        if ax is None:
+            plt.figure()
+        if suptitle is not None:
+            plt.suptitle(suptitle)
+
+        # plot each subplot
+        for i in range(y.shape[0]):
+            plt.subplot(nrows, ncols, i + 1)
+            if titles is not None:
+                if isinstance(titles, str):
+                    plt.title(titles)
+                elif isinstance(titles, (list, tuple, np.ndarray)) and i < len(titles):
+                    plt.title(titles[i])
+            plt.plot(y[i])
+
+        # tight the layout
+        plt.tight_layout()
+        if show:
+            plt.show()
 
     # def __rshift__(self, other):
     #     """

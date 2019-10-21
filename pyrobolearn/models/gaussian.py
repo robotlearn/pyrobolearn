@@ -84,9 +84,9 @@ class Gaussian(object):
      forward substitution, and then computing :math:`L^\top x = y` by backward substitution.
 
     References:
-        [1] "Pattern Recognition and Machine Learning", Bishop, 2006
-        [2] "Machine Learning: A Probabilistic Perspective", Murphy, 2012, chap 3 and 4
-        [3] "The Matrix Cookbook", Petersen et al., 2012, sec 8
+        - [1] "Pattern Recognition and Machine Learning", Bishop, 2006
+        - [2] "Machine Learning: A Probabilistic Perspective", Murphy, 2012, chap 3 and 4
+        - [3] "The Matrix Cookbook", Petersen et al., 2012, sec 8
 
     The implementation of this class was inspired by the following codes:
     * `scipy`: https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/scipy.stats.multivariate_normal.html
@@ -108,8 +108,8 @@ class Gaussian(object):
         Initialize the multivariate normal distribution on the given manifold.
 
         Args:
-            mean (np.array[D]): mean vector.
-            covariance (np.array[D,D]): covariance matrix.
+            mean (np.array[float[D]]): mean vector.
+            covariance (np.array[float[D,D]]): covariance matrix.
             seed (int): random seed. Useful when sampling.
             manifold (None): By default, it is the Euclidean space.
             N (int, N): the number of data points
@@ -273,12 +273,12 @@ class Gaussian(object):
         the mean vector :math:`\mu`, i.e. :math:`\max_{\mu} p(X | \mu, \Sigma)`.
 
         Args:
-            X (array[N,D]): data matrix of shape NxD (if axis=0) or DxN (if axis=1), where N is the number of samples,
-                and D is the dimensionality of a data point
+            X (np.array[float[N,D]]): data matrix of shape NxD (if axis=0) or DxN (if axis=1), where N is the number
+              of samples, and D is the dimensionality of a data point
             axis (int): axis along which the mean is computed
 
         Returns:
-            float[D]: mean vector
+            np.array[float[D]]: mean vector
         """
         # if manifold is Euclidean
         mean = np.mean(X, axis=axis)
@@ -291,13 +291,13 @@ class Gaussian(object):
         for the covariance matrix :math:`\Sigma`, i.e. :math:`\max_{\Sigma} p(X | \mu, \Sigma)`.
 
         Args:
-            X (array[N,D]): data matrix of shape NxD where N is the number of samples, and D is the dimensionality
-                of a data point
+            X (np.array[float[N,D]]): data matrix of shape NxD where N is the number of samples, and D is the
+              dimensionality of a data point.
             axis (int): axis along which the covariance is computed
             bessels_correction (bool): if True, it will compute the covariance using `1/N-1` instead of `N`.
 
         Returns:
-            float[D,D]: 2D covariance matrix
+            np.array[float[D,D]]: 2D covariance matrix
         """
         # if manifold is Euclidean
         cov = np.cov(X, rowvar=bool(axis), bias=not bessels_correction)

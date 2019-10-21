@@ -54,6 +54,7 @@ class PublisherData(object):
         # self.__dict__['msg'] = data_class()
 
         self.topic = topic
+        self.queue_size = queue_size
         self.msg_class = data_class
         if isinstance(topic, collections.Iterable):
             self.is_group = True
@@ -176,8 +177,8 @@ class PublisherData(object):
         have no effect.
         """
         if isinstance(self.publisher, collections.Iterable):
-            for subscriber in self.publisher:
-                subscriber.unregister()
+            for publisher in self.publisher:
+                publisher.unregister()
         else:
             self.publisher.unregister()
 
@@ -213,12 +214,15 @@ class Publisher(object):
         else:
             rospy.init_node(self.__class__.__name__ + str(publisher_id))
 
-        # all publishers
+        # all publishers {publisher name: PublisherData}
         self.publishers = dict()
+        # all topics {topic: publisher name}
+        self.topics_to_publisher_name = dict()
 
     def create_publisher(self, name, topic, data_class, queue_size=10):
         """
-        Create a publisher to the specific topic.
+        Create a publisher to the specific topic. If the publisher already exists, it unregister the previous one
+        and replace it by the new one.
 
         Args:
             name (str): unique name of the publisher. The name must be unique. You will be able to access to this
@@ -232,10 +236,26 @@ class Publisher(object):
         Returns:
             PublisherData: the publisher data holder.
         """
+        # if the publisher already exists, unregister and remove it
+        self.remove_publisher(name)
+
+        # create new publisher
         publisher = PublisherData(topic, data_class, queue_size=queue_size)
         self.publishers[name] = publisher
-        # setattr(self, name, publisher)
+        self.topics_to_publisher_name[topic] = name
+
         return publisher
+
+    def remove_publisher(self, name):
+        """
+        Remove a publisher from the list of inner publishers. This will also unregister it.
+
+        Args:
+            name (str): unique name of the publisher.
+        """
+        if name in self.publishers:
+            self.unregister(name)
+            self.publishers.pop(name)
 
     def has_publisher(self, name):
         """
@@ -249,7 +269,7 @@ class Publisher(object):
         """
         return name in self.publishers
 
-    def get_subscriber(self, name):
+    def get_publisher(self, name):
         """
         Return the associated `PublisherData` given its unique name.
 
@@ -261,6 +281,59 @@ class Publisher(object):
               doesn't exist.
         """
         return self.publishers.get(name)
+
+    def has_topic(self, name):
+        """
+        Return True if the given topic is used by the publisher.
+
+        Args:
+            name (str): topic name.
+
+        Returns:
+            bool: True if the given topic name exists.
+        """
+        return name in self.topics_to_publisher_name
+
+    def get_publisher_name_from_topic(self, topic_name):
+        """
+        Return the publisher's name associated with the given topic name.
+
+        Args:
+            topic_name (str): topic name.
+
+        Returns:
+            str, None: name of the publisher. None, if no publisher name is associated with the given topic name.
+        """
+        return self.topics_to_publisher_name.get(topic_name)
+
+    def change_topic(self, old_topic, new_topic, new_msg=None, queue_size=None):
+        """
+        Change a publisher's topic name to a new one with possibly a new message class and queue size.
+
+        Args:
+            old_topic (str): old topic name.
+            new_topic (str): new topic name.
+            new_msg (object): message class serialization. If None, it will use the same message class than the old
+              topic.
+            queue_size (int): The queue size used for asynchronously publishing messages from different threads. A
+              size of zero means an infinite queue, which can be dangerous. If None, it will use the same queue size
+              than the old topic.
+
+        Returns:
+            PublisherData: the publisher data holder.
+        """
+        if not old_topic in self.topics_to_publisher_name:
+            raise ValueError("The given 'old_topic' name ({}) doesn't exist in this publisher, are you sure it is the "
+                             "correct topic name?".format(old_topic))
+        name = self.topics_to_publisher_name[old_topic]
+        publisher = self.publishers[name]
+
+        if new_msg is None:
+            new_msg = publisher.msg_class
+        if queue_size is None:
+            queue_size = publisher.queue_size
+
+        return self.create_publisher(name, new_topic, new_msg, queue_size=queue_size)
 
     def publish(self, name=None, data=None, indices=None):
         """
@@ -291,8 +364,8 @@ class Publisher(object):
             name (str, None): name of the topic to unsubscribe. If None, it will unsubscribe from all topics.
         """
         if name is None:
-            for subscriber in self.publishers.values():
-                subscriber.unregister()
+            for publisher in self.publishers.values():
+                publisher.unregister()
         else:
             self.publishers[name].unregister()
 

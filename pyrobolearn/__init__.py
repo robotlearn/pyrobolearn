@@ -22,6 +22,7 @@ logger.addHandler(handler)
 
 # import simulators
 from . import simulators
+from .simulators import middlewares
 
 # import robots
 from . import robots
@@ -70,6 +71,8 @@ from . import dynamics
 
 # import tools (interfaces and bridges)
 from . import tools
+from .tools import interfaces
+from .tools import bridges
 
 # import recorders
 from . import recorders

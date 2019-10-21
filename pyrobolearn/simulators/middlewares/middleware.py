@@ -17,13 +17,13 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class MiddleWare(object):
+class Middleware(object):
     r"""Middleware (abstract) class
 
     Middleware can be provided to simulators which can then use them to send/receive messages.
     """
 
-    def __init__(self, subscribe=False, publish=False, teleoperate=False):
+    def __init__(self, subscribe=False, publish=False, teleoperate=False, command=True):
         """
         Initialize the middleware to communicate.
 
@@ -33,11 +33,16 @@ class MiddleWare(object):
             publish (bool): if True, it will publish the given values to the topics associated to the loaded robots.
             teleoperate (bool): if True, it will move the robot based on the received or sent values based on the 2
               previous attributes :attr:`subscribe` and :attr:`publish`.
+            command (bool): if True, it will subscribe/publish to some (joint) commands. If False, it will
+              subscribe/publish to some (joint) states.
         """
         # set variables
         self.is_subscribing = subscribe
         self.is_publishing = publish
         self.is_teleoperating = teleoperate
+        self.is_commanding = command
+
+        self._robots = {}  # {body_id: RobotMiddleware}
 
     ##############
     # Properties #
@@ -66,6 +71,14 @@ class MiddleWare(object):
     @is_teleoperating.setter
     def is_teleoperating(self, teleoperate):
         self._teleoperate = bool(teleoperate)
+
+    @property
+    def is_commanding(self):
+        return self._command
+
+    @is_commanding.setter
+    def is_commanding(self, command):
+        self._command = bool(command)
 
     #############
     # Operators #
@@ -114,6 +127,18 @@ class MiddleWare(object):
     def reset(self):
         """
         Reset the middleware.
+        """
+        pass
+
+    def get_robot_middleware(self, robot_id):
+        r"""
+        Get the robot middleware associated with the given robot id.
+
+        Args:
+            robot_id (int): robot unique id.
+
+        Returns:
+            RobotMiddleware, None: robot middleware. None if it could not find the associated robot midddleware.
         """
         pass
 

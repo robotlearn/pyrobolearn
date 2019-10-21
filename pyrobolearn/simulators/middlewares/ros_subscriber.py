@@ -47,6 +47,7 @@ class SubscriberData(object):
         # self.subscriber_data = data_class()
 
         self.topic = topic
+        self.msg_class = data_class
         if isinstance(topic, collections.Iterable):
             self.is_group = True
             self.subscriber = [rospy.Subscriber(t, data_class, callback=self.callback, callback_args=idx)
@@ -138,12 +139,15 @@ class Subscriber(object):
         else:
             rospy.init_node(self.__class__.__name__ + str(subscriber_id))
 
-        # all subscribers
+        # all subscribers {subscriber name: SubscriberData}
         self.subscribers = dict()
+        # all topics {topic: subscriber name}
+        self.topics_to_subscriber_name = dict()
 
     def create_subscriber(self, name, topic, data_class):
         """
-        Create a subscriber to the specific topic.
+        Create a subscriber to the specific topic. If the subscriber already exists, it unregister the previous one
+        and replace it by the new one.
 
         Args:
             name (str): unique name of the subscriber. The name must be unique. You will be able to access to this
@@ -154,9 +158,25 @@ class Subscriber(object):
         Returns:
             SubscriberData: the subscriber data holder.
         """
+        # if the subscriber already exists, unregister and remove it
+        self.remove_subscriber(name)
+
+        # create new subscriber
         subscriber = SubscriberData(topic, data_class)
         self.subscribers[name] = subscriber
+        self.topics_to_subscriber_name[topic] = name
         return subscriber
+
+    def remove_subscriber(self, name):
+        """
+        Remove a subscriber from the list of inner subscribers. This will also unregister it.
+
+        Args:
+            name (str): unique name of the suscriber.
+        """
+        if name in self.subscribers:
+            self.unregister(name)
+            self.subscribers.pop(name)
 
     def has_subscriber(self, name):
         """
@@ -182,6 +202,54 @@ class Subscriber(object):
               doesn't exist.
         """
         return self.subscribers.get(name)
+
+    def has_topic(self, name):
+        """
+        Return True if the given topic is used by the subscriber.
+
+        Args:
+            name (str): topic name.
+
+        Returns:
+            bool: True if the given topic name exists.
+        """
+        return name in self.topics_to_subscriber_name
+
+    def get_subscriber_name_from_topic(self, topic_name):
+        """
+        Return the subscriber's name associated with the given topic name.
+
+        Args:
+            topic_name (str): topic name.
+
+        Returns:
+            str, None: name of the subscriber. None, if no subscriber name is associated with the given topic name.
+        """
+        return self.topics_to_subscriber_name.get(topic_name)
+
+    def change_topic(self, old_topic, new_topic, new_msg=None):
+        """
+        Change a subscriber's topic name to a new one with possibly a new message class.
+
+        Args:
+            old_topic (str): old topic name.
+            new_topic (str): new topic name.
+            new_msg (object): message class serialization. If None, it will use the same message class than the old
+              topic.
+
+        Returns:
+            SubscriberData: the subscriber data holder.
+        """
+        if not old_topic in self.topics_to_subscriber_name:
+            raise ValueError("The given 'old_topic' name ({}) doesn't exist in this subscriber, are you sure it is "
+                             "the correct topic name?".format(old_topic))
+        name = self.topics_to_subscriber_name[old_topic]
+
+        if new_msg is None:
+            subscriber = self.subscribers[name]
+            new_msg = subscriber.msg_class
+
+        return self.create_subscriber(name, new_topic, new_msg)
 
     # def __getattr__(self, name):
     #     return self.subscribers[name]
@@ -324,15 +392,26 @@ class RobotSubscriber(Subscriber):
         """
         pass
 
-    def get_jacobian(self):
+    def get_jacobian(self, link_id, q=None, local_position=None):
         """
-        Return the jacobian.
+        Return the full geometric jacobian.
+
+        Args:
+            link_id (int): link id.
+            q (np.array[float[N]], None): joint positions of size N, where N is the number of DoFs. If None, it will
+              compute q based on the current joint positions.
+            local_position (None, np.array[float[3]]): the point on the specified link to compute the Jacobian (in link
+              local coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
         """
         pass
 
-    def get_inertia_matrix(self):
+    def get_inertia_matrix(self, q=None):
         """
         Return the inertia matrix.
+
+        Args:
+            q (np.array[float[N]], None): joint positions of size N, where N is the total number of DoFs. If None, it
+              will get the current joint positions.
         """
         pass
 

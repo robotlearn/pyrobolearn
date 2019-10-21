@@ -4,6 +4,7 @@
 """
 
 import os
+import numpy as np
 
 from pyrobolearn.robots.manipulator import Manipulator
 from pyrobolearn.robots.gripper import ParallelGripper
@@ -58,6 +59,11 @@ class Franka(Manipulator):
         self.name = 'franka'
 
         # self.disable_motor()
+
+        self._joint_configuration = {'home': np.array([0.0277854, -0.97229678, -0.028778385, -2.427800237,
+                                                       -0.086976557, 1.442695354, -0.711514286, 0., 0.])}
+
+        self.set_home_joint_positions()
 
 
 class FrankaGripper(ParallelGripper):
