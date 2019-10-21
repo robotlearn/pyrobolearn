@@ -1,10 +1,14 @@
 #!/bin/bash
 # Install the raisim simulator (raisimLib and raisimOgre) and its Python wrapper (raisimpy)
 # ./install_raisim [<workspace_path> <local_build_path> <python_version> [<path/to/python/bin>]]
+#
+# You will need to source your `.bashrc` at the end.
+#
 # References:
 # - install raisimLib: https://github.com/leggedrobotics/raisimLib
 # - install raisimOgre: https://github.com/leggedrobotics/raisimOgre
 # - install raisimpy: https://github.com/robotlearn/raisimpy
+
 
 # Define few variables
 ORIGIN_DIR=$PWD
@@ -38,11 +42,14 @@ PYTHON_VERSION=$3
 #####################
 
 # install raisimLib dependencies
-sudo apt-get install libeigen-dev
+sudo apt-get install libeigen3-dev
 
 # install raisimLib
-cd $WORKSPACE/raisimLib
-mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=$LOCAL_BUILD && make install
+cd $WORKSPACE
+git clone https://github.com/leggedrobotics/raisimLib
+cd raisimLib
+mkdir build && cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=$LOCAL_BUILD && make install
 
 ######################
 # install raisimOgre #
@@ -81,6 +88,7 @@ make install -j8
 
 # install raisimOgre
 cd $WORKSPACE
+git clone https://github.com/leggedrobotics/raisimOgre
 cd raisimOgre && mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$LOCAL_BUILD -DCMAKE_INSTALL_PREFIX=$LOCAL_BUILD -DRAISIM_OGRE_EXAMPLES=True
 make install -j8
