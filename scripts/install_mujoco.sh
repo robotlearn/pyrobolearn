@@ -35,7 +35,7 @@ wget "https://www.roboti.us/download/${PACKAGE}.zip"
 unzip "${PACKAGE}.zip"
 
 # install mujoco_py
-sudo apt install libosmesa6-dev libgl1-mesa-glx libglfw3
+sudo apt install libosmesa6-dev libgl1-mesa-glx libglfw3 patchelf
 
 export MUJOCO_PY_MJKEY_PATH="${MUJOCO_PATH}/mjkey.txt"
 export MUJOCO_PY_MJPRO_PATH="${MUJOCO_PATH}/${PACKAGE}"

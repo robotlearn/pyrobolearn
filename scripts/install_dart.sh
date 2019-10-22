@@ -32,7 +32,7 @@ sudo apt-get install libxi-dev libxmu-dev freeglut3-dev libopenscenegraph-dev
 sudo apt-get install python3-pip
 
 # build and install DART and dartpy
-git clone git://github.com/dartsim/dart.git
+git clone https://github.com/dartsim/dart
 cd dart
 git checkout tags/v6.9.0
 mkdir build

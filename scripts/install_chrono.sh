@@ -33,7 +33,7 @@ sudo apt-get install automake
 ./configure
 sudo apt-get install bison flex
 make -j4
-sudo make install
+sudo make install  # install swig in /usr/local/bin/
 
 # install chrono and pychrono
 cd $CHRONO_PATH
