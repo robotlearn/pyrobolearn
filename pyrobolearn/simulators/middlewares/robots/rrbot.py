@@ -1,24 +1,19 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python
-"""Define the Franka ROS Robot middleware API.
+"""Define the RRBot ROS Robot middleware API.
 
-This is robot middleware interface between the Franka robot and ROS. This file should be modified by the user!!
-Currently, we use the following setup:
-- https://github.com/erdalpekel/franka_ros
-- https://github.com/erdalpekel/panda_simulation
-by launching `panda_simulation/simulation.launch`.
+This is robot middleware interface between the RRBot robot and ROS. This file should be modified by the user!!
+Currently, we use the setup provided in: https://github.com/ros-simulation/gazebo_ros_demos
+by launching `rrbot_world.launch` and `rrbot_control.launch`.
 
-The topics for the joint states and joint commands (=joint trajectories) are:
-- /joint_states
-- /panda_arm_controller/command
-- /panda_hand_controller/command
+The topics for the joint states (sensor_msgs.JointState) and joint commands (std_msgs.Float64) are:
+- /rrbot/joint_states
+- /rrbot/joint1_position_controller/command
+- /rrbot/joint2_position_controller/command
 """
 
-import numpy as np
-import rospy
-
 # import ROS messages
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+import std_msgs.msg as std_msg
 from sensor_msgs.msg import JointState
 
 from pyrobolearn.simulators.middlewares.ros import ROSRobotMiddleware
@@ -34,7 +29,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class FrankaROSMiddleware(ROSRobotMiddleware):
+class RRBotROSMiddleware(ROSRobotMiddleware):
     r"""Robot middleware interface.
 
     The robot middleware interface is an interface between a particular robot and the middleware. The middleware
@@ -62,53 +57,21 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
             control_file (str, None): path to the YAML control file. If provided, it will be parsed.
             launch_file (str, None): path to the ROS launch file. If provided, it will be parsed.
         """
-        joint_state_topic = '/joint_states'
-        super(FrankaROSMiddleware, self).__init__(robot_id, urdf, subscribe, publish, teleoperate, command,
-                                                  control_file, launch_file, joint_state_topics=joint_state_topic)
+        print("Creating RRBot Publisher.")
+        super(RRBotROSMiddleware, self).__init__(robot_id, urdf, subscribe, publish, teleoperate, command,
+                                                 control_file, launch_file)
 
-        # # update publisher and subscriber topics
-        # pub = self.publisher.create_publisher('joint_trajectory', '/panda_arm_controller/command', JointTrajectory)
-        # self.publisher.init_set_joint_positions(pub, msg_attribute_name='points')
-        # self.publisher.init_set_joint_velocities(pub, msg_attribute_name='points')
-        # self.publisher.init_set_joint_torques(pub, msg_attribute_name='points')
-        #
-        # self.subscriber.
-        #
-        # # joint names in the messages
-        # self.msg_joint_names = ['panda_finger_joint1', 'panda_finger_joint2'] + \
-        #                        ['panda_joint' + str(i+1) for i in range(7)]
-        #
-        # # set joint names and trajectory point in message
-        # pub.msg.joint_names = self.msg_joint_names[2:] + self.msg_joint_names[:2]
-        # pub.msg.points = [JointTrajectoryPoint()]
-
-        # joint names in the messages
-        self.msg_joint_names = ['panda_finger_joint1', 'panda_finger_joint2'] + \
-                               ['panda_joint' + str(i+1) for i in range(7)]
-
-        # joint trajectory point instance
-        self.arm_point = JointTrajectoryPoint()
-        self.arm_point.positions = np.zeros(7)
-        # self.arm_point.velocities = 0.1 * np.ones(7)
-        # self.arm_point.effort = 0.1 * np.ones(7)
-        self.hand_point = JointTrajectoryPoint()
-        self.hand_point.positions = np.zeros(2)
-        # self.hand_point.velocities = 0.1 * np.ones(2)
-        # self.hand_point.effort = 0.1 * np.ones(2)
-
-        # update publisher
-        arm_topic = '/panda_arm_controller/command'
-        self.arm_publisher = self.publisher.create_publisher(name='panda_arm_trajectory', topic=arm_topic,
-                                                             msg_class=JointTrajectory)
-        hand_topic = '/panda_hand_controller/command'
-        self.hand_publisher = self.publisher.create_publisher(name='panda_hand_trajectory', topic=hand_topic,
-                                                              msg_class=JointTrajectory)
-
-        # set joint names and trajectory point in message
-        self.arm_publisher.msg.joint_names = self.msg_joint_names[2:]
-        self.arm_publisher.msg.points = [self.arm_point]
-        self.hand_publisher.msg.joint_names = self.msg_joint_names[:2]
-        self.hand_publisher.msg.points = [self.hand_point]
+        # create publishing topics
+        topics = []
+        count = 0
+        for joint in self.tree.joints.values():
+            if joint.dtype != 'fixed':
+                topic = '/rrbot/joint' + str(count + 1) + '_position_controller/command'
+                topics.append(topic)
+                count += 1
+        print("Publishing Topics: ", topics)
+        publisher = self.publisher.create_publisher(name='qpos', topic=topics, msg_class=std_msg.Float64)
+        self.publisher.init_set_joint_positions(publisher=publisher, msg_attribute_name='data')
 
     def get_joint_positions(self, joint_ids=None):
         """
@@ -140,36 +103,9 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
             forces (None, float, np.array[float[N]]): maximum motor force(s)/torque(s) used to reach the target values.
         """
         if self.is_publishing:
-            q = self.subscriber.get_joint_positions()
-            dq = self.subscriber.get_joint_velocities()
-            tau = self.subscriber.get_joint_torques()
-
-            if len(q) > 0:
-                q_indices = None if joint_ids is None else self.q_indices[joint_ids]
-                if q_indices is not None:
-                    q[q_indices] = positions
-                    if velocities is not None:
-                        dq[q_indices] = velocities
-
-                self.arm_point.positions = q[:7]
-                # self.arm_point.velocities = dq[:7]
-                # self.arm_point.effort = tau[:7]
-
-                self.hand_point.positions = q[7:]
-                # self.hand_point.velocities = dq[7:]
-                # self.hand_point.effort = tau[7:]
-
-                # set time duration
-                self.arm_point.time_from_start.secs = 0
-                self.arm_point.time_from_start.nsecs = 200000000
-                self.hand_point.time_from_start.secs = 0
-                self.hand_point.time_from_start.nsecs = 200000000
-
-                # set message and publish it
-                self.arm_publisher.msg.points = [self.arm_point]
-                self.hand_publisher.msg.points = [self.hand_point]
-                self.arm_publisher.publish()
-                self.hand_publisher.publish()
+            q_indices = None if joint_ids is None else self.q_indices[joint_ids]
+            self.publisher.set_joint_positions(positions, q_indices=q_indices)
+            self.publisher.publish('qpos')
 
     def get_joint_velocities(self, joint_ids=None):
         """

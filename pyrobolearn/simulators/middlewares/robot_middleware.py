@@ -229,14 +229,49 @@ class RobotMiddleware(object):
         """
         pass
 
-    def get_jacobian(self, link_id, q=None, local_position=None):
-        """
-        Return the jacobian.
+    def get_jacobian(self, link_id, local_position=None, q=None):
+        r"""
+        Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q), J_{ang}(q)]^T`, such that:
+
+        .. math:: v = [\dot{p}, \omega]^T = J(q) \dot{q}
+
+        where :math:`\dot{p}` is the Cartesian linear velocity of the link, and :math:`\omega` is its angular velocity.
+
+        Warnings: if we have a floating base then the Jacobian will also include columns corresponding to the root
+            link DoFs (at the beginning). If it is a fixed base, it will only have columns associated with the joints.
+
+        Args:
+            link_id (int): link id.
+            local_position (None, np.array[float[3]]): the point on the specified link to compute the Jacobian (in link
+              local coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+            q (np.array[float[N]], None): joint positions of size N, where N is the number of DoFs. If None, it will
+              compute q based on the current joint positions.
+
+        Returns:
+            np.array[float[6,N]], np.array[float[6,6+N]]: full geometric (linear and angular) Jacobian matrix. The
+              number of columns depends if the base is fixed or floating.
         """
         pass
 
     def get_inertia_matrix(self, q=None):
-        """
-        Return the inertia matrix.
+        r"""
+        Return the mass/inertia matrix :math:`H(q)`, which is used in the rigid-body equation of motion (EoM) in joint
+        space given by (see [1]):
+
+        .. math:: \tau = H(q)\ddot{q} + C(q,\dot{q})
+
+        where :math:`\tau` is the vector of applied torques, :math:`H(q)` is the inertia matrix, and
+        :math:`C(q,\dot{q}) \dot{q}` is the vector accounting for Coriolis, centrifugal forces, gravity, and any
+        other forces acting on the system except the applied torques :math:`\tau`.
+
+        Warnings: If the base is floating, it will return a [6+N,6+N] inertia matrix, where N is the number of actuated
+            joints. If the base is fixed, it will return a [N,N] inertia matrix
+
+        Args:
+            q (np.array[float[N]], None): joint positions of size N, where N is the total number of DoFs. If None, it
+              will get the current joint positions.
+
+        Returns:
+            np.array[float[N,N]], np.array[float[6+N,6+N]]: inertia matrix
         """
         pass

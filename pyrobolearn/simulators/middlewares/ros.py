@@ -176,7 +176,7 @@ class ROSRobotMiddleware(RobotMiddleware):
     """
 
     def __init__(self, robot_id, urdf=None, subscribe=False, publish=False, teleoperate=False, command=True,
-                 control_file=None, launch_file=None):
+                 control_file=None, launch_file=None, joint_state_topics=None, joint_state_msg_class=None):
         """
         Initialize the robot middleware interface.
 
@@ -192,6 +192,10 @@ class ROSRobotMiddleware(RobotMiddleware):
               subscribe/publish to some (joint) states.
             control_file (str, None): path to the YAML control file. If provided, it will be parsed.
             launch_file (str, None): path to the ROS launch file. If provided, it will be parsed.
+            joint_state_topics (str, list[str]): joint state topic(s). If not provided the joint state topic will be
+              set to '/<robot_name>/joint_states'.
+            joint_state_msg_class (class): message serialization class used for the provided joint state topic. By
+              default, it will be set to 'sensor_msg.JointState'.
         """
         super(ROSRobotMiddleware, self).__init__(robot_id, urdf, subscribe, publish, teleoperate, command, control_file)
         self.launch_file = launch_file
@@ -200,7 +204,7 @@ class ROSRobotMiddleware(RobotMiddleware):
 
         # get path to the URDF folder
         path = os.path.abspath(urdf)  # /path/to/pyrobolearn/robots/urdfs/<robot>/robot.urdf
-        dirname = str(os.path.dirname(path))  # /path/to/pyrobolearn/robots/urdfs/<robot>/
+        # dirname = str(os.path.dirname(path))  # /path/to/pyrobolearn/robots/urdfs/<robot>/
         basename = str(os.path.basename(path).split('.')[-2])  # robot name without extension
 
         # parse URDF to get joint names, q indices, etc.
@@ -215,15 +219,16 @@ class ROSRobotMiddleware(RobotMiddleware):
         count = 0
         for i, joint in enumerate(tree.joints.values()):
             if joint.dtype != 'fixed':
-                print("Adding joint {} with type={}".format(joint.name, joint.dtype))
+                print("Adding joint {} with type={}, q_idx={}".format(joint.name, joint.dtype, i))
                 self.q_indices[i] = count
                 self.joint_names.append(joint.name)
                 count += 1
 
         # subscriber and publisher associated with the given robot
-        if self.is_subscribing:
-            print("Creating Robot Subscriber")
-            self.subscriber = RobotSubscriber(name=basename)
+        # if self.is_subscribing:
+        print("Creating Robot Subscriber")
+        self.subscriber = RobotSubscriber(name=basename, joint_state_topics=joint_state_topics,
+                                          joint_state_msg_class=joint_state_msg_class)
         if self.is_publishing:
             print("Creating Robot Publisher")
             self.publisher = RobotPublisher(name=basename)
@@ -255,7 +260,7 @@ class ROSRobotMiddleware(RobotMiddleware):
         Returns:
             PublisherData: the publisher data holder.
         """
-        return self.publisher.create_publisher(name=name, topic=topic, data_class=msg_class, queue_size=queue_size)
+        return self.publisher.create_publisher(name=name, topic=topic, msg_class=msg_class, queue_size=queue_size)
 
     def create_subscriber(self, name, topic, msg_class):
         """
@@ -271,7 +276,7 @@ class ROSRobotMiddleware(RobotMiddleware):
         Returns:
             SubscriberData: the subscriber data holder.
         """
-        return self.subscriber.create_subscriber(name=name, topic=topic, data_class=msg_class)
+        return self.subscriber.create_subscriber(name=name, topic=topic, msg_class=msg_class)
 
     def change_topic(self, old_topic, new_topic, new_msg=None, queue_size=None):
         """
@@ -294,6 +299,67 @@ class ROSRobotMiddleware(RobotMiddleware):
                                         queue_size=queue_size)
         if self.subscriber.has_subscriber(old_topic):
             self.subscriber.change_topic(old_topic=old_topic, new_topic=new_topic, new_msg=new_msg)
+
+
+class DefaultROSRobotMiddleware(ROSRobotMiddleware):
+    r"""Default ROS robot middleware interface.
+
+    This is the default ROS robot middleware interface which can be created when no specific interfaces are provided
+    by the user. Specific interfaces can be found in the `robots` folder.
+
+    Here are the possible combinations between the different values for subscribe (S), publish (P), teleoperate (T),
+    and command (C):
+
+    - S=1, P=0, T=0: subscribes to the topics, and get the messages when calling the corresponding getter methods.
+    - S=0, P=1, T=0: publishes the various messages to the topics when calling the corresponding setter methods.
+    - S=1, P=0, T=1, C=0/1: get messages by subscribing to the topics that publish some commands/states. The received
+      commands/states are then set in the simulator. Depending on the value of `C`, it will subscribe to topics that
+      publish some commands (C=1) or states (C=0). Example: should we subscribe to joint trajectory commands, or joint
+      states when teleoperating the robot in the simulator? This C value allows to specify which one we are interested
+      in.
+    - S=0, P=1, T=1: when calling the getters methods such as joint positions, velocities, and others, it also
+      publishes the joint states. This is useful if we are moving/teleoperating the robot in the simulator.
+    - S=0, P=0, T=1/0: doesn't do anything.
+    - S=1, P=1, T=0: subscribes to some topics and publish messages to other topics. The messages are can be
+      sent/received by calling the appropriate getter/setter methods.
+    - S=1, P=1, T=1: not allowed.
+    """
+
+    def __init__(self, robot_id, urdf=None, subscribe=False, publish=False, teleoperate=False, command=True,
+                 control_file=None, launch_file=None):
+        """
+        Initialize the robot middleware interface.
+
+        Args:
+            robot_id (int): robot unique id.
+            urdf (str): path to the URDF file.
+            subscribe (bool): if True, it will subscribe to the topics associated to the loaded robot, and will read
+              the values published on these topics.
+            publish (bool): if True, it will publish the given values to the topics associated to the loaded robot.
+            teleoperate (bool): if True, it will move the robot based on the received or sent values based on the 2
+              previous attributes :attr:`subscribe` and :attr:`publish`.
+            command (bool): if True, it will subscribe/publish to some (joint) commands. If False, it will
+              subscribe/publish to some (joint) states.
+            control_file (str, None): path to the YAML control file.
+            launch_file (str, None): path to the ROS launch file. If provided, it will be parsed.
+        """
+        # set variables
+        super(DefaultROSRobotMiddleware, self).__init__(robot_id, urdf=urdf, subscribe=subscribe, publish=publish,
+                                                        teleoperate=teleoperate, command=command,
+                                                        control_file=control_file, launch_file=launch_file)
+
+        if self.is_publishing:
+            topics = []
+            count = 0
+            for i, joint in enumerate(self.tree.joints.values()):
+                if joint.dtype != 'fixed':
+                    topic = '/' + self.tree.name + '/joint' + str(count+1) + '_position_controller/command'
+                    topics.append(topic)
+            print("Publishing Topics: ", topics)
+            publisher = self.publisher.create_publisher(name='qpos', topic=topics, msg_class=std_msg.Float64)
+            self.publisher.init_set_joint_positions(publisher=publisher, msg_attribute_name='data')
+
+        # sensors
 
     def get_joint_positions(self, joint_ids=None):
         """
@@ -441,96 +507,52 @@ class ROSRobotMiddleware(RobotMiddleware):
         """
         pass
 
-    def get_jacobian(self, link_id, q=None, local_position=None):
-        """
-        Return the full geometric jacobian.
+    def get_jacobian(self, link_id, local_position=None, q=None):
+        r"""
+        Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q), J_{ang}(q)]^T`, such that:
+
+        .. math:: v = [\dot{p}, \omega]^T = J(q) \dot{q}
+
+        where :math:`\dot{p}` is the Cartesian linear velocity of the link, and :math:`\omega` is its angular velocity.
+
+        Warnings: if we have a floating base then the Jacobian will also include columns corresponding to the root
+            link DoFs (at the beginning). If it is a fixed base, it will only have columns associated with the joints.
 
         Args:
             link_id (int): link id.
-            q (np.array[float[N]], None): joint positions of size N, where N is the number of DoFs. If None, it will
-              compute q based on the current joint positions.
             local_position (None, np.array[float[3]]): the point on the specified link to compute the Jacobian (in link
               local coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+            q (np.array[float[N]], None): joint positions of size N, where N is the number of DoFs. If None, it will
+              compute q based on the current joint positions.
+
+        Returns:
+            np.array[float[6,N]], np.array[float[6,6+N]]: full geometric (linear and angular) Jacobian matrix. The
+              number of columns depends if the base is fixed or floating.
         """
         pass
 
     def get_inertia_matrix(self, q=None):
-        """
-        Return the inertia matrix.
+        r"""
+        Return the mass/inertia matrix :math:`H(q)`, which is used in the rigid-body equation of motion (EoM) in joint
+        space given by (see [1]):
+
+        .. math:: \tau = H(q)\ddot{q} + C(q,\dot{q})
+
+        where :math:`\tau` is the vector of applied torques, :math:`H(q)` is the inertia matrix, and
+        :math:`C(q,\dot{q}) \dot{q}` is the vector accounting for Coriolis, centrifugal forces, gravity, and any
+        other forces acting on the system except the applied torques :math:`\tau`.
+
+        Warnings: If the base is floating, it will return a [6+N,6+N] inertia matrix, where N is the number of actuated
+            joints. If the base is fixed, it will return a [N,N] inertia matrix
 
         Args:
             q (np.array[float[N]], None): joint positions of size N, where N is the total number of DoFs. If None, it
               will get the current joint positions.
+
+        Returns:
+            np.array[float[N,N]], np.array[float[6+N,6+N]]: inertia matrix
         """
         pass
-
-
-class DefaultROSRobotMiddleware(ROSRobotMiddleware):
-    r"""Default ROS robot middleware interface.
-
-    This is the default ROS robot middleware interface which can be created when no specific interfaces are provided
-    by the user. Specific interfaces can be found in the `robots` folder.
-
-    Here are the possible combinations between the different values for subscribe (S), publish (P), teleoperate (T),
-    and command (C):
-
-    - S=1, P=0, T=0: subscribes to the topics, and get the messages when calling the corresponding getter methods.
-    - S=0, P=1, T=0: publishes the various messages to the topics when calling the corresponding setter methods.
-    - S=1, P=0, T=1, C=0/1: get messages by subscribing to the topics that publish some commands/states. The received
-      commands/states are then set in the simulator. Depending on the value of `C`, it will subscribe to topics that
-      publish some commands (C=1) or states (C=0). Example: should we subscribe to joint trajectory commands, or joint
-      states when teleoperating the robot in the simulator? This C value allows to specify which one we are interested
-      in.
-    - S=0, P=1, T=1: when calling the getters methods such as joint positions, velocities, and others, it also
-      publishes the joint states. This is useful if we are moving/teleoperating the robot in the simulator.
-    - S=0, P=0, T=1/0: doesn't do anything.
-    - S=1, P=1, T=0: subscribes to some topics and publish messages to other topics. The messages are can be
-      sent/received by calling the appropriate getter/setter methods.
-    - S=1, P=1, T=1: not allowed.
-    """
-
-    def __init__(self, robot_id, urdf=None, subscribe=False, publish=False, teleoperate=False, command=True,
-                 control_file=None):
-        """
-        Initialize the robot middleware interface.
-
-        Args:
-            robot_id (int): robot unique id.
-            urdf (str): path to the URDF file.
-            subscribe (bool): if True, it will subscribe to the topics associated to the loaded robot, and will read
-              the values published on these topics.
-            publish (bool): if True, it will publish the given values to the topics associated to the loaded robot.
-            teleoperate (bool): if True, it will move the robot based on the received or sent values based on the 2
-              previous attributes :attr:`subscribe` and :attr:`publish`.
-            command (bool): if True, it will subscribe/publish to some (joint) commands. If False, it will
-              subscribe/publish to some (joint) states.
-            control_file (str, None): path to the YAML control file.
-        """
-        # set variables
-        super(DefaultROSRobotMiddleware, self).__init__(robot_id, urdf, subscribe, publish, teleoperate, command,
-                                                        control_file)
-
-        if self.is_publishing:
-            urdf_parser = URDFParser()
-            tree = urdf_parser.parse(urdf)
-            print("ROSRobotMiddleware - publisher - name: ", tree.name)
-            print("Num joints: ", tree.num_joints)
-            print("Num actuated joints: ", tree.num_actuated_joints)
-            self.q_indices = np.zeros(tree.num_joints, dtype=int)
-            topics = []
-            count = 0
-            for i, joint in enumerate(tree.joints.values()):
-                if joint.dtype != 'fixed':
-                    print("Adding joint {} with type={}".format(joint.name, joint.dtype))
-                    topic = '/' + tree.name + '/joint' + str(count+1) + '_position_controller/command'
-                    self.q_indices[i] = count
-                    count += 1
-                    topics.append(topic)
-            print("Publishing Topics: ", topics)
-            publisher = self.publisher.create_publisher(name='qpos', topic=topics, data_class=std_msg.Float64)
-            self.publisher.init_set_joint_positions(publisher=publisher, msg_attribute_name='data')
-
-        # sensors
 
 
 class ROS(Middleware):
@@ -612,6 +634,8 @@ class ROS(Middleware):
         self.launch = self.init_launch_process(start_process=True)
 
         self.processes = {}  # {Node: process}
+
+        rospy.init_node(self.__class__.__name__, anonymous=True)
 
     ###########
     # Methods #
@@ -1337,17 +1361,43 @@ class ROS(Middleware):
         """
         # check URDF path; check if it is a valid robot directory. If not a robot, just skip
         path = os.path.dirname(os.path.abspath(urdf))  # /path/to/pyrobolearn/robots/urdfs/<robot>/
-        robot_path = '/'.join(path.split('/')[-4:-1])
+        # robot_path = '/'.join(path.split('/')[-4:-1])
         if 'pyrobolearn/robots/urdfs' in path:
             id_ = self.count_id
             self.count_id += 1
 
             # check if specific robot middleware exists in `robots` folder, and if so load it
+            dirname = os.path.dirname(os.path.abspath(__file__))
+            robot_name = str(os.path.basename(os.path.abspath(urdf)).split('.')[-2])  # name without extension (.urdf)
+            if os.path.exists(dirname + '/robots/' + robot_name + '.py'):
+                # import module
+                module = importlib.import_module('pyrobolearn.simulators.middlewares.robots.' + robot_name)
+
+                def predicate(cls):
+                    return inspect.isclass(cls) and issubclass(cls, ROSRobotMiddleware) and cls != ROSRobotMiddleware
+
+                # get classes inside modules that are a subclass of ROSRobotMiddleware
+                classes = dict(inspect.getmembers(module, predicate))
+                cls = DefaultROSRobotMiddleware
+
+                # get first specific ROS robot middleware class if present
+                for key in classes:
+                    cls = classes[key]
+                    if cls != ROSRobotMiddleware:
+                        break
+
+                print("Creating specific robot middleware: ", cls.__name__)
+
+                robot = cls(id_, urdf=urdf, subscribe=self.is_subscribing, publish=self.is_publishing,
+                            teleoperate=self.is_teleoperating, command=self.is_commanding, control_file=None,
+                            launch_file=None)
 
             # otherwise, create default robot middleware
-            robot = DefaultROSRobotMiddleware(id_, urdf=urdf, subscribe=self.is_subscribing,
-                                              publish=self.is_publishing, teleoperate=self.is_teleoperating,
-                                              command=self.is_commanding, control_file=None)
+            else:
+                print("Creating default robot middleware")
+                robot = DefaultROSRobotMiddleware(id_, urdf=urdf, subscribe=self.is_subscribing,
+                                                  publish=self.is_publishing, teleoperate=self.is_teleoperating,
+                                                  command=self.is_commanding, control_file=None)
             self._robots[id_] = robot
 
             return id_
@@ -1489,7 +1539,9 @@ class ROS(Middleware):
             np.array[float[6,N]], np.array[float[6,6+N]]: full geometric (linear and angular) Jacobian matrix. The
                 number of columns depends if the base is fixed or floating.
         """
-        pass
+        robot = self._robots.get(body_id)
+        if robot is not None:
+            return robot.get_jacobian(link_id, local_position=local_position, q=q)
 
     def get_inertia_matrix(self, body_id, q):
         r"""
@@ -1512,7 +1564,9 @@ class ROS(Middleware):
         Returns:
             np.array[float[N,N]], np.array[float[6+N,6+N]]: inertia matrix
         """
-        pass
+        robot = self._robots.get(body_id)
+        if robot is not None:
+            return robot.get_inertia_matrix(q)
 
     def has_sensor(self, body_id, name):
         """

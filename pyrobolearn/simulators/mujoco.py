@@ -46,15 +46,15 @@ import xml.etree.ElementTree as ET  # XML parser
 from xml.dom import minidom  # to print in a pretty way the XML file
 
 # import mesh converter (from .obj to .stl)
-try:
-    import pymesh    # rapid prototyping platform focused on geometry processing
-    # doc: https://pymesh.readthedocs.io/en/latest/user_guide.html
-
-    import pyassimp  # library to import and export various 3d-model-formats
-    # doc: http://www.assimp.org/index.php
-    # github: https://github.com/assimp/assimp
-except ImportError as e:
-    raise ImportError(str(e) + "\nTry to install pymesh pyassimp: `pip install pymesh pyassimp`")
+# try:
+#     import pymesh    # rapid prototyping platform focused on geometry processing
+#     # doc: https://pymesh.readthedocs.io/en/latest/user_guide.html
+#
+#     import pyassimp  # library to import and export various 3d-model-formats
+#     # doc: http://www.assimp.org/index.php
+#     # github: https://github.com/assimp/assimp
+# except ImportError as e:
+#     raise ImportError(str(e) + "\nTry to install pymesh pyassimp: `pip install pymesh pyassimp`")
 
 # import image converter
 from PIL import Image

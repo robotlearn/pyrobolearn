@@ -2661,9 +2661,78 @@ class Simulator(object):
             np.array[float[6,N]], np.array[float[6,6+N]]: full geometric (linear and angular) Jacobian matrix. The
                 number of columns depends if the base is fixed or floating.
         """
+        # if a middleware is defined
+        if self.middleware is not None and self._middleware_enabled:
+            middleware_id = self._middleware_ids[body_id]
+
+            # get jacobian from the middleware
+            jacobian = self.middleware.get_jacobian(middleware_id, link_id, local_position, q)
+            if jacobian is not None:
+                return jacobian
+
+        # get the jacobian from the simulator (if we don't have a middleware or didn't get the jacobian from it)
+        return self._calculate_jacobian(body_id, link_id, local_position, q, dq, des_ddq)
+
+    def _calculate_jacobian(self, body_id, link_id, local_position, q, dq, des_ddq):
+        r"""
+        Return the full geometric Jacobian matrix :math:`J(q) = [J_{lin}(q), J_{ang}(q)]^T`, such that:
+
+        .. math:: v = [\dot{p}, \omega]^T = J(q) \dot{q}
+
+        where :math:`\dot{p}` is the Cartesian linear velocity of the link, and :math:`\omega` is its angular velocity.
+
+        Warnings: if we have a floating base then the Jacobian will also include columns corresponding to the root
+            link DoFs (at the beginning). If it is a fixed base, it will only have columns associated with the joints.
+
+        Args:
+            body_id (int): unique body id.
+            link_id (int): link id.
+            local_position (np.array[float[3]]): the point on the specified link to compute the Jacobian (in link local
+                coordinates around its center of mass). If None, it will use the CoM position (in the link frame).
+            q (np.array[float[N]]): joint positions of size N, where N is the number of DoFs.
+            dq (np.array[float[N]]): joint velocities of size N, where N is the number of DoFs.
+            des_ddq (np.array[float[N]]): desired joint accelerations of size N.
+
+        Returns:
+            np.array[float[6,N]], np.array[float[6,6+N]]: full geometric (linear and angular) Jacobian matrix. The
+                number of columns depends if the base is fixed or floating.
+        """
         pass
 
     def calculate_mass_matrix(self, body_id, q):
+        r"""
+        Return the mass/inertia matrix :math:`H(q)`, which is used in the rigid-body equation of motion (EoM) in joint
+        space given by (see [1]):
+
+        .. math:: \tau = H(q)\ddot{q} + C(q,\dot{q})
+
+        where :math:`\tau` is the vector of applied torques, :math:`H(q)` is the inertia matrix, and
+        :math:`C(q,\dot{q}) \dot{q}` is the vector accounting for Coriolis, centrifugal forces, gravity, and any
+        other forces acting on the system except the applied torques :math:`\tau`.
+
+        Warnings: If the base is floating, it will return a [6+N,6+N] inertia matrix, where N is the number of actuated
+            joints. If the base is fixed, it will return a [N,N] inertia matrix
+
+        Args:
+            body_id (int): body unique id.
+            q (np.array[float[N]]): joint positions of size N, where N is the total number of DoFs.
+
+        Returns:
+            np.array[float[N,N]], np.array[float[6+N,6+N]]: inertia matrix
+        """
+        # if a middleware is defined
+        if self.middleware is not None and self._middleware_enabled:
+            middleware_id = self._middleware_ids[body_id]
+
+            # get inertia matrix from the middleware
+            inertia = self.middleware.get_inertia_matrix(middleware_id, q)
+            if inertia is not None:
+                return inertia
+
+        # get the inertia matrix from the simulator (if we don't have a middleware or didn't get the inertia from it)
+        return self._calculate_mass_matrix(body_id, q)
+
+    def _calculate_mass_matrix(self, body_id, q):
         r"""
         Return the mass/inertia matrix :math:`H(q)`, which is used in the rigid-body equation of motion (EoM) in joint
         space given by (see [1]):

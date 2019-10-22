@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-
 import inspect
 import types
+import functools
+import re
 import numpy as np
 
 # import data structures
@@ -30,6 +31,9 @@ from . import feedback
 from . import plotting
 
 # import parsers
+from . import parsers
+
+# import parsers
 # from . import parsers
 
 
@@ -38,6 +42,72 @@ from . import plotting
 def has_attribute(object, name):
     """Check if the given object has an attribute (variable or method) with the given name"""
     return hasattr(object, name)
+
+
+def rsetattr(obj, attr, val):
+    """
+    Recursively set an attribute. This is useful for nested sub-objects or chained properties.
+
+    Examples:
+        class A(object):
+            def __init__(self, a=0):
+                self.a = a
+
+        class B(object):
+            def __init__(self, b):
+                self.b = b
+
+        obj = B(b=A())
+        rsetattr(obj, 'b.a', 1)  # obj.b.a is set to 1 now
+
+    References:
+        - https://stackoverflow.com/questions/31174295/getattr-and-setattr-on-nested-subobjects-chained-properties
+    """
+    pre, _, post = attr.rpartition('.')
+    return setattr(rgetattr(obj, pre) if pre else obj, post, val)
+
+
+def rgetattr(obj, attr, *args):
+    """
+    Recursively get an attribute. This is useful for nested subobjects or chained properties.
+
+    Examples:
+        class A(object):
+            def __init__(self, a=0):
+                self.a = a
+
+        class B(object):
+            def __init__(self, b):
+                self.b = b
+
+        obj = B(b=A())
+        rgetattr(obj, 'b.a')  # this will access obj.b.a and thus print 0
+
+    References:
+        - https://stackoverflow.com/questions/31174295/getattr-and-setattr-on-nested-subobjects-chained-properties
+    """
+    def _getattr(obj, attr):
+        search = re.search("\[.*\]", attr)  # check for square brackets
+        if search is not None:
+            begin_idx, last_idx = search.span()
+            a = getattr(obj, attr[:begin_idx], *args)
+            idx = last_idx
+            while idx != begin_idx:
+                idx = attr.find(']', begin_idx)
+                s = attr[begin_idx+1:idx]
+                if re.match("[0-9]+", s):  # check if numeric string
+                    if ':' in s:  # check for ':', i.e. slice
+                        sl = slice(*[{True: lambda n: None, False: int}[x == ''](x)
+                                     for x in (s.split(':') + ['', '', ''])[:3]])
+                        a = a[sl]
+                    else:  # if no slice
+                        a = a[int(s)]
+                else:  # string for dictionary
+                    a = a[s]
+                begin_idx = idx
+            return a
+        return getattr(obj, attr, *args)
+    return functools.reduce(_getattr, [obj] + attr.split('.'))
 
 
 def has_variable(object, name):

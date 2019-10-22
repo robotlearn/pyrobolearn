@@ -31,32 +31,35 @@ class SubscriberData(object):
     from this class.
     """
 
-    def __init__(self, topic, data_class):
+    def __init__(self, topic, msg_class):
         """
         Initialize the SubscriberData that subscribes to the given topic.
 
         Args:
             topic (str, list[str]): topic name(s). If multiple topics are given, it will group them. Note that you can
               only group topics that use the same message class.
-            data_class (class): message class for serialization.
+            msg_class (class): message class for serialization.
         """
-        # self.subscriber = rospy.Subscriber(topic, data_class, callback=self.callback)
+        # self.subscriber = rospy.Subscriber(topic, msg_class, callback=self.callback)
         # # set the message attributes to be part of this class attributes
-        # self.attributes = set([attr for attr in [attr for attr in dir(data_class) if not attr.startswith('_')]
-        #                        if not callable(getattr(data_class, attr))])
-        # self.subscriber_data = data_class()
+        # self.attributes = set([attr for attr in [attr for attr in dir(msg_class) if not attr.startswith('_')]
+        #                        if not callable(getattr(msg_class, attr))])
+        # self.subscriber_data = msg_class()
 
         self.topic = topic
-        self.msg_class = data_class
-        if isinstance(topic, collections.Iterable):
-            self.is_group = True
-            self.subscriber = [rospy.Subscriber(t, data_class, callback=self.callback, callback_args=idx)
-                               for idx, t in enumerate(topic)]
-            self.msg = [data_class() for _ in topic]
-        else:
+        self.msg_class = msg_class
+        if isinstance(topic, str):
             self.is_group = False
-            self.subscriber = rospy.Subscriber(topic, data_class, callback=self.callback)
-            self.msg = data_class()
+            self.subscriber = rospy.Subscriber(topic, msg_class, callback=self.callback)
+            self.msg = msg_class()
+        elif isinstance(topic, collections.Iterable):
+            self.is_group = True
+            self.subscriber = [rospy.Subscriber(t, msg_class, callback=self.callback, callback_args=idx)
+                               for idx, t in enumerate(topic)]
+            self.msg = [msg_class() for _ in topic]
+        else:
+            raise TypeError("Expecting the given 'topic' to a str, or a list of str, but instead got: "
+                            "{}".format(type(topic)))
 
     def callback(self, data, idx=None):
         """
@@ -134,17 +137,20 @@ class Subscriber(object):
               parameter in `rospy.init_node`.
         """
         # initialize the node
-        if subscriber_id is None:
-            rospy.init_node(self.__class__.__name__, anonymous=True)
-        else:
-            rospy.init_node(self.__class__.__name__ + str(subscriber_id))
+        # try:
+        #     if subscriber_id is None:
+        #         rospy.init_node(self.__class__.__name__, anonymous=True)
+        #     else:
+        #         rospy.init_node(self.__class__.__name__ + str(subscriber_id))
+        # except rospy.exceptions.ROSException:  # node already initialized
+        #     pass
 
         # all subscribers {subscriber name: SubscriberData}
         self.subscribers = dict()
         # all topics {topic: subscriber name}
         self.topics_to_subscriber_name = dict()
 
-    def create_subscriber(self, name, topic, data_class):
+    def create_subscriber(self, name, topic, msg_class):
         """
         Create a subscriber to the specific topic. If the subscriber already exists, it unregister the previous one
         and replace it by the new one.
@@ -153,7 +159,7 @@ class Subscriber(object):
             name (str): unique name of the subscriber. The name must be unique. You will be able to access to this
               subscriber using its name.
             topic (str, list[str]): name of the topic(s).
-            data_class (object): data type class to use for messages
+            msg_class (object): data type class to use for messages
 
         Returns:
             SubscriberData: the subscriber data holder.
@@ -162,9 +168,14 @@ class Subscriber(object):
         self.remove_subscriber(name)
 
         # create new subscriber
-        subscriber = SubscriberData(topic, data_class)
+        subscriber = SubscriberData(topic, msg_class)
         self.subscribers[name] = subscriber
-        self.topics_to_subscriber_name[topic] = name
+        if isinstance(topic, collections.Iterable):
+            for t in topic:
+                self.topics_to_subscriber_name[t] = name
+        else:
+            self.topics_to_subscriber_name[topic] = name
+
         return subscriber
 
     def remove_subscriber(self, name):

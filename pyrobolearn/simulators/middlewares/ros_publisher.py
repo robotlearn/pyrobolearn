@@ -35,35 +35,38 @@ class PublisherData(object):
     `pub.msg.data`).
     """
 
-    def __init__(self, topic, data_class, queue_size=10):
+    def __init__(self, topic, msg_class, queue_size=10):
         """
         Initialize the PublisherData that publishes the given message data.
 
         Args:
             topic (str, list[str]): topic name(s). If multiple topics are given, it will group them. Note that you can
               only group topics that use the same message class.
-            data_class (class): message class for serialization.
+            msg_class (class): message class for serialization.
             queue_size (int): The queue size used for asynchronously publishing messages from different threads. A
               size of zero means an infinite queue, which can be dangerous. When None is passed all publishing will
               happen synchronously and a warning message will be printed.
         """
-        # self.__dict__['publisher'] = rospy.Publisher(topic, data_class, queue_size=queue_size)
+        # self.__dict__['publisher'] = rospy.Publisher(topic, msg_class, queue_size=queue_size)
         # # set the message attributes to be part of this class attributes
-        # self.__dict__['attributes'] = [attr for attr in [attr for attr in dir(data_class) if not attr.startswith('_')]
-        #                                if not callable(getattr(data_class, attr))]
-        # self.__dict__['msg'] = data_class()
+        # self.__dict__['attributes'] = [attr for attr in [attr for attr in dir(msg_class) if not attr.startswith('_')]
+        #                                if not callable(getattr(msg_class, attr))]
+        # self.__dict__['msg'] = msg_class()
 
         self.topic = topic
         self.queue_size = queue_size
-        self.msg_class = data_class
-        if isinstance(topic, collections.Iterable):
-            self.is_group = True
-            self.publisher = [rospy.Publisher(t, data_class, queue_size=queue_size) for t in topic]
-            self.msg = [data_class() for _ in topic]
-        else:
+        self.msg_class = msg_class
+        if isinstance(topic, str):
             self.is_group = False
-            self.publisher = rospy.Publisher(topic, data_class, queue_size=queue_size)
-            self.msg = data_class()
+            self.publisher = rospy.Publisher(topic, msg_class, queue_size=queue_size)
+            self.msg = msg_class()
+        elif isinstance(topic, collections.Iterable):
+            self.is_group = True
+            self.publisher = [rospy.Publisher(t, msg_class, queue_size=queue_size) for t in topic]
+            self.msg = [msg_class() for _ in topic]
+        else:
+            raise TypeError("Expecting the given 'topic' to a str, or a list of str, but instead got: "
+                            "{}".format(type(topic)))
 
     def publish(self, data=None, indices=None, replace=True):
         """
@@ -125,6 +128,7 @@ class PublisherData(object):
             indices (None, list[int], int): if multiple topics are defined for this class, you can specify which index
               to use.
         """
+        # TODO: use `rsetattr` (which is implemented in pyrobolearn/utils/__init__.py)
         if self.is_group:
             if indices is None:  # set every message attribute
                 if isinstance(values, collections.Iterable):
@@ -159,6 +163,7 @@ class PublisherData(object):
         Returns:
             object: message attribute value(s).
         """
+        # TODO: use `rgetattr` (which is implemented in pyrobolearn/utils/__init__.py)
         if self.is_group:
             if indices is None:
                 return [getattr(msg, key) for msg in self.msg]
@@ -209,17 +214,20 @@ class Publisher(object):
         """
 
         # initialize the node
-        if publisher_id is None:
-            rospy.init_node(self.__class__.__name__, anonymous=True)
-        else:
-            rospy.init_node(self.__class__.__name__ + str(publisher_id))
+        # # try:
+        # if publisher_id is None:
+        #     rospy.init_node(self.__class__.__name__, anonymous=True)
+        # else:
+        #     rospy.init_node(self.__class__.__name__ + str(publisher_id))
+        # # except rospy.exceptions.ROSException:  # node already initialized
+        # #     pass
 
         # all publishers {publisher name: PublisherData}
         self.publishers = dict()
         # all topics {topic: publisher name}
         self.topics_to_publisher_name = dict()
 
-    def create_publisher(self, name, topic, data_class, queue_size=10):
+    def create_publisher(self, name, topic, msg_class, queue_size=10):
         """
         Create a publisher to the specific topic. If the publisher already exists, it unregister the previous one
         and replace it by the new one.
@@ -228,7 +236,7 @@ class Publisher(object):
             name (str): unique name of the publisher. The name must be unique. You will be able to access to this
               publisher using its name.
             topic (str, list[str]): name of the topic(s).
-            data_class (object): data type class to use for messages
+            msg_class (object): data type class to use for messages
             queue_size (int): The queue size used for asynchronously publishing messages from different threads. A
               size of zero means an infinite queue, which can be dangerous. When None is passed all publishing will
               happen synchronously and a warning message will be printed.
@@ -240,9 +248,13 @@ class Publisher(object):
         self.remove_publisher(name)
 
         # create new publisher
-        publisher = PublisherData(topic, data_class, queue_size=queue_size)
+        publisher = PublisherData(topic=topic, msg_class=msg_class, queue_size=queue_size)
         self.publishers[name] = publisher
-        self.topics_to_publisher_name[topic] = name
+        if isinstance(topic, collections.Iterable):
+            for t in topic:
+                self.topics_to_publisher_name[t] = name
+        else:
+            self.topics_to_publisher_name[topic] = name
 
         return publisher
 

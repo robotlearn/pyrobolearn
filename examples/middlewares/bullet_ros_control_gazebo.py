@@ -24,10 +24,10 @@ Here is a video of what it should give: https://www.youtube.com/watch?v=OPh-NCfK
 
 If you want to use 'kuka_iiwa' and 'franka', you will have to follow the same steps as above but this time by cloning:
 - https://github.com/IFL-CAMP/iiwa_stack
-- https://github.com/mkrizmancic/franka_gazebo
+- https://github.com/erdalpekel/franka_ros  and  https://github.com/erdalpekel/panda_simulation
 
-Then run the corresponding roslaunch files (*_gazebo.launch) that are located in the corresponding
-`pyrobolearn/robots/urdfs/<robot_name>/` folder using the `roslaunch <robot>_gazebo.launch` command.
+Then run the corresponding roslaunch files that are provided in these repositories (`simulation.launch` for the panda
+robot, and `iiwa_gazebo.launch` for the kuka robot).
 """
 
 import pyrobolearn as prl
@@ -39,7 +39,7 @@ sim = prl.simulators.Bullet(middleware=ros)
 world = prl.worlds.BasicWorld(sim)
 
 # load robot
-robot = world.load_robot('rrbot')  # 'kuka_iiwa', 'franka'
+robot = world.load_robot('rrbot')  # 'kuka_iiwa', 'franka', 'rrbot'
 
 # run simulation
 for t in prl.count():

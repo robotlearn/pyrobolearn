@@ -8,7 +8,7 @@ joint trajectories to it.
 
 Here are the few examples that you can find in this folder:
 1. `bullet_ros_control_gazebo.py`: After running the corresponding roslaunch file (see file documentation), you will 
-be able to teleoperate the manipulator (rrbot, kuka, or franka emika panda) in Gazebo by moving the same robot in 
+be able to teleoperate a manipulator (rrbot, kuka, or franka emika panda) in Gazebo by moving the same robot in 
 PyBullet. The robots that are instantiated in Gazebo use position control (by using `ros_control`). A simple video 
 demonstrating the results can be found here: https://www.youtube.com/watch?v=OPh-NCfKKK8
 2. `bullet_ros_rqt.py`: this will launch RQT along PRL.
