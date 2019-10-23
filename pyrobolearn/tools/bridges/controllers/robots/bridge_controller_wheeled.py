@@ -61,7 +61,8 @@ class BridgeControllerWheeledRobot(Bridge):
 
         # if interface not defined, create one.
         if not isinstance(interface, GameControllerInterface):
-            raise TypeError
+            raise TypeError("Expecting the given 'interface' to be an instance of `GameControllerInterface`, instead "
+                            "got: {}".format(type(interface)))
 
         # call superclass
         super(BridgeControllerWheeledRobot, self).__init__(interface, priority=priority, verbose=verbose)
@@ -128,8 +129,8 @@ class BridgeControllerWheeledRobot(Bridge):
         pitch, yaw = get_rpy_from_quaternion(self.robot.orientation)[1:]
         if self.fpv:  # first-person view
             target_pos = self.robot.position + 2 * np.array([np.cos(yaw) * np.cos(pitch),
-                                                                  np.sin(yaw) * np.cos(pitch),
-                                                                  np.sin(pitch)])
+                                                             np.sin(yaw) * np.cos(pitch),
+                                                             np.sin(pitch)])
             self.camera.reset(distance=2, pitch=-pitch, yaw=yaw - np.pi / 2, target_position=target_pos)
         else:  # third-person view
             self.camera.follow(body_id=self.robot.id, distance=2, yaw=yaw - np.pi / 2, pitch=self.camera_pitch)

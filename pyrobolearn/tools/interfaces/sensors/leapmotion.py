@@ -2,6 +2,12 @@
 #!/usr/bin/env python
 """Define the Leap Motion hand tracking sensor input interface.
 
+You can run the Leap control panel by typing in the terminal:
+$ LeapControlPanel
+
+If you need to restart the daemon (if necessary), just run:
+$ sudo service leapd restart
+
 References:
     - Leap Motion: https://www.leapmotion.com/
     - Installation (Ubuntu): https://www.leapmotion.com/setup/desktop/linux/
@@ -68,7 +74,7 @@ class LeapMotionInterface(SensorInterface):
         Initialize the Leap motion input interface.
 
         Args:
-            bounding_box (None, np.array[2,3]):
+            bounding_box (None, np.array[float[2,3]]): bounding box limits.
             use_thread (bool): If True, it will run the interface in a separate thread than the main one.
                 The interface will update its data automatically.
             sleep_dt (float): If :attr:`use_thread` is True, it will sleep the specified amount before acquiring or
@@ -149,7 +155,7 @@ class LeapMotionInterface(SensorInterface):
             hand (Leap.Hand): hand instance.
 
         Returns:
-            np.array[3]: hand direction (unit vector)
+            np.array[float[3]]: hand direction (unit vector)
         """
         d = hand.direction
         return np.array([-d.z, -d.x, d.y])
@@ -164,7 +170,7 @@ class LeapMotionInterface(SensorInterface):
             hand (Leap.Hand): hand instance.
 
         Returns:
-            np.array[3]: palm normal (unit vector)
+            np.array[float[3]]: palm normal (unit vector)
         """
         d = hand.palm_normal
         return np.array([-d.z, -d.x, d.y])
@@ -178,7 +184,7 @@ class LeapMotionInterface(SensorInterface):
             hand (Leap.Hand): hand instance.
 
         Returns:
-            np.array[3, 3]: rotation matrix.
+            np.array[float[3,3]]: rotation matrix.
         """
         basis = hand.basis
         x_basis = basis.x_basis.to_float_array()
@@ -195,7 +201,7 @@ class LeapMotionInterface(SensorInterface):
             hand (Leap.Hand): hand instance.
 
         Returns:
-            np.array[4]: quaternion [x,y,z,w]
+            np.array[float[4]]: quaternion [x,y,z,w]
         """
         return get_quaternion_from_matrix(LeapMotionInterface.get_hand_rotation_matrix(hand))
 
@@ -208,7 +214,7 @@ class LeapMotionInterface(SensorInterface):
             hand (Leap.Hand): hand instance.
 
         Returns:
-            np.array[3]: roll-pitch-yaw angles (in radians)
+            np.array[float[3]]: roll-pitch-yaw angles (in radians)
         """
         return get_rpy_from_matrix(LeapMotionInterface.get_hand_rotation_matrix(hand))
 
@@ -221,7 +227,7 @@ class LeapMotionInterface(SensorInterface):
             hand (Leap.Hand): hand instance.
 
         Returns:
-            np.array[3]: position (in meter)
+            np.array[float[3]]: position (in meter)
         """
         d = hand.palm_position
         return np.array([-d.z, -d.x, d.y]) / 1000.
@@ -239,7 +245,7 @@ class LeapMotionInterface(SensorInterface):
             hand (Leap.Hand): hand instance.
 
         Returns:
-            np.array[3]: stabilized hand position (in meter)
+            np.array[float[3]]: stabilized hand position (in meter)
         """
         d = hand.stabilized_palm_position
         return np.array([-d.z, -d.x, d.y]) / 1000.
@@ -269,7 +275,7 @@ class LeapMotionInterface(SensorInterface):
             hand (Leap.Hand): hand instance.
 
         Returns:
-            np.array[3]: wrist position (in meter)
+            np.array[float[3]]: wrist position (in meter)
         """
         d = hand.wrist_position
         return np.array([-d.z, -d.x, d.y]) / 1000.
@@ -283,7 +289,7 @@ class LeapMotionInterface(SensorInterface):
             hand (Leap.Hand): hand instance.
 
         Returns:
-            np.array[3]: linear velocity (in meter/second)
+            np.array[float[3]]: linear velocity (in meter/second)
         """
         d = hand.palm_velocity
         return np.array([-d.z, -d.x, d.y]) / 1000.
@@ -372,7 +378,7 @@ class LeapMotionInterface(SensorInterface):
             hand (Leap.Hand): hand instance.
 
         Returns:
-            np.array[3]: position of the center of the "hold" sphere (in meter)
+            np.array[float[3]]: position of the center of the "hold" sphere (in meter)
         """
         d = hand.sphere_center
         return np.array([-d.z, -d.x, d.y]) / 1000.
@@ -480,7 +486,7 @@ class LeapMotionInterface(SensorInterface):
             hand_or_arm (Leap.Hand, Leap.Arm): hand or arm instance.
 
         Returns:
-            np.array[3]: elbow position (in meter)
+            np.array[float[3]]: elbow position (in meter)
         """
         if isinstance(hand_or_arm, Leap.Hand):
             d = hand_or_arm.arm.elbow_position
@@ -500,7 +506,7 @@ class LeapMotionInterface(SensorInterface):
             finger (Leap.Finger): finger instance.
 
         Returns:
-            np.array[3]: finger tip position (in meter)
+            np.array[float[3]]: finger tip position (in meter)
         """
         d = finger.tip_position
         return np.array([-d.z, -d.x, d.y]) / 1000.
@@ -514,7 +520,7 @@ class LeapMotionInterface(SensorInterface):
             finger (Leap.Finger): finger instance.
 
         Returns:
-            np.array[3]: finger tip stabilized position
+            np.array[float[3]]: finger tip stabilized position
         """
         d = finger.stabilized_tip_position
         return np.array([-d.z, -d.x, d.y]) / 1000.
@@ -528,7 +534,7 @@ class LeapMotionInterface(SensorInterface):
             finger (Leap.Finger): finger instance.
 
         Returns:
-            np.array[3]: finger tip velocity (in meter/second)
+            np.array[float[3]]: finger tip velocity (in meter/second)
         """
         d = finger.tip_velocity
         return np.array([-d.z, -d.x, d.y]) / 1000.
@@ -542,7 +548,7 @@ class LeapMotionInterface(SensorInterface):
             finger (Leap.Finger): finger instance.
 
         Returns:
-            np.array[3]: finger direction (unit vector)
+            np.array[float[3]]: finger direction (unit vector)
         """
         d = finger.direction
         return np.array([-d.z, -d.x, d.y])
@@ -556,7 +562,7 @@ class LeapMotionInterface(SensorInterface):
             finger (Leap.Finger): finger instance.
 
         Returns:
-            np.array[3]: finger length (in meter)
+            np.array[float[3]]: finger length (in meter)
         """
         return finger.length / 1000.
 
@@ -569,7 +575,7 @@ class LeapMotionInterface(SensorInterface):
             finger (Leap.Finger): finger instance.
 
         Returns:
-            np.array[3]: finger witdh (in meter)
+            np.array[float[3]]: finger witdh (in meter)
         """
         return finger.width / 1000.
 
@@ -595,7 +601,7 @@ class LeapMotionInterface(SensorInterface):
             box (Leap.InteractionBox): interaction box instance.
 
         Returns:
-            np.array[3]: interaction box center (in meter).
+            np.array[float[3]]: interaction box center (in meter).
         """
         d = box.center
         return np.array([-d.z, -d.x, d.y]) / 1000.
@@ -648,7 +654,7 @@ class LeapMotionInterface(SensorInterface):
             box (Leap.InteractionBox): interaction box instance.
 
         Returns:
-            np.array[3]: box dimensions (depth, width, height)
+            np.array[float[3]]: box dimensions (depth, width, height)
         """
         return np.array([box.depth, box.width, box.height])
 
@@ -657,27 +663,27 @@ class LeapMotionInterface(SensorInterface):
         Normalize the given position such that the position is in the range of [0..1].
 
         Args:
-            position (np.array[3]): position to normalized.
+            position (np.array[float[3]]): position to normalized.
             clamp (bool): Whether or not to limit the output value to the range [0,1] when the input position is
                 outside the InteractionBox. Defaults to True.
 
         Returns:
-            np.array[3]: normalized position
+            np.array[float[3]]: normalized position
         """
         pass
 
     def transform_normalized_position(self, position, clamp=True, ranges=None):
         """
-        Transform the normalized position
+        Transform the normalized position.
 
         Args:
-            position (np.array[3]): normalized position.
+            position (np.array[float[3]]): normalized position.
             clamp (bool): Whether or not to limit the output value to the range [0,1] when the input position is
                 outside the InteractionBox. Defaults to True.
-            ranges (None, np.array[2,3]):
+            ranges (None, np.array[float[2,3]]):
 
         Returns:
-            np.array[3]: transformed position.
+            np.array[float[3]]: transformed position.
         """
         # normalize the position
         position = self.normalize_point(position, clamp=clamp)
@@ -687,13 +693,13 @@ class LeapMotionInterface(SensorInterface):
         Transform the position
 
         Args:
-            position (np.array[3]): normalized position.
+            position (np.array[float[3]]): normalized position.
             clamp (bool): Whether or not to limit the output value to the range [0,1] when the input position is
                 outside the InteractionBox. Defaults to True.
-            ranges (None, np.array[2,3]):
+            ranges (None, np.array[float[2,3]]):
 
         Returns:
-            np.array[3]: transformed position.
+            np.array[float[3]]: transformed position.
         """
         pass
 
@@ -705,7 +711,7 @@ class LeapMotionInterface(SensorInterface):
             hand (Leap.Hand): hand instance.
 
         Returns:
-            np.array[3]: hand transformed position (in meter)
+            np.array[float[3]]: hand transformed position (in meter)
         """
         pass
 
@@ -718,7 +724,7 @@ class LeapMotionInterface(SensorInterface):
             frame (Leap.Frame): frame instance.
 
         Returns:
-            np.array[H, W]: image.
+            np.array[uint8[H,W]]: image.
         """
         image = frame.images[0]
         height, width = image.height, image.width
@@ -733,7 +739,7 @@ class LeapMotionInterface(SensorInterface):
             frame (Leap.Frame): frame instance.
 
         Returns:
-            np.array[H, W]: image
+            np.array[uint8[H,W]]: image
         """
         image = frame.images[1]
         height, width = image.height, image.width
@@ -762,20 +768,15 @@ if __name__ == '__main__':
     import time
 
     # create the myo interface
-    myo = LeapMotionInterface(verbose=True)
+    leap = LeapMotionInterface(verbose=True)
 
     try:
         while True:
-            myo.step()
-            print("RPY: {}".format(myo.rpy))
-            print("Quaternion: {}".format(myo.quaternion))
-            print("EMG: {}".format(myo.emg))
-            print("Accel: {}".format(myo.acceleration))
-            print("Gyro: {}".format(myo.gyro))
+            leap.step()
             print("")
             time.sleep(0.01)
     except KeyboardInterrupt:
         print("Keyboard Interrupt")
     finally:
-        myo.close()
+        leap.close()
         print("Bye!")
