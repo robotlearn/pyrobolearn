@@ -30,6 +30,7 @@ except ImportError as e:
           "when resetting the joint states.\n" + str(e))
 
 from pyrobolearn.simulators.middlewares.ros import ROSRobotMiddleware
+from pyrobolearn.utils.filters import MovingAverageFilter
 
 
 __author__ = "Brian Delhaisse"
@@ -107,6 +108,7 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
         # arm_topic = '/position_joint_trajectory_controller/command'
         self.arm_publisher = self.publisher.create_publisher(name='panda_arm_trajectory', topic=arm_topic,
                                                              msg_class=JointTrajectory)
+        self.use_hand = True
         hand_topic = '/panda_hand_controller/command'
         self.hand_publisher = self.publisher.create_publisher(name='panda_hand_trajectory', topic=hand_topic,
                                                               msg_class=JointTrajectory)
@@ -119,9 +121,12 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
 
         # create reset joint state service
         self.reset_joint_service = None
-        if MoveJoints is not None:
+        self.use_real_robot = True
+        if MoveJoints is not None and self.use_real_robot:
             self.reset_joint_service_name = '/arm/move_joint_absolute'
             self.reset_joint_service = rospy.ServiceProxy(self.reset_joint_service_name, MoveJoints)
+
+        self.filter = MovingAverageFilter(alpha=0.3)
 
     def reset_joint_states(self, positions, joint_ids=None, velocities=None):
         """
@@ -189,6 +194,8 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
         """
         if self.is_subscribing:
             q_indices = None if joint_ids is None else self.q_indices[joint_ids]
+            if not self.use_hand:
+                q_indices = q_indices[q_indices <= 6]
             return self.subscriber.get_joint_positions(q_indices)
 
     def set_joint_positions(self, positions, joint_ids=None, velocities=None, kps=None, kds=None, forces=None):
@@ -206,10 +213,14 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
         if self.is_publishing:
             q = self.subscriber.get_joint_positions()
             dq = self.subscriber.get_joint_velocities()
+            # dq = self.filter(dq)
             # tau = self.subscriber.get_joint_torques()
 
-            if len(q) > 0:
+            if q is not None and len(q) > 0:
                 q_indices = None if joint_ids is None else self.q_indices[joint_ids]
+                if not self.use_hand:
+                    q_indices = q_indices[q_indices <= 6]
+
                 if q_indices is not None:
                     q[q_indices] = positions
                     if velocities is not None:
@@ -219,9 +230,10 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
                 self.arm_point.velocities = dq[:7]
                 # self.arm_point.effort = tau[:7]
 
-                self.hand_point.positions = q[7:]
-                self.hand_point.velocities = dq[7:]
-                # self.hand_point.effort = tau[7:]
+                if self.use_hand:
+                    self.hand_point.positions = q[7:]
+                    self.hand_point.velocities = dq[7:]
+                    # self.hand_point.effort = tau[7:]
 
                 # set time duration
                 self.arm_point.time_from_start.secs = 0

@@ -25,15 +25,20 @@ class MovingAverageFilter(Filter):
 
     The moving average filter computes the moving mean given by:
 
-    .. math:: \mu_{N+1} = \frac{N}{N+1} \mu_N + \frac{1}{N+1} x_{N+1}
+    .. math:: \mu_{N+1} = \frac{N}{N+1} \mu_N + \frac{1}{N+1} x_{N+1}`
 
     where :math:`\mu_0 = 1`.
+
+    If an :math:`\alpha` parameter is provided it will compute:
+
+    .. math:: \mu_{N+1} = (1-\alpha) \mu_N + \alpha x_{N+1}
     """
 
-    def __init__(self):
+    def __init__(self, alpha=None):
         """Initialize the moving average filter"""
         self.mu = None
         self.N = 0
+        self.alpha = alpha
 
     def __call__(self, x):
         """
@@ -47,9 +52,11 @@ class MovingAverageFilter(Filter):
         """
         if self.mu is None:
             self.mu, self.N = x, 1
-            return self.mu
-        self.N += 1
-        self.mu = (self.N-1.)/self.N * self.mu + 1./self.N * x
+        elif self.alpha is None:
+            self.N += 1
+            self.mu = (self.N-1.)/self.N * self.mu + 1./self.N * x
+        else:
+            self.mu = (1. - self.alpha) * self.mu + self.alpha * x
         return self.mu
 
 
@@ -229,3 +236,19 @@ class OneEuroFilter(Filter):
         cutoff = self.__mincutoff + self.__beta * np.fabs(edx)
         # filter the given value
         return self.__x(x, timestamp, alpha=self.__alpha(cutoff))
+
+
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+
+    # Test the filters
+    one_euro_filter = OneEuroFilter(freq=1, mincutoff=0.5, beta=0.1, dcutoff=1.0)
+    moving_average = MovingAverageFilter(alpha=0.3)
+
+    t = np.linspace(0, 1., 200)
+    x = np.sin(4*np.pi*t) + 0.2 * (np.random.rand(200) - 0.5)
+
+    plt.plot(t, x)
+    plt.plot(t, [moving_average(i) for i in x])
+    plt.plot(t, [one_euro_filter(i, timestamp=i) for i in t])
+    plt.show()
