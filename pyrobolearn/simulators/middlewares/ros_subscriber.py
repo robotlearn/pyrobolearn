@@ -356,9 +356,11 @@ class RobotSubscriber(Subscriber):
         Returns:
             float, np.array[float]: joint positions.
         """
-        if q_indices is None:
-            return np.asarray(self.joint_states.msg.position)
-        return np.asarray(self.joint_states.msg.position)[q_indices]
+        positions = self.joint_states.msg.position
+        if positions:  # because it can be empty at the beginning
+            if q_indices is None:
+                return np.asarray(positions)
+            return np.asarray(positions)[q_indices]
 
     def get_joint_velocities(self, q_indices=None):
         """
@@ -371,9 +373,11 @@ class RobotSubscriber(Subscriber):
         Returns:
             float, np.array[float]: joint velocities.
         """
-        if q_indices is None:
-            return np.asarray(self.joint_states.msg.velocity)
-        return np.asarray(self.joint_states.msg.velocity)[q_indices]
+        velocities = self.joint_states.msg.velocity
+        if velocities:  # because it can be empty at the beginning
+            if q_indices is None:
+                return np.asarray(velocities)
+            return np.asarray(velocities)[q_indices]
 
     def get_joint_torques(self, q_indices=None):
         """
@@ -386,9 +390,11 @@ class RobotSubscriber(Subscriber):
         Returns:
             float, np.array[float]: joint torques.
         """
-        if q_indices is None:
-            return np.asarray(self.joint_states.msg.effort)
-        return np.asarray(self.joint_states.msg.effort)[q_indices]
+        torques = self.joint_states.msg.effort
+        if torques:
+            if q_indices is None:
+                return np.asarray(torques)
+            return np.asarray(torques)[q_indices]
 
     def get_pid(self, q_indices=None):
         """

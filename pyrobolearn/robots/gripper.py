@@ -74,14 +74,14 @@ class Gripper(Robot):
 
         Args:
             strength (float): scalar describing how much to increases the stiffness (the torques that are applied on
-                the joint fingers). If positive, it closes the gripper fingers. If negative, it opens the gripper
-                fingers.
-            point (np.array[float[3]], list of np.array[float[3]], None): attractor point(s) described in the specified frame.
-                If multiple points are specified, they have to match the number of fingers and will be used in the
-                same order. If None, it will grasp in a "natural" way (which is let to the user that has implemented
-                this method).
+              the joint fingers). If positive, it closes the gripper fingers. If negative, it opens the gripper
+              fingers.
+            point (np.array[float[3]], list of np.array[float[3]], None): attractor point(s) described in the specified
+              frame. If multiple points are specified, they have to match the number of fingers and will be used in the
+              same order. If None, it will grasp in a "natural" way (which is let to the user that has implemented
+              this method).
             frame (int): integer describing if the above given point is described in the world frame
-                (``Simulator.WORLD_FRAME``), or in the link frame of the gripper base (``Simulator.LINK_FRAME``).
+              (``Simulator.WORLD_FRAME``), or in the link frame of the gripper base (``Simulator.LINK_FRAME``).
         """
         pass
 

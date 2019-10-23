@@ -1320,6 +1320,45 @@ class Simulator(object):
         """
         pass
 
+    def reset_joint_states(self, body_id, joint_ids, positions, velocities=None):
+        """
+        Reset the joint states. It is best only to do this at the start, while not running the simulation:
+        `reset_joint_state` overrides all physics simulation.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint indices where each joint index is between [0..num_joints(body_id)]
+            positions (float, list[float], np.array[float]): the joint position(s) (angle in radians [rad] or
+              position [m])
+            velocities (float, list[float], np.array[float]): the joint velocity(ies) (angular [rad/s] or linear
+              velocity [m/s])
+        """
+        # reset the joint states in the simulator
+        self._reset_joint_states(body_id, joint_ids, positions, velocities)
+
+        # publish the joint positions through the middleware
+        if self.middleware is not None and self._middleware_enabled:
+            self.middleware.reset_joint_states(body_id, joint_ids, positions, velocities)
+
+    def _reset_joint_states(self, body_id, joint_ids, positions, velocities=None):
+        """
+        Reset the joint states. It is best only to do this at the start, while not running the simulation:
+        `reset_joint_state` overrides all physics simulation.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint indices where each joint index is between [0..num_joints(body_id)]
+            positions (float, list[float], np.array[float]): the joint position(s) (angle in radians [rad] or
+              position [m])
+            velocities (float, list[float], np.array[float]): the joint velocity(ies) (angular [rad/s] or linear
+              velocity [m/s])
+        """
+        # reset the joint states
+        for i, joint_id in enumerate(joint_ids):
+            position = positions[i]
+            velocity = None if velocities is None else velocities[i]
+            self.reset_joint_state(body_id, joint_id, position, velocity)
+
     def enable_joint_force_torque_sensor(self, body_id, joint_ids, enable=True):
         """
         You can enable or disable a joint force/torque sensor in each joint.

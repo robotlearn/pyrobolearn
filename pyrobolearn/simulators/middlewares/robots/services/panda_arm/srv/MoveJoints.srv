@@ -1,0 +1,21 @@
+float64 T1
+
+float64 T2
+
+float64 T3
+
+float64 T4
+
+float64 T5
+
+float64 T6
+
+float64 T7
+
+float64 scale
+
+int32 time
+
+---
+
+std_msgs/String output

@@ -10,13 +10,15 @@ import pyrobolearn as prl
 joint_ids = None  # None for all the actuated joints, or you can select which joint you want to move; e.g. [0, 1, 2]
 num_basis = 20
 rate = 30
+use_real_robot = True
 
 # create middleware
-# ros = prl.middlewares.ROS()
+ros = prl.middlewares.ROS(subscribe=True, teleoperate=True)
 
 # create simulator
-sim = prl.simulators.Bullet()  # middleware=ros)
-# sim.disable_middleware()  # disable the middleware (get/set info only from/to simulation)
+sim = prl.simulators.Bullet(middleware=ros)
+if not use_real_robot:
+    sim.disable_middleware()  # disable the middleware (get/set info only from/to simulation)
 
 # create basic world (with gravity and floor)
 world = prl.worlds.BasicWorld(sim)
@@ -55,6 +57,7 @@ task = prl.tasks.ILTask(env, policy, interface=bridge, recorders=recorder)
 print("\nRecording phase: press `ctrl+r` to start/stop the recording. Once finished, press `shift+r`.")
 task.record(signal_from_interface=True)
 print("Recording phase: finished the recording!")
+sim.disable_middleware()  # disable the middleware (get/set info only from/to simulation)
 
 # train policy
 print("Training phase: training the policy...")
@@ -71,7 +74,10 @@ task.test(num_steps=rate*100, signal_from_interface=False)
 print("Reproduction phase: Policy tested!")
 
 # test policy on real robot
-print("Reproduction phase: test policy in reality...")
-# sim.enable_middleware()  # enable the real robot
-# task.test(num_steps=rate*100, signal_from_interface=False)
-print("Reproduction phase: Policy tested!")
+if use_real_robot:
+    input("Press Enter to move to the real robot experiment...")
+    sim.enable_middleware()  # enable the real robot
+    ros.switch_mode(subscribe=False, publish=True, teleoperate=True)
+    print("Reproduction phase: test policy in reality...")
+    task.test(num_steps=rate*100, signal_from_interface=False)
+    print("Reproduction phase: Policy tested!")

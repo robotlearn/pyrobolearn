@@ -14,12 +14,20 @@ The topics for the joint states and joint commands (=joint trajectories) are:
 - /panda_hand_controller/command
 """
 
+import time
 import numpy as np
 import rospy
 
-# import ROS messages
+# import ROS messages / services
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-from sensor_msgs.msg import JointState
+# from sensor_msgs.msg import JointState
+
+MoveJoints = None
+try:
+    from panda_arm.srv import MoveJoints
+except ImportError as e:
+    print("The service `MoveJoints` is not available... Please compile it using `catkin_make` in order to use it "
+          "when resetting the joint states.\n" + str(e))
 
 from pyrobolearn.simulators.middlewares.ros import ROSRobotMiddleware
 
@@ -72,8 +80,6 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
         # self.publisher.init_set_joint_velocities(pub, msg_attribute_name='points')
         # self.publisher.init_set_joint_torques(pub, msg_attribute_name='points')
         #
-        # self.subscriber.
-        #
         # # joint names in the messages
         # self.msg_joint_names = ['panda_finger_joint1', 'panda_finger_joint2'] + \
         #                        ['panda_joint' + str(i+1) for i in range(7)]
@@ -89,15 +95,16 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
         # joint trajectory point instance
         self.arm_point = JointTrajectoryPoint()
         self.arm_point.positions = np.zeros(7)
-        # self.arm_point.velocities = 0.1 * np.ones(7)
+        self.arm_point.velocities = 0.1 * np.ones(7)
         # self.arm_point.effort = 0.1 * np.ones(7)
         self.hand_point = JointTrajectoryPoint()
         self.hand_point.positions = np.zeros(2)
-        # self.hand_point.velocities = 0.1 * np.ones(2)
+        self.hand_point.velocities = 0.1 * np.ones(2)
         # self.hand_point.effort = 0.1 * np.ones(2)
 
         # update publisher
         arm_topic = '/panda_arm_controller/command'
+        # arm_topic = '/position_joint_trajectory_controller/command'
         self.arm_publisher = self.publisher.create_publisher(name='panda_arm_trajectory', topic=arm_topic,
                                                              msg_class=JointTrajectory)
         hand_topic = '/panda_hand_controller/command'
@@ -109,6 +116,63 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
         self.arm_publisher.msg.points = [self.arm_point]
         self.hand_publisher.msg.joint_names = self.msg_joint_names[:2]
         self.hand_publisher.msg.points = [self.hand_point]
+
+        # create reset joint state service
+        self.reset_joint_service = None
+        if MoveJoints is not None:
+            self.reset_joint_service_name = '/arm/move_joint_absolute'
+            self.reset_joint_service = rospy.ServiceProxy(self.reset_joint_service_name, MoveJoints)
+
+    def reset_joint_states(self, positions, joint_ids=None, velocities=None):
+        """
+        Reset the joint states. It is best only to do this at the start, while not running the simulation:
+        `reset_joint_state` overrides all physics simulation.
+
+        Args:
+            positions (float, list[float], np.array[float]): the joint position(s) (angle in radians [rad] or
+              position [m])
+            joint_ids (int, list[int]): joint indices where each joint index is between [0..num_joints(body_id)]
+            velocities (float, list[float], np.array[float]): the joint velocity(ies) (angular [rad/s] or linear
+              velocity [m/s])
+        """
+        if self.reset_joint_service is not None:
+
+            # call rosservice to reset the joints
+            rospy.wait_for_service(self.reset_joint_service_name)
+            try:
+                print("Reset joint state on the real platform...")
+                # keep only joint arm indices/positions
+                q_indices = None if joint_ids is None else self.q_indices[joint_ids]
+                positions = positions[:7]
+                q_indices = q_indices[q_indices <= 6]
+                positions = positions[q_indices]
+                args = np.array(['T' + str(i+1) for i in range(6)])
+                kwargs = dict(zip(args[q_indices], positions))
+                velocity_scale = 0.1  # 1 = max velocity, 0 = don't move
+                duration_time = 10  # 10 secs
+                response = self.reset_joint_service(**kwargs, scale=velocity_scale, time=duration_time)
+
+                # blocking call
+                request = 'test'
+                while request != '':
+                    request = input("Once the robot has been reset to the desired joint configuration, please press "
+                                    "Enter to move on with the code.")
+
+                    # double check that the robot is at the specified joint configuration and if not, ask the user
+                    # to confirm to proceed with the code
+
+                    # q_curr = self.get_joint_positions(joint_ids=joint_ids)
+                    # positions = np.asarray(positions)
+                    # if q_curr is not None:
+                    #     while True:
+                    #         if len(q_curr) > 0:
+                    #             if np.linalg.norm((positions[:7] - )):
+                    #                 break
+                    #         q_curr = self.get_joint_positions(joint_ids=joint_ids)
+                    # print("Reset joint state was a success.")
+
+            except rospy.ServiceException as e:
+                print(self.reset_joint_service_name + " service call failed: " + str(e))
 
     def get_joint_positions(self, joint_ids=None):
         """
@@ -142,7 +206,7 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
         if self.is_publishing:
             q = self.subscriber.get_joint_positions()
             dq = self.subscriber.get_joint_velocities()
-            tau = self.subscriber.get_joint_torques()
+            # tau = self.subscriber.get_joint_torques()
 
             if len(q) > 0:
                 q_indices = None if joint_ids is None else self.q_indices[joint_ids]
@@ -152,11 +216,11 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
                         dq[q_indices] = velocities
 
                 self.arm_point.positions = q[:7]
-                # self.arm_point.velocities = dq[:7]
+                self.arm_point.velocities = dq[:7]
                 # self.arm_point.effort = tau[:7]
 
                 self.hand_point.positions = q[7:]
-                # self.hand_point.velocities = dq[7:]
+                self.hand_point.velocities = dq[7:]
                 # self.hand_point.effort = tau[7:]
 
                 # set time duration

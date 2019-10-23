@@ -21,6 +21,23 @@ class Middleware(object):
     r"""Middleware (abstract) class
 
     Middleware can be provided to simulators which can then use them to send/receive messages.
+
+    Here are the possible combinations between the different values for subscribe (S), publish (P), teleoperate (T),
+    and command (C):
+
+    - S=1, P=0, T=0: subscribes to the topics, and get the messages when calling the corresponding getter methods.
+    - S=0, P=1, T=0: publishes the various messages to the topics when calling the corresponding setter methods.
+    - S=1, P=0, T=1, C=0/1: get messages by subscribing to the topics that publish some commands/states. The
+      received commands/states are then set in the simulator. Depending on the value of `C`, it will subscribe to
+      topics that publish some commands (C=1) or states (C=0). Example: should we subscribe to joint trajectory
+      commands, or joint states when teleoperating the robot in the simulator? This C value allows to specify
+      which one we are interested in.
+    - S=0, P=1, T=1: when calling the getters methods such as joint positions, velocities, and others, it also
+      publishes the joint states. This is useful if we are moving/teleoperating the robot in the simulator.
+    - S=0, P=0, T=1/0: doesn't do anything.
+    - S=1, P=1, T=0: subscribes to some topics and publish messages to other topics. The messages are can be
+      sent/received by calling the appropriate getter/setter methods.
+    - S=1, P=1, T=1: not allowed, because teleoperating the robot is not a two-way communication process.
     """
 
     def __init__(self, subscribe=False, publish=False, teleoperate=False, command=True):
@@ -33,14 +50,16 @@ class Middleware(object):
             publish (bool): if True, it will publish the given values to the topics associated to the loaded robots.
             teleoperate (bool): if True, it will move the robot based on the received or sent values based on the 2
               previous attributes :attr:`subscribe` and :attr:`publish`.
-            command (bool): if True, it will subscribe/publish to some (joint) commands. If False, it will
-              subscribe/publish to some (joint) states.
+            command (bool): if True, it will subscribe to the joint commands. If False, it will subscribe to the
+              joint states.
         """
         # set variables
-        self.is_subscribing = subscribe
-        self.is_publishing = publish
-        self.is_teleoperating = teleoperate
-        self.is_commanding = command
+        # self.is_subscribing = subscribe
+        # self.is_publishing = publish
+        # self.is_teleoperating = teleoperate
+        # self.is_commanding = command
+        self._subscribe, self._publish, self._teleoperate, self._command = False, False, False, False
+        self.switch_mode(subscribe=subscribe, publish=publish, teleoperate=teleoperate, command=command)
 
         self._robots = {}  # {body_id: RobotMiddleware}
 
@@ -52,33 +71,39 @@ class Middleware(object):
     def is_subscribing(self):
         return self._subscribe
 
-    @is_subscribing.setter
-    def is_subscribing(self, subscribe):
-        self._subscribe = bool(subscribe)
+    # @is_subscribing.setter
+    # def is_subscribing(self, subscribe):
+    #     self._subscribe = bool(subscribe)
 
     @property
     def is_publishing(self):
         return self._publish
 
-    @is_publishing.setter
-    def is_publishing(self, publish):
-        self._publish = bool(publish)
+    # @is_publishing.setter
+    # def is_publishing(self, publish):
+    #     self._publish = bool(publish)
 
     @property
     def is_teleoperating(self):
         return self._teleoperate
 
-    @is_teleoperating.setter
-    def is_teleoperating(self, teleoperate):
-        self._teleoperate = bool(teleoperate)
+    # @is_teleoperating.setter
+    # def is_teleoperating(self, teleoperate):
+    #     self._teleoperate = bool(teleoperate)
 
     @property
     def is_commanding(self):
         return self._command
 
-    @is_commanding.setter
-    def is_commanding(self, command):
-        self._command = bool(command)
+    # @is_commanding.setter
+    # def is_commanding(self, command):
+    #     self._command = bool(command)
+
+    # aliases
+    subscribe = is_subscribing
+    publish = is_publishing
+    teleoperate = is_teleoperating
+    command = is_commanding
 
     #############
     # Operators #
@@ -117,6 +142,57 @@ class Middleware(object):
     ###########
     # Methods #
     ###########
+
+    def switch_mode(self, body_id=None, subscribe=None, publish=None, teleoperate=None, command=None):
+        """
+        Switch middleware mode.
+
+        Here are the possible combinations between the different values for subscribe (S), publish (P),
+        teleoperate (T), and command (C):
+
+        - S=1, P=0, T=0: subscribes to the topics, and get the messages when calling the corresponding getter methods.
+        - S=0, P=1, T=0: publishes the various messages to the topics when calling the corresponding setter methods.
+        - S=1, P=0, T=1, C=0/1: get messages by subscribing to the topics that publish some commands/states. The
+          received commands/states are then set in the simulator. Depending on the value of `C`, it will subscribe to
+          topics that publish some commands (C=1) or states (C=0). Example: should we subscribe to joint trajectory
+          commands, or joint states when teleoperating the robot in the simulator? This C value allows to specify
+          which one we are interested in.
+        - S=0, P=1, T=1: when calling the getters methods such as joint positions, velocities, and others, it also
+          publishes the joint states. This is useful if we are moving/teleoperating the robot in the simulator.
+        - S=0, P=0, T=1/0: doesn't do anything.
+        - S=1, P=1, T=0: subscribes to some topics and publish messages to other topics. The messages are can be
+          sent/received by calling the appropriate getter/setter methods.
+        - S=1, P=1, T=1: not allowed, because teleoperating the robot is not a two-way communication process.
+
+        Args:
+            body_id (int): unique body id to switch the mode.
+            subscribe (bool): if True, it will subscribe to the topics associated to the loaded robots, and will read
+              the values published on these topics.
+            publish (bool): if True, it will publish the given values to the topics associated to the loaded robots.
+            teleoperate (bool): if True, it will move the robot based on the received or sent values based on the 2
+              previous attributes :attr:`subscribe` and :attr:`publish`.
+            command (bool): if True, it will subscribe to the joint commands. If False, it will subscribe to the
+              joint states.
+        """
+        if body_id is None:
+            if subscribe is None:
+                subscribe = self.subscribe
+            if publish is None:
+                publish = self.publish
+            if teleoperate is None:
+                teleoperate = self.teleoperate
+            if command is None:
+                command = self.command
+
+            if teleoperate and publish and subscribe:
+                raise ValueError("The three following arguments 'subscribe', 'publish', and 'teleoperate' can not be "
+                                 "all true at the same time. Select maximum two to be set to True (see method "
+                                 "documentation).")
+
+            self._subscribe = bool(subscribe)
+            self._publish = bool(publish)
+            self._teleoperate = bool(teleoperate)
+            self._command = bool(command)
 
     def close(self):
         """
@@ -182,6 +258,21 @@ class Middleware(object):
 
         Returns:
             np.array, dict, list, None: sensor values. None if it didn't have anything.
+        """
+        pass
+
+    def reset_joint_states(self, body_id, joint_ids, positions, velocities=None):
+        """
+        Reset the joint states. It is best only to do this at the start, while not running the simulation:
+        `reset_joint_state` overrides all physics simulation.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint indices where each joint index is between [0..num_joints(body_id)]
+            positions (float, list[float], np.array[float]): the joint position(s) (angle in radians [rad] or
+              position [m])
+            velocities (float, list[float], np.array[float]): the joint velocity(ies) (angular [rad/s] or linear
+              velocity [m/s])
         """
         pass
 

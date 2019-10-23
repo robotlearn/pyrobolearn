@@ -172,7 +172,7 @@ class ROSRobotMiddleware(RobotMiddleware):
     - S=0, P=0, T=1/0: doesn't do anything.
     - S=1, P=1, T=0: subscribes to some topics and publish messages to other topics. The messages are can be
       sent/received by calling the appropriate getter/setter methods.
-    - S=1, P=1, T=1: not allowed.
+    - S=1, P=1, T=1: not allowed, because teleoperating the robot is not a two-way communication process.
     """
 
     def __init__(self, robot_id, urdf=None, subscribe=False, publish=False, teleoperate=False, command=True,
@@ -188,8 +188,8 @@ class ROSRobotMiddleware(RobotMiddleware):
             publish (bool): if True, it will publish the given values to the topics associated to the loaded robot.
             teleoperate (bool): if True, it will move the robot based on the received or sent values based on the 2
               previous attributes :attr:`subscribe` and :attr:`publish`.
-            command (bool): if True, it will subscribe/publish to some (joint) commands. If False, it will
-              subscribe/publish to some (joint) states.
+            command (bool): if True, it will subscribe to the joint commands. If False, it will subscribe to the
+              joint states.
             control_file (str, None): path to the YAML control file. If provided, it will be parsed.
             launch_file (str, None): path to the ROS launch file. If provided, it will be parsed.
             joint_state_topics (str, list[str]): joint state topic(s). If not provided the joint state topic will be
@@ -229,9 +229,9 @@ class ROSRobotMiddleware(RobotMiddleware):
         print("Creating Robot Subscriber")
         self.subscriber = RobotSubscriber(name=basename, joint_state_topics=joint_state_topics,
                                           joint_state_msg_class=joint_state_msg_class)
-        if self.is_publishing:
-            print("Creating Robot Publisher")
-            self.publisher = RobotPublisher(name=basename)
+        # if self.is_publishing:
+        print("Creating Robot Publisher")
+        self.publisher = RobotPublisher(name=basename)
 
     def unregister(self):
         """
@@ -322,10 +322,10 @@ class DefaultROSRobotMiddleware(ROSRobotMiddleware):
     - S=0, P=0, T=1/0: doesn't do anything.
     - S=1, P=1, T=0: subscribes to some topics and publish messages to other topics. The messages are can be
       sent/received by calling the appropriate getter/setter methods.
-    - S=1, P=1, T=1: not allowed.
+    - S=1, P=1, T=1: not allowed, because teleoperating the robot is not a two-way communication process.
     """
 
-    def __init__(self, robot_id, urdf=None, subscribe=False, publish=False, teleoperate=False, command=True,
+    def __init__(self, robot_id, urdf=None, subscribe=False, publish=False, teleoperate=False, command=False,
                  control_file=None, launch_file=None):
         """
         Initialize the robot middleware interface.
@@ -338,8 +338,8 @@ class DefaultROSRobotMiddleware(ROSRobotMiddleware):
             publish (bool): if True, it will publish the given values to the topics associated to the loaded robot.
             teleoperate (bool): if True, it will move the robot based on the received or sent values based on the 2
               previous attributes :attr:`subscribe` and :attr:`publish`.
-            command (bool): if True, it will subscribe/publish to some (joint) commands. If False, it will
-              subscribe/publish to some (joint) states.
+            command (bool): if True, it will subscribe to the joint commands. If False, it will subscribe to the
+              joint states.
             control_file (str, None): path to the YAML control file.
             launch_file (str, None): path to the ROS launch file. If provided, it will be parsed.
         """
@@ -596,6 +596,23 @@ class ROS(Middleware):
                  init_core=True, **kwargs):
         """
         Initialize the ROS middleware.
+
+        Here are the possible combinations between the different values for subscribe (S), publish (P),
+        teleoperate (T), and command (C):
+
+        - S=1, P=0, T=0: subscribes to the topics, and get the messages when calling the corresponding getter methods.
+        - S=0, P=1, T=0: publishes the various messages to the topics when calling the corresponding setter methods.
+        - S=1, P=0, T=1, C=0/1: get messages by subscribing to the topics that publish some commands/states. The
+          received commands/states are then set in the simulator. Depending on the value of `C`, it will subscribe to
+          topics that publish some commands (C=1) or states (C=0). Example: should we subscribe to joint trajectory
+          commands, or joint states when teleoperating the robot in the simulator? This C value allows to specify
+          which one we are interested in.
+        - S=0, P=1, T=1: when calling the getters methods such as joint positions, velocities, and others, it also
+          publishes the joint states. This is useful if we are moving/teleoperating the robot in the simulator.
+        - S=0, P=0, T=1/0: doesn't do anything.
+        - S=1, P=1, T=0: subscribes to some topics and publish messages to other topics. The messages are can be
+          sent/received by calling the appropriate getter/setter methods.
+        - S=1, P=1, T=1: not allowed, because teleoperating the robot is not a two-way communication process.
 
         Args:
             subscribe (bool): if True, it will subscribe to the topics associated to the loaded robots, and will read
@@ -1404,6 +1421,23 @@ class ROS(Middleware):
 
         return -1
 
+    def reset_joint_states(self, body_id, joint_ids, positions, velocities=None):
+        """
+        Reset the joint states. It is best only to do this at the start, while not running the simulation:
+        `reset_joint_state` overrides all physics simulation.
+
+        Args:
+            body_id (int): unique body id.
+            joint_ids (int, list[int]): joint indices where each joint index is between [0..num_joints(body_id)]
+            positions (float, list[float], np.array[float]): the joint position(s) (angle in radians [rad] or
+              position [m])
+            velocities (float, list[float], np.array[float]): the joint velocity(ies) (angular [rad/s] or linear
+              velocity [m/s])
+        """
+        robot = self._robots.get(body_id)
+        if robot is not None:
+            return robot.reset_joint_states(positions, joint_ids=joint_ids, velocities=velocities)
+
     def get_joint_positions(self, body_id, joint_ids):
         """
         Get the position of the given joint(s).
@@ -1643,6 +1677,43 @@ class ROS(Middleware):
         if robot is None:
             return False
         return robot.publish
+
+    def switch_mode(self, body_id=None, subscribe=None, publish=None, teleoperate=None, command=None):
+        """
+        Switch middleware mode.
+
+        Here are the possible combinations between the different values for subscribe (S), publish (P),
+        teleoperate (T), and command (C):
+
+        - S=1, P=0, T=0: subscribes to the topics, and get the messages when calling the corresponding getter methods.
+        - S=0, P=1, T=0: publishes the various messages to the topics when calling the corresponding setter methods.
+        - S=1, P=0, T=1, C=0/1: get messages by subscribing to the topics that publish some commands/states. The
+          received commands/states are then set in the simulator. Depending on the value of `C`, it will subscribe to
+          topics that publish some commands (C=1) or states (C=0). Example: should we subscribe to joint trajectory
+          commands, or joint states when teleoperating the robot in the simulator? This C value allows to specify
+          which one we are interested in.
+        - S=0, P=1, T=1: when calling the getters methods such as joint positions, velocities, and others, it also
+          publishes the joint states. This is useful if we are moving/teleoperating the robot in the simulator.
+        - S=0, P=0, T=1/0: doesn't do anything.
+        - S=1, P=1, T=0: subscribes to some topics and publish messages to other topics. The messages are can be
+          sent/received by calling the appropriate getter/setter methods.
+        - S=1, P=1, T=1: not allowed, because teleoperating the robot is not a two-way communication process.
+
+        Args:
+            body_id (int): unique body id to switch the mode.
+            subscribe (bool): if True, it will subscribe to the topics associated to the loaded robots, and will read
+              the values published on these topics.
+            publish (bool): if True, it will publish the given values to the topics associated to the loaded robots.
+            teleoperate (bool): if True, it will move the robot based on the received or sent values based on the 2
+              previous attributes :attr:`subscribe` and :attr:`publish`.
+            command (bool): if True, it will subscribe to the joint commands. If False, it will subscribe to the
+              joint states.
+        """
+        super(ROS, self).switch_mode(body_id=body_id, subscribe=subscribe, publish=publish, teleoperate=teleoperate,
+                                     command=command)
+        if body_id is not None:
+            robot = self._robots.get(body_id, None)
+            robot.switch_mode(subscribe=subscribe, publish=publish, teleoperate=teleoperate, command=command)
 
 
 # Tests

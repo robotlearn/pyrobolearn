@@ -11,7 +11,11 @@ try:
     import rosmsg
     import rosservice
     import rostopic
-    import controller_manager.controller_manager_interface as cm_interface
+    try:
+        import controller_manager.controller_manager_interface as cm_interface
+    except ImportError as e:
+        print("ROS control is not installed for this Python version, please install it... For now, disabling the "
+              "ROS control module... Calling methods that use the controller mananger will fail...")
 
     from .ros import ROS
 except ImportError as e:
