@@ -33,8 +33,8 @@ from . import plotting
 # import parsers
 from . import parsers
 
-# import parsers
-# from . import parsers
+# import filters
+from . import filters
 
 
 # Built-in functions
