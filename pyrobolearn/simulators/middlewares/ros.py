@@ -48,7 +48,11 @@ import roslaunch
 import rosparam
 import rosmsg, rosservice
 import rostopic
-import controller_manager.controller_manager_interface as cm_interface
+try:  # TODO: fix this!!
+    import controller_manager.controller_manager_interface as cm_interface
+except ImportError as e:
+    print("ROS control is not installed for this Python version, please install it... For now, disabling the "
+          "ROS control module... Calling methods that use the controller mananger will fail...")
 
 import std_msgs.msg as std_msg
 import sensor_msgs.msg as sensor_msg
