@@ -950,20 +950,23 @@ class MuJoCoParser(WorldParser):
         if root is None:
             root = ET.Element('mujoco', attrib={'model': world.name})
 
-        # create <compiler>
+        # generate <compiler>
         self.generate_compiler(parent_tag=root)
 
-        # create <option>
+        # generate <option>
         self.generate_options(parent_tag=root, options=self.options)
 
-        # create <default>
+        # generate <default>
         self.generate_default(parent_tag=root, default=self.defaults)
 
-        # create asset
+        # generate asset
         self.generate_assets(parent_tag=root, assets=self.assets)
 
-        # create world
+        # generate world
         self.generate_world(root, world)
+
+        # generate <actuator>
+        # self.generate_actuators(root, world=world)
 
         return root
 
@@ -1476,7 +1479,7 @@ class MuJoCoParser(WorldParser):
 
         # create <joint>
         for joint in body.parent_joints.values():  # parent_joints
-            self.generate_joint(body_tag, joint)
+            self.generate_joint(body_tag, joint, root=root)
 
         # create inner <body>
         for body in body.bodies:
@@ -1484,13 +1487,14 @@ class MuJoCoParser(WorldParser):
 
         return body_tag
 
-    def generate_joint(self, parent_tag, joint):
+    def generate_joint(self, parent_tag, joint, root=None):
         """
         Generate the joint.
 
         Args:
             parent_tag (ET.Element): parent XML element.
             joint (Joint): Joint data structure.
+            root (ET.Element): root element. If None, it will take the root element given in this class.
 
         Returns:
             ET.Element, None: joint XML element. None if it couldn't generate the joint, this can happen if for
@@ -1500,6 +1504,8 @@ class MuJoCoParser(WorldParser):
         if not isinstance(joint, Joint):
             raise TypeError("Expecting the given 'joint' to be an instance of `Joint`, but got instead: "
                             "{}".format(type(joint)))
+        if root is None:
+            root = self.root
 
         # create <joint>
         attrib = {}
@@ -1530,9 +1536,73 @@ class MuJoCoParser(WorldParser):
 
         self._update_attribute_dict(attrib, joint, name='dtype', key='type', fct=check_joint_type)
 
+        # generate joint actuator
+        self.generate_joint_actuator(joint, root=root)
+
         # return if the joint type is known
         if 'type' in attrib:
             return ET.SubElement(parent_tag, "joint", attrib=attrib)
+
+    def generate_joint_actuator(self, joint, root):
+        if joint.dtype == 'revolute' or joint.dtype == 'continuous' or joint.dtype == 'prismatic':
+            # check <actuator> tag in xml
+            actuator_tag = root.find("actuator")
+            # if no <actuator> tag, create one
+            if actuator_tag is None:
+                actuator_tag = ET.SubElement(root, "actuator")
+
+            # add position, velocity, and effort/force/torque motors
+            name = self._generate_name(joint.name, self._joint_cnt)
+            attrib = {"joint": name}
+            ET.SubElement(actuator_tag, "position", attrib=attrib)  # position control (P control)
+            ET.SubElement(actuator_tag, "velocity", attrib=attrib)  # velocity control (D control)
+            ET.SubElement(actuator_tag, "motor", attrib=attrib)  # torque control
+
+    def generate_actuators(self, parent_tag, tree, use_joints=True, root=None):
+        """
+        Generate the actuators for the given tree.
+
+        Args:
+            parent_tag (ET.Element): parent XML element.
+            tree (Tree): Tree / MultiBody data structure.
+            use_joints (bool): if True, it will check the 'joints' instead of the 'actuators' that are in the tree.
+              For each joint, it will create a position, velocity, and force motors. If False, it will only create the
+              specified actuator type in the tree.
+            root (ET.Element): root element. If None, it will take the root element given in this class.
+
+        Returns:
+            ET.Element: actuator XML element.
+        """
+        # check arguments
+        if not isinstance(parent_tag, ET.Element):
+            raise TypeError("Expecting the given 'parent_tag' to be an instance of `ET.Element`, but got instead: "
+                            "{}".format(type(parent_tag)))
+        if not isinstance(tree, Tree):
+            raise TypeError("Expecting the given 'tree' to be an instance of `Tree`, but got instead: "
+                            "{}".format(type(tree)))
+        if root is None:
+            root = self.root
+
+        actuator_tag = None
+        if use_joints:
+            # go through every joint in the tree
+            for joint in tree.joints.values():
+                if joint.dtype != 'fixed' and joint.dtype != 'floating':
+                    # check <actuator> tag in xml
+                    actuator_tag = root.find("actuator")
+                    # if no <actuator> tag, create one
+                    if actuator_tag is None:
+                        actuator_tag = ET.SubElement(root, "actuator")
+
+                    # add position, velocity, and effort/force/torque motors
+                    attrib = {"joint": joint.name}
+                    ET.SubElement(actuator_tag, "position", attrib=attrib)  # position control (P control)
+                    ET.SubElement(actuator_tag, "velocity", attrib=attrib)  # velocity control (D control)
+                    ET.SubElement(actuator_tag, "motor", attrib=attrib)  # torque control
+        else:
+            raise NotImplementedError("This feature is currently not implemented...")
+
+        return actuator_tag
 
     def add_multibody(self, tree, mesh_directory_path=''):
         r"""
@@ -1556,7 +1626,12 @@ class MuJoCoParser(WorldParser):
         self._mesh_dirname = mesh_directory_path if isinstance(mesh_directory_path, str) else ''
 
         # generate tree
-        return self.generate_tree(parent_tag=self.worldbody, tree=tree, root=self.root)
+        tree_tag = self.generate_tree(parent_tag=self.worldbody, tree=tree, root=self.root)
+
+        # generate <actuator>  # DEPRECATED: this is done in generate_joint now!
+        # self.generate_actuators(parent_tag=self.root, tree=tree, use_joints=True, root=self.root)
+
+        return tree_tag
 
     # alias
     add_tree = add_multibody

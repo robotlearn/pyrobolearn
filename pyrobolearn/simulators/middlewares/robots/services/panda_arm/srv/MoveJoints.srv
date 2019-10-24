@@ -1,16 +1,16 @@
-float64 T1
+float64 Joint1
 
-float64 T2
+float64 Joint2
 
-float64 T3
+float64 Joint3
 
-float64 T4
+float64 Joint4
 
-float64 T5
+float64 Joint5
 
-float64 T6
+float64 Joint6
 
-float64 T7
+float64 Joint7
 
 float64 scale
 

@@ -3842,6 +3842,7 @@ class ControlMode(Enum):
     POSITION = 1
     VELOCITY = 2
     EFFORT = 3
+    PD = 4  # position and velocity
 
 
 class PID(object):

@@ -1338,7 +1338,8 @@ class Simulator(object):
 
         # publish the joint positions through the middleware
         if self.middleware is not None and self._middleware_enabled:
-            self.middleware.reset_joint_states(body_id, joint_ids, positions, velocities)
+            self.middleware.reset_joint_states(body_id=body_id, joint_ids=joint_ids, positions=positions,
+                                               velocities=velocities)
 
     def _reset_joint_states(self, body_id, joint_ids, positions, velocities=None):
         """
@@ -1357,7 +1358,7 @@ class Simulator(object):
         for i, joint_id in enumerate(joint_ids):
             position = positions[i]
             velocity = None if velocities is None else velocities[i]
-            self.reset_joint_state(body_id, joint_id, position, velocity)
+            self.reset_joint_state(body_id=body_id, joint_id=joint_id, position=position, velocity=velocity)
 
     def enable_joint_force_torque_sensor(self, body_id, joint_ids, enable=True):
         """

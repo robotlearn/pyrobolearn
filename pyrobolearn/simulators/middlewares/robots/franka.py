@@ -108,7 +108,7 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
         # arm_topic = '/position_joint_trajectory_controller/command'
         self.arm_publisher = self.publisher.create_publisher(name='panda_arm_trajectory', topic=arm_topic,
                                                              msg_class=JointTrajectory)
-        self.use_hand = True
+        self.use_hand = False
         hand_topic = '/panda_hand_controller/command'
         self.hand_publisher = self.publisher.create_publisher(name='panda_hand_trajectory', topic=hand_topic,
                                                               msg_class=JointTrajectory)
@@ -142,16 +142,18 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
         """
         if self.reset_joint_service is not None:
 
+            input("Press Enter to call ROS service to reset the joint states...")
+
             # call rosservice to reset the joints
             rospy.wait_for_service(self.reset_joint_service_name)
             try:
-                print("Reset joint state on the real platform...")
+                print("Resetting joint states on the real platform...")
                 # keep only joint arm indices/positions
                 q_indices = None if joint_ids is None else self.q_indices[joint_ids]
                 positions = positions[:7]
                 q_indices = q_indices[q_indices <= 6]
                 positions = positions[q_indices]
-                args = np.array(['T' + str(i+1) for i in range(6)])
+                args = np.array(['Joint' + str(i+1) for i in range(6)])
                 kwargs = dict(zip(args[q_indices], positions))
                 velocity_scale = 0.1  # 1 = max velocity, 0 = don't move
                 duration_time = 10  # 10 secs
@@ -195,7 +197,9 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
         if self.is_subscribing:
             q_indices = None if joint_ids is None else self.q_indices[joint_ids]
             if not self.use_hand:
-                q_indices = q_indices[q_indices <= 6]
+                q_indices = q_indices[q_indices <= 6]  # only keep the 7 first joints (correspond to the arm)
+                positions = self.subscriber.get_joint_positions(q_indices)
+                return np.concatenate((positions, np.zeros(2)))
             return self.subscriber.get_joint_positions(q_indices)
 
     def set_joint_positions(self, positions, joint_ids=None, velocities=None, kps=None, kds=None, forces=None):
@@ -219,7 +223,7 @@ class FrankaROSMiddleware(ROSRobotMiddleware):
             if q is not None and len(q) > 0:
                 q_indices = None if joint_ids is None else self.q_indices[joint_ids]
                 if not self.use_hand:
-                    q_indices = q_indices[q_indices <= 6]
+                    q_indices = q_indices[q_indices <= 6]  # only keep the 7 first joints (correspond to the arm)
 
                 if q_indices is not None:
                     q[q_indices] = positions

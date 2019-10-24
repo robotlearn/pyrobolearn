@@ -1439,8 +1439,9 @@ class Robot(ControllableBody):
         # print("resetting: {}, {}, {}".format(joint_ids, q, dq))
 
         # reset the joint state
-        for joint_id, position, velocity in zip(joint_ids, q, dq):
-            self.sim.reset_joint_state(self.id, joint_id, position, velocity)
+        # for joint_id, position, velocity in zip(joint_ids, q, dq):
+        #     self.sim.reset_joint_state(self.id, joint_id, position, velocity)
+        self.sim.reset_joint_states(body_id=self.id, joint_ids=joint_ids, positions=q, velocities=dq)
 
     def get_home_joint_positions(self):
         r"""
