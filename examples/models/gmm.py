@@ -65,3 +65,20 @@ fig, ax = plt.subplots(1, 2)
 plot_gmm(gmm, X=X, label=True, ax=ax[0], title='Our Trained GMM', option=1, xlim=xlim, ylim=ylim)
 plot_gmm_sklearn(gmm_sklearn, X, label=True, ax=ax[1], title="Sklearn's Trained GMM", xlim=xlim, ylim=ylim)
 plt.show()
+
+# GMR: condition on the input variable and plot
+means, std_devs = [], []
+time_linspace = np.linspace(-6, 6, 100)
+for t in time_linspace:
+    g = gmm.condition(np.array([t]), idx_out=[1], idx_in=[0]).approximate_by_single_gaussian()
+    means.append(g.mean[0])
+    std_devs.append(np.sqrt(g.covariance[0, 0]))
+
+means, std_devs = np.asarray(means), np.asarray(std_devs)
+
+plt.plot(time_linspace, means)
+plt.fill_between(time_linspace, means - 2 * std_devs, means + 2 * std_devs, facecolor='green', alpha=0.3)
+plt.fill_between(time_linspace, means - std_devs, means + std_devs, facecolor='green', alpha=0.5)
+plt.title('GMR')
+plt.scatter(X[:, 0], X[:, 1])
+plt.show()
