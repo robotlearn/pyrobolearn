@@ -1437,7 +1437,7 @@ class GMM(object):
             return self.gaussians[idx].sample()  # shape: D
         return np.array([self.gaussians[i].sample() for i in idx])  # shape: NxD
 
-    def responsibilities(self, x, k=None, axis=1):
+    def responsibilities(self, x, dims = None, k=None, axis=1):
         r"""
         Compute the responsibilities (posterior probability of component k once we have observed the data `x`).
         These are given by:
@@ -1468,7 +1468,16 @@ class GMM(object):
                 An array of size `N` if multiple data points and one component index or `N` component indices were
                 given. A matrix of shape `Nxk` if multiple data points and `k` component indices were given.
         """
-        gaussian_pdfs = np.array([g.pdf(x) for g in self.gaussians]).T  # shape: K if 1 data point, or NxK if multiple
+        # gaussian_pdfs = np.array([g.pdf(x) for g in self.gaussians]).T  # shape: K if 1 data point, or NxK if multiple
+        gaussian_pdfs = []
+        for g in self.gaussians:
+            if dims is None:
+                input_gaussian = Gaussian(mean=g.mean, covariance=g.cov)
+            else:
+                input_gaussian = Gaussian(mean=g.mean[np.ix_(dims)], covariance=g.cov[np.ix_(dims, dims)])
+            gaussian_pdfs.append(input_gaussian.pdf(x))
+        gaussian_pdfs = np.asarray(gaussian_pdfs).T
+
         joint = self.priors * gaussian_pdfs  # shape: K if 1 data point, or NxK if multiple
         marginal = np.sum(joint, axis=-1)  # shape: 1 if 1 data point, or N if multiple
 
@@ -1523,7 +1532,7 @@ class GMM(object):
             - [1] "Robot Programming by Demonstration: a Probabilistic Approach" (chap 2), Calinon, 2009
             - [2] "A Tutorial on Task-Parameterized Movement Learning and Retrieval", Calinon, 2015
         """
-        priors = self.responsibilities(x_in)
+        priors = self.responsibilities(x_in, dims=idx_in)
         gaussians = [g.condition(x_in, idx_out, idx_in) for g in self.gaussians]
         return GMM(priors=priors, gaussians=gaussians)
 
@@ -2051,29 +2060,29 @@ class TPGMM(GMM):
 ######################
 
 
-def plot_gmm(gmm, X=None, label=True, ax=None, title='GMM', xlim=[-6, 6], ylim=[-6, 6], option=1, color='b'):
+def plot_gmm(gmm, dims=[0, 1], X=None, label=True, ax=None, title='GMM', xlim=[-6, 6], ylim=[-6, 6], option=1, color='b'):
     r"""Plot GMM"""
     # create ax if not already created
     if ax is None:
         fig, ax = plt.subplots(1, 1)
 
     # configure ax
-    ax.set(title=title, xlim=xlim, ylim=ylim, aspect='equal')
+    ax.set(title=title, xlim=xlim, ylim=ylim)
 
     # draw the data if provided
     if X is not None:
         labels = gmm.predict(X)
         if label:
-            ax.scatter(X[:, 0], X[:, 1], c=labels, s=40, cmap='viridis', zorder=2)
+            ax.scatter(X[:, dims[0]], X[:, dims[1]], c=labels, s=40, cmap='viridis', zorder=2)
         else:
-            ax.scatter(X[:, 0], X[:, 1], s=40, zorder=2)
+            ax.scatter(X[:, dims[0]], X[:, dims[1]], s=40, zorder=2)
 
     # draw the ellipse for each gaussian
     w_factor = 0.2 / gmm.priors.max()
     priors = gmm.priors
     for i, g in enumerate(gmm.gaussians):
         if option == 1:
-            plot_2d_ellipse(ax, g, color=color, plot_arrows=False)
+            plot_2d_ellipse(ax, g, dims, color=color, plot_arrows=False)
         else:
             draw_ellipse(g.mean, g.cov, ax=ax, alpha=priors[i] * w_factor)
 
@@ -2181,7 +2190,7 @@ if __name__ == "__main__":
     means, std_devs = [], []
     time_linspace = np.linspace(-6, 6, 100)
     for t in time_linspace:
-        g = gmm.condition(np.array([t]), idx_out=1).approximate_by_single_gaussian()
+        g = gmm.condition(np.array([t]), idx_out=[1], idx_in=[0]).approximate_by_single_gaussian()
         means.append(g.mean[0])
         std_devs.append(np.sqrt(g.covariance[0, 0]))
 

@@ -605,7 +605,7 @@ class Gaussian(object):
         # compute conditional
         c = self.cov[np.ix_(o, i)].dot(np.linalg.inv(self.cov[np.ix_(i, i)]))
         mu = self.mean[o] + c.dot(value - self.mean[i])
-        cov = self.cov[np.ix_(o, o)] - c.dot(self.cov[i, o])
+        cov = self.cov[np.ix_(o, o)] - c.dot(self.cov[np.ix_(i, o)])
         return Gaussian(mu, cov)
 
     def marginalize(self, idx):
@@ -1280,9 +1280,10 @@ def plot_3d_and_2d_countour(gaussians, step=500, bound=10, fig=None, title='', b
     plt.show(block=block)
 
 
-def plot_2d_ellipse(ax, gaussian, color='g', fill=False, plot_2devs=False, plot_arrows=True):
+def plot_2d_ellipse(ax, gaussian, dims, color='g', fill=False, plot_2devs=False, plot_arrows=True):
     # alias
-    g = gaussian
+    g = Gaussian(mean=gaussian.mean[np.ix_(dims)], covariance=gaussian.cov[np.ix_(dims, dims)])
+    # g = gaussian
 
     # compute std deviation and eigenvectors from the gaussian
     std_dev, evecs = g.ellipsoid_axes()
@@ -1311,8 +1312,8 @@ def plot_2d_ellipse(ax, gaussian, color='g', fill=False, plot_2devs=False, plot_
         # compute scaled eigenvectors
         p = std_dev * evecs
         # draw arrows
-        ax.arrow(g.mean[0], g.mean[1], p[0, 0], p[1, 0], length_includes_head=True, head_width=0.15, color='r')
-        ax.arrow(g.mean[0], g.mean[1], p[0, 1], p[1, 1], length_includes_head=True, head_width=0.15, color='r')
+        ax.arrow(g.mean[dims[0]], g.mean[dims[1]], p[0, 0], p[1, 0], length_includes_head=True, head_width=0.15, color='r')
+        ax.arrow(g.mean[dims[0]], g.mean[dims[1]], p[0, 1], p[1, 1], length_includes_head=True, head_width=0.15, color='r')
 
     return ellipse_2std
 
