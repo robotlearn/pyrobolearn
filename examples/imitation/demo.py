@@ -14,16 +14,17 @@ use_real_robot = True
 
 # create middleware
 ros = prl.middlewares.ROS(subscribe=True, teleoperate=True)
+if not use_real_robot:
+    ros.disable_middleware()  # disable the middleware if not using the real robot
 
 # create simulator
 sim = prl.simulators.Bullet(middleware=ros)
-if not use_real_robot:
-    sim.disable_middleware()  # disable the middleware (get/set info only from/to simulation)
 
 # create basic world (with gravity and floor)
 world = prl.worlds.BasicWorld(sim)
 
 # load Franka Emika Panda robot in the world
+input("Press Enter to load the robot")
 robot = prl.robots.Franka(sim)
 world.load_robot(robot)
 robot.print_info()
@@ -60,6 +61,7 @@ print("Recording phase: finished the recording!")
 sim.disable_middleware()  # disable the middleware (get/set info only from/to simulation)
 
 # train policy
+input("Press Enter to start the training")
 print("Training phase: training the policy...")
 task.train(signal_from_interface=False)
 print("Training phase: policy trained!")
@@ -70,6 +72,7 @@ policy.plot_rollout(nrows=3, ncols=3, suptitle='DMP position trajectories in joi
 
 # test policy in simulation
 print("Reproduction phase: test policy in simulation...")
+# robot.set_home_joint_positions()
 task.test(num_steps=rate*100, signal_from_interface=False)
 print("Reproduction phase: Policy tested!")
 
@@ -79,5 +82,6 @@ if use_real_robot:
     sim.enable_middleware()  # enable the real robot
     ros.switch_mode(subscribe=False, publish=True, teleoperate=True)
     print("Reproduction phase: test policy in reality...")
+    # robot.set_home_joint_positions()
     task.test(num_steps=rate*100, signal_from_interface=False)
     print("Reproduction phase: Policy tested!")
