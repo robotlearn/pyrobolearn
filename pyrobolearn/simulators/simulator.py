@@ -1338,7 +1338,8 @@ class Simulator(object):
 
         # publish the joint positions through the middleware
         if self.middleware is not None and self._middleware_enabled:
-            self.middleware.reset_joint_states(body_id=body_id, joint_ids=joint_ids, positions=positions,
+            middleware_id = self._middleware_ids[body_id]
+            self.middleware.reset_joint_states(body_id=middleware_id, joint_ids=joint_ids, positions=positions,
                                                velocities=velocities)
 
     def _reset_joint_states(self, body_id, joint_ids, positions, velocities=None):
@@ -1836,7 +1837,8 @@ class Simulator(object):
 
         # publish the joint positions through the middleware
         if self.middleware is not None and self._middleware_enabled:
-            self.middleware.set_joint_positions(body_id, joint_ids, positions, velocities, kps, kds, forces)
+            middleware_id = self._middleware_ids[body_id]
+            self.middleware.set_joint_positions(middleware_id, joint_ids, positions, velocities, kps, kds, forces)
 
     def _set_joint_positions(self, body_id, joint_ids, positions, velocities=None, kps=None, kds=None, forces=None):
         """
@@ -1919,7 +1921,8 @@ class Simulator(object):
 
         # publish the joint velocities through the middleware
         if self.middleware is not None and self._middleware_enabled:
-            self.middleware.set_joint_velocities(body_id, joint_ids, velocities, max_force)
+            middleware_id = self._middleware_ids[body_id]
+            self.middleware.set_joint_velocities(middleware_id, joint_ids, velocities, max_force)
 
     def _set_joint_velocities(self, body_id, joint_ids, velocities, max_force=None):
         """
@@ -1949,20 +1952,22 @@ class Simulator(object):
         """
         # if a middleware is defined
         if self.middleware is not None and self._middleware_enabled:
+            middleware_id = self._middleware_ids[body_id]
             # get joint velocities from the middleware
-            dq = self.middleware.get_joint_velocities(body_id, joint_ids)
+            dq = self.middleware.get_joint_velocities(middleware_id, joint_ids)
             if dq is None:  # if we didn't get the joint velocities from the middleware, get them from the simulator
                 dq = self._get_joint_velocities(body_id, joint_ids)
+
+                # if the middleware is set on teleoperation mode, publish the joint positions through the middleware
+                if self.middleware.is_teleoperating:
+                    self.middleware.set_joint_velocities(middleware_id, joint_ids, dq, check_teleoperate=True)
+
             else:  # if we got them from the middleware, set them in the simulator
                 self._set_joint_velocities(body_id=body_id, joint_ids=joint_ids, velocities=dq)
 
         else:
             # get the joint velocities from the simulator
             dq = self._get_joint_velocities(body_id, joint_ids)
-
-            # if the middleware is set on the teleoperation mode, publish the joint velocities through the middleware
-            if self.middleware is not None and self._middleware_enabled:
-                self.middleware.set_joint_velocities(body_id, joint_ids, dq, check_teleoperate=True)
 
         return dq
 
@@ -2025,7 +2030,8 @@ class Simulator(object):
 
         # publish the joint torques through the middleware
         if self.middleware is not None and self._middleware_enabled:
-            self.middleware.set_joint_torques(body_id, joint_ids, torques)
+            middleware_id = self._middleware_ids[body_id]
+            self.middleware.set_joint_torques(middleware_id, joint_ids, torques)
 
     def _set_joint_torques(self, body_id, joint_ids, torques):
         """
@@ -2054,20 +2060,21 @@ class Simulator(object):
         """
         # if a middleware is defined
         if self.middleware is not None and self._middleware_enabled:
+            middleware_id = self._middleware_ids[body_id]
             # get joint torques from the middleware
-            tau = self.middleware.get_joint_torques(body_id, joint_ids)
+            tau = self.middleware.get_joint_torques(middleware_id, joint_ids)
             if tau is None:  # if we didn't get the joint torques from the middleware, get them from the simulator
                 tau = self._get_joint_torques(body_id, joint_ids)
             else:  # if we got them from the middleware, set them in the simulator
                 self._set_joint_torques(body_id=body_id, joint_ids=joint_ids, torques=tau)
 
+                # if the middleware is set on teleoperation mode, publish the joint positions through the middleware
+                if self.middleware.is_teleoperating:
+                    self.middleware.set_joint_positions(middleware_id, joint_ids, tau, check_teleoperate=True)
+
         else:
             # get the joint velocities from the simulator
             tau = self._get_joint_torques(body_id, joint_ids)
-
-            # if the middleware is set on the teleoperation mode, publish the joint torques through the middleware
-            if self.middleware is not None and self._middleware_enabled:
-                self.middleware.set_joint_torques(body_id, joint_ids, tau, check_teleoperate=True)
 
         return tau
 

@@ -48,11 +48,7 @@ import roslaunch
 import rosparam
 import rosmsg, rosservice
 import rostopic
-try:  # TODO: fix this!!
-    import controller_manager.controller_manager_interface as cm_interface
-except ImportError as e:
-    print("ROS control is not installed for this Python version, please install it... For now, disabling the "
-          "ROS control module... Calling methods that use the controller mananger will fail...")
+import controller_manager.controller_manager_interface as cm_interface
 
 import std_msgs.msg as std_msg
 import sensor_msgs.msg as sensor_msg
@@ -645,7 +641,7 @@ class ROS(Middleware):
         self.remappers = {}
         self.models = []
 
-        self._robots = {}  # {body_id: ROSRobotMiddleware}
+        # self._robots = {}  # {body_id: ROSRobotMiddleware}
         self.count_id = -1
 
         # init roslaunch
@@ -1438,6 +1434,7 @@ class ROS(Middleware):
             velocities (float, list[float], np.array[float]): the joint velocity(ies) (angular [rad/s] or linear
               velocity [m/s])
         """
+
         robot = self._robots.get(body_id)
         if robot is not None:
             return robot.reset_joint_states(positions, joint_ids=joint_ids, velocities=velocities)

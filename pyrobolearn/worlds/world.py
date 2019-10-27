@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 """Define the `World` class which allows to specify what constitutes the world (i.e. what elements are in the world).
 
@@ -364,6 +363,13 @@ class World(object):
                 self.sim.load(self.world_state)
                 # reset the robot
                 # self.reset_robots()
+
+                # reset the robots (we call this because sometimes we are using a robot middleware)
+                for body_id, body in self.bodies.items():
+                    if isinstance(body, Robot):
+                        positions = body.get_joint_positions()
+                        velocities = body.get_joint_velocities()
+                        body.reset_joint_states(q=positions, dq=velocities)
             else:
                 # reset simulation: remove all objects from the world and reset the world to initial conditions
                 self.sim.reset()

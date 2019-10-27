@@ -7,7 +7,7 @@ Work is under progress for other simulators.
 import pyrobolearn as prl
 
 sim = prl.simulators.Bullet()
-sim1 = prl.simulators.BulletROS()
+sim1 = prl.simulators.Mujoco()
 sim2 = prl.simulators.Dart()
 ```
 
@@ -18,11 +18,14 @@ Check the `worlds` folder and the `robots` folder.
 #### TODOs
 
 - [x] implement Bullet interface
-- [ ] implement BulletROS interface (ongoing)
-- [ ] implement Mujoco interface
-- [ ] implement Isaac interface
-- [ ] implement Dart interface
+- [ ] implement Mujoco interface (ongoing)
+- [ ] implement Raisim interface (ongoing)
+- [ ] implement Dart interface (ongoing)
+- [ ] implement ROS middleware (ongoing - currently worked with real franka emika panda robot)
 - [ ] implement RBDL_ROS interface
 - [ ] implement GazeboROS interface
 - [ ] implement V-REP (PyRep) interface
+- [ ] implement Isaac interface
+- [ ] implement Chrono interface
+- [ ] implement OpenSim interface (useful for biomedical models)
 - [ ] implement `simulator_randomizer` (similar to `physics_randomizer`)

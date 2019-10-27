@@ -59,9 +59,8 @@ class Middleware(object):
         # self.is_teleoperating = teleoperate
         # self.is_commanding = command
         self._subscribe, self._publish, self._teleoperate, self._command = False, False, False, False
-        self.switch_mode(subscribe=subscribe, publish=publish, teleoperate=teleoperate, command=command)
-
         self._robots = {}  # {body_id: RobotMiddleware}
+        self.switch_mode(subscribe=subscribe, publish=publish, teleoperate=teleoperate, command=command)
 
     ##############
     # Properties #
@@ -193,6 +192,10 @@ class Middleware(object):
             self._publish = bool(publish)
             self._teleoperate = bool(teleoperate)
             self._command = bool(command)
+
+            for robot in self._robots.values():
+                robot.switch_mode(subscribe=self._subscribe, publish=self._publish, teleoperate=self._teleoperate,
+                                  command=self._command)
 
     def close(self):
         """

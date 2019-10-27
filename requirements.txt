@@ -73,3 +73,9 @@ nlopt>=2.4.2.post2
 trimesh>=3.1.1    # to compute volume, COM, inertia, etc.
 pyassimp>=4.1.4   # to import and export meshes in different formats
 # pymesh>=1.0.2
+
+# install ros related packages
+rospkg>=1.1.7
+defusedxml>=0.4.1
+empy>=3.3.2
+# might need to install `ros_comm` and `ros_control` manually. Don't forget to switch the correct branch
