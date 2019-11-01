@@ -106,6 +106,8 @@ class DMP(object):
         - [8] "A Framework for Learning Biped Locomotion with Dynamical Movement Primitives", Nakanishi et al., 2004
         - [9] "Policy Search for Motor Primitives in Robotics", Kober et al., 2010
         - [10] "A Generalized Path Integral Control Approach to Reinforcement Learning", Theodorou et al., 2010
+        - [11] "A correct formulation for the Orientation Dynamic Movement Primitives for robot control in the 
+          Cartesian space", Koutras et al., 2019
     """
 
     def __init__(self, canonical_system, forcing_term, y0=0, goal=1, stiffness=None, damping=None):
