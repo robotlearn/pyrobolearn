@@ -1,0 +1,32 @@
+In this file, you can find the list of direct and indirect contributors to the PyRoboLearn framework. 
+Personally, I think people should also acknowledge their contributions as the framework would not have 
+been possible without them. However, I still need to think how this could be achieved...
+If you contributed to the framework, I will automatically add you to the list and specify what you modified
+/added to the framework. Just note that I won't include people who correct typos (it has to be a real contribution :p).
+
+
+Direct contributors
+-------------------
+
+Leonel Rozo
+Noémie Jaquier
+Daniele Bonatto
+Songyan Xin
+
+
+Indirect contributors
+---------------------
+
+The following list is based on the lists of contributors of the various libraries that I am using, and libraries/codes/papers that inspired parts of the framework. This list will be pretty long and as such I might have forgotten few contributors inadvertently. If you are one of them, please send me an email such that I can add you properly to the list as I try to make it as accurate as possible.
+
+- Erwin Coumans (Bullet/PyBullet)
+- Yunfei Bai (Bullet/PyBullet)
+- Emanuel Todorov (MuJoCo)
+- Jemin Hwangbo (RaiSim)
+- Joonho Lee (RaiSim)
+- Marco Hutter (RaiSim)
+
+- Auke Ijspeert (CPG, DMP, Salamander robot)
+- Sylvain Calinon (GMM/GMR)
+
+
