@@ -21,6 +21,9 @@ import torch
 import gpytorch
 # import GPy
 
+# to check Python version (if sys.version_info[0] < 3, then python 2)
+import sys
+
 # from pyrobolearn.models.model import Model
 
 __author__ = "Brian Delhaisse"
@@ -32,6 +35,7 @@ __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
+echo '# -*- coding: utf-8 -*-\n#!/usr/bin/env python'
 
 class GP(object):
     r"""Gaussian Process model
@@ -51,11 +55,11 @@ class GP(object):
         - `GPFlow` (which uses TensorFlow) [5]
 
     References:
-        [1] "Gaussian Processes for Machine Learning", Rasmussen and Williams, 2006
-        [2] GPyTorch: https://github.com/cornellius-gp/gpytorch
-        [3] GPyTorch examples: https://github.com/cornellius-gp/gpytorch/tree/master/examples
-        [4] GPy: https://gpy.readthedocs.io/en/deploy/
-        [5] GPFlow: http://gpflow.readthedocs.io/en/latest/intro.html
+        - [1] "Gaussian Processes for Machine Learning", Rasmussen and Williams, 2006
+        - [2] GPyTorch: https://github.com/cornellius-gp/gpytorch
+        - [3] GPyTorch examples: https://github.com/cornellius-gp/gpytorch/tree/master/examples
+        - [4] GPy: https://gpy.readthedocs.io/en/deploy/
+        - [5] GPFlow: http://gpflow.readthedocs.io/en/latest/intro.html
     """
 
     def fit(self, *args, **kwargs):
@@ -66,10 +70,11 @@ class GPC(GP):
     r"""Gaussian Process Classification
 
     References:
-        [1] "Gaussian Processes for Machine Learning", Rasmussen and Williams, 2006
-        [2] GPyTorch: https://github.com/cornellius-gp/gpytorch
-        [3] GPyTorch examples: https://github.com/cornellius-gp/gpytorch/tree/master/examples
+        - [1] "Gaussian Processes for Machine Learning", Rasmussen and Williams, 2006
+        - [2] GPyTorch: https://github.com/cornellius-gp/gpytorch
+        - [3] GPyTorch examples: https://github.com/cornellius-gp/gpytorch/tree/master/examples
     """
+    # TODO
     pass
 
 
@@ -140,12 +145,20 @@ class ExactGPModel(gpytorch.models.ExactGP):
     # Methods #
     ###########
 
-    def forward(self, x):
-        r"""Return the prior probability density function :math:`p(f|x) = \mathcal{N}(\cdot | \mu(x), K(x,x))`."""
-        mean_x = self.mean(x)
-        covar_x = self.kernel(x)
-        # return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
-        return gpytorch.random_variables.GaussianRandomVariable(mean_x, covar_x)
+    if sys.version_info[0] < 3:  # Python 2.7
+        def forward(self, x):
+            r"""Return the prior probability density function :math:`p(f|x) = \mathcal{N}(\cdot | \mu(x), K(x,x))`."""
+            mean_x = self.mean(x)
+            covar_x = self.kernel(x)
+            # return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
+            return gpytorch.random_variables.GaussianRandomVariable(mean_x, covar_x)
+    else:  # Python 3.*
+        def forward(self, x):
+            r"""Return the prior probability density function :math:`p(f|x) = \mathcal{N}(\cdot | \mu(x), K(x,x))`."""
+            mean_x = self.mean(x)
+            covar_x = self.kernel(x)
+            # return gpytorch.random_variables.GaussianRandomVariable(mean_x, covar_x)
+            return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
 
 class GPR(GP):
@@ -214,10 +227,10 @@ class GPR(GP):
 
 
     References:
-        [1] "Gaussian Processes for Machine Learning", Rasmussen and Williams, 2006
-        [2] GPy: https://gpy.readthedocs.io/en/deploy/
-        [3] GPyTorch: https://github.com/cornellius-gp/gpytorch
-        [4] GPFlow: http://gpflow.readthedocs.io/en/latest/intro.html
+        - [1] "Gaussian Processes for Machine Learning", Rasmussen and Williams, 2006
+        - [2] GPy: https://gpy.readthedocs.io/en/deploy/
+        - [3] GPyTorch: https://github.com/cornellius-gp/gpytorch
+        - [4] GPFlow: http://gpflow.readthedocs.io/en/latest/intro.html
     """
 
     def __init__(self,  mean=None, kernel=None, model=None, likelihood=None):
@@ -231,7 +244,7 @@ class GPR(GP):
             model (None, gpytorch.module.Module): the prior GP model. If None, it will create `ExactGPModel()`, a GP
                 model using the provided mean, kernel, and likelihood.
             likelihood (None, gpytorch.likelihoods.Likelihood): the likelihood pdf. If None, it will use the
-                `gpytorch.likelihoods.GaussianLikelihood()`
+                `gpytorch.likelihoods.GaussianLikelihood()`.
         """
         # check model
         if model is None:
@@ -428,26 +441,44 @@ class GPR(GP):
         likelihood = torch.exp(self.log_likelihood(x, y, to_numpy=False))
         return self._convert(likelihood, to_numpy=to_numpy)
 
-    def log_likelihood(self, x, y, to_numpy=False):
-        r"""Evaluate the log likelihood: log p(y|f,x)."""
-        x = self._convert_to_torch(x)
-        y = self._convert_to_torch(y)
-        f = self.model(x)
-        log_likelihood = self.likelihood_prob.log_probability(f, y)
-        return self._convert(log_likelihood, to_numpy=to_numpy)
+    if sys.version_info[0] < 3:  # Python 2.7
+        def log_likelihood(self, x, y, to_numpy=False):
+            r"""Evaluate the log likelihood: log p(y|f,x)."""
+            x = self._convert_to_torch(x)
+            y = self._convert_to_torch(y)
+            f = self.model(x)
+            log_likelihood = self.likelihood_prob.log_probability(f, y)
+            return self._convert(log_likelihood, to_numpy=to_numpy)
+    else:
+        def log_likelihood(self, x, y, to_numpy=False):
+            r"""Evaluate the log likelihood: log p(y|f,x)."""
+            x = self._convert_to_torch(x)
+            y = self._convert_to_torch(y)
+            f = self.model(x)
+            log_likelihood = self.likelihood_prob.variational_log_probability(f, y)
+            return self._convert(log_likelihood, to_numpy=to_numpy)
 
     def marginal_likelihood(self, x, y, to_numpy=False):
         r"""Evaluate the marginal likelihood: p(y|x)."""
         ml = torch.exp(self.log_marginal_likelihood(x, y, to_numpy=False))
         return self._convert(ml, to_numpy=to_numpy)
 
-    def log_marginal_likelihood(self, x, y, to_numpy=False):
-        r"""Evaluate the log marginal likelihood: log p(y|x)."""
-        x = self._convert_to_torch(x)
-        y = self._convert_to_torch(y)
-        f = self.model(x)
-        mll = self.mll(f, y)
-        return self._convert(mll[0], to_numpy=to_numpy)
+    if sys.version_info[0] < 3:  # Python 2.7
+        def log_marginal_likelihood(self, x, y, to_numpy=False):
+            r"""Evaluate the log marginal likelihood: log p(y|x)."""
+            x = self._convert_to_torch(x)
+            y = self._convert_to_torch(y)
+            f = self.model(x)
+            mll = self.mll(f, y)
+            return self._convert(mll[0], to_numpy=to_numpy)
+    else:
+        def log_marginal_likelihood(self, x, y, to_numpy=False):
+            r"""Evaluate the log marginal likelihood: log p(y|x)."""
+            x = self._convert_to_torch(x)
+            y = self._convert_to_torch(y)
+            f = self.model(x)
+            mll = self.mll(f, y)
+            return self._convert(mll, to_numpy=to_numpy)
 
     def fit(self, x, y, num_iters=100, tolerance=1e-5, optimizer=None, verbose=False):
         r"""Fit the input and output data; find optimal model hyperparameters.
@@ -546,30 +577,56 @@ class GPR(GP):
             return self._convert_to_numpy(y.mean())
         return y.mean()
 
-    def predict_prob(self, x, to_numpy=True):
-        r"""
-        Predict p(y|x) by returning the mean and the covariance arrays.
+    if sys.version_info[0] < 3:  # Python 2.7
+        def predict_prob(self, x, to_numpy=True):
+            r"""
+            Predict p(y|x) by returning the mean and the covariance arrays.
 
-        Args:
-            x (np.ndarray, torch.Tensor): input array
-            to_numpy (bool): if True, return a np.array
+            Args:
+                x (np.ndarray, torch.Tensor): input array
+                to_numpy (bool): if True, return a np.array
 
-        Returns:
-            np.ndarray, torch.Tensor: output mean array
-            np.ndarray, torch.Tensor: output covariance array
-        """
-        x = self._convert_to_torch(x)
+            Returns:
+                np.ndarray, torch.Tensor: output mean array
+                np.ndarray, torch.Tensor: output covariance array
+            """
+            x = self._convert_to_torch(x)
 
-        # compute p(f|x)
-        f = self.model(x)
+            # compute p(f|x)
+            f = self.model(x)
 
-        # compute p(y|f,x)
-        y = self.likelihood_prob(f)
+            # compute p(y|f,x)
+            y = self.likelihood_prob(f)
 
-        # return mean and covariance
-        if to_numpy:
-            return self._convert_to_numpy(y.mean()), self._convert_to_numpy(y.var())  # y.covar())
-        return y.mean(), y.var()  # y.covar()
+            # return mean and covariance
+            if to_numpy:
+                return self._convert_to_numpy(y.mean()), self._convert_to_numpy(y.var())  # y.covar())
+            return y.mean(), y.var()  # y.covar()
+    else:  # Python 3.5
+        def predict_prob(self, x, to_numpy=True):
+            r"""
+            Predict p(y|x) by returning the mean and the covariance arrays.
+
+            Args:
+                x (np.ndarray, torch.Tensor): input array
+                to_numpy (bool): if True, return a np.array
+
+            Returns:
+                np.ndarray, torch.Tensor: output mean array
+                np.ndarray, torch.Tensor: output covariance array
+            """
+            x = self._convert_to_torch(x)
+
+            # compute p(f|x)
+            f = self.model(x)
+
+            # compute p(y|f,x)
+            y = self.likelihood_prob(f)
+
+            # return mean and covariance
+            if to_numpy:
+                return self._convert_to_numpy(y.mean), self._convert_to_numpy(y.variance)  # y.covariance)
+            return y.mean, y.variance  # y.covariance
 
     def forward(self, x):
         r"""
@@ -589,13 +646,25 @@ class GPR(GP):
         # return p(y|f,x)
         return self.likelihood_prob(f)
 
-    def sample(self, x, num_samples=1, to_numpy=True):
-        """Sample the function vector from the GP; i.e. f ~ p(f|x)."""
-        x = self._convert_to_torch(x)
-        f = self.model(x)
-        if to_numpy:
-            return self._convert_to_numpy(f.sample(num_samples))
-        return f.sample(num_samples)
+    if sys.version_info[0] < 3:  # Python 2.7
+        def sample(self, x, num_samples=1, to_numpy=True):
+            """Sample the function vector from the GP; i.e. f ~ p(f|x)."""
+            x = self._convert_to_torch(x)
+            f = self.model(x)
+            if to_numpy:
+                return self._convert_to_numpy(f.sample(num_samples))
+            return f.sample(num_samples)
+
+    else:  # Python 3.*
+        def sample(self, x, num_samples=1, to_numpy=True):
+            """Sample the function vector from the GP; i.e. f ~ p(f|x)."""
+            x = self._convert_to_torch(x)
+            f = self.model(x)
+            if isinstance(num_samples, int):
+                num_samples = (num_samples,)
+            if to_numpy:
+                return self._convert_to_numpy(f.sample(num_samples))
+            return f.sample(num_samples)
 
     #############
     # Operators #
@@ -679,7 +748,7 @@ if __name__ == '__main__':
     plt.plot(x, f.T, 'k', linewidth=2.)
 
     # predict prob
-    x_test = torch.linspace(0, 1, 51).numpy()
+    x_test = torch.linspace(-0.5, 1.5, 51).numpy()
     mean_y, var_y = model.predict_prob(x_test, to_numpy=True)
     std_y = np.sqrt(var_y)
     plt.plot(x_test, mean_y, 'b')
