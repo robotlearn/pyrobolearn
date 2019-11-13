@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the various actuators used in robotics.
 
 This is decoupled from the robots such that actuators can be defined outside the robot class and can be selected at

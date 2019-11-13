@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the differential kinematics constraint.
 
 This provides the joint velocity constraints which is given by:

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the Evaluator class used in the second step of RL algorithms
 
 The evaluator assesses the quality of the actions/trajectories performed by the policy using the given returns.

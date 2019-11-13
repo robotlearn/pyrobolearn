@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the locomotion environment.
 
 Define the environment to perform a locomotion task; it mainly defines the reward function.

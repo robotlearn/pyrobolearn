@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Variational Auto-Encoder (VAE) learning model.
 
 This file provides the VAE model; a parametric, generally non-linear, non-recurrent, generative, and stochastic model.

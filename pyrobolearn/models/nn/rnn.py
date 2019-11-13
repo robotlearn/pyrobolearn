@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Recurrent Neural Network (RNN) learning model.
 
 This file provides the RNN model; a parametric, generally non-linear, recurrent, discriminative,

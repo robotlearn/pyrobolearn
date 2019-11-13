@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Example on how to use an imitation learning task in PyRoboLearn using Dynamic Movement Primitives as a policy,
 and a mouse keyboard interface.
 """

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the knowledge distillation task.
 
 This type of tasks takes one or multiple models that have been trained on one or several tasks, and use them to train

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the cartesian velocity constraint.
 
 The bilateral inequality cartesian velocity constraint is given by:

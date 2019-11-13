@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Run the Webcam interface.
 
 Make sure that the webcam is connected before running this code. Note that it can take some time to initialize

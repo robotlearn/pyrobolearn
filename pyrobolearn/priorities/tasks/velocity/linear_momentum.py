@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the linear momentum task.
 
 The is the linear part of the `CentroidalMomentumTask`. The centroidal momentum task tries to minimize the

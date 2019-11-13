@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the the `WorldCamera` class.
 
 Get the camera that looks at the world (only available in the simulator).

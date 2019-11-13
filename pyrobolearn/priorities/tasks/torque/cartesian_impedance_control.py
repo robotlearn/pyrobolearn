@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the cartesian impedance control task.
 
 The cartesian impedance control task optimizes the joint torques such that it applies the necessary torques to

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """load a robot in a basic world and distribute randomly few objects on the floor.
 
 Load a basic world (i.e. with a floor and gravity enabled), and load a robot inside of it, and distributed randomly

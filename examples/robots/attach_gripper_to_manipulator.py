@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Attach a gripper/hand to the Kuka manipulator.
 
 In this file, you can attach different grippers / hands to the kuka robot. You can move the robot with the mouse.

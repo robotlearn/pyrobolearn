@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the Xbox controller interfaces.
 
 This provides the interfaces for the Xbox controllers (Xbox 360 and Xbox One) using the `inputs` library.

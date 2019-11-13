@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the conveyor world.
 
 This is used by other worlds in the `warehouse` folder.

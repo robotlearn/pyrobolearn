@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the abstract 'Task'/'Scenario' class.
 
 A task represents a certain learning paradigm, and use specific metrics with respect to that paradigm.

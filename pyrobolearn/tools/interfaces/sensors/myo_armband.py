@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Myo armband sensor input interface.
 
 Warnings: "Myo production has officially ended as of Oct 12, 2018 and is no longer available for purchase".

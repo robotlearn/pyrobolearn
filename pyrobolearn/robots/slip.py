@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the various Spring-Loaded Inverted Pendulum (SLIP) models.
 
 This includes: SLIP2D, DualSLIP2D, SLIP3D, DualSLIP3D

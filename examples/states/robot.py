@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Get the robot's joint position and velocity states.
 
 In this example, we load a Kuka manipulator and print the joint position and velocity states. You can try to move the

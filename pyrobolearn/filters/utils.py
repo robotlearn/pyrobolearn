@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Common filters used in signal processing
 
 These filters can be useful to smooth signal trajectories.

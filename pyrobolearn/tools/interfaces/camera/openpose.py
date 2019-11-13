@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Openpose Interface
 
 This extracts the human skeleton from an image or stream of images (from a webcam for instance) using the openpose

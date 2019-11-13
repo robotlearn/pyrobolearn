@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Central Pattern Generator Node and Network classes
 
 Central Pattern Generators (CPGs) allows to model rhythmic movement primitives, and are often used in locomotion.

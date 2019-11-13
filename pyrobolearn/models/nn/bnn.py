@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide Bayesian Neural Networks.
 
 This file provides Bayesian neural networks which add uncertainty to the the prediction of NNs. In a bayesian neural

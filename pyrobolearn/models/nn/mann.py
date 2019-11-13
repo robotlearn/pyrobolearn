@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the various memory-augmented neural networks (MANNs).
 
 This file provides the various MANNs; a parametric, generally non-linear, recurrent with memory, discriminative,

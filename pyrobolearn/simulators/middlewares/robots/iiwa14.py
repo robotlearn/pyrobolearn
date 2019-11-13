@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Kuka IIWA ROS Robot middleware API.
 
 This is robot middleware interface between the Kuka IIWA robot and ROS. This file should be modified by the user!!

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the abstract interfaces
 
 This defines the Input/Output abstract interfaces. They allowed to get information from input systems (such as

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the Sampler class from which all sampling strategies inherit from.
 
 Sampling strategies can be classified into two categories: probability or deterministic sampling methods.

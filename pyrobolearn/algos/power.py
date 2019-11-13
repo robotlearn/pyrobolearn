@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the PoWER reinforcement learning algorithm.
 
 This Policy learning by Weighting Exploration with the Returns (PoWER) algorithm is an model-free, on-policy, and

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide some reward processors.
 
 It processes the rewards before returning them; this can be useful to standardize, normalize, center them for instance.

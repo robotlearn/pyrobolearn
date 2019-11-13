@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the `Experiment` class, which allows the user to define an experiment.
 
 We define the `Experiment` class here which is the highest-level class of our framework. More specifically, it allows

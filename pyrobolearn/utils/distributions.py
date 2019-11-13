@@ -1,10 +1,12 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# This file provides the most common probability distributions
+"""This file provides the most common probability distributions
 
-# References:
-# [1] pyrobolearn/models/gaussian
-# [2] Distributions in pytorch: https://pytorch.org/docs/stable/distributions.html
-# [3] https://github.com/ikostrikov/pytorch-a2c-ppo-acktr/blob/master/distributions.py
+References:
+    - [1] pyrobolearn/models/gaussian
+    - [2] Distributions in pytorch: https://pytorch.org/docs/stable/distributions.html
+    - [3] https://github.com/ikostrikov/pytorch-a2c-ppo-acktr/blob/master/distributions.py
+"""
 
 import torch
 import torch.nn as nn

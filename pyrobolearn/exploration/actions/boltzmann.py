@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the discrete Boltzmann action exploration.
 
 The Boltzmann exploration strategy consists to explore in the discrete action space of policies by using a

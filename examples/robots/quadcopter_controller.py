@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Control a quadcopter in the air using an Xbox or Playstation game controller.
 
 how to run:

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the various update schemes to update optimization parameters and model parameters.
 
 These parameters include parameters of a learning model, simple weight numbers (int or float) used in losses/rewards,

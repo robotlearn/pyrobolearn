@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the various basic bodies / objects that are present in the simulator / world.
 
 Dependencies:

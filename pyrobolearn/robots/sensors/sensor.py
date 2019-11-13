@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the various sensors used in robotics.
 
 This is decoupled from the robots such that sensors can be defined outside the robot class and can be selected at

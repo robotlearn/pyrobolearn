@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the various joint actions
 
 This includes notably the joint positions, velocities, and force/torque actions.

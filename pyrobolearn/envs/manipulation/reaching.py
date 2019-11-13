@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the reaching manipulation environment.
 
 The goal is to reach a certain 3D (fixed or movable) target with the end-effector of a robot.

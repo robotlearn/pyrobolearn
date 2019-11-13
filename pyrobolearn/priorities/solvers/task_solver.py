@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the abstract task solver class from which all the other task solvers inherit from.
 
 A task solver accepts as inputs a task (or a stack of tasks) and an optimizer to use to solve the task.

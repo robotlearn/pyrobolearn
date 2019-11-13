@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Run the Asus Xtion interface.
 
 Make sure that the `openni` library is installed with all the correct environment variables set, and that the Asus

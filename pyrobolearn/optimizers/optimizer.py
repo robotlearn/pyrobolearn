@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the abstract optimizer class.
 
 Optimizers allows to optimize (i.e. minimize or maximize) a utility function (also known as objective function,

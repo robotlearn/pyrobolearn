@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define various initial state generators.
 
 The initial state generator generates the initial state which is returned by the environment when calling

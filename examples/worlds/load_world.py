@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Load a basic world with different objects in it
 
 Load a basic world (i.e. with a floor and gravity enabled) with different objects (only visual, and with collision

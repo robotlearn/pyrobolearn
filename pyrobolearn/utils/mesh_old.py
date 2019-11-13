@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the code to create meshes using the `Mayavi` library.
 
 Most of the meshes in the world such as the `cone`, `ellipsoid`, and others were created using the hereby code.

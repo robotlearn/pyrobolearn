@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the Convex Hull constraint.
 
 This convex hull constraints make sure that the projected CoM position (in the x-y directions) belongs to the

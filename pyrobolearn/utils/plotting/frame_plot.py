@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the link frame real-time plotting class.
 
 Warnings: DON'T FORGET TO CLOSE FIRST THE FIGURE THEN THE SIMULATOR OTHERWISE YOU WILL HAVE THE PLOTTING PROCESS STILL

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Move main camera in the world.
 
 Move the main camera in the world using the keyboard:

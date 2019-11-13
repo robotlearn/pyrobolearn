@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the Explorer class used in the first step of RL algorithms
 
 It consists to explore and collect samples in the environment using the policy. The samples are stored in the

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Bullet-ROS Simulator API.
 
 This is the main interface that communicates with the PyBullet simulator [1] and use ROS [3] to query the state of the

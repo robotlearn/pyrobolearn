@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the manipulability task.
 
 The manipulability task implements a task that tries to maximize the manipulability measure given in [1]:

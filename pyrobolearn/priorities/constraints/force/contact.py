@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the contact (force normal) constraint.
 
 The lower unilateral contact force constraint is given by :math:`0 \leq f^i_n` where :math:`f^i_n` is the normal

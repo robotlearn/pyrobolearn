@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the CoM linear and angular momentum task.
 
 The centroidal momentum task tries to minimize the difference between the desired and current centroidal moment

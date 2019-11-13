@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Simulator tests.
 
 Example on how to load different things with the simulators. This example is still in an experimental phase. For

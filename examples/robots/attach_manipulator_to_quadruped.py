@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Attach the Kuka Youbot manipulator to the HyQ2Max quadruped.
 """
 

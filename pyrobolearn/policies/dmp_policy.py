@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Dynamic Movement Primitive (DMP) Policy.
 
 Define the various DMP policies that can be used.

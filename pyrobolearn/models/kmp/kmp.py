@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the kernelized movement primitive class.
 
 This file provides the Kernelized Movement Primitive (KMP) model, and uses the Gaussian mixture model as well as

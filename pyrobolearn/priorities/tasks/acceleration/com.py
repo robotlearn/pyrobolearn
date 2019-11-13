@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the Cartesian CoM acceleration task.
 
 The CoM task tries to impose a desired position of the CoM with respect to the world frame.

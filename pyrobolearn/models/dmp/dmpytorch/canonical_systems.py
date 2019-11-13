@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define canonical systems for dynamic movement primitives
 
 This file implements canonical systems for discrete and rhythmic dynamic movement primitives.

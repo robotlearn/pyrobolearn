@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Computes the various returns evaluated on batches of transitions (used in RL).
 
 The returns that are evaluated are placed inside the given batch, which can then be accessed by other classes.

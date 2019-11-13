@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the MuJoCo Simulator API.
 
 This is the main interface that communicates with the MuJoCo simulator [1]. By defining this interface, it allows to

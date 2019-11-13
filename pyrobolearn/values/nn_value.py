@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provides value function approximators based on neural networks.
 
 For instance, a value network is a function represented by a neural network that maps a state to a value (real number).

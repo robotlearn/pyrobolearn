@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provides the various basis functions and matrices used in ProMPs.
 
 A basis matrix contains the basis functions, and the derivative of the basis functions (with respect to the phase),

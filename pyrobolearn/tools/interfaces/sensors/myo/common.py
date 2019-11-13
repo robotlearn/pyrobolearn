@@ -1,5 +1,8 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 import struct
+
 
 def pack(fmt, *args):
     return struct.pack('<' + fmt, *args)

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Manipulate the robot's joints with sliders.
 
 You can move in the world using the keyboard and mouse:

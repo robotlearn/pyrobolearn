@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 import rospy
+# -*- coding: utf-8 -*-
 #from std_msgs import msg as stdMsg
 from sensor_msgs import msg as senMsg
 from geometry_msgs import msg as geoMsg

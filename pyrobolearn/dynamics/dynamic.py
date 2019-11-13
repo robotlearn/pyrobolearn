@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provides the `transition`/`dynamic` function approximators in RL.
 
 Dynamic models allows to compute the next state given the current state and action; that is,

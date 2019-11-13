@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the forcing terms used in dynamic movement primitives
 
 This file implements the forcing terms used for discrete and rhythmic dynamic movement primitives.

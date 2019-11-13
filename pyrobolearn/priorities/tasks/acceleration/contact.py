@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the contact acceleration task.
 
 The contact acceleration task tries to minimize the dynamic movement of a contact link:

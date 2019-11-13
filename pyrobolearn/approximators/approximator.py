@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the basic (Function) Approximator class.
 
 This file describes the `Approximator` class that wraps a learning model and connects it with its inputs, and outputs.

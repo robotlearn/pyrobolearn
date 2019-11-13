@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the SRDF parser.
 
 The Semantic Robot Description Format (SRDF) format allows to represent semantic information about the robot

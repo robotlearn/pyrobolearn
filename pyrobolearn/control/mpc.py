@@ -1,5 +1,7 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # MPC: Model Predictive Control
+
 
 class MPC(object):
     r"""Model Predictive Control

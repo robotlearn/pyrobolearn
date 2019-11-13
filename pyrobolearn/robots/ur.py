@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the universal robot platforms.
 
 Specifically, it provides the classes for UR3, UR5, and UR10.

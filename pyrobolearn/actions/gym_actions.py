@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the OpenAI Gym Action
 
 This defines the OpenAI Gym action such that it is compatible with the pyrobolearn framework. It notably decouples

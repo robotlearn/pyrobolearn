@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the diamond-square heightmap generator.
 
 Generate the heightmap using the diamond-square algorithm [1].

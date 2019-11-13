@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the DQN algorithm.
 
 The DQN is a value-based, off-policy, model-free RL algorithm with exploration in the action space.

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the inverse kinematic controller for locomotion.
 
 The inverse kinematic controller is a low-level controller that uses quadratic programming to solve several kinematic

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Computes the various targets based on value function on batches of trajectories/transitions (used in RL).
 
 The approximators are evaluated in . targets that are evaluated are placed inside the given batch, which can then be accessed by other classes.

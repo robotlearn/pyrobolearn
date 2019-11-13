@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Multi-Layer Perceptron (MLP) learning model.
 
 This file provides the MLP model; a parametric, generally non-linear, non-recurrent, discriminative,

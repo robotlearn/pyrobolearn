@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the OculusTouch class which communicates with Unity (on Windows) using TCP.
 
 Currently, Oculus has only support for Windows systems. However, several libraries such as ROS only runs on

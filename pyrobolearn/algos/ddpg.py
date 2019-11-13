@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the  Deep Deterministic Policy Gradient (DDPG).
 
 For the Twin Delayed DDPG algorithm, see `pyrobolearn/algos/td3.py`

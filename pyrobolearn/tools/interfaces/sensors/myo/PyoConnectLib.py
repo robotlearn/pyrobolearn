@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # uncompyle6 version 3.3.5
 # Python bytecode 2.7 (62211)

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Recurrent Convolutional Neural Network (RCNN) learning model.
 
 This file provides the RCNN model; a parametric, generally non-linear, recurrent, discriminative,

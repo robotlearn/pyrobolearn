@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 # This file defines the main `Objective` class, which is inherited by the `Reward` and `Cost` classes, and
+# -*- coding: utf-8 -*-
 # all subsequent child classes which define common objective/reward/cost functions.
 # Objectives can be maximized or minimized, while rewards are maximized, and costs are minimized.
 # Allow to define objectives with different frameworks: numpy, pytorch, tensorflow, theano,...

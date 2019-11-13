@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Model interface used in priority tasks.
 
 A model interface is an abstraction layer that provides a common interface and remove the direct coupling between the

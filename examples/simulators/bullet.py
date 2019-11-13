@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Example on how to use the Bullet simulator in pyrobolearn.
 
 Simple example where we use the bullet simulator, load a basic world (with a floor and gravity enabled) and the RRBot

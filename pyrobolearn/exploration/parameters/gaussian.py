@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the continuous Gaussian parameter exploration strategies.
 
 The Gaussian parameter exploration strategy consists to explore in the parameter space of policies by using a gaussian

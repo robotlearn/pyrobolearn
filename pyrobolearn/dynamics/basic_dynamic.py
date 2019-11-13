@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provides the various basic dynamic transition function approximators (e.g. table and linear approximators)
 
 It can use learning models as most of these models learn a function (that is how to map inputs to outputs).

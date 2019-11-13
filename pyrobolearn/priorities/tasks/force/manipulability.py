@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the force manipulability task.
 
  The manipulability task implements a tasks that tries to maximize the force manipulability measure given in [1]:

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the general dynamic movement primitive abstract class.
 
 This file implements the DMP abstract class from which all dynamic movement primitive classes inherit from.

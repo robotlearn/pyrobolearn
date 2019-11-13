@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 import rospy
+# -*- coding: utf-8 -*-
 from std_msgs import msg as stdMsg
 
 import sys

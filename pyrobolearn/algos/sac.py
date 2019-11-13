@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the Soft-Actor Critic algorithm.
 
 Define the SAC reinforcement learning algorithm. This is a model-free, off-policy, actor-critic method.

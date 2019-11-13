@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """In this file, we use and compare several IK libraries using the Kuka robot.
 
 Namely, we compare: pybullet, PyKDL, trac_ik, and rbdl.

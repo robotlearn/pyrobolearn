@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Demonstrate how the distance cost decreases as you move the manipulator (with your mouse) closer to the target
 object in the world.
 """

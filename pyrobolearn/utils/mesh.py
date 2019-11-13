@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide functions to create, convert, and get information from meshes, using the `trimesh` and `pyassimp` libraries.
 
 Note that some methods just wrap the methods / attributes provided by the `trimesh` library.

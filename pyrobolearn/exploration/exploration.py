@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the various exploration strategies.
 
 Specifically, this file provides the main abstract `Exploration` class from which all the other exploration strategies

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define basic function approximators.
 
 Define the various basic approximators such as the random approximator, linear approximator, etc.

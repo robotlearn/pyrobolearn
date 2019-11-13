@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Robot middleware API.
 
 The robot middleware interface is an interface between a particular robot and the middleware. The middleware

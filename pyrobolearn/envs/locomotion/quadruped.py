@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the locomotion with quadruped environment.
 
 This is based on [1] and [2] but generalized to other quadruped platforms.

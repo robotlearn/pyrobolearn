@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 import numpy as np
+# -*- coding: utf-8 -*-
 from scipy.interpolate import CubicSpline
 import matplotlib.pyplot as plt
 

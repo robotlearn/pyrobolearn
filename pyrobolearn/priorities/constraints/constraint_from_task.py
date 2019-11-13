@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Transform a given equality constraint into a task.
 
 An equality constraint specified by :math:`Fx = k` is transformed to a soft task :math:`||Ax - b||^2`, where

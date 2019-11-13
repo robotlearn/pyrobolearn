@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Run the Openpose interface.
 
 Make sure that the webcam is connected, and that the openpose framework has been installed before running this code.

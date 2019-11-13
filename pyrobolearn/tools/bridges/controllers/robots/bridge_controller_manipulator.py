@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 # !/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the bridge between the game controller interface and a manipulator's end-effector. Note that this uses a QP 
 controller behind the scene to move the robot. You can use position or impedance control.
 """

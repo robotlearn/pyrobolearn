@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the State class.
 
 This file defines the `State` class, which is returned by the environment, and given as an input to several

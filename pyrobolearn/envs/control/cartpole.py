@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the inverted pole on a cart (Cartpole) environment.
 
 This is based on the control problem proposed in OpenAI Gym:

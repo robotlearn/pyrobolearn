@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the Cartesian acceleration task.
 
 The Cartesian acceleration task tries to impose a desired pose, velocity and acceleration profiles for a distal

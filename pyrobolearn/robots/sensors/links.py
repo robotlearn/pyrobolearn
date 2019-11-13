@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the link sensors used in robotics.
 
 These include IMU, contact, Camera, and other sensors.

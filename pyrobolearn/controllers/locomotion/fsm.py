@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the various states and transitions in a finite state machine (FSM) used in locomotion.
 
 References:

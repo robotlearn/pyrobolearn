@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Isaac SDK simulator API.
 
 This is the main interface that communicates with the Isaac SDK/Gym simulator [1]. By defining this interface, it

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the 'Efficient Lifelong Learning Algorithm' (ELLA).
 
 The ELLA algorithm is an online multi-task learning algorithm that maintains a shared knowledge database that can be

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Leap Motion hand tracking sensor input interface.
 
 You can run the Leap control panel by typing in the terminal:

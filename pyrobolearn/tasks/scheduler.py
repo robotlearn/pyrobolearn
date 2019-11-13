@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the `Scheduler` class which deals on how to run multiple tasks in a sequential or parallel way.
 
 A user can create its own task/scenario independently of the rest. Once a task is done, which is known when

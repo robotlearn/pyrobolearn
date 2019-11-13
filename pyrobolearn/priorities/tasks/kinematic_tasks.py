@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the various kinematic tasks (i.e. objective functions) used in QP.
 
 DEPRECATED.

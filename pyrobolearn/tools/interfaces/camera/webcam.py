@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Webcam Interface
 
 This provides the main interface to get pictures from the specified webcam.

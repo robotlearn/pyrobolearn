@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Define the bounds in an optimization problem.
 
 A constrained optimization problem is generally given by:

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the minimum velocity task.
 
 The minimum velocity task minimizes the joint velocities, that is it minimizes:

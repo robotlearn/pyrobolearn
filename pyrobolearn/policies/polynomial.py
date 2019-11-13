@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the polynomial policy.
 
 The polynomial policy uses a polynomial parametric approximator to predict the action vector based on the state vector.

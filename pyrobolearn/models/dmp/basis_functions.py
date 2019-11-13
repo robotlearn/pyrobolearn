@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define basis functions used in the forcing terms in dynamic movement primitives
 
 This file implements basis functions used for discrete and rhythmic dynamic movement primitives.

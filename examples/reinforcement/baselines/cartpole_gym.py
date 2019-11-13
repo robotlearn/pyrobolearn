@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Example on how to use the 'Cartpole' OpenAI Gym environments in PRL using the `stable_baselines` library.
 """
 

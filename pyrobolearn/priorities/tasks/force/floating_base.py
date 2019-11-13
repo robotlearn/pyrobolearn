@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the floating base force task.
 
 From [1]: "this implements a task which maps forces acting on the floating base virtual chain to contacts".

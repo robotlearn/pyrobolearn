@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Probabilistic Movement Primitive class
 
 This file defines the Probabilistic Movement Primitive (ProMP) model, and use the Gaussian distribution defined

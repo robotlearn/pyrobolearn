@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Inverse kinematics with the Kuka robot where the goal is to follow a moving sphere.
 
 The inverse kinematics is performed using priority tasks and constraints, which are optimized using Quadratic

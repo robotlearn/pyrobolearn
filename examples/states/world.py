@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Get the cartesian position state of an object loaded in the world.
 
 In this example, we load a sphere in the world which can be moved using the mouse. At every time step, we print the

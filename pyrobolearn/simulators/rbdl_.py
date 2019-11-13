@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Python wrapper around RBDL
 
 The signature of each method defined here are inspired by the `Robot` class in PyRoboLearn and [1] but in accordance

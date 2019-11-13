@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Action class.
 
 This file defines the `Action` class, which is returned by the policy and given to the environment.

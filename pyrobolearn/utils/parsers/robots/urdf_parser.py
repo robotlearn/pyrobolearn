@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the URDF parser/generator.
 
 URDF files are notably used in ROS, Gazebo, Bullet, Dart, and MuJoCo.

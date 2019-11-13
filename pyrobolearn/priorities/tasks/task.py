@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the various tasks (i.e. objective functions) used in QP.
 
 The tasks presented here represents the quadratic objective functions used in quadratic programming (QP).

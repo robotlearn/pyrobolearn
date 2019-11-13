@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Gazebo ROS simulator
 
 This simulator uses Gazebo as the simulator, ROS to communicate with this simulator (to send and receive any

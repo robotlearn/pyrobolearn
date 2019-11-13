@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide a wrapper around the non-linear Interior Point optimizer (IPopt).
 
 References:

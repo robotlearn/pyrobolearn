@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Draw the 2D velocity and force manipulability ellipsoids on the end-effector of a 3-link planar manipulator.
 
 References:

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the abstract interface state class.
 
 The interface state allows to get the state information about input interfaces defined in

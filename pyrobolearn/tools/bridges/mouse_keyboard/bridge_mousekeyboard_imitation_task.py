@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Bridge between the mouse-keyboard interface and the world.
 
 Dependencies:

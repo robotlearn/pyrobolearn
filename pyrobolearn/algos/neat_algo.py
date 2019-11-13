@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the NEAT algorithm.
 
 This uses the Neuro-Evolution through Augmenting topologies (NEAT) framework. It allows the evolution of not only the

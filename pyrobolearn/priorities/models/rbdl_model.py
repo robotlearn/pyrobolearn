@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""RBDL model interface used in priority tasks.
 
 This is based on the implementation in `https://github.com/ADVRHumanoids/ModelInterfaceRBDL`, which is licensed under

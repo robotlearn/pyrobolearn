@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define most common rewards used in reinforcement learning and optimization.
 
 A reward is defined as an objective that compliments/rewards a certain behavior.

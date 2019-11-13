@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the wrench task.
 
 The wrench task tries to generate a wrench near the desired one by minimizing:

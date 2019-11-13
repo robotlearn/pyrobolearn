@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Run the speech interface.
 
 This will perform speech recognition, translation, and synthesization. Make sure that your computer has a microphone

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Defines the common loss functions that are used by the learning algorithm / optimizer.
 
 Losses are evaluated on model parameters, data batches / storages, or transitions tuples.

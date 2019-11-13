@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define various basic policies.
 
 Define the various basic policies such as the random policy, linear policy, policies based on value functions, etc.

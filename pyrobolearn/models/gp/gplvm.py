@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the Gaussian Process Latent Variable Model (GPLVM)
 
 This file provides the GPLVM and shared GPLVM.

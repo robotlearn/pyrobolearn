@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the Updater class used in the third and final step of RL algorithms
 
 The updater update the approximator (such as the policy and/or value function) parameters based on the loss, and

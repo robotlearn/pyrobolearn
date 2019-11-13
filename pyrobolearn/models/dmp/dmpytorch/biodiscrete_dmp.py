@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the biologically-inspired discrete dynamic movement primitive (as described in [1,2])
 
 References:

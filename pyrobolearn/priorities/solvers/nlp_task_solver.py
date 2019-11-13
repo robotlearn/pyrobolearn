@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the non-linear task solver.
 
 Warnings: This optimization process might take time to solve the task.

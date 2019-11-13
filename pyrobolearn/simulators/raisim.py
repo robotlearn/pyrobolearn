@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the RaiSim Simulator API.
 
 This is the main interface that communicates with the RaiSim simulator [1-5]. By defining this interface, it

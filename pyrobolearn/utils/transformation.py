@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide utils code to transform orientation expressed in different forms
 
 This includes rotation matrices, euler angles (RPY), axis-angle, and quaternions.

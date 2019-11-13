@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define most common costs used in reinforcement learning, control, and optimization.
 
 A cost is defined as an objective that penalizes a certain behavior.

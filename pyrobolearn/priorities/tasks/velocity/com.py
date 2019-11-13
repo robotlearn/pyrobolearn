@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the center of mass velocity task.
 
 The CoM task tries to impose a desired position and (linear) velocity of the CoM with respect to the world frame.

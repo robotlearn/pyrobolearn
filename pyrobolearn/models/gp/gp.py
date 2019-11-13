@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Gaussian Process (GP) learning model.
 
 This file provides the Gaussian Process (GP) model; a non-parametric, discriminative, and probabilistic model.

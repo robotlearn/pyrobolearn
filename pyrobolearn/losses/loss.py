@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Defines the abstract loss class that is used by the learning algorithm / optimizer.
 
 Losses are evaluated on model parameters, data batches, and / or storages.

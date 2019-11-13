@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Example on how to use the Bullet-ROS simulator (the publisher version) in PRL.
 
 The publisher version publish the various data on the corresponding topics every time the joints are set. If the

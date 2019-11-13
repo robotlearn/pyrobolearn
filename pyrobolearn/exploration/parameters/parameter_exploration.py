@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the parameter exploration strategies.
 
 Parameter exploration is used in reinforcement learning algorithms, and describes how the policy explores in the

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 
+# -*- coding: utf-8 -*-
 
 class Monitor(object):
     r"""Monitor class.

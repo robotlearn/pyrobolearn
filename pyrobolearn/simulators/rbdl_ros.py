@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ROS-RBDL simulator
 
 This 'simulator' is not per se a simulator, it communicates with the real robots in the real world using ROS [1], and

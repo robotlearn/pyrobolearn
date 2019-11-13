@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the center of mass force task.
 
 From the documentation of the framework of [1]: "The CoM task computes the wrenches at the contact, in world frame,

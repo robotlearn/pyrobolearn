@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the IMU sensor used in robotics.
 
 'An inertial measurement unit (IMU) is an electronic device that measures and reports a body's specific force,

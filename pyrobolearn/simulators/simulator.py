@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Simulator API.
 
 All the simulators inherit from the interface defined here. This acts as a bridge between the simulator and

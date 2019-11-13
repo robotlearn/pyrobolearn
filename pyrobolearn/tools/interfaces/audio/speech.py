@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the various speech interfaces allowing to perform speech recognition, translation, and synthesization.
 """
 # TODO: chatbox, google assistant, alexa

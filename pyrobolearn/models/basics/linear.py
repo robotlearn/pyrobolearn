@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the Linear Model.
 
 The linear model is a discriminative deterministic model given by: :math:`y = f(x) = w^T x`.

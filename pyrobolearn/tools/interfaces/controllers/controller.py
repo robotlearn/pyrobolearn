@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the abstract game controller interface class.
 
 All the game controller interfaces inherit from the `GameControllerInterface` class defined here.

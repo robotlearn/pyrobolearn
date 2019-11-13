@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the abstract noise class from which all noises inherit from.
 
 The noise can be applied notably on sensors and actuators.

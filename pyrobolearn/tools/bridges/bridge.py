@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Bridge class.
 
 The Bridge class links an interface with something else. This can be the world (such as a robot, a camera,

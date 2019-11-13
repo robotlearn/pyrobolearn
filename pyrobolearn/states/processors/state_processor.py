@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide state processors
 
 The various state processors defined here allow to process the data after being read. In contrast, to process the

@@ -1,9 +1,12 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # This file describes the linear quadratic regulator
+
 
 import control
 from scipy.linalg import solve_continuous_are
 import numpy as np
+
 
 class LQR(object):
     r"""Linear Quadratic Regulator

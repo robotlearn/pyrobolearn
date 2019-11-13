@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the curriculum learning task.
 
 This type of tasks starts by training agents on simple tasks/environments first and then increase the difficulty

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Defines the dynamic losses in RL.
 
 That is, the losses that are used with dynamic models.

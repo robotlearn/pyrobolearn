@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the Cartesian Position constraint.
 
 The bilateral inequality cartesian position constraint is given by:

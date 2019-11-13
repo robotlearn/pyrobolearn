@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the PlayStation controller interfaces.
 
 This provides the interfaces for the PlayStation controllers (PS3 and PS4) using the `inputs` library.

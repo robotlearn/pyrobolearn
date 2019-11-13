@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the `PhysicsRandomizer` class which randomizes the physical attributes / properties of an object.
 
 This is the main abstract class from which all physics randomizers inherit from.

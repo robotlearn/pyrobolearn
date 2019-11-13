@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provides dynamic transition neural network approximators
 
 For instance, a dynamic network is a function represented by a neural network that maps a state-action to the next

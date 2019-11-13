@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Follow a body with the main camera in the world.
 
 Try to move the sphere with the mouse (left-click on the object).

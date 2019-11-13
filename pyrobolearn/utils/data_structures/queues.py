@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the queue data structures.
 
 These inherit from the various queues in the `queue` Python library, to which we provide few more functionalities.

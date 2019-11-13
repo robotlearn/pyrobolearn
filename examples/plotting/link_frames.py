@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the link frame real-time plotting example.
 
 Try to move the Kuka manipulator and / or the box with your mouse. Note that it can take few seconds to load the plot.

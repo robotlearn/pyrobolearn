@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provides the canonical systems used in ProMPs.
 
 This file defines the canonical systems used in ProMPs. The canonical system (CS) allows to modulate temporarily the

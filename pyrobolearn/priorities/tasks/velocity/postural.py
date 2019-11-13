@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the postural (velocity) task.
 
 The postural task tries to bring the robot to a reference posture; that is, it minimizes the joint velocities such

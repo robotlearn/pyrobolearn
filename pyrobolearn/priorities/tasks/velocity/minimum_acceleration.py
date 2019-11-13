@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the minimum acceleration task.
 
 The minimum acceleration task tries to minimize the change in velocity, that is, it minimizes:

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide basic processor classes that center, normalize, or standardize the given input.
 
 Processors are functions that are applied to the inputs (respectively outputs) of an approximator/learning model

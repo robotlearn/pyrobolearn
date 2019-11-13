@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Control a wheeled robot using a keyboard, an Xbox or Playstation game controller.
 
 how to run:

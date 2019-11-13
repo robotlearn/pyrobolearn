@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 # To run the code `H3DLoad
+# -*- coding: utf-8 -*-
 
 import H3DInterface as h3d
 

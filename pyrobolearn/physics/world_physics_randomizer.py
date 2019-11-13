@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the `WorldPhysicsRandomizer` class which randomizes the physical attributes / properties of the world.
 
 Dependencies:

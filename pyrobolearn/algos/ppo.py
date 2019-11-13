@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the Proximal Policy Optimization algorithm.
 
 The PPO is a model-free, on-policy, gradient-based on-policy algorithm that works with discrete and continuous action

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide a wrapper around the gym framework and the `gym.Env` class
 
 This provides a wrapper around the gym framework such that is compatible with the pyrobolearn framework.

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the recorder classes.
 
 The recorders allow to record the data from a source at a certain rate.

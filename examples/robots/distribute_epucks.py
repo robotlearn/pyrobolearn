@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Distribute several e-pucks in the world and make them move forward.
 
 You can move in the world using the keyboard and mouse:

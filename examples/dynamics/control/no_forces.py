@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Force control: apply no forces/torques.
 
 Try to move the end-effector using the mouse, and see what happens. Compare the obtained results with

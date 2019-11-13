@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the Center of Mass velocity constraint.
 
 The bilateral inequality CoM velocity constraint is given by:

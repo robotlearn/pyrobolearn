@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide a wrapper around the Covariance Adaptation Matrix (CMA) which uses an evolution strategy to optimize
 the parameters.
 

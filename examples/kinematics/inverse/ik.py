@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """In this file, we perform inverse kinematics using the Kuka robot.
 
 Set the `solver_flag` to a number between 0 and 1 (see lines [19,22]) to select which IK solver to select.

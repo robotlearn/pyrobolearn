@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the task solver that uses quadratic programming.
 
 A quadratic program (QP) is written in standard form [1]_ as:

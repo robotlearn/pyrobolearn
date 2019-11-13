@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the visual camera sensors.
 
 Cameras have one of the most richest sensory inputs (i.e. visual).

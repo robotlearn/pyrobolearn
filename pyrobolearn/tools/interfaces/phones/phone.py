@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the smartphone and tablet interface.
 
 These interfaces allows you to get sensor values sent with your phone or tablet, and values returned by the

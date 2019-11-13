@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the Legged robot abstract classes.
 
 Classes that are defined here: LeggedRobot, BipedRobot, QuadrupedRobot, HexapodRobot.

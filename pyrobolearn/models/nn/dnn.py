@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Deep Neural Network (DNN) learning model.
 
 This file provides the DNN model; a parametric, generally non-linear, possibly recurrent, discriminative/generative,

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the robot class from which all the other robots inherit from.
 
 The robot can access to the simulator as the `World`. If the `Robot` class defined here is the first layer in

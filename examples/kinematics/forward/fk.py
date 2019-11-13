@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """In this file, we perform forward kinematics using the Kuka robot.
 
 The Kuka robot just draw a circle in the air. The joint positions are in the `data.txt` file.

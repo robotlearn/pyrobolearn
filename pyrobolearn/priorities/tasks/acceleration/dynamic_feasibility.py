@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the dynamic feasibility task (which is based on the dynamic feasibility constraint).
 
 The equality joint acceleration constraint is given by:

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the main basic Camera interface
 
 This defines the main basic camera interface from which all other interfaces which uses a camera inherit from.

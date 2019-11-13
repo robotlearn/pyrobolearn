@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Run the Space mouse interface.
 
 Make sure that the `spnav` library is installed, and the space mouse (by 3Dconnexion) is connected to the computer

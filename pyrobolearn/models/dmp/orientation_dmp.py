@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Define DMPs for orientations
 
 For orientations expressed as rotation matrices or quaternions, DMPs have to be reformulated to account for the manifold on which these mathematical objects live. This is different from the standard DMP equations which assumes that the space is Euclidean.

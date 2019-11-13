@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the discrete epsilon-greedy action exploration.
 
 The epsilon-greedy exploration strategy consists to explore in the discrete action space of policies. Specifically,

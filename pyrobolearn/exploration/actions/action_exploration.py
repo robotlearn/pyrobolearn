@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the action exploration strategies.
 
 Action exploration is used in reinforcement learning algorithms and describe how the policy explores in the

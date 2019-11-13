@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Describes the various `Estimators` / `Returns` used in reinforcement learning.
 
 - Estimators are evaluated on trajectories and directly saved in the rollout storage unit (i.e. RolloutStorage).

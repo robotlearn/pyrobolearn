@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Neural Network (NN) Policies.
 
 Define the various neural network policies that can be used.

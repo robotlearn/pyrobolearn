@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the ROS middleware API.
 
 ROS (Robot Operating System) [1] is a robotics middleware which "provides libraries and tools to help software

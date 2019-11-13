@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provides the prioritized experience replay (PER) storage.
 
 The PER works by prioritizing transitions based on the magnitude of their TD error. In order to overcome over-fitting

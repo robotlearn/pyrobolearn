@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the minimum torque task.
 
 The minimum torque task minimizes the joint torques, that is it minimizes:

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the various constraints and bounds used in QP.
 
 Provide the various optimization constraints (:math:`G, h, F, c` in the upcoming formulation) used in QP.

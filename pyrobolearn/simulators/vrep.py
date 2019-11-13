@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the V-REP Simulator API (using PyRep).
 
 This is the main interface that communicates with the V-REP simulator [1] through its Python wrapper PyRep [2].

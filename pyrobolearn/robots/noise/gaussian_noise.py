@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Gaussian noise class.
 
 This noise can be applied notably on sensors and actuators.

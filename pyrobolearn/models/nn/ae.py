@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Auto-Encoder (AE) learning model.
 
 This file provides the AE model; a parametric, generally non-linear, non-recurrent, discriminative,

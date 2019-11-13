@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Multivariate Gaussian / Normal distribution class.
 
 This distribution is so important in the field of Machine Learning that we extended the functionalities of the basic

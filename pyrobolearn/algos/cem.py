@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the Cross-Entropy Method algorithm.
 
 This CEM is an evolutionary algorithm that explores in the parameter space of the policy in an episodic way.

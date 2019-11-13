@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Central Pattern Generator (CPG) Policy.
 
 Define the various CPG policies that can be used.

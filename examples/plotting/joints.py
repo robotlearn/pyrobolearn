@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the joint real-time plotting example.
 
 Try to move the Kuka manipulator with your mouse, and check the joint values. Note that it can take few seconds to

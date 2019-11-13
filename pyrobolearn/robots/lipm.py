@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the various Linear Inverted Pendulum Models (LIPMs).
 
 This includes: LIPM2D, DualLIPM2D, LIPM3D, DualLIPM3D

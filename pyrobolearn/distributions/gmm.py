@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Gaussian Mixture Model and Gaussian Mixture Regression
 
 This file provides the Gaussian Mixture Model implemented in PyTorch, and uses the Gaussian model defined in the

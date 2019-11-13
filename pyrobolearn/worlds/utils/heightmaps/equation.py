@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the equation heightmap generator.
 
 Generate a heightmap from a 3D equation :math:`z = f(x, y)`.

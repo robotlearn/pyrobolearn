@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the Twin Delayed Deep Deterministic Policy Gradient (TD3) algorithm.
 
 The REINFORCE/VPG is a model-free, off-policy, gradient policy-based algorithm that works only for continuous actions.

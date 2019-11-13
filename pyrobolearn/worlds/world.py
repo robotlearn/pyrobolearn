@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the `World` class which allows to specify what constitutes the world (i.e. what elements are in the world).
 
 Dependencies:

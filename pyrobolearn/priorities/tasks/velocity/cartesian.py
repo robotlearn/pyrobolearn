@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the cartesian (velocity) task.
 
 The cartesian task tries to impose a desired pose (position and orientation) and velocity of a distal link with

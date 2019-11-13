@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the Finite-Difference (FD) method algorithm.
 
 This FD method is a policy gradient algorithm that explores in the parameter space of the policy in an episodic way.

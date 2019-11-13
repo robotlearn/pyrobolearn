@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the Generative Adversarial Network (GAN) learning model.
 
 This file provides the GAN model; a parametric, generally non-linear, non-recurrent, generative, and stochastic model.

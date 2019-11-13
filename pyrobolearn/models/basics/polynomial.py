@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Define the polynomial learning model.
 
 The polynomial model is a discriminative deterministic model given by: :math:`y = f(x) = W \phi(x)`, where

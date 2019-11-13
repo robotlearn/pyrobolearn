@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide few PyTorch utils methods.
 
 For instance, it can evaluate the Hessian matrix of a scalar function.

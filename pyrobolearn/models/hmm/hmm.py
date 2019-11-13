@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 # This file describes the Hidden Markov Model
+# -*- coding: utf-8 -*-
 
 # TODO: implement this model
 

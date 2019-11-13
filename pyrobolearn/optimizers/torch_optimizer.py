@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide wrappers around the torch optimizers.
 
 Compared to the optimizers present in the PyTorch library [1], which require to pass the parameters of the model when

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the `JointPhysicsRandomizer` class which randomizes the physical attributes / properties of a joint or
 multiple joints of a specific body.
 

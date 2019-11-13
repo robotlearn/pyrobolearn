@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Center of mass manipulability tracking
 
 Track the dynamic manipulability ellipsoid of the center of mass of a particular robot while keeping its balance.

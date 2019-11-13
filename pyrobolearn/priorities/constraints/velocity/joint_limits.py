@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the joint position limits constraint.
 
 This provides bounds/limits on the joint positions, which are given by:

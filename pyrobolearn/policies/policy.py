@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the basic Policy class.
 
 A policy couples one or several learning model(s), the action, and state together. In this framework, the policy

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 r"""Provide the joint impedance control task.
 
 The joint impedance control task minimizes the specified torques given as a PD control from the desired joint

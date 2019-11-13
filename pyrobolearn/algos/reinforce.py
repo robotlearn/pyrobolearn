@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provide the REINFORCE/VPG algorithm.
 
 The REINFORCE/VPG is a model-free, on-policy, gradient policy-based algorithm.

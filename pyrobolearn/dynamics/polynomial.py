@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Provides the polynomial dynamic transition function approximators
 
 The polynomial dynamic model predicts using a polynomial model the next state given the current state and action.

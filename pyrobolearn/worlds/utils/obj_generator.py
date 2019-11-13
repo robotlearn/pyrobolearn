@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """OBJ generator.
 
 Create an OBJ file from a heightmap (2D np.array).

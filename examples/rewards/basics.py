@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Demonstrate the various features (operations) you can use with the ``Reward`` class.
 
 To illustrate the various operations we use the ``FixedReward``.

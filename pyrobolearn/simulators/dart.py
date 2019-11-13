@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Define the DART (Dynamic Animation and Robotics Toolkit) Simulator API.
 
 This is the main interface that communicates with the DART simulator [1, 2]. By defining this interface, it allows to

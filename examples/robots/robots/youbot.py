@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Load the various Youbot robotic platforms.
 
 These include: YoubotBase, KukaYoubotArm, Youbot, YoubotDualArm
