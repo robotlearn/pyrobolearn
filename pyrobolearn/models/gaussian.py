@@ -184,6 +184,16 @@ class Gaussian(object):
     sigma = cov
 
     @property
+    def variances(self):
+        """Return the diagonal elements of the covariance matrix, i.e. the variances."""
+        return np.diag(self.cov)
+
+    @property
+    def standard_deviations(self):
+        """Return the square root of the diagonal of the covariance matrix, i.e. the standard deviations."""
+        return np.sqrt(self.variances)
+
+    @property
     def mode(self):
         """value that is the most likely to be sampled"""
         return self.mean
@@ -603,7 +613,7 @@ class Gaussian(object):
         assert len(i) == len(value), "The value array and the idx2 array have different lengths"
 
         # compute conditional
-        c = self.cov[np.ix_(o, i)].dot(np.linalg.inv(self.cov[np.ix_(i, i)]))
+        c = self.cov[np.ix_(o, i)].dot(np.linalg.inv(self.cov[np.ix_(i, i)]))  # = \Sigma_{12} \Sigma_{22}^{-1}
         mu = self.mean[o] + c.dot(value - self.mean[i])
         cov = self.cov[np.ix_(o, o)] - c.dot(self.cov[np.ix_(i, o)])
         return Gaussian(mu, cov)
@@ -1280,10 +1290,12 @@ def plot_3d_and_2d_countour(gaussians, step=500, bound=10, fig=None, title='', b
     plt.show(block=block)
 
 
-def plot_2d_ellipse(ax, gaussian, dims, color='g', fill=False, plot_2devs=False, plot_arrows=True):
+def plot_2d_ellipse(ax, gaussian, dims=[0, 1], color='g', fill=False, plot_2devs=False, plot_arrows=True):
     # alias
-    g = Gaussian(mean=gaussian.mean[np.ix_(dims)], covariance=gaussian.cov[np.ix_(dims, dims)])
     # g = gaussian
+    if dims is None:
+        dims = [0, 1]
+    g = Gaussian(mean=gaussian.mean[dims], covariance=gaussian.cov[np.ix_(dims, dims)])
 
     # compute std deviation and eigenvectors from the gaussian
     std_dev, evecs = g.ellipsoid_axes()
@@ -1363,18 +1375,18 @@ if __name__ == '__main__':
     # from matplotlib.patches import Ellipse
 
     # create two 2D Gaussian distributions
-    m1, c1 = np.array([0.,0.]), np.identity(2)*0.5
-    m2, c2 = np.array([1.5,1.5]), np.array([[1.,0.5], [0.5,2.]])
+    m1, c1 = np.array([0., 0.]), np.identity(2)*0.5
+    m2, c2 = np.array([1.5, 1.5]), np.array([[1., 0.5], [0.5, 2.]])
     g1 = Gaussian(m1, c1)
     g2 = Gaussian(m2, c2)
 
     # sample from the Gaussian distributions, and plot them
     d1 = g1.sample(size=200)
     d2 = g2.sample(size=200)
-    fig, ax = plt.subplots(1,1)
+    fig, ax = plt.subplots(1, 1)
     ax.set(title='sampling from 2 Gaussians', aspect='equal')
-    ax.scatter(d1[:,0], d1[:,1], color='b', alpha=0.7)
-    ax.scatter(d2[:,0], d2[:,1], color='r', alpha=0.7)
+    ax.scatter(d1[:, 0], d1[:, 1], color='b', alpha=0.7)
+    ax.scatter(d2[:, 0], d2[:, 1], color='r', alpha=0.7)
     plt.show()
 
     # 3D and 2D plots of the Gaussian distributions
@@ -1404,7 +1416,7 @@ if __name__ == '__main__':
 
     # samples from the Gaussian and plot ellipse
     samples = g2.sample(size=100)
-    fig, ax = plt.subplots(1,1)
+    fig, ax = plt.subplots(1, 1)
     ax.set(title='Sampling from one Gaussian', aspect='equal')
     ax.scatter(samples[:, 0], samples[:, 1], color='b')
     plot_2d_ellipse(ax, g2, fill=True, plot_2devs=True, plot_arrows=True)
@@ -1449,7 +1461,7 @@ if __name__ == '__main__':
 
     # addition of two independent Gaussians
     g_sum = g1 + g2
-    fig, ax = plt.subplots(1,1)
+    fig, ax = plt.subplots(1, 1)
     ax.set(title='addition', xlim=[-5, 5], ylim=[-5, 5], aspect='equal')
     e1 = plot_2d_ellipse(ax, g1, color='g', plot_arrows=False)
     e2 = plot_2d_ellipse(ax, g2, color='b', plot_arrows=False)
@@ -1470,7 +1482,7 @@ if __name__ == '__main__':
     # Fit a Gaussian on given data #
 
     # create data
-    g_data = Gaussian(mean=np.array([2,3]), covariance=np.array([[1, -0.5], [-0.5, 1]]))
+    g_data = Gaussian(mean=np.array([2, 3]), covariance=np.array([[1, -0.5], [-0.5, 1]]))
     samples = np.random.multivariate_normal(mean=g_data.mean, cov=g_data.cov, size=1000)
 
     # fit one Gaussian and plot it along the data

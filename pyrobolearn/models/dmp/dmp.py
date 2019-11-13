@@ -83,7 +83,7 @@ class DMP(object):
 
     Note that this code was inspired by the `pydmps` code [2,3], but differ in several ways, notably:
     - we undertake a more object-oriented programming (OOP) approach
-    - the equations are a little bit differents (e.g. :math:`tau`) in which we use the ones presented in the refs
+    - the equations are a little bit different (e.g. :math:`tau`) in which we use the ones presented in the refs
     - we decouple the Euler's method time step with the time step for the number of data points
     - timesteps: we go from 0 to T included, while DeWolf goes from 0 to T-1
     - we use array operation instead of iterating over each element to update them
@@ -106,7 +106,7 @@ class DMP(object):
         - [8] "A Framework for Learning Biped Locomotion with Dynamical Movement Primitives", Nakanishi et al., 2004
         - [9] "Policy Search for Motor Primitives in Robotics", Kober et al., 2010
         - [10] "A Generalized Path Integral Control Approach to Reinforcement Learning", Theodorou et al., 2010
-        - [11] "A correct formulation for the Orientation Dynamic Movement Primitives for robot control in the 
+        - [11] "A correct formulation for the Orientation Dynamic Movement Primitives for robot control in the
           Cartesian space", Koutras et al., 2019
     """
 
@@ -116,7 +116,7 @@ class DMP(object):
         Args:
             canonical_system (CS): canonical system which drives the DMP transformation system
             forcing_term (list): list of forcing terms (one forcing term for each DMP). Each forcing term can have
-                different number of basis functions.
+              different number of basis functions.
             y0 (float, np.array[float[M]]): initial state of DMPs
             goal (float, np.array[float[M]]): goal state of DMPs
             stiffness (float): stiffness term in the transformation system for DMPs

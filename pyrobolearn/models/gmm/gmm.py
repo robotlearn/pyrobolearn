@@ -1276,7 +1276,8 @@ class GMM(object):
         Warnings: the initialization can affect greatly the results; this is often true with EM algorithms.
 
         Args:
-            X (np.array[N,D]): data matrix
+            X (np.array[N,D]): data matrix of shape (N,D) where N is the number of data points, and D is the
+                dimensionality of a data point.
             reg (float): regularization term
             num_iters (int): number of iterations
             threshold (float): convergence threshold
@@ -1291,7 +1292,8 @@ class GMM(object):
         """
         # quick check
         if len(X.shape) != 2:
-            raise ValueError("Expecting a 2D array of shape NxD for the data")
+            raise ValueError("Expecting a 2D array of shape NxD for the data (where N is the number of data points, "
+                             "and D is the dimensionality).")
 
         # compute dictionary results
         results = {'losses': [], 'success': False, 'num_iters': 0}
@@ -1300,7 +1302,8 @@ class GMM(object):
         # 1. Initialize
         self.init(X, method=init, seed=seed, reg=reg)
         if init is None:
-            np.random.seed(seed)
+            if seed is not None:
+                np.random.seed(seed)
 
         # compute initial loss
         loss = self.log_likelihood(X)
@@ -1437,7 +1440,7 @@ class GMM(object):
             return self.gaussians[idx].sample()  # shape: D
         return np.array([self.gaussians[i].sample() for i in idx])  # shape: NxD
 
-    def responsibilities(self, x, dims = None, k=None, axis=1):
+    def responsibilities(self, x, dims=None, k=None, axis=1):
         r"""
         Compute the responsibilities (posterior probability of component k once we have observed the data `x`).
         These are given by:
@@ -1451,6 +1454,9 @@ class GMM(object):
 
         Args:
             x (np.array): data vector/matrix
+            dims (None, list of int): dimension indices specifying which indices of the mean and covariance of each
+                Gaussian we have to consider when computing the responsibilities. The number of indices must be between
+                1 and the length of the data vector/matrix.
             k (np.array, int, slice, None): component index(ices). If None, compute the responsibilities wrt to each
                 component.
             axis (int): This argument is useful when the argument 'k' is an array; k can then be an array of size `N`
@@ -1474,7 +1480,8 @@ class GMM(object):
             if dims is None:
                 input_gaussian = Gaussian(mean=g.mean, covariance=g.cov)
             else:
-                input_gaussian = Gaussian(mean=g.mean[np.ix_(dims)], covariance=g.cov[np.ix_(dims, dims)])
+                # input_gaussian = Gaussian(mean=g.mean[np.ix_(dims)], covariance=g.cov[np.ix_(dims, dims)])
+                input_gaussian = Gaussian(mean=g.mean[dims], covariance=g.cov[np.ix_(dims, dims)])
             gaussian_pdfs.append(input_gaussian.pdf(x))
         gaussian_pdfs = np.asarray(gaussian_pdfs).T
 
@@ -2060,7 +2067,8 @@ class TPGMM(GMM):
 ######################
 
 
-def plot_gmm(gmm, dims=[0, 1], X=None, label=True, ax=None, title='GMM', xlim=[-6, 6], ylim=[-6, 6], option=1, color='b'):
+def plot_gmm(gmm, dims=(0, 1), X=None, label=True, ax=None, title='GMM', xlim=(-6, 6), ylim=(-6, 6), option=1,
+             color='b'):
     r"""Plot GMM"""
     # create ax if not already created
     if ax is None:
@@ -2085,6 +2093,75 @@ def plot_gmm(gmm, dims=[0, 1], X=None, label=True, ax=None, title='GMM', xlim=[-
             plot_2d_ellipse(ax, g, dims, color=color, plot_arrows=False)
         else:
             draw_ellipse(g.mean, g.cov, ax=ax, alpha=priors[i] * w_factor)
+
+
+def plot_gmr(time_linspace, means=None, std_devs=None, covariances=None, gaussians=None, suptitle='GMR',
+             ylabels=('x', 'y'), xlim=(-6, 6), ylim=(-6, 6)):
+    """Plot GMR.
+
+    Warnings: this assumes that the first column is the time, and the other columns are the cartesian positions.
+    """
+
+    # check given arguments
+    if gaussians is None:
+        if means is None:
+            raise ValueError("Expecting the means to be provided if a list of gaussians is not provided.")
+        if std_devs is None:
+            raise ValueError("Expecting the std_devs to be provided if a list of gaussians is not provided.")
+        if covariances is None:
+            raise ValueError("Expecting the covariances to be provided if a list of gaussians is not provided.")
+    else:
+        means, std_devs, covariances = [], [], []
+        for g in gaussians:
+            means.append(g.mean)
+            std_devs.append(np.sqrt(g.variances))
+            covariances.append(g.covariance)
+
+    means, std_devs, covariances = np.asarray(means), np.asarray(std_devs), np.asarray(covariances)
+
+    # plot figures for GMR
+    fig = plt.figure()
+    grid = plt.GridSpec(nrows=len(ylabels), ncols=len(ylabels)+1, figure=fig)
+    axes = []
+    for i in range(len(ylabels)):
+        axes.append(fig.add_subplot(grid[i, 0]))
+    axes.append(fig.add_subplot(grid[:, 1:]))
+    plt.suptitle(suptitle)
+
+    # plot t-x and t-y
+    for i in range(len(ylabels)):
+        mean = means[:, i]
+        std_dev = std_devs[:, i]
+        axes[i].plot(time_linspace, mean)
+        axes[i].fill_between(time_linspace, mean - 2 * std_dev, mean + 2 * std_dev, facecolor='green', alpha=0.3)
+        axes[i].fill_between(time_linspace, mean - std_dev, mean + std_dev, facecolor='green', alpha=0.5)
+        axes[i].set_xlabel('t')
+        axes[i].set_ylabel(ylabels[i])
+        # axes[i].scatter(X[:, 0], X[:, i+1])
+
+    axes[-1].plot(means[:, 0], means[:, 1])
+    axes[-1].set_xlabel('x')
+    axes[-1].set_ylabel('y')
+    axes[-1].set_xlim(xlim)
+    axes[-1].set_ylim(ylim)
+
+    # plot x-y
+    # Ref: https://stackoverflow.com/questions/38291692/combining-patches-to-obtain-single-transparency-in-matplotlib
+    pts = []
+    stoppoint = np.array([[np.nan, np.nan]])
+    t = np.linspace(-np.pi, np.pi, 35)
+    circle = np.array([np.cos(t), np.sin(t)])
+    for i, (mean, cov) in enumerate(zip(means, covariances)):
+        evals, evecs = np.linalg.eigh(cov)
+        # radius = np.sqrt(evals[1])
+        radius = np.sqrt(evals) * evecs
+        pt = radius.dot(circle).T + mean
+        pts.append(pt)
+        if i < len(means) - 1:
+            pts.append(stoppoint)
+
+    pts = np.concatenate(pts)
+    axes[2].add_patch(plt.Polygon(pts, closed=True, lw=0.0, color='green', alpha=0.2, zorder=2))
 
 
 def draw_ellipse(position, covariance, ax=None, **kwargs):
