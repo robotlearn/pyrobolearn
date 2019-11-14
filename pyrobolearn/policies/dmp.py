@@ -34,25 +34,25 @@ class DMPPolicy(Policy):
 
         Args:
             action (Action): At each step, by calling `policy.act(state)`, the `action` is computed by the policy,
-                and can be given to the environment. As with the `state`, the type and size/shape of each inner
-                action can be inferred and could be used to automatically build a policy. The `action` connects the
-                policy with a controllable object (such as a robot) in the environment.
+              and can be given to the environment. As with the `state`, the type and size/shape of each inner
+              action can be inferred and could be used to automatically build a policy. The `action` connects the
+              policy with a controllable object (such as a robot) in the environment.
             state (State): By giving the `state` to the policy, it can automatically infer the type and size/shape
-                of each inner state, and thus can be used to automatically build a policy. At each step, the `state`
-                is filled by the environment, and read by the policy. The `state` connects the policy with one or
-                several objects (including robots) in the environment. Note that some policies don't use any state
-                information.
+              of each inner state, and thus can be used to automatically build a policy. At each step, the `state`
+              is filled by the environment, and read by the policy. The `state` connects the policy with one or
+              several objects (including robots) in the environment. Note that some policies don't use any state
+              information.
             model (DMP): DMP model
             rate (int, float): rate (float) at which the policy operates if we are operating in real-time. If we are
-                stepping deterministically in the simulator, it represents the number of ticks (int) to sleep before
-                executing the model.
+              stepping deterministically in the simulator, it represents the number of ticks (int) to sleep before
+              executing the model.
             preprocessors (Processor, list of Processor, None): pre-processors to be applied to the given input
             postprocessors (Processor, list of Processor, None): post-processors to be applied to the output
             *args (list): list of arguments (this is not used in this class).
             **kwargs (dict): dictionary of arguments (this is not used in this class).
         """
         if not isinstance(model, DMP):
-            raise TypeError("Expecting model to be an instance of DMP")
+            raise TypeError("Expecting model to be an instance of `DMP`, but got instead: {}".format(type(model)))
         super(DMPPolicy, self).__init__(state=state, action=action, model=model, rate=rate,
                                         preprocessors=preprocessors, postprocessors=postprocessors, *args, **kwargs)
 
@@ -68,10 +68,12 @@ class DMPPolicy(Policy):
 
         Args:
             state ((list of) torch.Tensor, (list of) np.array): state data.
+            deterministic (bool): if True, it will predict in a deterministic way. Setting it to False, only works
+              with stochastic models.
             to_numpy (bool): If True, it will convert the data (torch.Tensors) to numpy arrays.
             return_logits (bool): If True, in the case of discrete outputs, it will return the logits.
             set_output_data (bool): If True, it will set the predicted output data to the outputs given to the
-                approximator.
+              approximator.
 
         Returns:
             (list of) torch.Tensor, (list of) np.array: predicted action data.
@@ -116,14 +118,22 @@ class DMPPolicy(Policy):
         if len(data) > 0:
             # print("Imitating with :", data.shape)
             # y, dy, ddy = data
-            y = data
+            # y = data
             # if len(y.shape) == 1:
             #     y = y.reshape(1, -1)
             # if len(dy.shape) == 1:
             #     dy = dy.reshape(1, -1)
             # if len(ddy.shape) == 1:
             #     ddy = ddy.reshape(1, -1)
-            self.model.imitate(y, plot=False)  # dy, ddy, plot=True)  # dy, ddy)
+            if self.is_joint_position_action:
+                if self.is_joint_velocity_action:
+
+                    self.model.imitate(y, dy, plot=False)
+                else:
+                    y = data
+                    self.model.imitate(y, plot=False)  # dy, ddy, plot=True)  # dy, ddy)
+            else:
+                raise NotImplementedError
         else:
             print("Nothing to imitate.")
 
@@ -147,7 +157,7 @@ class DiscreteDMPPolicy(DMPPolicy):
     See Also: see documentation in `pyrobolearn.models.dmp.discrete_dmp.py`
 
     References:
-        [1] "Dynamical movement primitives: Learning attractor models for motor behaviors", Ijspeert et al., 2013
+        - [1] "Dynamical movement primitives: Learning attractor models for motor behaviors", Ijspeert et al., 2013
     """
 
     def __init__(self, action, state=None, num_basis=20, dt=0.01, y0=0, goal=1, forcing_terms=None,
@@ -156,8 +166,15 @@ class DiscreteDMPPolicy(DMPPolicy):
         Initialize the discrete DMP policy.
 
         Args:
-            action:
-            state:
+            action (Action): At each step, by calling `policy.act(state)`, the `action` is computed by the policy,
+              and can be given to the environment. As with the `state`, the type and size/shape of each inner
+              action can be inferred and could be used to automatically build a policy. The `action` connects the
+              policy with a controllable object (such as a robot) in the environment.
+            state (State): By giving the `state` to the policy, it can automatically infer the type and size/shape
+              of each inner state, and thus can be used to automatically build a policy. At each step, the `state`
+              is filled by the environment, and read by the policy. The `state` connects the policy with one or
+              several objects (including robots) in the environment. Note that some policies don't use any state
+              information.
             num_basis (int): number of basis functions
             dt (float): step integration for Euler's method
             y0 (float, np.array): initial position(s)
@@ -165,7 +182,9 @@ class DiscreteDMPPolicy(DMPPolicy):
             forcing_terms (list, ForcingTerm): the forcing terms (which can have different basis functions)
             stiffness (float): stiffness coefficient
             damping (float): damping coefficient
-            rate:
+            rate (int, float): rate (float) at which the policy operates if we are operating in real-time. If we are
+              stepping deterministically in the simulator, it represents the number of ticks (int) to sleep before
+              executing the model.
         """
         if not isinstance(action, Action):
             raise TypeError("Expecting actions to be an instance of the 'Action' class.")
@@ -180,7 +199,7 @@ class RhythmicDMPPolicy(DMPPolicy):
     See Also: see documentation in `pyrobolearn.models.dmp.rhythmic_dmp.py`
 
     References:
-        [1] "Dynamical movement primitives: Learning attractor models for motor behaviors", Ijspeert et al., 2013
+        - [1] "Dynamical movement primitives: Learning attractor models for motor behaviors", Ijspeert et al., 2013
     """
 
     def __init__(self, action, state=None, num_basis=20, dt=0.01, y0=0, goal=1, forcing_terms=None,
@@ -189,8 +208,15 @@ class RhythmicDMPPolicy(DMPPolicy):
         Initialize the Rhythmic DMP policy.
 
         Args:
-            action:
-            state:
+            action (Action): At each step, by calling `policy.act(state)`, the `action` is computed by the policy,
+              and can be given to the environment. As with the `state`, the type and size/shape of each inner
+              action can be inferred and could be used to automatically build a policy. The `action` connects the
+              policy with a controllable object (such as a robot) in the environment.
+            state (State): By giving the `state` to the policy, it can automatically infer the type and size/shape
+              of each inner state, and thus can be used to automatically build a policy. At each step, the `state`
+              is filled by the environment, and read by the policy. The `state` connects the policy with one or
+              several objects (including robots) in the environment. Note that some policies don't use any state
+              information.
             num_basis (int): number of basis functions
             dt (float): step integration for Euler's method
             y0 (float, np.array): initial position(s)
@@ -198,7 +224,9 @@ class RhythmicDMPPolicy(DMPPolicy):
             forcing_terms (list, ForcingTerm): the forcing terms (which can have different basis functions)
             stiffness (float): stiffness coefficient
             damping (float): damping coefficient
-            rate:
+            rate (int, float): rate (float) at which the policy operates if we are operating in real-time. If we are
+              stepping deterministically in the simulator, it represents the number of ticks (int) to sleep before
+              executing the model.
         """
         model = RhythmicDMP(num_dmps=self._size(action), num_basis=num_basis, dt=dt, y0=y0, goal=goal,
                             forcing_terms=forcing_terms, stiffness=stiffness, damping=damping)
@@ -211,10 +239,10 @@ class BioDiscreteDMPPolicy(DMPPolicy):
     See Also: see documentation in `pyrobolearn.models.dmp.biodiscrete_dmp.py`
 
     References:
-        [1] "Dynamical movement primitives: Learning attractor models for motor behaviors", Ijspeert et al., 2013
-        [2] "Biologically-inspired Dynamical Systems for Movement Generation: Automatic Real-time Goal Adaptation
-             and Obstacle Avoidance", Hoffmann et al., 2009
-        [3] "Learning and Generalization of Motor Skills by Learning from Demonstration", Pastor et al., 2009
+        - [1] "Dynamical movement primitives: Learning attractor models for motor behaviors", Ijspeert et al., 2013
+        - [2] "Biologically-inspired Dynamical Systems for Movement Generation: Automatic Real-time Goal Adaptation
+          and Obstacle Avoidance", Hoffmann et al., 2009
+        - [3] "Learning and Generalization of Motor Skills by Learning from Demonstration", Pastor et al., 2009
     """
 
     def __init__(self, action, state=None, num_basis=20, dt=0.01, y0=0, goal=1, forcing_terms=None,
@@ -223,8 +251,15 @@ class BioDiscreteDMPPolicy(DMPPolicy):
         Initialize the biologically-inspired DMP policy.
 
         Args:
-            action:
-            state:
+            action (Action): At each step, by calling `policy.act(state)`, the `action` is computed by the policy,
+              and can be given to the environment. As with the `state`, the type and size/shape of each inner
+              action can be inferred and could be used to automatically build a policy. The `action` connects the
+              policy with a controllable object (such as a robot) in the environment.
+            state (State): By giving the `state` to the policy, it can automatically infer the type and size/shape
+              of each inner state, and thus can be used to automatically build a policy. At each step, the `state`
+              is filled by the environment, and read by the policy. The `state` connects the policy with one or
+              several objects (including robots) in the environment. Note that some policies don't use any state
+              information.
             num_basis (int): number of basis functions
             dt (float): step integration for Euler's method
             y0 (float, np.array): initial position(s)
@@ -232,7 +267,9 @@ class BioDiscreteDMPPolicy(DMPPolicy):
             forcing_terms (list, ForcingTerm): the forcing terms (which can have different basis functions)
             stiffness (float): stiffness coefficient
             damping (float): damping coefficient
-            rate:
+            rate (int, float): rate (float) at which the policy operates if we are operating in real-time. If we are
+              stepping deterministically in the simulator, it represents the number of ticks (int) to sleep before
+              executing the model.
         """
         model = BioDiscreteDMP(num_dmps=self._size(action), num_basis=num_basis, dt=dt, y0=y0, goal=goal,
                                forcing_terms=forcing_terms, stiffness=stiffness, damping=damping)

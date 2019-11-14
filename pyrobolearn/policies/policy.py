@@ -531,21 +531,17 @@ class Policy(object):
                 #     if not return_logits:
                 #         action_data[idx] = discrete_data
                 else:
-                    raise TypeError(
-                        "Expecting the `data` action to be an int, numpy array, torch.Tensor, instead got: "
-                        "{}".format(type(data)))
+                    raise TypeError("Expecting the `data` action to be an int, numpy array, torch.Tensor, instead "
+                                    "got: {}".format(type(data)))
             else:  # continuous action
-                if isinstance(data, np.ndarray):
+                if isinstance(data, (np.ndarray, float, int)):
                     action.data = data
                 elif isinstance(data, torch.Tensor):
                     action.torch_data = data
                     action_data[idx] = self.__convert_to_numpy(data, to_numpy=to_numpy)
-                elif isinstance(data, (float, int)):
-                    action.data = data
                 else:
-                    raise TypeError(
-                        "Expecting `data` to be a numpy array or torch.Tensor, instead got: "
-                        "{}".format(type(data)))
+                    raise TypeError("Expecting `data` to be a numpy array or torch.Tensor, instead got: "
+                                    "{}".format(type(data)))
 
         # if action_data is a list and has one element, return just that element
         if isinstance(action_data, list) and len(action_data) == 1:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Provides the `transition`/`dynamic` function approximators in RL.
+r"""Provides the `transition`/`dynamic` function approximators in RL.
 
 Dynamic models allows to compute the next state given the current state and action; that is,
 :math:`s_{t+1} = f(s_t, a_t)` (if deterministic) or :math:`s_{t+1} \sim p(.| s_t, a_t)`.
