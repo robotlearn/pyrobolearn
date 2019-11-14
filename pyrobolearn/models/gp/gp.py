@@ -35,7 +35,6 @@ __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
-echo '# -*- coding: utf-8 -*-\n#!/usr/bin/env python'
 
 class GP(object):
     r"""Gaussian Process model
