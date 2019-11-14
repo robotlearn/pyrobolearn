@@ -505,7 +505,7 @@ class GMM(object):
 
             # compute individual joint distribution
             likelihoods = np.array([g.pdf(x) for g in self.gaussians]).T  # shape: K if data vector, or NxK if matrix
-            priors = np.array([self.priors[z_id] for z_id in z_idx]) # shape: 1 if data vector, or N if matrix
+            priors = np.array([self.priors[z_id] for z_id in z_idx])  # shape: 1 if data vector, or N if matrix
             joints = priors * likelihoods[range(Nx), z_idx]     # shape: N
 
             # return product of joint distributions
@@ -949,7 +949,7 @@ class GMM(object):
 
             # if not first basis vector, compute orthogonal vector using Gram-Schmidt
             if i != 0:
-                d_init = np.array(d)
+                d_init = np.asarray(d)
                 for basis in bases:  # TODO: vectorize this
                     d -= np.sum(basis * d_init, axis=1) * basis  # (T, D-1)
             else:
@@ -968,7 +968,7 @@ class GMM(object):
                 chi = np.sum(basis * d, axis=1) / norm_first_deriv  # (T,)
                 generalized_curvatures.append(chi)
 
-        generalized_curvatures = np.array(generalized_curvatures)  # (D-2, T)
+        generalized_curvatures = np.asarray(generalized_curvatures)  # (D-2, T)
 
         # compute total curvature norm
         total_curvature_norm = np.linalg.norm(generalized_curvatures, axis=0)  # (T,)
@@ -1539,8 +1539,25 @@ class GMM(object):
             - [1] "Robot Programming by Demonstration: a Probabilistic Approach" (chap 2), Calinon, 2009
             - [2] "A Tutorial on Task-Parameterized Movement Learning and Retrieval", Calinon, 2015
         """
+        # check input state
+        x_in = np.array([x_in]) if isinstance(x_in, (int, float)) else np.asarray(x_in)
+
+        # check output state
+        idx_out = np.array([idx_out]) if isinstance(idx_out, int) else np.asarray(idx_out)
+
+        # check the idx_in. If None, infer it from idx_out.
+        if idx_in is None:
+            # from all the indices remove the output indices
+            idx_in = np.array(list(set(range(self.size)) - set(idx_out)))
+            idx_in.sort()
+
+            # make sure that the input indices have the same length as the value ones
+            idx_in = idx_in[:len(x_in)]
+        else:
+            idx_in = np.array([idx_in]) if isinstance(idx_in, int) else np.asarray(idx_in)
+
         priors = self.responsibilities(x_in, dims=idx_in)
-        gaussians = [g.condition(x_in, idx_out, idx_in) for g in self.gaussians]
+        gaussians = [gaussian.condition(x_in, idx_out, idx_in) for gaussian in self.gaussians]
         return GMM(priors=priors, gaussians=gaussians)
 
     def marginalize(self, idx):
@@ -1647,7 +1664,7 @@ class GMM(object):
                     coefficients.append(coeff)
                     gaussians.append(gaussian)
 
-            priors, coefficients = np.array(priors), np.array(coefficients)
+            priors, coefficients = np.asarray(priors), np.asarray(coefficients)
             normalization = np.sum(priors * coefficients)
             priors = priors * coefficients / normalization
             return GMM(priors=priors, gaussians=gaussians)
@@ -1688,7 +1705,7 @@ class GMM(object):
                 coefficients.append(coeff)
                 gaussians.append(gaussian)
 
-            priors, coefficients = np.array(priors), np.array(coefficients)
+            priors, coefficients = np.asarray(priors), np.asarray(coefficients)
             normalization = np.sum(priors * coefficients)
             priors = priors * coefficients / normalization
             return GMM(priors=priors, gaussians=gaussians)
@@ -1762,7 +1779,7 @@ class GMM(object):
         Returns:
             float: p(lower <= x <= upper)
         """
-        probs = np.array([g.integrate(lower, upper) for g in self.gaussians])
+        probs = np.asarray([g.integrate(lower, upper) for g in self.gaussians])
         return np.sum(self.priors * probs)
 
     def grad(self, x, k=None, wrt='x'):
@@ -1808,10 +1825,10 @@ class GMM(object):
         if wrt == 'x':
             return np.sum([prior * g.grad(x, wrt=wrt) for prior, g in zip(self.priors, self.gaussians)], axis=0)
         elif wrt == 'pi' or wrt == 'prior':
-            return np.array([gaussian.pdf(x) for gaussian in self.gaussians])
+            return np.asarray([gaussian.pdf(x) for gaussian in self.gaussians])
         elif wrt == 'mu' or wrt == 'mean' or wrt == 'sigma' or wrt[:3] == 'cov' \
                 or wrt == 'lambda' or wrt == 'precision':
-            return np.array([prior * g.grad(x, wrt=wrt) for prior, g in zip(self.priors, self.gaussians)])
+            return np.asarray([prior * g.grad(x, wrt=wrt) for prior, g in zip(self.priors, self.gaussians)])
         else:
             raise ValueError("The given 'wrt' argument is not valid (see documentation)")
 
@@ -2067,7 +2084,7 @@ class TPGMM(GMM):
 ######################
 
 
-def plot_gmm(gmm, dims=(0, 1), X=None, label=True, ax=None, title='GMM', xlim=(-6, 6), ylim=(-6, 6), option=1,
+def plot_gmm(gmm, dims=[0, 1], X=None, label=True, ax=None, title='GMM', xlim=(-6, 6), ylim=(-6, 6), option=1,
              color='b'):
     r"""Plot GMM"""
     # create ax if not already created
@@ -2106,10 +2123,10 @@ def plot_gmr(time_linspace, means=None, std_devs=None, covariances=None, gaussia
     if gaussians is None:
         if means is None:
             raise ValueError("Expecting the means to be provided if a list of gaussians is not provided.")
-        if std_devs is None:
-            raise ValueError("Expecting the std_devs to be provided if a list of gaussians is not provided.")
         if covariances is None:
             raise ValueError("Expecting the covariances to be provided if a list of gaussians is not provided.")
+        if std_devs is None:
+            std_devs = [np.sqrt(np.diag(covariance)) for covariance in covariances]
     else:
         means, std_devs, covariances = [], [], []
         for g in gaussians:

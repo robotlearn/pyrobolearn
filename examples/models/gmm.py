@@ -70,7 +70,7 @@ plt.show()
 means, std_devs = [], []
 time_linspace = np.linspace(-6, 6, 100)
 for t in time_linspace:
-    g = gmm.condition(np.array([t]), idx_out=[1], idx_in=[0]).approximate_by_single_gaussian()
+    g = gmm.condition(t, idx_out=1, idx_in=0).approximate_by_single_gaussian()
     means.append(g.mean[0])
     std_devs.append(np.sqrt(g.covariance[0, 0]))
 

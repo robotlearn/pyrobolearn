@@ -17,9 +17,14 @@ import copy
 # from pyrobolearn.models.model import Model
 from pyrobolearn.models.gmm import GMM, Gaussian
 
+# to check Python version (if sys.version_info[0] < 3, then python 2)
+import sys
+if sys.version_info[0] < 3:  # Python 2
+    input = raw_input  # redefine input to be raw_input
+
 
 __author__ = "Brian Delhaisse"
-__copyright__ = "Copyright 2018, PyRoboLearn"
+__copyright__ = "Copyright 2019, PyRoboLearn"
 __credits__ = ["Yanlong Huang (paper + Matlab)", "Brian Delhaisse (Python)"]
 __license__ = "GNU GPLv3"
 __version__ = "1.0.0"
@@ -79,27 +84,39 @@ class KMP(object):
     Kernelized Movement Primitives allows to encode a movement/trajectory using kernels. The use of kernels makes it
     practical for high-dimensional inputs.
 
-    KMP is a non-parametric (but a semi-parametric approach is used to initialize it) probabilistic discriminative
-    model. The performance of the KMP depends thus on the underlying probabilistic distribution from which it learns
-    from (which is often a GMM, and thus it depends on the GMM initialization).
+    KMP is a non-parametric (but a semi-parametric approach is often used to initialize it) probabilistic
+    discriminative model. The performance of the KMP depends thus on the underlying probabilistic distribution from
+    which it learns from (which is often a GMM, and thus it depends on the GMM initialization).
+
+    KMP is well-suited for via-point, end-point, extrapolation and high-dimensional inputs problems. However, note that
+    it does not scale well with high-dimensional outputs or long trajectories. The reason is because of the kernel
+    matrix which has a shape of :math:`K \in \mathbb{R}^{TO \times TO}` where :math:`O` is the output dimension, and
+    :math:`T` is the length of the reference trajectory (i.e. number of data points sampled from that trajectory).
 
     References:
         - [1] "Kernelized Movement Primitives", Huang et al., 2017
     """
 
     def __init__(self, kernel_fct=None, database=None):
-        """
+        r"""
         Initialize the KMP.
 
         Args:
             kernel_fct (None, callable): kernel function. If None, it will use the `RBF` kernel with a variance
                 of 1, and a length scale of 2.
-            database (None, list): initial database.
+            database (None, list): initial reference database. The database should be a list where each item is a
+                tuple of 3 elements (the input state, the mean, and the covariance). That is, the reference database
+                is given by: :math:`\[s_t, \hat{\mu}_t, \hat{\Sigma}_t \]_{t=1}^T` where :math:`T` is the length of
+                a reference trajectory, :math:`s_t` is the input (vector/scalar) state, :math:`\hat{\mu}_t` is the
+                reference mean, and :math:`\hat{\Sigma}_t` is the reference covariance matrix. By reference, we mean
+                that after training your probabilistic discriminative model on multiple trajectories, you provide the
+                predicted mean and covariance given the input state.
         """
         super(KMP, self).__init__()
 
-        self._input_dim = 0
-        self._output_dim = 0
+        self._input_dim = 0   # input dimension
+        self._output_dim = 0  # output dimension
+        self.N = 0            # number of data points
 
         # set kernel fct
         self.K = kernel_fct if kernel_fct is not None else RBF(variance=1., lengthscale=2.)
@@ -110,9 +127,14 @@ class KMP(object):
         else:
             self._database = database
 
+        # mean
+        self.mu = None  # mean used for the mean prediction
+
         # Inverse Kernel matrix (useful when computing the prediction)
-        self.K_inv = None
-        self.prior_reg = 1.
+        self.lambda1 = 1.  # lambda in the paper for the mean prediction (in Huang's code, it is often set to 1)
+        self.lambda2 = 60.  # lambda in the paper for the covariance prediction (in Huang's code, it is set to 60)
+        self.K_inv1 = None  # inverse kernel matrix for the mean
+        self.K_inv2 = None  # inverse kernel matrix for the covariance
 
         # translation vector and rotation matrix
         self.bias = 0
@@ -152,27 +174,74 @@ class KMP(object):
         """Return the rotation matrix applied to the predicted mean and covariance by the KMP"""
         return self.rot
 
+    @property
+    def lambda1(self):
+        """Return the prior regularization term for the mean."""
+        return self._l1
+
+    @lambda1.setter
+    def lambda1(self, value):
+        """Set the prior regularization term for the mean."""
+        if not isinstance(value, (int, float)):
+            raise TypeError("Expecting the prior regularization term for the mean to be a scalar (int, float), but "
+                            "got instead: {}".format(type(value)))
+        if value <= 0.:
+            raise ValueError("The prior regularization term needs to be strictly bigger than 0.")
+        self._l1 = value
+
+    # aliases
+    prior_mean_regularization = lambda1
+    mean_regularization = lambda1
+    mean_reg = lambda1
+
+    @property
+    def lambda2(self):
+        """Return the prior regularization term for the covariance."""
+        return self._l2
+
+    @lambda2.setter
+    def lambda2(self, value):
+        """Set the prior regularization term for the covariance."""
+        if not isinstance(value, (int, float)):
+            raise TypeError("Expecting the prior regularization term for the covariance to be a scalar (int, float), "
+                            "but got instead: {}".format(type(value)))
+        if value <= 0.:
+            raise ValueError("The prior regularization term needs to be strictly bigger than 0.")
+        self._l2 = value
+
+    # aliases
+    prior_covariance_regularization = lambda2
+    covariance_regularization = lambda2
+    cov_reg = lambda2
+
     ##################
     # Static Methods #
     ##################
 
     @staticmethod
-    def copy(other):
-        """Copy the other KMP"""
+    def copy(other):  # TODO: use deepcopy instead...
+        """Copy the other KMP."""
+        if not isinstance(other, KMP):
+            raise TypeError("Expecting the other element to be an instance of `KMP`, but got instead: "
+                            "{}".format(type(other)))
         kmp = KMP(kernel_fct=other.kernel_fct)
         kmp._database = copy.deepcopy(other.database)
         kmp.bias = other.bias
         kmp.rot = other.rot
-        kmp.K_inv = np.copy(other.K_inv)
+        kmp.lambda1 = other.lambda1
+        kmp.lambda2 = other.lambda2
+        kmp.K_inv1 = np.copy(other.K_inv1)
+        kmp.K_inv2 = np.copy(other.K_inv2)
+        return kmp
 
     @staticmethod
     def is_parametric():
-        """The KMP is a non-parametric model which uses a kernel"""
+        """The KMP is a non-parametric model which uses a kernel."""
         return False
 
     @staticmethod
     def is_linear():
-        """The KMP has no parameters, and thus has no linear parameters"""
+        """The KMP has no parameters, and thus has no linear parameters."""
         return False
 
     @staticmethod
@@ -198,17 +267,25 @@ class KMP(object):
         return False
 
     @staticmethod
-    def create_reference_database(X, Y, gmm=None, gmm_num_components=10, dist=None, database_threshold=1e-3,
+    def create_reference_database(X, Y, gmm=None, gmm_num_components=10, distance=None, database_threshold=1e-3,
                                   database_size_limit=100, sample_from_gmm=False, gmm_init='kmeans', gmm_reg=1e-8,
-                                  gmm_num_iters=1000, gmm_convergence_threshold=1e-4, seed=None, verbose=True,
+                                  gmm_num_iters=1000, gmm_convergence_threshold=1e-4, seed=None, verbose=False,
                                   block=True):
         r"""
         Create reference database from the data. This database contains a list of input data with their
         corresponding predicted output distribution by the reference model (which in this case is a GMM).
 
-        X (np.array[N,T,I], list of np.array[T,I]): input data matrix of shape NxTxI, where N is the number of
+        That is from several trajectories :math:`\{ \{ s_{t,n}, \xi_{t,n} \}_{t=1}^T_n \}_{n=1}^N`, it computes the
+        reference database :math:`\{ s_t, \hat{\mu}_t, \hat{\Sigma}_t \}_{t=1}^T`, where :math:`N` is the number of
+        trajectories, :math:`T_n` is the length of the trajectory :math:`n`, :math:`s` is the input, :math:`\xi` is
+        the output, :math:`\hat{\mu}_t` is the reference mean, and :math:`\hat{\Sigma}_t` is the reference covariance
+        matrix. By reference, we mean that after training the probabilistic discriminative model on multiple
+        trajectories, the predicted mean and covariance given each input become the references.
+
+        Args:
+            X (np.array[N,T,I], list[np.array[T,I]]): input data matrix of shape NxTxI, where N is the number of
                 trajectories, T is its length, and I is the input data dimension.
-            Y (np.array[N,T,O], list of np.array[T,O]): corresponding output data matrix of shape NxTxO, where N is
+            Y (np.array[N,T,O], list[np.array[T,O]]): corresponding output data matrix of shape NxTxO, where N is
                 the number of trajectories, T is its length, and O is the output data dimension.
             gmm (None, GMM): the reference generative model. If None, it will create a GMM.
             gmm_num_components (int): the number of components for the underlying reference GMM.
@@ -237,7 +314,7 @@ class KMP(object):
         # TODO: replace gmm by joint generative model
 
         # check given arguments
-        X, Y = np.array(X), np.array(Y)
+        X, Y = np.asarray(X), np.asarray(Y)
         if X.shape[:2] != Y.shape[:2]:
             if X.shape[0] != Y.shape[0]:
                 raise ValueError("The number of trajectories are different between the input and output data")
@@ -257,9 +334,15 @@ class KMP(object):
         data = np.dstack((X, Y))  # shape: NxTxD
         data = data.reshape(-1, I + O)  # shape: NTxD
 
+        if verbose:
+            print("Training the GMM...")
+
         # train gmm
         gmm.fit(data, reg=gmm_reg, num_iters=gmm_num_iters, threshold=gmm_convergence_threshold, init=gmm_init,
                 seed=seed, verbose=verbose)
+
+        if verbose:
+            print("GMM trained")
 
         # create reference database
         database = []
@@ -271,8 +354,8 @@ class KMP(object):
         # use the distance function to check if we should add the input data into the database
         else:
             # define distance function
-            if dist is None:
-                def dist(x1, x2):
+            if distance is None:
+                def distance(x1, x2):
                     return np.linalg.norm(x1 - x2)
 
             # check inputs to put in the reference database (time complexity: O((NT)^2))
@@ -281,7 +364,7 @@ class KMP(object):
                     # compare current input with previous inputs, and add in database if unique enough
                     can_add = True
                     for x_prev in database:
-                        if dist(x_curr, x_prev) < database_threshold:
+                        if distance(x_curr, x_prev) < database_threshold:
                             can_add = False
                             break
                     if can_add:
@@ -289,15 +372,64 @@ class KMP(object):
 
             # if the size of the database is bigger than database size limit, sample uniformly from it
             if len(database) > database_size_limit:
-                idx = np.random.choice(range(len(database)), size=database_size_limit, replace=False)
+                idx = np.random.choice(list(range(len(database))), size=database_size_limit, replace=False)
                 database = database[idx]
 
+        if verbose:
+            print("Creating database...")
+
         # update database to also contain prediction from GMR
-        database = [(x, (gmm.condition(x, idx_out=range(I, O))).approximate_by_single_gaussian())
+        database = [(x, gmm.condition(x, idx_out=list(range(I, I+O)),
+                                      idx_in=list(range(I))).approximate_by_single_gaussian())
                     for x in database]
+
+        if verbose:
+            print("Database created...")
 
         # return constructed reference database
         return database
+
+    @staticmethod
+    def get_reference_database(x, means=None, covariances=None, gaussians=None):
+        """
+        Get reference database from the state inputs, means and covariances (gaussians).
+
+        Args:
+            x (np.array[float[T,I]]): input data matrix of shape TxI, where T is the length of a trajectory, and I is
+              the input data dimension.
+            means (np.array[float[T,O]]): list of means.
+            covariances (np.array[float[T,O,O]]): list of covariances.
+            gaussians (list[Gaussian]): list of Gaussian.
+
+        Returns:
+            list[(np.ndarray, Gaussian)]: database which is a list of tuples where each one contains an input data
+                array and the corresponding predicted output Gaussian (by GMR)
+        """
+        if gaussians is None:
+            if means is None:
+                raise ValueError("If the gaussians are not provided, the means are required.")
+            if covariances is None:
+                raise ValueError("If the gaussians are not provided, the covariances are required.")
+            gaussians = [Gaussian(mean=mean, covariance=covariance) for mean, covariance in zip(means, covariances)]
+        database = [(xi, gaussian) for xi, gaussian in zip(x, gaussians)]
+        return database
+
+    def set_reference_database(self, x, means=None, covariances=None, gaussians=None):
+        """
+        Set reference database from the state inputs, means and covariances (gaussians).
+
+        Args:
+            x (np.array[float[T,I]]): input data matrix of shape TxI, where T is the length of a trajectory, and I is
+              the input data dimension.
+            means (np.array[float[T,O]]): list of means.
+            covariances (np.array[float[T,O,O]]): list of covariances.
+            gaussians (list[Gaussian]): list of Gaussian.
+
+        Returns:
+            list[(np.ndarray, Gaussian)]: database which is a list of tuples where each one contains an input data
+                array and the corresponding predicted output Gaussian (by GMR)
+        """
+        self._database = self.get_reference_database(x, means=means, covariances=covariances, gaussians=gaussians)
 
     @staticmethod
     def combine(x, kmps, frames):
@@ -309,7 +441,7 @@ class KMP(object):
         than coordinates. For instance, it does not work if the inputs are images or sensor values.
 
         Args:
-            x (np.array[I], np.array[N,I]): new input data vector or matrix
+            x (np.array[float[I]], np.array[float[N,I]]): new input data vector or matrix
             kmps (KMP, list of KMP): list of local KMPs
             frames (tuple, list of tuples): list of tuples where each tuple contains a rotation matrix and a bias
                 translation vector
@@ -345,9 +477,9 @@ class KMP(object):
     # Methods #
     ###########
 
-    def fit(self, X, Y, gmm=None, gmm_num_components=10, prior_reg=1.,  dist=None, database_threshold=1e-3,
-            database_size_limit=100, sample_from_gmm=False, gmm_init='kmeans', gmm_reg=1e-8, gmm_num_iters=1000,
-            gmm_convergence_threshold=1e-4, seed=None, verbose=True, block=True):
+    def fit(self, X, Y, gmm=None, gmm_num_components=10, mean_reg=1., covariance_reg=1., distance=None,
+            database_threshold=1e-3, database_size_limit=100, sample_from_gmm=False, gmm_init='kmeans', gmm_reg=1e-8,
+            gmm_num_iters=1000, gmm_convergence_threshold=1e-4, seed=None, verbose=False, block=True):
         r"""
         Fit the given data composed of inputs and outputs.
 
@@ -368,18 +500,18 @@ class KMP(object):
         .. math::
 
             \mathcal{L}(\mu_w, \Sigma_w) = \sum_{n=1}^N KL[p(y|x_n;\theta) || p_{ref}(y | x_n)]
-                + \tau ( (\mu_w^T\mu_w) + tr(\Sigma_w) )
+                + \lambda ( (\mu_w^T\mu_w) + tr(\Sigma_w) )
 
         where :math:`\theta = \{\mu_w, \Sigma_w\}` are the parameters that are being optimized,
         :math:`p_{ref}(y | x_n) = \mathcal{N}(\mu_n, \Sigma_n)` is the predicted reference distribution
-        (e.g. Gaussian by GMR), and :math:`\tau` is the prior regularization term.
+        (e.g. Gaussian by GMR), and :math:`\lambda` is the prior regularization term.
 
         Once the parametric model has been optimized, the optimal mean and covariance of the weights are given by:
 
         .. math::
 
-            \mu_w = \Omega (\Omega^T \Omega + \tau \Sigma)^{-1} \mu
-            \Sigma_w = N (\Omega \Sigma \Omega^T + \tau I)^{-1}
+            \mu_w = \Omega (\Omega^T \Omega + \lambda \Sigma)^{-1} \mu
+            \Sigma_w = N (\Omega \Sigma \Omega^T + \lambda I)^{-1}
 
         where :math:`\Omega = [\Phi(x_1) ... \Phi(x_N)] \in \mathbb{R}^{BO \times NO}`,
         :math:`\Sigma = blockdiag(\Sigma_1, ..., \Sigma_N) \in \mathbb{R}^{NO \times NO}`, and
@@ -389,15 +521,15 @@ class KMP(object):
 
         .. math::
 
-            \mu_y &= \Phi(x^*)^T \mu_w = \Phi(x^*) \Omega (\Omega^T \Omega + \tau \Sigma)^{-1} \mu \\
-            \Sigma_y &= \Phi(x^*)^T \Sigma_w \Phi(x^*) = N \Phi(x^*)^T (\Omega\Sigma\Omega^T+\tau I)^{-1} \Phi(x^*)
+            \mu_y &= \Phi(x^*)^T \mu_w = \Phi(x^*) \Omega (\Omega^T \Omega + \lambda \Sigma)^{-1} \mu \\
+            \Sigma_y &= \Phi(x^*)^T \Sigma_w \Phi(x^*) = N \Phi(x^*)^T (\Omega\Sigma\Omega^T+\lambda I)^{-1} \Phi(x^*)
 
         And by using the kernel trick (and the Woodbury identity for the covariance), this resumes to:
 
         .. math::
 
-            \mu_y &= k^* (K + \tau \Sigma)^{-1} \mu \\
-            \Sigma_y &= \frac{N}{\tau} (k(x^*, x^*) - k^* (K + \tau \Sigma)^{-1} k^*^T)
+            \mu_y &= k^* (K + \lambda \Sigma)^{-1} \mu \\
+            \Sigma_y &= \frac{N}{\lambda} (k(x^*, x^*) - k^* (K + \lambda \Sigma)^{-1} k^*^T)
 
         where :math:`K(X,X) \in \mathbb{R}^{NO \times NO}` is the kernel matrix,
         :math:`k^* = [k(x^*, x_1) ... k(x^*,x_N)] \in \mathbb{R}^{O \times NO}` is the kernel evaluated
@@ -405,14 +537,17 @@ class KMP(object):
         `I_O \in \mathbb{O \times O}` and :math:`\hat{k}(x_i, x_j)` the kernel function.
 
         Args:
-            X (np.array[N,T,I], list of np.array[T,I]): input data matrix of shape NxTxI, where N is the number of
+            X (np.array[N,T,I], list[np.array[T,I]]): input data matrix of shape NxTxI, where N is the number of
                 trajectories, T is its length, and I is the input data dimension.
-            Y (np.array[N,T,O], list of np.array[T,O]): corresponding output data matrix of shape NxTxO, where N is
+            Y (np.array[N,T,O], list[np.array[T,O]]): corresponding output data matrix of shape NxTxO, where N is
                 the number of trajectories, T is its length, and O is the output data dimension.
             gmm (None, GMM): the reference generative model. If None, it will create a GMM.
             gmm_num_components (int): the number of components for the underlying reference GMM.
-            prior_reg (float): prior regularization term
-            dist (callable, None): callable function which accepts two data points from X, and compute the distance
+            mean_reg (float): prior regularization term for the mean that is multiplied by the covariance in the KMP
+                (see lambda symbol in the paper [1]).
+            covariance_reg (float): prior regularization term for the covariance that is multiplied by the covariance
+                in the KMP (see lambda symbol in the paper [2]).
+            distance (callable, None): callable function which accepts two data points from X, and compute the distance
                 between them. If None and `sample_from_gmm` is False, it will use the 2-norm.
             database_threshold (float): threshold associated with the `distance` argument above. If the distance between
                 a new data point and data point in the database is below the threshold, it will be added to
@@ -437,7 +572,7 @@ class KMP(object):
 
         # create reference database
         self._database = self.create_reference_database(X, Y, gmm=gmm, gmm_num_components=gmm_num_components,
-                                                        dist=dist, database_threshold=database_threshold,
+                                                        distance=distance, database_threshold=database_threshold,
                                                         database_size_limit=database_size_limit,
                                                         sample_from_gmm=sample_from_gmm, gmm_init=gmm_init,
                                                         gmm_reg=gmm_reg, gmm_num_iters=gmm_num_iters,
@@ -445,23 +580,29 @@ class KMP(object):
                                                         seed=seed, verbose=verbose, block=block)
 
         # compute kernel inverse from database
-        K, K_inv = self.learn_from_database(self._database, prior_reg=prior_reg, verbose=verbose, block=block)
-        self.K_inv = K_inv     # shape: NOxNO
+        K, K_inv1, K_inv2 = self.learn_from_database(self._database, mean_reg=mean_reg, covariance_reg=covariance_reg,
+                                                     verbose=verbose, block=block)
+
+        self.K_inv1 = K_inv1     # shape: NOxNO
+        self.K_inv2 = K_inv2     # shape: NOxNO
 
     # aliases
     learn = fit
     imitate = fit
 
-    def learn_from_database(self, database=None, prior_reg=1., verbose=True, block=True):
+    def learn_from_database(self, database=None, mean_reg=1., covariance_reg=1., verbose=False, block=True):
         r"""
         Learn the Kernel matrix from the database. Specifically, it computes :math:`K` and
-        :math:`(K + \tau \Sigma)^{-1}`. The latter is because this is used for the prediction part; for the predicted
-        mean and covariance, and is better to compute it during the learning phase than the prediction phase.
+        :math:`(K + \lambda \Sigma)^{-1}`. The latter is because this is used for the prediction part; for the
+        predicted mean and covariance, and is better to compute it during the learning phase than the prediction phase.
 
         Args:
             database (list of tuples): list of tuples which contain the input data array and the associated predicted
                 output distribution by the reference model.
-            prior_reg (float): prior regularization term
+            mean_reg (float): prior regularization term for the mean that is multiplied by the covariance in the KMP
+                (see lambda symbol in the paper [1]).
+            covariance_reg (float): prior regularization term for the covariance that is multiplied by the covariance
+                in the KMP (see lambda symbol in the paper [2]).
             verbose (bool): if we should print details during the optimization process
             block (bool): if the size of the kernel matrix is bigger than 1000, it will ask for confirmation to
                 continue. The kernel matrix has to be inversed, which has a time complexity of `O(N^3)` where
@@ -469,15 +610,14 @@ class KMP(object):
 
         Returns:
             np.array[NO,NO]: Kernel matrix :math:`K`
-            np.array[NO,NO]: Inverse Kernel matrix :math:`(K + \tau \Sigma)^-1`
+            np.array[NO,NO]: Inverse Kernel matrix :math:`(K + \lambda_1 \Sigma)^-1` for mean prediction.
+            np.array[NO,NO]: Inverse Kernel matrix :math:`(K + \lambda_2 \Sigma)^-1` for covariance prediction.
         """
         # Quick checks
         if database is None:
             database = self.database
         if len(database) == 0:
             raise ValueError("There are no elements in the database")
-        if prior_reg <= 0:
-            raise ValueError("The prior regularization term needs to be strictly bigger than 0")
 
         # output dimension and size of database
         output_dim = database[0][1].size
@@ -488,24 +628,36 @@ class KMP(object):
             print("Warning: trying to inverse a {} by {} 2D matrix... This could be computationally "
                   "expensive...".format(N * output_dim, N * output_dim))
             if block:
-                raw_input("Please press enter to continue with the inversion of the matrix. Ctrl+C to stop "
-                          "the program")
+                input("Please press enter to continue with the inversion of the matrix. Ctrl+C to stop "
+                      "the program")
+
+        # remember variables for prediction
+        self.N, self.lambda1, self.lambda2 = len(database), mean_reg, covariance_reg
+        self._output_dim = output_dim
+        self._input_dim = database[0][0].size
 
         # compute mean, covariance, and kernel from database
-        self.mu = np.array([gaussian.mean for _, gaussian in self.database]).reshape(-1, 1)  # shape: NO x 1
+        self.mu = np.array([gaussian.mean for _, gaussian in self.database]).reshape(-1)  # shape: NO x 1
         cov = block_diag(*[gaussian.cov for _, gaussian in self.database])  # shape: NOxNO
         I_O = np.identity(output_dim)  # shape: OxO
-        K = np.array([[self.K(xi, xj) * I_O for xj, _ in self.database]
+        K = np.vstack([np.hstack([self.K(xi, xj) * I_O for xj, _ in self.database])
                       for xi, _ in self.database])  # shape: NOxNO
 
         # compute kernel inverse
-        K_inv = np.linalg.inv(K + prior_reg * cov)  # shape: NOxNO
+        if verbose:
+            print("Mean shape: {}".format(self.mu.shape))
+            print("Covariance shape: {}".format(cov.shape))
+            print("I_O shape: {}".format(I_O.shape))
+            print("Inversing the kernel matrices with shape: {}".format(K.shape))
 
-        # remember variables for prediction
-        self.N, self.prior_reg = len(database), prior_reg
+        K_inv1 = np.linalg.inv(K + mean_reg * cov)  # shape: NOxNO
+        K_inv2 = K_inv1 if mean_reg == covariance_reg else np.linalg.inv(K + covariance_reg * cov)  # shape: NOxNO
+
+        if verbose:
+            print("The kernel matrices have been inversed...")
 
         # return kernel and kernel inverse
-        return K, K_inv
+        return K, K_inv1, K_inv2
 
     def loss(self):
         r"""
@@ -515,8 +667,8 @@ class KMP(object):
 
             \mathcal{L} = \sum_{n=1}^N KL[\mathcal{N}(\mu_n^*, \Sigma_n^*) || \mathcal{N}_{ref}(\mu_n, \Sigma_n)]
 
-        where :math:`\mu_n^* = k^* (K + \tau \Sigma)^{-1} \mu` and
-        :math:`\Sigma_n^* = \frac{N}{\tau} (k(x^*, x^*) - k^* (K + \tau \Sigma)^{-1} k^*^T)` are the predicted
+        where :math:`\mu_n^* = k^* (K + \lambda \Sigma)^{-1} \mu` and
+        :math:`\Sigma_n^* = \frac{N}{\lambda} (k(x^*, x^*) - k^* (K + \lambda \Sigma)^{-1} k^*^T)` are the predicted
         mean and covariance by the KMP, and :math:`\mu_n` and :math:`\Sigma_n` are the predicted mean and covariance
         by GMR.
 
@@ -552,8 +704,9 @@ class KMP(object):
         """
         # compute k vector (which compares given input data with previous ones)
         I = np.identity(self.output_dim)
-        k = np.array([self.K(x, x_prev) * I for x_prev, _ in self.database])    # shape: NxOxO
-        k = k.reshape(-1, 1).T     # shape: OxNO
+        # k = np.array([self.K(x, x_prev) * I for x_prev, _ in self.database])    # shape: NxOxO
+        # k = k.reshape(-1, 1).T     # shape: OxNO
+        k = np.hstack([self.K(x, x_prev) * I for x_prev, _ in self.database])  # shape: OxNO
         return k
 
     def predict(self, x):
@@ -562,7 +715,7 @@ class KMP(object):
 
         .. math::
 
-            \mu_y(x^*) &= k^* (K + \tau \Sigma)^{-1} \mu \\
+            \mu_y(x^*) &= k^* (K + \lambda \Sigma)^{-1} \mu \\
 
         where :math:`K(X,X) \in \mathbb{R}^{NO \times NO}` is the kernel matrix,
         :math:`k^* = [k(x^*, x_1) ... k(x^*,x_N)] \in \mathbb{R}^{O \times NO}` is the kernel evaluated
@@ -586,7 +739,7 @@ class KMP(object):
             k = self._compute_k(xi)
 
             # return mean
-            mean = k.dot(self.K_inv).dot(self.mu)
+            mean = k.dot(self.K_inv1).dot(self.mu)
             means.append(mean)
 
         # return the same shape as input
@@ -603,8 +756,8 @@ class KMP(object):
 
         .. math::
 
-            \mu_y(x^*) &= k^* (K + \tau \Sigma)^{-1} \mu \\
-            \Sigma_y(x^*) &= \frac{N}{\tau} (k(x^*, x^*) - k^* (K + \tau \Sigma)^{-1} k^*^T)
+            \mu_y(x^*) &= k^* (K + \lambda \Sigma)^{-1} \mu \\
+            \Sigma_y(x^*) &= \frac{N}{\lambda} (k(x^*, x^*) - k^* (K + \lambda \Sigma)^{-1} k^*^T)
 
         where :math:`K(X,X) \in \mathbb{R}^{NO \times NO}` is the kernel matrix,
         :math:`k^* = [k(x^*, x_1) ... k(x^*,x_N)] \in \mathbb{R}^{O \times NO}` is the kernel evaluated
@@ -613,6 +766,8 @@ class KMP(object):
 
         Args:
             x (np.array[I], np.array[N,I]): input data vector or matrix
+            return_gaussian (bool): if True, it will return a list of Gaussians. Otherwise, it will return the means
+              and covariances.
 
         Returns:
             if return_gaussian:
@@ -623,12 +778,14 @@ class KMP(object):
         """
         # if only one sample
         only_one_sample = False
+        if isinstance(x, (int, float)):
+            x = np.array([x])
         if len(x.shape) == 1:
             only_one_sample = True
             x = [x]
 
         # useful variables
-        coeff = self.N / self.prior_reg
+        coeff = self.N / self.cov_reg
         I = np.identity(self.output_dim)
 
         # compute predicted mean(s) and covariance(s)
@@ -639,8 +796,8 @@ class KMP(object):
             k_input = self.K(xi, xi) * I
 
             # compute mean and covariance
-            mean = k.dot(self.K_inv).dot(self.mu)
-            cov = coeff * (k_input - k.dot(self.K_inv).dot(k.T))
+            mean = k.dot(self.K_inv1).dot(self.mu)
+            cov = coeff * (k_input - k.dot(self.K_inv2).dot(k.T))
 
             means.append(mean)
             covs.append(cov)
@@ -659,8 +816,8 @@ class KMP(object):
         # else, return mean(s) and covariance(s)
         return means, covs
 
-    def modulate(self, x, y_mean, y_cov, dist=None, threshold=1, update_database=False, prior_reg=1.,
-                 verbose=True, block=True):
+    def modulate(self, x, y_mean, y_cov, distance=None, threshold=1, update_database=False, mean_reg=1.,
+                 covariance_reg=1., verbose=True, block=True):
         r"""
         Modulate the prediction given new data point with their associated covariances.
 
@@ -673,14 +830,17 @@ class KMP(object):
             y_mean (np.array[O], np.array[N,O]): mean of new data point(s)
             y_cov (np.array[O,O], np.array[N,O,O]): covariance of new data point(s). A small covariance means the user
                 wants a high precision around the new data point.
-            dist (callable, None): callable function which accepts two data points from X, and compute the distance
+            distance (callable, None): callable function which accepts two data points from X, and compute the distance
                 between them. If None and `sample_from_gmm` is False, it will use the 2-norm.
             threshold (float): threshold associated with the `distance` argument above. If the distance between
                 a new data point and data point in the database is below the threshold, it will be added to
                 the database.
             update_database (bool): If True, it will modify permanently the original database by including the new
                 given points.
-            prior_reg (float): prior regularization term
+            mean_reg (float): prior regularization term for the mean that is multiplied by the covariance in the KMP
+                (see lambda symbol in the paper [1]).
+            covariance_reg (float): prior regularization term for the covariance that is multiplied by the covariance
+                in the KMP (see lambda symbol in the paper [2]).
             verbose (bool): if we should print details during the optimization process
             block (bool): if the size of the kernel matrix is bigger than 1000, it will ask for confirmation to
                 continue. The kernel matrix has to be inversed, which has a time complexity of `O(N^3)` where
@@ -701,8 +861,8 @@ class KMP(object):
             raise ValueError("The number of means and covariances for the output data points doesn't match")
 
         # define distance function
-        if dist is None:
-            def dist(x1, x2):
+        if distance is None:
+            def distance(x1, x2):
                 return np.linalg.norm(x1 - x2)
 
         # copy database
@@ -713,15 +873,15 @@ class KMP(object):
             # check the closest input inside the reference database  (time complexity: O((NT)^2))
             idx_closest = 0
             x_closest = database[idx_closest][0]
-            dist_closest = dist(x_closest, xi)
+            dist_closest = distance(x_closest, xi)
             for idx, (x_curr, _) in enumerate(database):
                 # if the current distance between the new point and the current point is smaller than the previous
                 # closest one, update the closest point
-                dist_curr = dist(x_curr, xi)
+                dist_curr = distance(x_curr, xi)
                 if dist_curr < dist_closest:
                     idx_closest = idx
                     x_closest = x_curr
-                    dist_closest = dist(x_closest, xi)
+                    dist_closest = distance(x_closest, xi)
 
             # check with the threshold if the closest point should be replaced by the new input data point,
             # or if the new point should just be appended in the database
@@ -732,8 +892,10 @@ class KMP(object):
                 database.append((xi, gaussian))
 
         # compute kernel inverse from the extended database
-        K, K_inv = self.learn_from_database(database, prior_reg=prior_reg, verbose=verbose, block=block)
-        self.K_inv = K_inv  # shape: NOxNO
+        K, K_inv1, K_inv2 = self.learn_from_database(database, mean_reg=mean_reg, covariance_reg=covariance_reg,
+                                                     verbose=verbose, block=block)
+        self.K_inv1 = K_inv1  # shape: NOxNO
+        self.K_inv2 = K_inv2  # shape: NOxNO
 
         if update_database:
             self._database = database
@@ -744,7 +906,8 @@ class KMP(object):
     # alias
     add_via_points = modulate
 
-    def superpose(self, databases, priorities, update_database=False, prior_reg=1., verbose=True, block=True):
+    def superpose(self, databases, priorities, update_database=False, mean_reg=1., covariance_reg=1.,
+                  verbose=True, block=True):
         r"""
         Superpose different trajectories based on priorities.
 
@@ -767,7 +930,10 @@ class KMP(object):
             priorities(np.array[L,N]]): list of priorities (float) for each point in each database.
             update_database (bool): If True, it will modify permanently the original database by including the new
                 given points.
-            prior_reg (float): prior regularization term
+            mean_reg (float): prior regularization term for the mean that is multiplied by the covariance in the KMP
+                (see lambda symbol in the paper [1]).
+            covariance_reg (float): prior regularization term for the covariance that is multiplied by the covariance
+                in the KMP (see lambda symbol in the paper [2]).
             verbose (bool): if we should print details during the optimization process
             block (bool): if the size of the kernel matrix is bigger than 1000, it will ask for confirmation to
                 continue. The kernel matrix has to be inversed, which has a time complexity of `O(N^3)` where
@@ -783,7 +949,7 @@ class KMP(object):
         L, N = len(databases), len(databases[0])
         databases = np.array(databases)     # shape: LxNx2
         priorities = np.array(priorities)   # shape: LxN
-        if priorities.shape != (L,N):
+        if priorities.shape != (L, N):
             raise ValueError("Expecting the priorities to be of shape (L,N) where L is the number of databases, "
                              "and N is the number of elements in these databases.")
         if not np.allclose(np.sum(priorities, axis=0), np.ones(L)):
@@ -793,13 +959,13 @@ class KMP(object):
         # create mixed reference database
         mixed_database = []
         for i in range(N):
-            priority = priorities[:,i]    # shape: L
-            database = databases[:,i,1]     # shape: L
-            x_input = databases[0,i,0]
+            priority = priorities[:, i]    # shape: L
+            database = databases[:, i, 1]     # shape: L
+            x_input = databases[0, i, 0]
 
             # quick check if similar input for each database
-            for j in range(1,L):
-                if np.allclose(databases[j-1,i,0], databases[j,i,0]):
+            for j in range(1, L):
+                if np.allclose(databases[j-1, i, 0], databases[j, i, 0]):
                     raise ValueError("The element {} in the database {} and {} are different input "
                                      "arrays".format(i, j-1, j))
 
@@ -814,8 +980,10 @@ class KMP(object):
             mixed_database.append((x_input, gaussians))
 
         # compute kernel inverse from the extended database
-        K, K_inv = self.learn_from_database(mixed_database, prior_reg=prior_reg, verbose=verbose, block=block)
-        self.K_inv = K_inv  # shape: NOxNO
+        K, K_inv1, K_inv2 = self.learn_from_database(mixed_database, mean_reg=mean_reg, covariance_reg=covariance_reg,
+                                                     verbose=verbose, block=block)
+        self.K_inv1 = K_inv1  # shape: NOxNO
+        self.K_inv2 = K_inv2  # shape: NOxNO
 
         if update_database:
             self._database = mixed_database
@@ -909,8 +1077,8 @@ class KMP(object):
 
         .. math::
 
-            \mu_y(x^*) &= k^* (K + \tau \Sigma)^{-1} \mu \\
-            \Sigma_y(x^*) &= \frac{T}{\tau} (k(x^*, x^*) - k^* (K + \tau \Sigma)^{-1} k^*^T)
+            \mu_y(x^*) &= k^* (K + \lambda \Sigma)^{-1} \mu \\
+            \Sigma_y(x^*) &= \frac{T}{\lambda} (k(x^*, x^*) - k^* (K + \lambda \Sigma)^{-1} k^*^T)
 
         where :math:`K(X,X) \in \mathbb{R}^{NO \times NO}` is the kernel matrix,
         :math:`k^* = [k(x^*, x_1) ... k(x^*,x_N)] \in \mathbb{R}^{O \times NO}` is the kernel evaluated

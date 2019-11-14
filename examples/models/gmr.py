@@ -67,7 +67,7 @@ plt.show()
 # GMR: condition on the input variable and plot
 gaussians = []
 for t in time_linspace:
-    g = gmm.condition(np.array([t]), idx_out=[1, 2], idx_in=[0]).approximate_by_single_gaussian()
+    g = gmm.condition(t, idx_out=[1, 2], idx_in=0).approximate_by_single_gaussian()
     gaussians.append(g)
 
 # plot figures for GMR

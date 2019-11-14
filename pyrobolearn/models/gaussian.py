@@ -153,7 +153,7 @@ class Gaussian(object):
         if isinstance(mean, (int, float)):
             mean = np.array([mean])
         if mean is not None:
-            mean = np.array(mean)
+            mean = np.asarray(mean)
         self._mean = mean
 
     # alias
@@ -170,7 +170,7 @@ class Gaussian(object):
         if cov is not None:
             if isinstance(cov, (int, float)):
                 cov = np.array([[cov]])
-            cov = np.array(cov)
+            cov = np.asarray(cov)
             if not self.is_symmetric(cov):
                 raise ValueError("The given covariance matrix is not symmetric")
             if not self.is_psd(cov):
@@ -598,10 +598,10 @@ class Gaussian(object):
         # aliases
         value, o, i = input_value, output_idx, input_idx
 
-        value = np.array([value]) if isinstance(value, (int, float)) else np.array(value)
+        value = np.array([value]) if isinstance(value, (int, float)) else np.asarray(value)
 
         if i is None:
-            o = np.array([o]) if isinstance(o, int) else np.array(o)
+            o = np.array([o]) if isinstance(o, int) else np.asarray(o)
             # from all the indices remove the output indices
             i = np.array(list(set(range(self.size)) - set(o)))
             i.sort()
@@ -609,7 +609,7 @@ class Gaussian(object):
             # make sure that the input indices have the same length as the value ones
             i = i[:len(value)]
         else:
-            i = np.array([i]) if isinstance(i, int) else np.array(i)
+            i = np.array([i]) if isinstance(i, int) else np.asarray(i)
         assert len(i) == len(value), "The value array and the idx2 array have different lengths"
 
         # compute conditional
