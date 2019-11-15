@@ -127,6 +127,9 @@ class KMP(object):
         else:
             self._database = database
 
+        # reference probability distribution (usually GMM)
+        self._ref_prob = None
+
         # mean
         self.mu = None  # mean used for the mean prediction
 
@@ -185,8 +188,8 @@ class KMP(object):
         if not isinstance(value, (int, float)):
             raise TypeError("Expecting the prior regularization term for the mean to be a scalar (int, float), but "
                             "got instead: {}".format(type(value)))
-        if value <= 0.:
-            raise ValueError("The prior regularization term needs to be strictly bigger than 0.")
+        if value < 0.:
+            raise ValueError("The prior regularization term for the mean needs to be bigger or equal to 0.")
         self._l1 = value
 
     # aliases
@@ -206,13 +209,20 @@ class KMP(object):
             raise TypeError("Expecting the prior regularization term for the covariance to be a scalar (int, float), "
                             "but got instead: {}".format(type(value)))
         if value <= 0.:
-            raise ValueError("The prior regularization term needs to be strictly bigger than 0.")
+            raise ValueError("The prior regularization term for the covariance needs to be strictly bigger than 0. "
+                             "The reason is that when computing the covariance prediction, we divide by that term.")
         self._l2 = value
 
     # aliases
     prior_covariance_regularization = lambda2
     covariance_regularization = lambda2
     cov_reg = lambda2
+
+    @property
+    def reference_probability_distribution(self):
+        """Return the underlying reference probability distribution. Currently, this returns the underlying trained
+        GMM."""
+        return self._ref_prob
 
     ##################
     # Static Methods #
@@ -310,6 +320,7 @@ class KMP(object):
         Returns:
             list[(np.ndarray, Gaussian)]: database which is a list of tuples where each one contains an input data
                 array and the corresponding predicted output Gaussian (by GMR)
+            GMM: reference probability distribution computed from the given data.
         """
         # TODO: replace gmm by joint generative model
 
@@ -384,10 +395,10 @@ class KMP(object):
                     for x in database]
 
         if verbose:
-            print("Database created...")
+            print("Database created with size: {}".format(len(database)))
 
         # return constructed reference database
-        return database
+        return database, gmm
 
     @staticmethod
     def get_reference_database(x, means=None, covariances=None, gaussians=None):
@@ -571,13 +582,16 @@ class KMP(object):
         # TODO: replace gmm by joint generative model
 
         # create reference database
-        self._database = self.create_reference_database(X, Y, gmm=gmm, gmm_num_components=gmm_num_components,
-                                                        distance=distance, database_threshold=database_threshold,
-                                                        database_size_limit=database_size_limit,
-                                                        sample_from_gmm=sample_from_gmm, gmm_init=gmm_init,
-                                                        gmm_reg=gmm_reg, gmm_num_iters=gmm_num_iters,
-                                                        gmm_convergence_threshold=gmm_convergence_threshold,
-                                                        seed=seed, verbose=verbose, block=block)
+        self._database, gmm = self.create_reference_database(X, Y, gmm=gmm, gmm_num_components=gmm_num_components,
+                                                             distance=distance, database_threshold=database_threshold,
+                                                             database_size_limit=database_size_limit,
+                                                             sample_from_gmm=sample_from_gmm, gmm_init=gmm_init,
+                                                             gmm_reg=gmm_reg, gmm_num_iters=gmm_num_iters,
+                                                             gmm_convergence_threshold=gmm_convergence_threshold,
+                                                             seed=seed, verbose=verbose, block=block)
+
+        # save reference probability distribution
+        self._ref_prob = gmm
 
         # compute kernel inverse from database
         K, K_inv1, K_inv2 = self.learn_from_database(self._database, mean_reg=mean_reg, covariance_reg=covariance_reg,

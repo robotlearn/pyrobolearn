@@ -2146,6 +2146,7 @@ def plot_gmr(time_linspace, means=None, std_devs=None, covariances=None, gaussia
     plt.suptitle(suptitle)
 
     # plot t-x and t-y
+    limits = [xlim, ylim]
     for i in range(len(ylabels)):
         mean = means[:, i]
         std_dev = std_devs[:, i]
@@ -2154,6 +2155,8 @@ def plot_gmr(time_linspace, means=None, std_devs=None, covariances=None, gaussia
         axes[i].fill_between(time_linspace, mean - std_dev, mean + std_dev, facecolor='green', alpha=0.5)
         axes[i].set_xlabel('t')
         axes[i].set_ylabel(ylabels[i])
+        if i < len(limits):
+            axes[i].set_ylim(limits[i])
         # axes[i].scatter(X[:, 0], X[:, i+1])
 
     axes[-1].plot(means[:, 0], means[:, 1])
