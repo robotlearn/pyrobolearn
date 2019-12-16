@@ -251,7 +251,7 @@ class QuaternionNumpyConverter(TypeConverter):
         if isinstance(data, self.to_type):
             return data
         elif isinstance(data, self.from_type):
-            return np.quaternion(roll(data.ravel().tolist(), -self.convention))
+            return np.quaternion(*roll(data.ravel().tolist(), -self.convention))
         else:
             raise TypeError("Type not known: {}".format(type(data)))
 
@@ -301,7 +301,7 @@ class QuaternionPyTorchConverter(TypeConverter):
         if isinstance(data, self.to_type):
             return data
         elif isinstance(data, self.from_type):
-            return np.quaternion(roll(data.view(-1).data.tolist(), -self.convention))
+            return np.quaternion(*roll(data.view(-1).data.tolist(), -self.convention))
         else:
             raise TypeError("Type not known: {}".format(type(data)))
 
