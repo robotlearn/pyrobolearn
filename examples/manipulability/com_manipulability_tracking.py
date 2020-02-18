@@ -100,6 +100,8 @@ else:
 
 # Initial conditions for visualization
 # Display initial and desired manipulability ellipsoid
+robot = world.load_robot(robot)
+world.step()
 q0 = robot.get_joint_positions()
 Jcom = robot.get_center_of_mass_jacobian(q0)
 velocity_manip = robot.compute_velocity_manipulability_ellipsoid(Jcom)
