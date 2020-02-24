@@ -32,7 +32,8 @@ import numpy as np
 # import pybullet
 import pybullet
 import pybullet_data
-from pybullet_envs.bullet.bullet_client import BulletClient
+# from pybullet_envs.bullet.bullet_client import BulletClient
+from pybullet_utils.bullet_client import BulletClient
 
 # import PRL simulator
 from pyrobolearn.simulators.simulator import Simulator
