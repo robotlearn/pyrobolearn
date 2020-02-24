@@ -454,7 +454,8 @@ class GPR(GP):
             x = self._convert_to_torch(x)
             y = self._convert_to_torch(y)
             f = self.model(x)
-            log_likelihood = self.likelihood_prob.variational_log_probability(f, y)
+            #log_likelihood = self.likelihood_prob.variational_log_probability(f, y)
+            log_likelihood = self.likelihood_prob.expected_log_prob(y, f)
             return self._convert(log_likelihood, to_numpy=to_numpy)
 
     def marginal_likelihood(self, x, y, to_numpy=False):
@@ -660,7 +661,8 @@ class GPR(GP):
             x = self._convert_to_torch(x)
             f = self.model(x)
             if isinstance(num_samples, int):
-                num_samples = (num_samples,)
+                #num_samples = (num_samples,)
+                num_samples = torch.Size([num_samples])
             if to_numpy:
                 return self._convert_to_numpy(f.sample(num_samples))
             return f.sample(num_samples)
@@ -717,6 +719,7 @@ if __name__ == '__main__':
     y = torch.sin(x * (2 * np.pi)) + torch.randn(x.size()) * 0.2
 
     x, y = x.numpy(), y.numpy()
+    xlim, ylim = [-.1, 1.1], [-2, 2]
 
     # plot true data
     plt.plot(x, y, 'x')
@@ -726,7 +729,11 @@ if __name__ == '__main__':
 
     # plot prior possible functions
     f = model.sample(x, num_samples=10, to_numpy=True)
+    #plt.scatter(x, y, alpha=0.3)
     plt.plot(x, f.T)
+    plt.xlim(xlim)
+    plt.ylim(ylim)
+    plt.show()
 
     # compute log likelihoods
     print("\nBefore training:")
@@ -760,7 +767,7 @@ if __name__ == '__main__':
     lower, upper = pred.confidence_region()
 
     plt.plot(x, y, 'k*')
-    plt.plot(x_test, torch_to_numpy(pred.mean()), 'b')
+    plt.plot(x_test, torch_to_numpy(pred.mean), 'b')
     plt.fill_between(x_test, torch_to_numpy(lower), torch_to_numpy(upper), alpha=0.5)
     plt.ylim([-3, 3])
     plt.show()
