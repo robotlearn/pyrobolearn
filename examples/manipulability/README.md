@@ -11,6 +11,7 @@ with a fixed base.
 of a floating-base robot while keeping its balance.
 4. `com_dynamic_manipulability_tracking_with_balance.py`: track the dynamic manipulability ellipsoid of the center 
 of mass of a floating-base robot while keeping its balance.
+5. `right_arm_manipulability_tracking_with_balance.py`: track a desired manipulability for its right arm, while reaching a desired end-effector position and keeping balance
 
 References:
 - [1] "Robotics: Modelling, Planning and Control", Siciliano et al., 2010
