@@ -194,6 +194,8 @@ else:
 
 
 # Display initial and desired manipulability ellipsoid
+robot = world.load_robot(robot)
+world.step()
 q0 = robot.get_joint_positions()
 print("q0: {}".format(q0))
 Jcom0 = robot.get_center_of_mass_jacobian(q0)
