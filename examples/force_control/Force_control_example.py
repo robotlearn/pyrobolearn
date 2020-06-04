@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 """Inverse kinematics with the Kuka robot where the goal is to follow a moving sphere.
 """
-import sys
-sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+
 import numpy as np
 from itertools import count
 
@@ -102,18 +101,15 @@ def manipulator_thread(world, robot, sphere, FT_sensor):
                 break
         # step in simulation
         world.step(sleep_dt=dt)
-    Fz_error_old = 0
     sp_z = []
     num = []
-    if flag == 1:
-        detx = np.array([0.0, 0.0, 0.0])
+    detx = np.array([0.0, 0.0, 0.0])
     for t in count():
         Fz_desired = 100
         # move sphere
         if t == 0:
             z = robot.get_link_world_positions(link_id)[2]
             sphere.position = np.array([0.46 - r * np.sin(w * t + np.pi / 2), r * np.cos(w * t + np.pi / 2), z])
-            # zz = z - 0.002  # Try to make the end-effector touch the surface of the table
 
         # get current end-effector position and velocity in the task/operational space
         x = robot.get_link_world_positions(link_id)
@@ -136,41 +132,25 @@ def manipulator_thread(world, robot, sphere, FT_sensor):
         Fz_current = FT_sensor.sense()[2]  # record the current Fz
 
         Fz_error = Fz_current - Fz_desired  # record the current error
-        # dv[2] = dv[2] + 0.00016 * Fz_error + 0.0000008 * (Fz_error - Fz_error_old) / dt # 结果较好的dt=2400
-        # dv[2] = 0.0013 * Fz_error + 0.0000020 * (Fz_error - Fz_error_old) / dt  # 结果较好的dt=2400
-        # dv[2] = 0.00093 * Fz_error + 0.000060 * (Fz_error - Fz_error_old) / dt
-        # dv[2] = 0.0052 * Fz_error
-        # sphere.position[2] = sphere.position[2] + 0.00095 * Fz_error + 0.000060 * (Fz_error - Fz_error_old) / dt
-        if flag == 0:
-            Fz_error_integral = Fz_error + Fz_error_old
-            zzz = sphere.position[2] + 0.000001 * Fz_error + 0.000002 * Fz_error_integral
-            Fz_error_old = Fz_error  # record the current error as the old error
-        elif flag == 1:
-            # xyz 3 direction impedance control
-            # M = np.array([[50, 0, 0], [0, 50, 0], [0, 0, 50]])
-            # D = np.array([[10, 0, 0], [0, 10, 0], [0, 0, 10]])
-            # K = np.array([[20, 0, 0], [0, 20, 0], [0, 0, 20]])
-            # numerator = np.array([[Fz_error[0], 0, 0], [0, Fz_error[1], 0], [0, 0, Fz_error[2]]]) * np.square(dt) \
-            #             + D * dt * dx[:, 1] + M * (2 * dx[:, 1] - dx[:, 2])
-            # denominator = M + D*dt + K*np.square(dt)
-            # dx_ = numerator * np.linalg.inv(denominator)
-            # dx[:, 2] = dx[:, 1]
-            # dx[:, 1] = dx[:, 0]
-            # dx[:, 0] = np.array([dx_[0, 0], dx_[1, 1], dx_[2, 2]])
 
-            M = 1
-            D = 9500
-            K = 500000
-            numerator = Fz_error * np.square(dt) + D * dt * detx[1] + M * (2 * detx[1] - detx[2])
-            denominator = M + D*dt + K*np.square(dt)
-            detx_ = numerator / denominator
-            print (detx_)
-            detx[2] = detx[1]
-            detx[1] = detx[0]
-            detx[0] = detx_
+        # set the M\D\K parameters by heuristic method, these parameters may have a good result
+        M = 1
+        D = 9500
+        K = 500000
+        # Refer the formula in this article
+        # [1] SONG, Peng; YU, Yueqing; ZHANG, Xuping. A tutorial survey and comparison of impedance control on robotic manipulation. Robotica, 2019, 37.5: 801-836.
+        # the formula is theta_x(k) = Fc(k)*Ts^2+Bd*Ts*theta_x(k-1)+Md*(2*theta_x(k-1)-theta_x(k-2))/(Md+Bd*Ts+Kd*Ts^2)
+        numerator = Fz_error * np.square(dt) + D * dt * detx[1] + M * (2 * detx[1] - detx[2])
+        denominator = M + D*dt + K*np.square(dt)
+        detx_ = numerator / denominator
+        print (detx_)
+        detx[2] = detx[1]
+        detx[1] = detx[0]
+        detx[0] = detx_
 
-            zzz = sphere.position[2] + detx[0]
+        zzz = sphere.position[2] + detx[0]
 
+        # (0.46,0) is the the centre of the circle trajectory on the table
         sphere.position = np.array([0.46 - r * np.sin(w * t + np.pi / 2), r * np.cos(w * t + np.pi / 2), zzz])
         dv = kp * (sphere.position - x) - kd * dx  # compute the other direction tracking error term
 
@@ -204,7 +184,7 @@ if __name__=='__main__':
     world = BasicWorld(sim)
 
     # flag : 0 # PI control
-    flag = 1
+    flag = 0
     # create robot
     robot = KukaIIWA(sim)
     robot.print_info()
