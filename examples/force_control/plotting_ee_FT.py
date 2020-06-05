@@ -21,21 +21,19 @@ class EeFtRealTimePlot(RealTimePlot):
                  torquey=False, torquez=False, num_point=100, xlims=None, ylims=None,
                  suptitle='End effector Force and Torque', ticks=1, blit=True, interval=0.0001):
         """
-        初始化实时绘制的机械臂的相关配置
+        Initialize the configuration of the robot arm drawn in real time
 
-        参数：
-            robot: 所创造的机械臂实体
-            force: 如果为真则绘制力信息
-            torque: 如果为真则绘制力矩信息
-            num_point: 保持多少个点在实时的绘制坐标系下
-            xlims: x轴的限制
-            ylims: y轴的限制
-            suptitle: 图的标题
-            ticks: 采样实时点的时间步间隔
-            blit: 如果为真只更新数据内容不会改变标注等内容
-            interval: 在不同frame之间的延迟单位mm
+        :parameter：
+            robot: the
+            forcex, forcey,forcez: if is True plot the force information
+            torquex, torquey, torquez: if is True plot the torque information
+            num_point: the number of the points need to be obtained in the figure
+            xlims: the limited of x axis
+            ylims: the limited of y axis
+            suptitle: the title of the figure
+            ticks: Time step interval for sampling real-time points
+            blit: If it is true, only updating the data content will not change the label and other content
         """
-        # 设置机器人实例
         if not isinstance(robot, prl.robots.Robot):
             raise TypeError("Expecting the given 'robot' to be an instance of `Robot`, but got instead: "
                             "{}".format(robot))
@@ -46,10 +44,10 @@ class EeFtRealTimePlot(RealTimePlot):
         self._sensor = sensor
 
         self.axis_ids = ['Force', 'Torque']
-        # 设置图像布局
+        # Set image layout
         nrows, ncols = 1, 1
 
-        # 设置我们所需要绘制的参数
+        # Set the parameters we need to draw
         self._plot_Fx = bool(forcex)
         self._plot_Fy = bool(forcey)
         self._plot_Fz = bool(forcez)
@@ -67,10 +65,10 @@ class EeFtRealTimePlot(RealTimePlot):
         else:
             ncols = 2
 
-        # 设置点
+        # set the point
         self._num_points = num_point if num_point > 10 else 10
 
-        # 检查x和y的极限
+        # check the limited of the x y
         if xlims is None:
             xlims = (0, self._num_points)
         if ylims is None:
@@ -82,7 +80,7 @@ class EeFtRealTimePlot(RealTimePlot):
 
     def _init(self, axes):
         """
-        初始化图像在每个轴下创造线
+        initialize the figure
         :param axes:
         :return:
         """
@@ -124,7 +122,6 @@ class EeFtRealTimePlot(RealTimePlot):
 
     def _set_line(self, line_idx, data, state_name):
         """
-        设置新的数据的来划线
         :param axis_idx: joint index
         :param line_idx: line index
         :param data: data sent through the pipe
