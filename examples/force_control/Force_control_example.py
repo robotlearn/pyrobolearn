@@ -16,7 +16,7 @@ from pyrobolearn.worlds import BasicWorld
 from pyrobolearn.robots import KukaIIWA, Body, sensors
 from pyrobolearn.utils.transformation import *
 
-from plotting_ee_FT import EeFtRealTimePlot
+from pyrobolearn.utils.plotting.end_effector_realtime_FT_plot import EeFtRealTimePlot
 
 from threading import Thread
 
