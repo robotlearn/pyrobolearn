@@ -3,13 +3,14 @@ Citation
 
 .. code-block:: latex
 
-    @misc{delhaisse2019pyrobolearn,
-        author = {Delhaisse, Brian and Rozo, Leonel, and Caldwell, Darwin},
-        title = {PyRoboLearn: A Python Framework for Robot Learning Practitioners},
-        publisher = {GitHub},
-        journal = {GitHub repository},
-        howpublished = {\url{https://github.com/robotlearn/pyrobolearn}},
-        year=2019,
+    @INPROCEEDINGS{delhaisse2019pyrobolearn,
+	AUTHOR 	= {Brian Delhaisse and Leonel Rozo and Darwin G. Caldwell},
+	TITLE 	= {PyRoboLearn: A {P}ython Framework for Robot Learning Practitioners},
+	BOOKTITLE = {Conference on Robot Learning (CoRL)},
+	YEAR	= {2019},
+	ADDRESS = {Osaka, Japan},
+	MONTH 	= {October},
+    URL     = {https://github.com/robotlearn/pyrobolearn}
     }
 
 
