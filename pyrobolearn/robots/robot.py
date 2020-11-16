@@ -1108,7 +1108,7 @@ class Robot(ControllableBody):
         """
         # check if cached
         if 'ddq' in self._state:
-            ddq = self._state[0]
+            ddq = self._state['ddq'][0]
             if joint_ids is None:
                 return ddq
             return ddq[self.get_q_indices(joint_ids)]
