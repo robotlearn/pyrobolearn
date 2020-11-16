@@ -7,7 +7,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import torch
 import quaternion
-import collections
+import collections.abc
 
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
@@ -54,7 +54,7 @@ class TypeConverter(object):
     @from_type.setter
     def from_type(self, from_type):
         if from_type is not None:
-            if isinstance(from_type, collections.Iterable):
+            if isinstance(from_type, collections.abc.Iterable):
                 for t in from_type:
                     if not isinstance(t, type):
                         raise TypeError("Expecting the from_type to be an instance of 'type'")
@@ -70,7 +70,7 @@ class TypeConverter(object):
     @to_type.setter
     def to_type(self, to_type):
         if to_type is not None:
-            if isinstance(to_type, collections.Iterable):
+            if isinstance(to_type, collections.abc.Iterable):
                 for t in to_type:
                     if not isinstance(t, type):
                         raise TypeError("Expecting the to_type to be an instance of 'type'")

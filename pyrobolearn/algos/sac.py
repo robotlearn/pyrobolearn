@@ -6,7 +6,7 @@ Define the SAC reinforcement learning algorithm. This is a model-free, off-polic
 """
 
 import copy
-import collections
+import collections.abc
 
 from pyrobolearn.algos.rl_algo import GradientRLAlgo, Explorer, Evaluator, Updater
 
@@ -283,7 +283,7 @@ class SAC(GradientRLAlgo):
         """
 
         # check approximators
-        if not isinstance(approximators, collections.Iterable):
+        if not isinstance(approximators, collections.abc.Iterable):
             raise TypeError("Expecting the approximators to be a list containing a Policy, a Value, and at least 2 "
                             "QValues")
         policy, value, q_values = None, None, []

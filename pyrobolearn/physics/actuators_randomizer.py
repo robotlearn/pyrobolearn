@@ -6,7 +6,7 @@ Dependencies:
 - `pyrobolearn.physics`
 """
 
-import collections
+import collections.abc
 import numpy as np
 
 from pyrobolearn.physics.robot_physics_randomizer import RobotPhysicsRandomizer

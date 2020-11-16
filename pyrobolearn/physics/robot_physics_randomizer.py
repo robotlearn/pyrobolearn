@@ -6,7 +6,7 @@ Dependencies:
 - `pyrobolearn.physics`
 """
 
-import collections
+import collections.abc
 
 from pyrobolearn.physics.body_physics_randomizer import BodyPhysicsRandomizer
 from pyrobolearn.physics.link_physics_randomizer import LinkPhysicsRandomizer
@@ -63,7 +63,7 @@ class RobotPhysicsRandomizer(BodyPhysicsRandomizer):
             links = [LinkPhysicsRandomizer(self.body, links)]
         elif isinstance(links, LinkPhysicsRandomizer):
             links = [links]
-        elif isinstance(links, collections.Iterable):
+        elif isinstance(links, collections.abc.Iterable):
             link_list = []
             for idx, link in enumerate(links):
                 if isinstance(link, int):
@@ -90,7 +90,7 @@ class RobotPhysicsRandomizer(BodyPhysicsRandomizer):
             joints = [JointPhysicsRandomizer(self.body, joints)]
         elif isinstance(joints, JointPhysicsRandomizer):
             joints = [joints]
-        elif isinstance(joints, collections.Iterable):
+        elif isinstance(joints, collections.abc.Iterable):
             joint_list = []
             for idx, joint in enumerate(joints):
                 if isinstance(joint, int):

@@ -3,7 +3,7 @@
 """Define the abstract ROS service.
 """
 
-import collections
+import collections.abc
 import rospy
 
 
@@ -33,12 +33,12 @@ class ROSService(object):
         """
         if isinstance(name, str):
             name = [name]
-        elif not isinstance(name, collections.Iterable):
+        elif not isinstance(name, collections.abc.Iterable):
             raise TypeError("Expecting the given 'name' to be a string, list of string, but got instead: "
                             "{}".format(type(name)))
         self.names = name
 
-        if not isinstance(service_class, collections.Iterable):
+        if not isinstance(service_class, collections.abc.Iterable):
             service_class = [service_class]
         self.service_classes = service_class
 
@@ -77,10 +77,10 @@ class ROSService(object):
         """
         if isinstance(names, str):
             names = [names]
-        elif not isinstance(names, collections.Iterable):
+        elif not isinstance(names, collections.abc.Iterable):
             raise TypeError("Expecting the given 'names' to be a string, list of string, but got instead: "
                             "{}".format(type(names)))
-        if not isinstance(service_classes, collections.Iterable):
+        if not isinstance(service_classes, collections.abc.Iterable):
             service_classes = [service_classes]
 
         for name, service_class in zip(names, service_classes):

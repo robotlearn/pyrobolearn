@@ -18,7 +18,7 @@ Dependencies:
 
 import sys
 import numpy as np
-import collections
+import collections.abc
 import operator
 import copy
 
@@ -217,7 +217,7 @@ class Reward(object):
         """Set the inner rewards."""
         if rewards is None:
             rewards = []
-        elif isinstance(rewards, collections.Iterable):
+        elif isinstance(rewards, collections.abc.Iterable):
             for reward in rewards:
                 if not isinstance(reward, Reward):
                     raise TypeError("Expecting a Reward instance for each item in the iterator.")

@@ -12,7 +12,7 @@ Dependencies:
 """
 
 import copy
-import collections
+import collections.abc
 import numpy as np
 import torch
 
@@ -171,7 +171,7 @@ class Approximator(object):
             processors = []
         elif callable(processors):
             processors = [processors]
-        elif isinstance(processors, collections.Iterable):
+        elif isinstance(processors, collections.abc.Iterable):
             for idx, processor in enumerate(processors):
                 if not callable(processor):
                     raise ValueError("The {} processor {} is not callable.".format(idx, processor))
@@ -192,7 +192,7 @@ class Approximator(object):
             processors = []
         elif callable(processors):
             processors = [processors]
-        elif isinstance(processors, collections.Iterable):
+        elif isinstance(processors, collections.abc.Iterable):
             for idx, processor in enumerate(processors):
                 if not callable(processor):
                     raise ValueError("The {} processor {} is not callable.".format(idx, processor))

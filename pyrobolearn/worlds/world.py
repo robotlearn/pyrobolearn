@@ -9,7 +9,7 @@ Dependencies:
 import os
 import copy
 import inspect
-import collections
+import collections.abc
 import time
 import numpy as np
 import cv2
@@ -313,7 +313,7 @@ class World(object):
     #     Args:
     #         bridges (list, Bridge): list of bridges
     #     """
-    #     if isinstance(bridges, collections.Iterable):
+    #     if isinstance(bridges, collections.abc.Iterable):
     #         for bridge in bridges:
     #             # if not isinstance(bridge, Bridge):
     #             #    raise TypeError("Expecting a list of bridges (must be an instance of Bridge)")
@@ -2029,7 +2029,7 @@ class World(object):
         if isinstance(low, (float, int)) and isinstance(high, (float, int)):
             positions = np.random.uniform(low=low, high=high, size=(size,))
         else:
-            if isinstance(low, collections.Iterable):
+            if isinstance(low, collections.abc.Iterable):
                 positions = np.random.uniform(low=low, high=high, size=(size, len(low)))
             else:
                 positions = np.random.uniform(low=low, high=high, size=(size, len(high)))

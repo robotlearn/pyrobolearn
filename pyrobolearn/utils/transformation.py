@@ -15,7 +15,7 @@ from scipy.linalg import block_diag
 import quaternion
 # from pyquaternion import Quaternion  # TODO: check API at http://kieranwynn.github.io/pyquaternion
 import sympy
-from collections import Iterable
+from collections.abc import Iterable
 
 from pyrobolearn.utils.converter import QuaternionNumpyConverter
 

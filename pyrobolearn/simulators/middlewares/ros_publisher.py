@@ -3,7 +3,7 @@
 """Define the abstract robot publisher.
 """
 
-import collections
+import collections.abc
 
 import rospy
 
@@ -60,7 +60,7 @@ class PublisherData(object):
             self.is_group = False
             self.publisher = rospy.Publisher(topic, msg_class, queue_size=queue_size)
             self.msg = msg_class()
-        elif isinstance(topic, collections.Iterable):
+        elif isinstance(topic, collections.abc.Iterable):
             self.is_group = True
             self.publisher = [rospy.Publisher(t, msg_class, queue_size=queue_size) for t in topic]
             self.msg = [msg_class() for _ in topic]
@@ -86,7 +86,7 @@ class PublisherData(object):
                 data = data[indices]
 
         # if multiple publisher
-        if isinstance(self.publisher, collections.Iterable):
+        if isinstance(self.publisher, collections.abc.Iterable):
             if indices is None:  # publish to every topics the corresponding data
                 for idx, (pub, msg) in enumerate(zip(self.publisher, data)):
                     pub.publish(msg)
@@ -131,7 +131,7 @@ class PublisherData(object):
         # TODO: use `rsetattr` (which is implemented in pyrobolearn/utils/__init__.py)
         if self.is_group:
             if indices is None:  # set every message attribute
-                if isinstance(values, collections.Iterable):
+                if isinstance(values, collections.abc.Iterable):
                     for msg, value in zip(self.msg, values):
                         setattr(msg, key, value)
                 else:
@@ -141,7 +141,7 @@ class PublisherData(object):
                 if isinstance(indices, int):
                     setattr(self.msg[indices], key, values)
                 else:
-                    if isinstance(values, collections.Iterable):
+                    if isinstance(values, collections.abc.Iterable):
                         for i, index in enumerate(indices):
                             setattr(self.msg[index], key, values[i])
                     else:
@@ -169,7 +169,7 @@ class PublisherData(object):
                 return [getattr(msg, key) for msg in self.msg]
             elif isinstance(indices, int):
                 return getattr(self.msg[indices], key)
-            elif isinstance(indices, collections.Iterable):
+            elif isinstance(indices, collections.abc.Iterable):
                 return [getattr(self.msg[index], key) for index in indices]
             else:
                 raise TypeError("Expecting the given indices to be an int, None, or list of int, but got instead: "
@@ -181,7 +181,7 @@ class PublisherData(object):
         Unsubscribe from a topic. Topic instance is no longer valid after this call. Additional calls to `unregister()`
         have no effect.
         """
-        if isinstance(self.publisher, collections.Iterable):
+        if isinstance(self.publisher, collections.abc.Iterable):
             for publisher in self.publisher:
                 publisher.unregister()
         else:
@@ -250,7 +250,7 @@ class Publisher(object):
         # create new publisher
         publisher = PublisherData(topic=topic, msg_class=msg_class, queue_size=queue_size)
         self.publishers[name] = publisher
-        if isinstance(topic, collections.Iterable):
+        if isinstance(topic, collections.abc.Iterable):
             for t in topic:
                 self.topics_to_publisher_name[t] = name
         else:

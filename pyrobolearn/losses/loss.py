@@ -11,7 +11,7 @@ optimize them, while rewards / costs depends on the state(s) and action(s) and a
 from abc import ABCMeta
 import operator
 import copy
-import collections
+import collections.abc
 
 import torch
 
@@ -55,7 +55,7 @@ class Loss(object):
         """Set the inner losses."""
         if losses is None:
             losses = []
-        elif isinstance(losses, collections.Iterable):
+        elif isinstance(losses, collections.abc.Iterable):
             for loss in losses:
                 if not isinstance(loss, Loss):
                     raise TypeError("Expecting a Loss instance for each item in the iterator.")

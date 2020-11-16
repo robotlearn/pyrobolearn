@@ -10,7 +10,7 @@ See Also:
     - `pyrobolearn.samplers`: this defines how to samples from the storages.
 """
 
-import collections
+import collections.abc
 import copy
 import pickle
 import queue
@@ -153,7 +153,7 @@ class PyTorchStorage(Storage):
                 item.remove(value)
                 value = self._to(value, device=device, dtype=dtype)
                 item.add(value)
-        elif isinstance(item, collections.Iterable):
+        elif isinstance(item, collections.abc.Iterable):
             item = [self._to(value, device=device, dtype=dtype) for value in item]
             # for idx, value in enumerate(item):
             #     item[idx] = self._to(value, device=device, dtype=dtype)
@@ -188,7 +188,7 @@ class PyTorchStorage(Storage):
                 if isinstance(items, dict):
                     for item in items.values():
                         check(item)
-                elif isinstance(items, collections.Iterable):
+                elif isinstance(items, collections.abc.Iterable):
                     for item in items:
                         check(item)
             check(self)
@@ -260,7 +260,7 @@ class ListStorage(list, PyTorchStorage):
 
     def extend(self, iterable):
         """Extend list by appending elements from the iterable."""
-        if not isinstance(iterable, collections.Iterable):
+        if not isinstance(iterable, collections.abc.Iterable):
             raise TypeError("Expecting an iterable.")
         iterable = self._to(iterable, device=self.device, dtype=self.dtype)
         super(ListStorage, self).append(iterable)

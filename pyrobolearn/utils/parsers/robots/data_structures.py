@@ -7,7 +7,7 @@ import copy
 from enum import Enum
 import numpy as np
 import trimesh
-from collections import OrderedDict, Iterable
+from collections.abc import OrderedDict, Iterable
 
 from pyrobolearn.utils.transformation import get_rpy_from_quaternion, get_quaternion_from_rpy, get_matrix_from_rpy, \
     get_rpy_from_matrix, get_matrix_from_axis_angle, get_inverse_homogeneous

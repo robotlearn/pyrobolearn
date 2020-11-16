@@ -39,7 +39,7 @@ import os
 import time
 import numpy as np
 import pickle
-from collections import OrderedDict
+from collections.abc import OrderedDict
 
 # import XML parsers to parse / create XML for MuJoCo
 import xml.etree.ElementTree as ET  # XML parser

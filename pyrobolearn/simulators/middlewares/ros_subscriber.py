@@ -3,7 +3,7 @@
 """Define the abstract robot subscriber.
 """
 
-import collections
+import collections.abc
 
 import numpy as np
 import rospy
@@ -52,7 +52,7 @@ class SubscriberData(object):
             self.is_group = False
             self.subscriber = rospy.Subscriber(topic, msg_class, callback=self.callback)
             self.msg = msg_class()
-        elif isinstance(topic, collections.Iterable):
+        elif isinstance(topic, collections.abc.Iterable):
             self.is_group = True
             self.subscriber = [rospy.Subscriber(t, msg_class, callback=self.callback, callback_args=idx)
                                for idx, t in enumerate(topic)]
@@ -95,7 +95,7 @@ class SubscriberData(object):
                 return [getattr(msg, key) for msg in self.msg]
             elif isinstance(indices, int):
                 return getattr(self.msg[indices], key)
-            elif isinstance(indices, collections.Iterable):
+            elif isinstance(indices, collections.abc.Iterable):
                 return [getattr(self.msg[index], key) for index in indices]
             else:
                 raise TypeError("Expecting the given indices to be an int, None, or list of int, but got instead: "
@@ -107,7 +107,7 @@ class SubscriberData(object):
         Unsubscribe from a topic. Topic instance is no longer valid after this call. Additional calls to `unregister()`
         have no effect.
         """
-        if isinstance(self.subscriber, collections.Iterable):
+        if isinstance(self.subscriber, collections.abc.Iterable):
             for subscriber in self.subscriber:
                 subscriber.unregister()
         else:
@@ -170,7 +170,7 @@ class Subscriber(object):
         # create new subscriber
         subscriber = SubscriberData(topic, msg_class)
         self.subscribers[name] = subscriber
-        if isinstance(topic, collections.Iterable):
+        if isinstance(topic, collections.abc.Iterable):
             for t in topic:
                 self.topics_to_subscriber_name[t] = name
         else:

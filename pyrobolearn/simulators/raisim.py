@@ -35,7 +35,7 @@ References:
 
 import os
 import time
-from collections import OrderedDict
+from collections.abc import OrderedDict
 import numpy as np
 
 

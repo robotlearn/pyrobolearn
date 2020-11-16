@@ -7,7 +7,7 @@ models such as policies/controllers, dynamic transition functions, value approxi
 """
 
 import copy
-import collections
+import collections.abc
 # from abc import ABCMeta, abstractmethod
 import numpy as np
 import torch
@@ -165,7 +165,7 @@ class State(object):
             raise AttributeError("Trying to add internal states to the current state while it already has some data. "
                                  "A state should be a combination of states or should contain some kind of data, "
                                  "but not both.")
-        if isinstance(states, collections.Iterable):
+        if isinstance(states, collections.abc.Iterable):
             for state in states:
                 if not isinstance(state, State):
                     raise TypeError("One of the given states is not an instance of State.")
@@ -206,7 +206,7 @@ class State(object):
             data: the data to set
         """
         if self.has_states():  # combined states
-            if not isinstance(data, collections.Iterable):
+            if not isinstance(data, collections.abc.Iterable):
                 raise TypeError("data is not an iterator")
             if len(self._states) != len(data):
                 raise ValueError("The number of states is different from the number of data segments")
@@ -298,7 +298,7 @@ class State(object):
             data (torch.Tensor, list of torch.Tensors): data to set.
         """
         if self.has_states():  # combined states
-            if not isinstance(data, collections.Iterable):
+            if not isinstance(data, collections.abc.Iterable):
                 raise TypeError("data is not an iterator")
             if len(self._states) != len(data):
                 raise ValueError("The number of states is different from the number of data segments")
@@ -649,7 +649,7 @@ class State(object):
                                  "some kind of data, but not both.")
         if isinstance(state, State):
             self._states.add(state)
-        elif isinstance(state, collections.Iterable):
+        elif isinstance(state, collections.abc.Iterable):
             for i, s in enumerate(state):
                 if not isinstance(s, State):
                     raise TypeError("The item {} in the given list is not an instance of State".format(i))

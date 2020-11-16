@@ -20,7 +20,7 @@ References:
 
 import copy
 import types
-import collections
+import collections.abc
 import numpy as np
 import torch
 
@@ -237,7 +237,7 @@ class NN(object):  # Model
             self.model.load_state_dict(parameters.model.state_dict())
         elif isinstance(parameters, torch.nn.Module):
             self.model.load_state_dict(parameters.state_dict())
-        elif isinstance(parameters, (types.GeneratorType, collections.Iterable)):
+        elif isinstance(parameters, (types.GeneratorType, collections.abc.Iterable)):
             for model_params, other_params in zip(self.parameters(), parameters):
                 model_params.data.copy_(other_params.data)
         else:

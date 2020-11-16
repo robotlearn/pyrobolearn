@@ -10,7 +10,7 @@ Dependencies:
 """
 
 from abc import ABCMeta
-import collections
+import collections.abc
 
 import torch
 
@@ -45,7 +45,7 @@ class Target(object):
         """
         # check targets
         if targets is not None:
-            if not isinstance(targets, collections.Iterable):
+            if not isinstance(targets, collections.abc.Iterable):
                 targets = [targets]
             for i, target in enumerate(targets):
                 if not isinstance(target, Target):
@@ -272,7 +272,7 @@ class ValueTarget(GammaTarget):
             gamma (float): discount factor
         """
         super(ValueTarget, self).__init__(gamma)
-        if not isinstance(values, collections.Iterable):
+        if not isinstance(values, collections.abc.Iterable):
             values = [values]
         for i, value in enumerate(values):
             if not isinstance(value, Value):
@@ -312,7 +312,7 @@ class QValueTarget(GammaTarget):
         super(QValueTarget, self).__init__(gamma)
 
         # check Q-values
-        if not isinstance(q_values, collections.Iterable):
+        if not isinstance(q_values, collections.abc.Iterable):
             q_values = [q_values]
         for i, value in enumerate(q_values):
             if not isinstance(value, QValue):
@@ -357,7 +357,7 @@ class QLearningTarget(GammaTarget):
             gamma (float): discount factor
         """
         super(QLearningTarget, self).__init__(gamma)
-        if not isinstance(q_values, collections.Iterable):
+        if not isinstance(q_values, collections.abc.Iterable):
             q_values = [q_values]
         for i, value in enumerate(q_values):
             if not isinstance(value, QValue):
@@ -402,7 +402,7 @@ class EntropyValueTarget(Target):
         super(EntropyValueTarget, self).__init__()
 
         # check Q-values
-        if not isinstance(q_values, collections.Iterable):
+        if not isinstance(q_values, collections.abc.Iterable):
             q_values = [q_values]
         for i, value in enumerate(q_values):
             if not isinstance(value, QValue):
