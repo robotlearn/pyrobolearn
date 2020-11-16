@@ -1147,6 +1147,12 @@ class World(object):
         Returns:
             bool: True if it was successful.
         """
+        # check arguments
+        if isinstance(body1, Body):
+            body1 = body1.id
+        if isinstance(body2, Body):
+            body2 = body2.id
+
         if (body1, body2) in self.constraints:
             if link1 is None or link2 is None:
                 for (link_id1, link_id2), constraint_id in self.constraints[(body1, body2)].items():
@@ -1183,6 +1189,12 @@ class World(object):
         Returns:
             bool: True if the bodies/links are attached.
         """
+        # check arguments
+        if isinstance(body1, Body):
+            body1 = body1.id
+        if isinstance(body2, Body):
+            body2 = body2.id
+        
         if (body1, body2) in self.constraints:
             if link1 is None and link2 is None:
                 return True
