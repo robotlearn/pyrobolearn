@@ -1170,7 +1170,7 @@ class World(object):
                             if link1 == link_id1 and link2 == link_id2:
                                 self.sim.remove_constraint(constraint_id)
             else:
-                self.sim.remove_constraint(self.constraints[(body1, body2, link1, link2)])
+                self.sim.remove_constraint(self.constraints[(body1, body2)][(link1, link2)])
             return True
         return False
 
