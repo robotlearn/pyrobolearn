@@ -7,7 +7,7 @@ This includes notably the camera, contact, IMU, force/torque sensors and others.
 
 import copy
 from abc import ABCMeta
-import collections
+import collections.abc
 import numpy as np
 
 # from pyrobolearn.states.robot_states.robot_states import RobotState
@@ -174,7 +174,7 @@ class ContactState(SensorState):
                 state is not a combination of states, but is given some :attr:`data`.
             ticks (int): number of ticks to sleep before getting the next state data.
         """
-        if not isinstance(contacts, collections.Iterable):
+        if not isinstance(contacts, collections.abc.Iterable):
             contacts = [contacts]
         for contact in contacts:
             if not isinstance(contact, ContactSensor):
@@ -230,7 +230,7 @@ class FeetContactState(ContactState):
             for foot in feet:
                 if isinstance(foot, int):
                     feet_ids.append(foot)
-                elif isinstance(foot, collections.Iterable):
+                elif isinstance(foot, collections.abc.Iterable):
                     for f in foot:
                         feet_ids.append(f)
                 else:

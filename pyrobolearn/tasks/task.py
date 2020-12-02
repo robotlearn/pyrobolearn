@@ -19,7 +19,7 @@ Dependencies:
 - `pyrobolearn.policies`
 """
 
-import collections
+import collections.abc
 import copy
 import pickle
 import time
@@ -79,7 +79,7 @@ class Task(object):
         self.env = environment
 
         # check the policies
-        if isinstance(policies, collections.Iterable):
+        if isinstance(policies, collections.abc.Iterable):
             for policy in policies:
                 if not isinstance(policy, Policy):
                     raise TypeError("Expecting 'policies' to be a list/tuple of Policy instances")

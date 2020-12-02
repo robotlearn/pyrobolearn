@@ -7,7 +7,7 @@ Dependencies:
 - `pyrobolearn.physics`
 """
 
-import collections
+import collections.abc
 import numpy as np
 
 from pyrobolearn.physics.body_physics_randomizer import BodyPhysicsRandomizer
@@ -99,7 +99,7 @@ class LinkPhysicsRandomizer(BodyPhysicsRandomizer):
             links = list(range(self.body.num_links))
         elif isinstance(links, int):
             links = [links]
-        elif isinstance(links, collections.Iterable):
+        elif isinstance(links, collections.abc.Iterable):
             for idx, link in enumerate(links):
                 if not isinstance(link, int):
                     raise TypeError("The {} element of the given list of links is not an integer, instead got: "

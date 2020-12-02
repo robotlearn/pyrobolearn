@@ -8,7 +8,7 @@ The polynomial model is a discriminative deterministic model given by: :math:`y 
 
 import copy
 # import inspect
-import collections
+import collections.abc
 import numpy as np
 import torch
 
@@ -55,7 +55,7 @@ class PolynomialFunction(object):
         # checks
         if isinstance(degree, int):
             degree = range(degree + 1)
-        elif isinstance(degree, collections.Iterable):
+        elif isinstance(degree, collections.abc.Iterable):
             for d in degree:
                 if not isinstance(d, int):
                     raise TypeError("Expecting the given degrees to be positive integers, but got {}".format(type(d)))

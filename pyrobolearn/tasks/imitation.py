@@ -7,7 +7,7 @@ Dependencies:
 - `pyrobolearn.tools` (interfaces / bridges to be used to demonstrate a certain skill).
 """
 
-import collections
+import collections.abc
 from itertools import count
 import time
 import numpy as np
@@ -127,9 +127,9 @@ class ILTask(Task):
         """Set the recorders."""
         if recorders is None:
             recorders = [StateRecorder(self.policies.states), ActionRecorder(self.policies.actions)]
-        elif isinstance(recorders, Recorder):  # or not isinstance(recorders, collections.Iterable):
+        elif isinstance(recorders, Recorder):  # or not isinstance(recorders, collections.abc.Iterable):
             recorders = [recorders]
-        if not isinstance(recorders, collections.Iterable):
+        if not isinstance(recorders, collections.abc.Iterable):
             raise TypeError("Expecting a list of recorders.")
         # check each recorder
         for recorder in recorders:

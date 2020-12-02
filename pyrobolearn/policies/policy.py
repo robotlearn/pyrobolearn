@@ -15,7 +15,7 @@ Dependencies:
 
 import copy
 import pickle
-import collections
+import collections.abc
 import numpy as np
 import torch
 
@@ -152,13 +152,13 @@ class Policy(object):
         # preprocessors and postprocessors
         if preprocessors is None:
             preprocessors = []
-        if not isinstance(preprocessors, collections.Iterable):
+        if not isinstance(preprocessors, collections.abc.Iterable):
             preprocessors = [preprocessors]
         self.preprocessors = preprocessors
 
         if postprocessors is None:
             postprocessors = []
-        if not isinstance(postprocessors, collections.Iterable):
+        if not isinstance(postprocessors, collections.abc.Iterable):
             postprocessors = [postprocessors]
         self.postprocessors = postprocessors
 

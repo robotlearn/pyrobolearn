@@ -10,7 +10,7 @@ References:
     [1] "Distilling the Knowledge in a Neural Network", Hinton et al., 2015
 """
 
-import collections
+import collections.abc
 import torch
 
 from pyrobolearn.models.model import Model

@@ -4,7 +4,7 @@
 """
 
 import os
-import collections
+import collections.abc
 import numpy as np
 
 from pyrobolearn.robots.legged_robot import QuadrupedRobot
@@ -205,14 +205,14 @@ class Minitaur(QuadrupedRobot):
                     raise ValueError("Expecting the jointId to be an outer joint as the legs of the minitaur are "
                                      "coupled")
                 joint_ids = [joint_ids, joint_ids + 3]
-                if isinstance(positions, collections.Iterable):
+                if isinstance(positions, collections.abc.Iterable):
                     positions = positions[0]
 
                 positions = np.array([positions, -positions])
                 positions += self.init_joint_positions[self.get_q_indices(joint_ids)]
 
             # if multiple joint ids
-            elif isinstance(joint_ids, collections.Iterable):
+            elif isinstance(joint_ids, collections.abc.Iterable):
                 # for each outer joint id, get the corresponding inner joint id
                 joints = []
                 for joint in joint_ids:

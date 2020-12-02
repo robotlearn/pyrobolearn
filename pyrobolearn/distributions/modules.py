@@ -15,7 +15,7 @@ References:
 
 from abc import ABCMeta
 
-import collections
+import collections.abc
 import numpy as np
 import torch
 
@@ -981,7 +981,7 @@ class GaussianMixtureModule(torch.nn.Module):
     @means.setter
     def means(self, means):
         """Set the mean modules."""
-        if not isinstance(means, collections.Iterable):
+        if not isinstance(means, collections.abc.Iterable):
             means = [means]
         for mean in means:
             if not isinstance(mean, torch.nn.Module):
@@ -997,7 +997,7 @@ class GaussianMixtureModule(torch.nn.Module):
     @covariances.setter
     def covariances(self, covariances):
         """Set the covariance modules."""
-        if not isinstance(covariances, collections.Iterable):
+        if not isinstance(covariances, collections.abc.Iterable):
             covariances = [covariances]
         for covariance in covariances:
             if not isinstance(covariance, torch.nn.Module):

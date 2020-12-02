@@ -7,7 +7,7 @@ Dependencies:
 - `pyrobolearn.physics`
 """
 
-import collections
+import collections.abc
 import numpy as np
 
 from pyrobolearn.physics.body_physics_randomizer import BodyPhysicsRandomizer
@@ -71,7 +71,7 @@ class JointPhysicsRandomizer(BodyPhysicsRandomizer):
             joints = self.body.joints
         elif isinstance(joints, int):
             joints = [joints]
-        elif isinstance(joints, collections.Iterable):
+        elif isinstance(joints, collections.abc.Iterable):
             for idx, joint in enumerate(joints):
                 if not isinstance(joint, int):
                     raise TypeError("The {} element of the given list of joints is not an integer, instead got: "

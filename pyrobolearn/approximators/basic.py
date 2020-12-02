@@ -10,7 +10,7 @@ Dependencies:
 - `pyrobolearn.actions`
 """
 
-import collections
+import collections.abc
 import numpy as np
 import torch
 

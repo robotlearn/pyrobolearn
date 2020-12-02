@@ -13,7 +13,7 @@ References:
     - [2] PEP8: https://www.python.org/dev/peps/pep-0008/
 """
 
-import collections
+import collections.abc
 import rbdl
 
 
@@ -98,7 +98,7 @@ class RBDL(object):
 
     def get_link_names(self, link_ids):
         """Return the link names."""
-        if isinstance(link_ids, collections.Iterable):
+        if isinstance(link_ids, collections.abc.Iterable):
             return [self.model.GetBodyName(link_id) for link_id in link_ids]
         return self.model.GetBodyName(link_ids)
 

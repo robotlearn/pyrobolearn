@@ -6,7 +6,7 @@ This file defines the `Action` class, which is returned by the policy and given 
 """
 
 import copy
-import collections
+import collections.abc
 # from abc import ABCMeta, abstractmethod
 import numpy as np
 import torch
@@ -122,7 +122,7 @@ class Action(object):
             raise AttributeError("Trying to add internal actions to the current action while it already has some data. "
                                  "A action should be a combination of actions or should contain some kind of data, "
                                  "but not both.")
-        if isinstance(actions, collections.Iterable):
+        if isinstance(actions, collections.abc.Iterable):
             for action in actions:
                 if not isinstance(action, Action):
                     raise TypeError("One of the given actions is not an instance of Action.")
@@ -152,7 +152,7 @@ class Action(object):
             data: the data to set
         """
         if self.has_actions():  # combined actions
-            if not isinstance(data, collections.Iterable):
+            if not isinstance(data, collections.abc.Iterable):
                 raise TypeError("data is not an iterator")
             if len(self._actions) != len(data):
                 raise ValueError("The number of actions is different from the number of data segments")
@@ -226,7 +226,7 @@ class Action(object):
             data (torch.Tensor, list of torch.Tensors): data to set.
         """
         if self.has_actions():  # combined actions
-            if not isinstance(data, collections.Iterable):
+            if not isinstance(data, collections.abc.Iterable):
                 raise TypeError("data is not an iterator")
             if len(self._actions) != len(data):
                 raise ValueError("The number of actions is different from the number of data segments")
@@ -486,7 +486,7 @@ class Action(object):
                                  "some kind of data, but not both.")
         if isinstance(action, Action):
             self._actions.add(action)
-        elif isinstance(action, collections.Iterable):
+        elif isinstance(action, collections.abc.Iterable):
             for i, s in enumerate(action):
                 if not isinstance(s, Action):
                     raise TypeError("The item {} in the given list is not an instance of Action".format(i))

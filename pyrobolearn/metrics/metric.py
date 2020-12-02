@@ -3,7 +3,7 @@
 """Defines the various metrics used in different learning paradigms.
 """
 
-import collections
+import collections.abc
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -51,7 +51,7 @@ class Metric(object):
         """Set the inner list of metrics."""
         if metrics is None:
             metrics = []
-        if not isinstance(metrics, collections.Iterable):
+        if not isinstance(metrics, collections.abc.Iterable):
             metrics = [metrics]
         self._check_recursively_metric_type(metrics)
         self._metrics = metrics
@@ -69,7 +69,7 @@ class Metric(object):
 
     def _check_recursively_metric_type(self, metrics):
         """Check recursively the metric types."""
-        if isinstance(metrics, collections.Iterable):
+        if isinstance(metrics, collections.abc.Iterable):
             for metric in metrics:
                 self._check_recursively_metric_type(metric)
         elif not isinstance(metrics, Metric):

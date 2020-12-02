@@ -12,7 +12,7 @@ Dependencies:
 - `pyrobolearn/samplers`: to sample from batches
 """
 
-import collections
+import collections.abc
 
 # TODO: makes the 5 following classes inherit from the same Parent class
 from pyrobolearn.approximators import Approximator
@@ -97,7 +97,7 @@ class Updater(object):
     @approximators.setter
     def approximators(self, approximators):
         """Set the approximator instances."""
-        if not isinstance(approximators, collections.Iterable):
+        if not isinstance(approximators, collections.abc.Iterable):
             approximators = [approximators]
         for approximator in approximators:
             if not isinstance(approximator, (Approximator, Policy, Value, ActorCritic, DynamicModel, Exploration)):
@@ -140,7 +140,7 @@ class Updater(object):
     def losses(self, losses):
         """Set the losses."""
         # check that the losses are the correct data type
-        if not isinstance(losses, collections.Iterable):
+        if not isinstance(losses, collections.abc.Iterable):
             losses = [losses]
         for loss in losses:
             if not isinstance(loss, Loss):
@@ -162,7 +162,7 @@ class Updater(object):
     def optimizers(self, optimizers):
         """Set the optimizers."""
         # check that the optimizers are the correct data type
-        if not isinstance(optimizers, collections.Iterable):
+        if not isinstance(optimizers, collections.abc.Iterable):
             optimizers = [optimizers]
         for optimizer in optimizers:
             if not isinstance(optimizer, Optimizer):
@@ -192,7 +192,7 @@ class Updater(object):
         losses and updating the parameters of the approximators."""
         if evaluators is None:
             evaluators = []
-        if not isinstance(evaluators, collections.Iterable):
+        if not isinstance(evaluators, collections.abc.Iterable):
             evaluators = [evaluators]
         for i, evaluator in enumerate(evaluators):
             if not isinstance(evaluator, (Target, Return, Evaluator)):
@@ -210,7 +210,7 @@ class Updater(object):
     def updaters(self, updaters):
         if updaters is None:
             updaters = []
-        if not isinstance(updaters, collections.Iterable):
+        if not isinstance(updaters, collections.abc.Iterable):
             updaters = [updaters]
         for i, updater in enumerate(updaters):
             if not isinstance(updater, ParameterUpdater):

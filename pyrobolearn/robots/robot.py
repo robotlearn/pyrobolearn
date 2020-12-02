@@ -14,7 +14,7 @@ Dependencies:
 import os
 import time
 import copy
-import collections
+import collections.abc
 import xml.etree.ElementTree as ET
 # import rbdl
 import numpy as np
@@ -706,7 +706,7 @@ class Robot(ControllableBody):
                 raise TypeError("Incorrect type")
 
         # list of joints
-        if isinstance(joint, collections.Iterable) and not isinstance(joint, str):
+        if isinstance(joint, collections.abc.Iterable) and not isinstance(joint, str):
             return [get_index(joint) for joint in joint]
 
         # one joint
@@ -1333,7 +1333,7 @@ class Robot(ControllableBody):
         else:
             if joint_ids is None:
                 joint_ids = self.joints
-            if not isinstance(joint_ids, collections.Iterable):
+            if not isinstance(joint_ids, collections.abc.Iterable):
                 raise TypeError("Expecting jointId to be a tuple, list, or numpy array, got instead "
                                 "{}".format(type(joint_ids)))
             if torques is None:
@@ -1579,7 +1579,7 @@ class Robot(ControllableBody):
                 raise TypeError("Incorrect type")
 
         # list of links
-        if isinstance(link, collections.Iterable) and not isinstance(link, str):
+        if isinstance(link, collections.abc.Iterable) and not isinstance(link, str):
             return [get_index(link) for link in link]
 
         # one link
@@ -1619,7 +1619,7 @@ class Robot(ControllableBody):
             list[int], list[list[int]]: chain(s) containing the link ids.
         """
         if from_link_id is None:
-            if isinstance(to_link_id, collections.Iterable):
+            if isinstance(to_link_id, collections.abc.Iterable):
                 from_link_id = [-1] * len(to_link_id)
             else:
                 from_link_id = -1
@@ -2669,7 +2669,7 @@ class Robot(ControllableBody):
                 raise TypeError("Incorrect type")
 
         # list of links
-        if isinstance(end_effector, collections.Iterable) and not isinstance(end_effector, str):
+        if isinstance(end_effector, collections.abc.Iterable) and not isinstance(end_effector, str):
             return [get_index(link) for link in end_effector]
 
         # one link
@@ -4700,7 +4700,7 @@ class Robot(ControllableBody):
                 joint_ids = [joint_ids]
             elif isinstance(joint_ids, str):  # joint name
                 joint_ids = [self.get_joint_ids(joint_ids)]
-            elif isinstance(joint_ids, collections.Iterable):
+            elif isinstance(joint_ids, collections.abc.Iterable):
                 joint_ids = [getIndex(jnt) for jnt in joint_ids]
             else:
                 raise TypeError("jointId has to be a None, int, str, or a list/tuple of int/str.")
@@ -4760,7 +4760,7 @@ class Robot(ControllableBody):
                 joint_ids = [joint_ids]
             elif isinstance(joint_ids, str):  # joint name
                 joint_ids = [self.get_joint_ids(joint_ids)]
-            elif isinstance(joint_ids, collections.Iterable):
+            elif isinstance(joint_ids, collections.abc.Iterable):
                 joint_ids = [get_index(joint) for joint in joint_ids]
             else:
                 raise TypeError("jointId has to be a None, int, str, or a list/tuple of int/str.")
@@ -5057,7 +5057,7 @@ class Robot(ControllableBody):
             joint_ids = self.joints
         elif isinstance(joint_ids, int):
             joint_ids = [joint_ids]
-        elif not isinstance(joint_ids, collections.Iterable):
+        elif not isinstance(joint_ids, collections.abc.Iterable):
             raise TypeError("Expecting the given 'joint_ids' to be None, an int, or a list of int, instead got: "
                             "{}".format(joint_ids))
 
@@ -5083,7 +5083,7 @@ class Robot(ControllableBody):
             joint_ids = self.joints
         elif isinstance(joint_ids, int):
             joint_ids = [joint_ids]
-        elif not isinstance(joint_ids, collections.Iterable):
+        elif not isinstance(joint_ids, collections.abc.Iterable):
             raise TypeError("Expecting the given 'joint_ids' to be None, an int, or a list of int, instead got: "
                             "{}".format(joint_ids))
 

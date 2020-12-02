@@ -3,7 +3,7 @@
 """Define the OrderedSet data structure class.
 """
 
-import collections
+import collections.abc
 
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2018, PyRoboLearn"
@@ -15,7 +15,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class OrderedSet(collections.MutableSet):
+class OrderedSet(collections.abc.MutableSet):
     r"""Ordered Set
 
     This is my own implementation of an ordered set, and was inspired a bit from [1] and [2].
@@ -69,7 +69,7 @@ class OrderedSet(collections.MutableSet):
         self._set = set()
         self._list = []
 
-        if isinstance(iterator, collections.Iterable):
+        if isinstance(iterator, collections.abc.Iterable):
             for item in iterator:
                 self.add(item)
 
@@ -413,7 +413,7 @@ class OrderedSet(collections.MutableSet):
 ################################################################################################
 
 
-class OrderedSet2(collections.MutableSet):
+class OrderedSet2(collections.abc.MutableSet):
     r"""Ordered Set
 
     This is my own implementation of an ordered set, and was inspired a bit from [1] and [2].
@@ -472,7 +472,7 @@ class OrderedSet2(collections.MutableSet):
         self._start, self._end = self.NonePtr, self.NonePtr
         self._map = {}
 
-        if isinstance(iterator, collections.Iterable):
+        if isinstance(iterator, collections.abc.Iterable):
             for item in iterator:
                 self.add(item)
 

@@ -6,7 +6,7 @@ Classes that are defined here: LeggedRobot, BipedRobot, QuadrupedRobot, HexapodR
 """
 
 import os
-import collections
+import collections.abc
 import numpy as np
 from scipy.spatial import ConvexHull
 
@@ -150,7 +150,7 @@ class LeggedRobot(Robot):
         for foot_id, frict in zip(feet_ids, frictions):
             if isinstance(foot_id, int):
                 self.sim.change_dynamics(self.id, foot_id, lateral_friction=frict)
-            elif isinstance(foot_id, collections.Iterable):
+            elif isinstance(foot_id, collections.abc.Iterable):
                 for idx in foot_id:
                     self.sim.change_dynamics(self.id, idx, lateral_friction=frict)
             else:

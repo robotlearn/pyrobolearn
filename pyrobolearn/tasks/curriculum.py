@@ -17,7 +17,7 @@ References:
     [1] "Curriculum learning", Bengio et al., 2009
 """
 
-import collections
+import collections.abc
 
 from pyrobolearn.worlds import World
 from pyrobolearn.tasks.task import Task, Env
@@ -71,7 +71,7 @@ class CLTask(Task):
         # TODO use an ordered dictionary
         if isinstance(environments, Env):
             environments = [environments]
-        elif isinstance(environments, collections.Iterable):
+        elif isinstance(environments, collections.abc.Iterable):
             if len(environments) < 1:
                 raise ValueError("Expecting the list of environments to at least a length of one.")
             for i, env in enumerate(environments):

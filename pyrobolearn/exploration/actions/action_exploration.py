@@ -18,7 +18,7 @@ References:
     [1] "Reinforcement Learning: An Introduction", Sutton and Barto, 2018
 """
 
-import collections
+import collections.abc
 import torch
 
 from pyrobolearn.actions import Action
@@ -97,7 +97,7 @@ class ActionExploration(Exploration):
                 raise ValueError("Expecting to be given an action or a list of explorations, not both.")
 
             # transform the explorations to a list if not iterable
-            if not isinstance(explorations, collections.Iterable):
+            if not isinstance(explorations, collections.abc.Iterable):
                 explorations = [explorations]
 
             # check the length of exploration strategies and the number of actions in the policy

@@ -12,7 +12,7 @@ Dependencies:
 """
 
 import copy
-import collections
+import collections.abc
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import torch
@@ -99,13 +99,13 @@ class DynamicModel(object):
         # preprocessors and postprocessors
         if preprocessors is None:
             preprocessors = []
-        if not isinstance(preprocessors, collections.Iterable):
+        if not isinstance(preprocessors, collections.abc.Iterable):
             preprocessors = [preprocessors]
         self.preprocessors = preprocessors
 
         if postprocessors is None:
             postprocessors = []
-        if not isinstance(postprocessors, collections.Iterable):
+        if not isinstance(postprocessors, collections.abc.Iterable):
             postprocessors = [postprocessors]
         self.postprocessors = postprocessors
 

@@ -4,7 +4,7 @@
 """
 
 from abc import ABCMeta
-import collections
+import collections.abc
 import numpy as np
 import copy
 
