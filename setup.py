@@ -5,11 +5,9 @@
 # $ python setup.py install
 # $ python setup.py install --home=<dir>
 
+__requires__ = ['pip >= 20.1.0']
 from setuptools import setup, find_packages
-try: # for pip >= 10
-    from pip._internal.req import parse_requirements
-except ImportError: # for pip <= 9.0.3
-    from pip.req import parse_requirements
+from pip._internal.req import parse_requirements
 
 # get description from readme file
 with open('README.rst', 'r') as f:
@@ -17,7 +15,7 @@ with open('README.rst', 'r') as f:
 
 # get the required packages
 install_requires = parse_requirements('requirements.txt', session=False)
-reqs = [str(ir.req) for ir in install_requires]
+reqs = [str(ir.requirement) for ir in install_requires]
 
 # setup
 setup(
@@ -30,7 +28,7 @@ setup(
     author_email='briandelhaisse@gmail.com',
     maintainer='Brian Delhaisse',
     maintainer_email='briandelhaisse@gmail.com',
-    license='GNU GPLv3',
+    license='Apache license',
     url='https://github.com/robotlearn/pyrobolearn',
     platforms=['Linux Ubuntu'],
     # python_requires='==2.7.*',
