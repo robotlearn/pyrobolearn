@@ -1,6 +1,8 @@
 PyRoboLearn
 ===========
 
+**NOTE**: As python 2.7 is no more supported, a lot of the code in this repo will be ported to python 3 in this new branch. Extra features will also be added as time goes on.
+
 This repository contains the code for the *PyRoboLearn* (PRL) framework: a Python framework for Robot Learning.
 This framework revolves mainly around 7 axes: simulators, worlds, robots, interfaces, learning tasks (= environment and policy), learning models, and learning algorithms. 
 

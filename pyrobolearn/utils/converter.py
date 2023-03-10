@@ -7,11 +7,17 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import torch
 import quaternion
+import sys
+
 import collections
+
+if sys.version_info.major == 3 and sys.version_info.minor >= 10:
+    collections.Iterable = collections.abc.Iterable
+
 
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Brian Delhaisse"]
-__license__ = "GNU GPLv3"
+__license__ = "Apache License 2.0"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
