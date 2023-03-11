@@ -3,7 +3,7 @@
 __author__ = "Boyang Ti"
 __copyright__ = "Copyright 2020, PyRoboLearn"
 __credits__ = ["Boyang Ti"]
-__license__ = "GNU GPLv3"
+__license__ = "Apache License 2.0"
 __version__ = "1.0.0"
 __maintainer__ = "Boyang Ti"
 __email__ = "tiboyang@outlook.com"

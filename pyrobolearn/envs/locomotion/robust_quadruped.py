@@ -16,7 +16,7 @@ from pyrobolearn.envs.locomotion.locomotion import LocomotionEnv
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2019, PyRoboLearn"
 __credits__ = ["Hwangbo et al.", "Lee et al.", "Brian Delhaisse"]
-__license__ = "GNU GPLv3"
+__license__ = "Apache License 2.0"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"

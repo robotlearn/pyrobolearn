@@ -12,7 +12,7 @@ __author__ = ["Songyan Xin", "Brian Delhaisse"]
 # B.D. integrated it in the PRL framework, cleaned it, added the documentation, and made it more modular and flexible
 __copyright__ = "Copyright 2018, PyRoboLearn"
 __credits__ = ["Songyan Xin"]
-__license__ = "GNU GPLv3"
+__license__ = "Apache License 2.0"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"

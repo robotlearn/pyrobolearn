@@ -39,7 +39,7 @@ from pyrobolearn.utils.transformation import quaternion_error
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2019, PyRoboLearn"
 __credits__ = ["Alessio Rocchi (C++)", "Enrico Mingo Hoffman (C++)", "Brian Delhaisse (Python + doc)"]
-__license__ = "GNU GPLv3"
+__license__ = "Apache License 2.0"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"

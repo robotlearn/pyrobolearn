@@ -21,7 +21,7 @@ from pyrobolearn.utils.transformation import logarithm_map, exponential_map, get
 __author__ = "Brian Delhaisse"
 __copyright__ = "Copyright 2019, PyRoboLearn"
 __credits__ = ["Yanlong Huang (paper + Matlab)", "Brian Delhaisse (Python)"]
-__license__ = "GNU GPLv3"
+__license__ = "Apache License 2.0"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"

@@ -21,7 +21,7 @@ __author__ = ["Jamie Scollay", "Brian Delhaisse"]
 #     - it has been simplified.
 # - comments have been added and a better documentation is provided
 __credits__ = ["Jamie Scollay"]
-__license__ = "GNU GPLv3"
+__license__ = "Apache License 2.0"
 __version__ = "1.0.0"
 __maintainer__ = "Brian Delhaisse"
 __email__ = "briandelhaisse@gmail.com"
