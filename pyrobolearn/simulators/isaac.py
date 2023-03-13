@@ -22,6 +22,8 @@ References:
 """
 
 # TODO: waiting for its release in September
+# TODO: need to update; this will now use omniverse (Isaac Sim and Gym are integrated in it)
+# need to import omni.core
 
 import os
 import time
