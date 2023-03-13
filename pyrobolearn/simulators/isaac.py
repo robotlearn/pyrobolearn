@@ -24,6 +24,7 @@ References:
 # TODO: waiting for its release in September
 # TODO: need to update; this will now use omniverse (Isaac Sim and Gym are integrated in it)
 # need to import omni.core
+# the python packages are likely located in the `~/.local/share/ov/pkg/isaac_sim-<year>.<major>.<minor>/` folder
 
 import os
 import time
