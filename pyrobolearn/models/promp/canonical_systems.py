@@ -11,6 +11,7 @@ References
 """
 
 from abc import ABCMeta
+from typing import Optional
 import numpy as np
 
 
@@ -24,15 +25,30 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class CS(object):
-    r"""Canonical System
-    """
+class CS:
+    r"""Canonical System."""
 
-    def step(self, tau=1., **kwargs):
-        pass
+    def step(self, tau: float = 1., **kwargs) -> float:
+        """
+        Perform a step using Euler's method; increment the phase by a small amount.
 
-    def grad(self, t=None):
-        pass
+        Args:
+            tau (float): speed. Increase tau to make the system faster, and decrease it to make it slower.
+
+        Returns:
+            float: current phase
+        """
+
+    def grad(self, t: Optional[float] = None) -> float:
+        r"""
+        Compute the gradient of the phase variable with respect to time, i.e. :math:`ds/dt(t)`.
+
+        Args:
+            t (float, None): time variable.
+
+        Returns:
+            float: gradient evaluated at the given time.
+        """
 
 
 class LinearCS(CS):
@@ -55,7 +71,7 @@ class LinearCS(CS):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, dt=0.01, T=1.):
+    def __init__(self, dt: float = 0.01, T: float = 1.) -> None:
         """Initialize the canonical system.
 
         Args:
@@ -87,31 +103,36 @@ class LinearCS(CS):
     ##############
 
     @property
-    def initial_phase(self):
-        """Return the initial phase"""
+    def initial_phase(self) -> float:
+        """Return the initial phase."""
         return self.t0
 
     @property
-    def final_phase(self):
-        """Return the final phase"""
+    def final_phase(self) -> float:
+        """Return the final phase."""
         return self.T
 
     @property
-    def num_timesteps(self):
-        """Return the number of timesteps"""
+    def period(self) -> float:
+        """Return the period = final phase."""
+        return self.T
+
+    @property
+    def num_timesteps(self) -> int:
+        """Return the number of timesteps."""
         return self.timesteps
 
     ###########
     # Methods #
     ###########
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Reset the phase variable to its initial phase.
         """
         self.s = self.t0
 
-    def step(self, tau=1.0, error_coupling=1.0):
+    def step(self, tau: float = 1.0, error_coupling: float = 1.0) -> float:
         """
         Perform a step using Euler's method; increment the phase by a small amount.
 
@@ -119,7 +140,7 @@ class LinearCS(CS):
             tau (float): speed. Increase tau to make the system faster, and decrease it to make it slower.
 
         Returns:
-            float: current phase
+            float: current phase.
         """
         s = self.s
         self.s += tau * self.slope * self.dt
@@ -131,28 +152,28 @@ class LinearCS(CS):
     predict = step
     forward = step
 
-    def grad(self, t=None):
+    def grad(self, t: Optional[float] = None) -> float:
         r"""
         Compute the gradient of the phase variable with respect to time, i.e. :math:`ds/dt(t)`.
 
         Args:
-            t (float, None): time variable
+            t (float, None): time variable.
 
         Returns:
-            float: gradient evaluated at the given time
+            float: gradient evaluated at the given time.
         """
         return self.slope
 
-    def rollout(self, tau=1.0, error_coupling=1.0):
+    def rollout(self, tau: float = 1.0, error_coupling: float = 1.0) -> np.ndarray:
         """
         Generate phase variable in an open loop fashion from the initial to the final phase.
 
         Args:
             tau (float): Increase tau to make the system faster, and decrease it to make it slower.
-            error_coupling (float): slow down if the error is > 1
+            error_coupling (float): slow down if the error is > 1.
 
         Returns:
-            np.array[T]: value of phase variable at each time step
+            np.array[T]: value of phase variable at each time step.
         """
         timesteps = int(self.timesteps * tau)
         self.s_track = np.zeros(timesteps)

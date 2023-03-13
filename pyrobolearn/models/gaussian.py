@@ -7,7 +7,10 @@ the possible operations (that I could think of) that can be performed on it. It 
 Mixture Models, Probabilistic Movement Primitives, Kernelized Movement Primitives, etc.
 """
 
+from typing import Callable, List, Optional, Union, Tuple
+
 import numpy as np
+import numpy.typing as npt
 import scipy
 from scipy.stats import multivariate_normal as mvn
 
@@ -32,9 +35,10 @@ __status__ = "Development"
 
 # TODO: optimize space by considering diagonal covariances (given as a vector), or spherical/isotropic covariance
 #  (given as a scalar)
+# TODO: might be better to save the cholesky decomposition of the covariance/precision instead.
 
 
-class Gaussian(object):
+class Gaussian:
     r"""Multivariate Gaussian distribution
 
     The multivariate Gaussian distribution also known as the multivariate normal distribution is the most well-known
@@ -103,7 +107,8 @@ class Gaussian(object):
     # - https://stackoverflow.com/questions/38229953/array-and-rmul-operator-in-python-numpy
     __array_priority__ = 11
 
-    def __init__(self, mean=None, covariance=None, seed=None, manifold=None, N=None):  # coefficient=1.
+    def __init__(self, mean: Optional[npt.ArrayLike] = None, covariance: Optional[npt.ArrayLike] = None,
+                 seed: Optional[int] = None, manifold=None, N: Optional[int] = None) -> None:  # coefficient=1.
         """
         Initialize the multivariate normal distribution on the given manifold.
 
@@ -143,13 +148,13 @@ class Gaussian(object):
     ##############
 
     @property
-    def mean(self):
-        """Return the mean vector"""
+    def mean(self) -> Optional[np.ndarray]:
+        """Return the mean vector."""
         return self._mean
 
     @mean.setter
-    def mean(self, mean):
-        """Set the mean vector"""
+    def mean(self, mean: npt.ArrayLike) -> None:
+        """Set the mean vector."""
         if isinstance(mean, (int, float)):
             mean = np.array([mean])
         if mean is not None:
@@ -160,13 +165,13 @@ class Gaussian(object):
     mu = mean
 
     @property
-    def cov(self):
-        """Return the covariance (PSD) matrix"""
+    def cov(self) -> Optional[np.ndarray]:
+        """Return the covariance (PSD) matrix."""
         return self._cov
 
     @cov.setter
-    def cov(self, cov):
-        """Set the covariance matrix"""
+    def cov(self, cov: Optional[npt.ArrayLike]) -> None:
+        """Set the covariance matrix."""
         if cov is not None:
             if isinstance(cov, (int, float)):
                 cov = np.array([[cov]])
@@ -184,23 +189,23 @@ class Gaussian(object):
     sigma = cov
 
     @property
-    def variances(self):
+    def variances(self) -> np.ndarray:
         """Return the diagonal elements of the covariance matrix, i.e. the variances."""
         return np.diag(self.cov)
 
     @property
-    def standard_deviations(self):
+    def standard_deviations(self) -> np.ndarray:
         """Return the square root of the diagonal of the covariance matrix, i.e. the standard deviations."""
         return np.sqrt(self.variances)
 
     @property
-    def mode(self):
-        """value that is the most likely to be sampled"""
+    def mode(self) -> np.ndarray:
+        """value that is the most likely to be sampled."""
         return self.mean
 
     @property
-    def precision(self):
-        """Return the precision matrix"""
+    def precision(self) -> np.ndarray:
+        """Return the precision matrix."""
         if self.cov is not None:
             return np.linalg.inv(self.cov)
 
@@ -208,8 +213,8 @@ class Gaussian(object):
     prec = precision
 
     @property
-    def size(self):
-        """dimensionality of the gaussian distribution"""
+    def size(self) -> int:
+        """dimensionality of the gaussian distribution."""
         if self.mean is not None:
             return len(self.mean)
         return 0
@@ -218,19 +223,19 @@ class Gaussian(object):
     dim = size
 
     @property
-    def normalization_constant(self):
-        """normalization constant"""
+    def normalization_constant(self) -> float:
+        """normalization constant."""
         if self.cov is not None:
             return self.compute_normalization_constant(self.cov)
 
     @property
-    def seed(self):
-        """Return the seed"""
+    def seed(self) -> Optional[int]:
+        """Return the seed."""
         return self._seed
 
     @seed.setter
-    def seed(self, seed):
-        """Set the seed"""
+    def seed(self, seed: Optional[int]) -> None:
+        """Set the seed."""
         self._seed = seed
         np.random.seed(self._seed)
 
@@ -239,99 +244,99 @@ class Gaussian(object):
     ##################
 
     @staticmethod
-    def copy(other):
-        """Copy another Gaussian"""
+    def copy(other: "Gaussian") -> "Gaussian":
+        """Copy another Gaussian."""
         if not isinstance(other, Gaussian):
             raise TypeError("Expecting to copy a Gaussian")
         return Gaussian(mean=other.mean, covariance=other.cov)
 
     @staticmethod
-    def is_parametric():
-        """The Gaussian distribution is a nonparametric model; the mean and covariance summarized the data"""
+    def is_parametric() -> bool:
+        """The Gaussian distribution is a nonparametric model; the mean and covariance summarized the data."""
         return False
 
     @staticmethod
-    def is_linear():
+    def is_linear() -> bool:
         """The Gaussian doesn't have parameters. Even if the mean and covariance are considered as parameters,
         the model is not linear wrt them"""
         return False
 
     @staticmethod
-    def is_recurrent():
-        """The Gaussian is not recurrent model; current outputs do not depend on previous inputs"""
+    def is_recurrent() -> bool:
+        """The Gaussian is not recurrent model; current outputs do not depend on previous inputs."""
         return False
 
     @staticmethod
-    def is_probabilistic():
-        """The Gaussian distribution is by definition a probabilistic model"""
+    def is_probabilistic() -> bool:
+        """The Gaussian distribution is by definition a probabilistic model."""
         return True
 
     @staticmethod
-    def is_discriminative():
-        """The Gaussian is not a discriminative model; no inputs are involved"""
+    def is_discriminative() -> bool:
+        """The Gaussian is not a discriminative model; no inputs are involved."""
         return False
 
     @staticmethod
-    def is_generative():
-        """The Gaussian is a generative model, and thus we can sample from it"""
+    def is_generative() -> bool:
+        """The Gaussian is a generative model, and thus we can sample from it."""
         return True
 
     @staticmethod
-    def compute_mean(X, axis=0):
+    def compute_mean(X: npt.ArrayLike, axis: int = 0) -> np.ndarray:
         r"""
         Compute the empirical mean vector given the data. This is also known as the maximum likelihood estimate for
         the mean vector :math:`\mu`, i.e. :math:`\max_{\mu} p(X | \mu, \Sigma)`.
 
         Args:
-            X (np.array[float[N,D]]): data matrix of shape NxD (if axis=0) or DxN (if axis=1), where N is the number
-              of samples, and D is the dimensionality of a data point
-            axis (int): axis along which the mean is computed
+            X (np.float[N,D]): data matrix of shape NxD (if axis=0) or DxN (if axis=1), where N is the number
+              of samples, and D is the dimensionality of a data point.
+            axis (int): axis along which the mean is computed.
 
         Returns:
-            np.array[float[D]]: mean vector
+            np.float[D]: mean vector
         """
         # if manifold is Euclidean
         mean = np.mean(X, axis=axis)
         return mean
 
     @staticmethod
-    def compute_covariance(X, axis=0, bessels_correction=True):
+    def compute_covariance(X: npt.ArrayLike, axis: int = 0, bessels_correction: bool = True) -> np.ndarray:
         r"""
         Compute the empirical covariance matrix given the data. This is also known as the maximum likelihood estimate
         for the covariance matrix :math:`\Sigma`, i.e. :math:`\max_{\Sigma} p(X | \mu, \Sigma)`.
 
         Args:
-            X (np.array[float[N,D]]): data matrix of shape NxD where N is the number of samples, and D is the
+            X (np.float[N,D]): data matrix of shape NxD where N is the number of samples, and D is the
               dimensionality of a data point.
-            axis (int): axis along which the covariance is computed
+            axis (int): axis along which the covariance is computed.
             bessels_correction (bool): if True, it will compute the covariance using `1/N-1` instead of `N`.
 
         Returns:
-            np.array[float[D,D]]: 2D covariance matrix
+            np.float[D,D]: 2D covariance matrix
         """
         # if manifold is Euclidean
         cov = np.cov(X, rowvar=bool(axis), bias=not bessels_correction)
         return cov
 
     @staticmethod
-    def compute_precision(X, axis=0, bessels_correction=True):
+    def compute_precision(X: npt.ArrayLike, axis: int = 0, bessels_correction: bool = True) -> np.ndarray:
         r"""
         Compute the empirical precision matrix given the data.
 
         Args:
-            X (array[N,D]): data matrix of shape NxD where N is the number of samples, and D is the dimensionality
-                of a data point
-            axis (int): axis along which the precision is computed
+            X (np.float[N,D]): data matrix of shape NxD where N is the number of samples, and D is the dimensionality
+              of a data point.
+            axis (int): axis along which the precision is computed.
             bessels_correction (bool): if True, it will compute the precision using `1/N-1` instead of `N`.
 
         Returns:
-            float[D,D]: 2D precision matrix
+            np.float[D,D]: 2D precision matrix
         """
         prec = np.linalg.inv( Gaussian.compute_covariance(X, axis=axis, bessels_correction=bessels_correction) )
         return prec
 
     @staticmethod
-    def compute_normalization_constant(covariance):
+    def compute_normalization_constant(covariance: npt.ArrayLike) -> float:
         r"""
         Compute the normalization constant based on the covariance, which is given by:
 
@@ -348,16 +353,35 @@ class Gaussian(object):
         return normalization_constant
 
     @staticmethod
-    def is_symmetric(X, tol=1e-8):
-        """Check if given matrix X is symmetric.
-        If a matrix is symmetric, it has real eigenvalues, orthogonal eigenvectors and is always diagonalizable.
+    def is_symmetric(X: npt.ArrayLike, tol: float = 1e-8) -> bool:
+        """Check if the given square matrix X is symmetric.
+        
+        If a matrix is symmetric:
+        - it has real eigenvalues.
+        - it has orthogonal eigenvectors.
+        - it is always diagonalizable.
+        
+        Args:
+            X (np.float[D,D]): square matrix.
+            tol (float): the tolerance.
+        
+        Returns:
+            bool: if the given matrix is symmetric or not.
         """
         return np.allclose(X, X.T, atol=tol)
 
     # TODO: check if X belongs to the SPD space S^n_{++}
     @staticmethod
-    def is_psd(X, tol=1e-12):
-        """Check if given matrix is PSD"""
+    def is_psd(X: npt.ArrayLike, tol: float = 1e-12) -> bool:
+        """Check if given matrix is SPD (semi-positive definite).
+        
+        Args:
+            X (np.float[D,D]): the square matrix to check if it is SPD.
+            tol (float): tolerance.
+            
+        Returns:
+            bool: if the given matrix is SPD or not.
+        """
         return np.all(np.linalg.eigvals(X) >= 0 - tol)
 
     ###########
@@ -365,7 +389,7 @@ class Gaussian(object):
     ###########
 
     def _check_initialized(self):
-        """Check if the Gaussian distribution has been initialized"""
+        """Check if the Gaussian distribution has been initialized."""
         if self.mean is None:
             raise ValueError("Mean has not been initialized")
         if self.covariance is None:
@@ -381,7 +405,7 @@ class Gaussian(object):
         yield "mean", self.mean
         yield "covariance", self.covariance
 
-    def is_valid_pdf(self):
+    def is_valid_pdf(self) -> bool:
         r"""
         Check if this Gaussian is a valid probability density function.
 
@@ -400,7 +424,7 @@ class Gaussian(object):
         if self.is_psd(self.cov) and self.is_symmetric(self.cov): #and self.coefficient == 1.:
             return True
 
-    def pdf(self, x):
+    def pdf(self, x: npt.ArrayLike) -> float:
         r"""
         Probability density function evaluated at the given `x`.
 
@@ -425,7 +449,7 @@ class Gaussian(object):
     prob = pdf
     likelihood = pdf
 
-    def log_pdf(self, x):
+    def log_pdf(self, x: npt.ArrayLike) -> float:
         r"""
         Log of the probability density function evaluated at `x`.
 
@@ -453,7 +477,7 @@ class Gaussian(object):
     log_prob = log_pdf
     log_likelihood = log_pdf
 
-    def cdf(self, x):
+    def cdf(self, x: npt.ArrayLike) -> float:
         r"""
         Cumulative Distribution Function.
 
@@ -471,7 +495,7 @@ class Gaussian(object):
         """
         return mvn.cdf(x, self.mean, self.cov)
 
-    def logcdf(self, x):
+    def logcdf(self, x: npt.ArrayLike) -> float:
         r"""
         Log of the Cumulative Distribution Function.
 
@@ -485,13 +509,13 @@ class Gaussian(object):
         """
         return mvn.logcdf(x, self.mean, self.cov)
 
-    def sample(self, size=None, seed=None):
+    def sample(self, size: Optional[int] = None, seed: Optional[int] = None) -> np.ndarray:
         """
         Generate `size` samples from the Gaussian distribution.
 
         Args:
-            size (int, None): number of samples
-            seed (int, None): seed for the random number generator
+            size (int, None): number of samples.
+            seed (int, None): seed for the random number generator.
 
         Return:
             array: samples
@@ -499,23 +523,23 @@ class Gaussian(object):
         return mvn.rvs(self.mean, self.cov, size=size, random_state=seed)
         # return np.random.multivariate_normal(self.mean, self.cov, size=size)
 
-    def distance(self, x):
+    def distance(self, x: npt.ArrayLike) -> float:
         r"""
         Compute the distance of the given data from the mean by also taking into account the covariance. In the
         'Euclidean' space, this method returns the Mahalanobis distance which is defined as
         :math:`D_M(x) = \sqrt{(x - \mu)^T \Sigma^{-1} (x - \mu)}`.
 
         Args:
-            x (np.array[D]): data vector
+            x (np.array[D]): data vector.
 
         Returns:
-            float: distance
+            float: distance.
         """
         if self.manifold == 'euclidean':
             diff = x - self.mean
-            return np.sqrt( diff.dot(self.precision).dot(diff) )
+            return np.sqrt(diff.dot(self.precision).dot(diff))
 
-    def entropy(self):
+    def entropy(self) -> float:
         r"""
         Differential entropy associated with the normal distribution. Note that the gaussian distribution is the
         maximum entropy distribution given the 2 first moments (i.e. mean and covariance).
@@ -535,7 +559,7 @@ class Gaussian(object):
         # return mvn.entropy(self.mean, self.cov)
         return 0.5 * np.log(np.linalg.det(self.cov)) + self.mean.size/2. * (1. + np.log(2*np.pi))
 
-    def kl_divergence(self, other):
+    def kl_divergence(self, other: "Gaussian") -> float:
         r"""
         Compute the Kullback-Leibler divergence between the two multivariate Gaussians. Note that this divergence
         is not symmetric.
@@ -571,7 +595,9 @@ class Gaussian(object):
         """
         pass
 
-    def condition(self, input_value, output_idx, input_idx=None):
+    def condition(self, input_value: Union[float, List[float], npt.ArrayLike],
+                  output_idx: Union[int, List[int], npt.ArrayLike],
+                  input_idx: Optional[Union[int, List[int], npt.ArrayLike]] = None) -> "Gaussian":
         r"""
         Compute the conditional distribution.
 
@@ -618,7 +644,7 @@ class Gaussian(object):
         cov = self.cov[np.ix_(o, o)] - c.dot(self.cov[np.ix_(i, o)])
         return Gaussian(mu, cov)
 
-    def marginalize(self, idx):
+    def marginalize(self, idx: Union[int, float, slice]) -> "Gaussian":
         r"""
         Compute and return the marginal distribution (which is also Gaussian) of the specified indices.
 
@@ -644,7 +670,7 @@ class Gaussian(object):
             idx = [idx]
         return Gaussian(self.mean[idx], self.cov[np.ix_(idx,idx)])
 
-    def multiply(self, other):
+    def multiply(self, other: Union[float, npt.ArrayLike, "Gaussian"]) -> "Gaussian":
         r"""
         Multiply a Gaussian by another Gaussian, by a square matrix (under an affine transformation), or a float
         number.
@@ -692,7 +718,7 @@ class Gaussian(object):
         else:
             raise TypeError("Trying to multiply a Gaussian with {}, which has not be defined".format(type(other)))
 
-    def get_multiplication_coefficient(self, other):
+    def get_multiplication_coefficient(self, other: "Gaussian") -> float:
         r"""
         Return the coefficient :math:`C` that appears when multiplying two Gaussians.
 
@@ -713,7 +739,7 @@ class Gaussian(object):
         return Gaussian(other.mean, self.cov + other.cov)(self.mean)
 
     # def integrate_conjugate_prior(self, other): # TODO: call it marginal_likelihood
-    def marginal_distribution(self, x, prior):
+    def marginal_distribution(self, x: npt.ArrayLike, prior: "Gaussian") -> "Gaussian":
         r"""
         Integrate the given Gaussian conjugate prior on the parameters with the current Gaussian PDF.
 
@@ -723,10 +749,10 @@ class Gaussian(object):
                          &= \mathcal{N}(y | \Phi(x) \mu_w, \Phi(x) \Sigma_w \Phi(x)^T + \Sigma_y)
 
         Args:
-            prior (Gaussian): the other Gaussian conjugate prior
+            prior (Gaussian): the other Gaussian conjugate prior.
 
         Returns:
-            Gaussian: resulting Gaussian
+            Gaussian: resulting Gaussian.
         """
         if isinstance(prior, Gaussian):
             if callable(self.mean):
@@ -738,7 +764,7 @@ class Gaussian(object):
             raise TypeError("Expecting the prior to be a Gaussian distribution on the parameters of the mean "
                             "of this Gaussian")
 
-    def power(self, exponent):
+    def power(self, exponent: float) -> "Gaussian":
         r"""
         Raise to the power this Gaussian.
 
@@ -749,16 +775,16 @@ class Gaussian(object):
         distribution.
 
         Args:
-            exponent (float): strictly positive number
+            exponent (float): strictly positive number.
 
         Returns:
-            Gaussian: resulting gaussian distribution
+            Gaussian: resulting gaussian distribution.
         """
         if exponent <= 0:
             raise ValueError("The exponent has to be a strictly positive number")
         return Gaussian(mean=self.mean, covariance=1./exponent * self.cov)
 
-    def add(self, other):
+    def add(self, other: Union[float, npt.ArrayLike, "Gaussian"]) -> "Gaussian":
         r"""
         The sum of independent Gaussian random variables (with the same dimension) is also Gaussian. This can
         also be used to sum a Gaussian with a vector (affine transformation).
@@ -781,7 +807,7 @@ class Gaussian(object):
             return Gaussian(self.mean + other.mean, self.cov + other.cov)
         return Gaussian(self.mean + other, self.cov)
 
-    def affine_transform(self, A, b=None):
+    def affine_transform(self, A: npt.ArrayLike, b: Optional[npt.ArrayLike]=None) -> "Gaussian":
         r"""
         Perform an affine transformation on the Gaussian PDF. If :math:`x \sim \mathcal{N}(\mu, \Sigma)`, then
         :math:`Ax+b ~ \mathcal{N}(A\mu + b, A^T \Sigma A)`.
@@ -797,7 +823,8 @@ class Gaussian(object):
             return Gaussian(mean=A.dot(self.mean), covariance=A.dot(self.cov).dot(A.T))
         return Gaussian(mean=A.dot(self.mean) + b, covariance=A.dot(self.cov).dot(A.T))
 
-    def integrate(self, lower=None, upper=None):
+    def integrate(self, lower: Optional[Union[float, npt.ArrayLike]]=None,
+                  upper: Optional[Union[float, npt.ArrayLike]]=None) -> float:
         r"""
         Integrate the gaussian distribution between the two given bounds.
 
@@ -823,7 +850,7 @@ class Gaussian(object):
         # integrate
         return scipy.stats.mvn.mvnun(lower, upper, self.mean, self.cov)[0]
 
-    def grad(self, x, wrt='x'):
+    def grad(self, x: npt.ArrayLike, wrt: str = 'x') -> np.ndarray:
         r"""
         Compute the gradient of the Gaussian distribution evaluated at the given data. Let's
         :math:`p(x; \mu, \Sigma) = \mathcal{N}(x | \mu, \Sigma) = \frac{1}{(2\pi)^\frac{d}{2} |\Sigma|^\frac{1}{2}}
@@ -842,12 +869,12 @@ class Gaussian(object):
         where :math:`\Lambda = \Sigma^{-1}` is the precision matrix.
 
         Args:
-            x (np.array[D]): data vector
+            x (np.array[D]): data vector.
             wrt (str): specify with respect to which variable we compute the gradient. It can take the following
                 values 'x', 'mu' or 'mean', 'sigma' or 'covariance', 'lambda' or 'precision'.
 
         Returns:
-            np.array: gradient of the same shape (as the variable from which we take the gradient)
+            np.array: gradient of the same shape (as the variable from which we take the gradient).
 
         References:
             [1] "The Matrix Cookbook" (math.uwaterloo.ca/~hwolkowi/matrixcookbook.pdf), Petersen and Pedersen, 2012
@@ -868,7 +895,7 @@ class Gaussian(object):
         else:
             raise ValueError("The given 'wrt' argument is not valid (see documentation)")
 
-    def grad_fn(self, wrt='x'):
+    def grad_fn(self, wrt: str = 'x') -> Callable:
         r"""
         Compute the gradient function of the Gaussian wrt the current parameters (mean and covariance). Let's
         :math:`p(x; \mu, \Sigma) = \mathcal{N}(x | \mu, \Sigma) = \frac{1}{(2\pi)^\frac{d}{2} |\Sigma|^\frac{1}{2}}
@@ -891,7 +918,7 @@ class Gaussian(object):
                 values 'x', 'mu' or 'mean', 'sigma' or 'covariance', 'lambda' or 'precision'.
 
         Returns:
-            callable: gradient function that can be evaluated later
+            callable: gradient function that can be evaluated later.
 
         References:
             [1] "The Matrix Cookbook" (math.uwaterloo.ca/~hwolkowi/matrixcookbook.pdf), Petersen and Pedersen, 2012
@@ -925,7 +952,7 @@ class Gaussian(object):
             raise ValueError("The given 'wrt' argument is not valid (see documentation)")
         return wrap(self.pdf, self.mean, self.precision)
 
-    def hessian(self, x, wrt='x'):
+    def hessian(self, x: npt.ArrayLike, wrt: str = 'x') -> np.ndarray:
         r"""
         Compute the Hessian matrix (2nd derivative) of the Gaussian distribution evaluated at the given data. Let's
         :math:`p(x; \mu, \Sigma) = \mathcal{N}(x | \mu, \Sigma) = \frac{1}{(2\pi)^\frac{d}{2} |\Sigma|^\frac{1}{2}}
@@ -941,9 +968,12 @@ class Gaussian(object):
         where :math:`\Lambda = \Sigma^{-1}` is the precision matrix.
 
         Args:
-            x (np.array[D]): data vector
+            x (np.array[D]): data vector.
             wrt (str): specify with respect to which variable we compute the gradient. It can take the following
                 values 'x', 'mu' or 'mean'.
+                
+        Returns:
+            np.float[D,D]: the Hessian matrix.
 
         References:
             [1] "The Matrix Cookbook" (math.uwaterloo.ca/~hwolkowi/matrixcookbook.pdf), Petersen and Pedersen, 2012
@@ -957,7 +987,7 @@ class Gaussian(object):
         else:
             raise ValueError("The given 'wrt' argument is not valid (see documentation)")
 
-    def hessian_fn(self, wrt='x'):
+    def hessian_fn(self, wrt: str = 'x') -> Callable:
         r"""
         Compute the Hessian function of the Gaussian wrt to the current parameters (mean and covariance). Let's
         :math:`p(x; \mu, \Sigma) = \mathcal{N}(x | \mu, \Sigma) = \frac{1}{(2\pi)^\frac{d}{2} |\Sigma|^\frac{1}{2}}
@@ -975,6 +1005,9 @@ class Gaussian(object):
         Args:
             wrt (str): specify with respect to which variable we compute the gradient. It can take the following
                 values 'x', 'mu' or 'mean'.
+                
+        Returns:
+            callable: hessian function that can be evaluated later.
 
         References:
             [1] "The Matrix Cookbook" (math.uwaterloo.ca/~hwolkowi/matrixcookbook.pdf), Petersen and Pedersen, 2012
@@ -991,7 +1024,7 @@ class Gaussian(object):
             raise ValueError("The given 'wrt' argument is not valid (see documentation)")
         return wrap(self.pdf, self.mean, self.precision)
 
-    def update(self, x):
+    def update(self, x: npt.ArrayLike) -> None:
         r"""
         Update the Gaussian distribution by taking into account the new given point(s) `x`. Specifically, it updates
         the mean and covariance matrix based on the given point(s) `x`. This is only valid if the initial data was
@@ -1012,7 +1045,7 @@ class Gaussian(object):
                             - \mu_{N+M}\mu_{N+M}^T
 
         Args:
-            x (np.array): data vector/matrix
+            x (np.array): data vector/matrix.
         """
         if self.N is None:
             # if the mean and covariance are not defined, learn from scratch
@@ -1042,7 +1075,7 @@ class Gaussian(object):
             self.cov = cov
             self.N = N + M
 
-    def mle(self, data):
+    def mle(self, data: npt.ArrayLike) -> float:
         r"""
         Perform maximum likelihood estimate (MLE) given the data. This results to compute the empirical mean and
         covariance from the data.
@@ -1053,10 +1086,10 @@ class Gaussian(object):
         i.e. :math:`\theta = \{ \mu, \Sigma \}`, and :math:`X` represents the data set.
 
         Args:
-            data (np.array[N,D]): data matrix of shape NxD
+            data (np.array[N,D]): data matrix of shape NxD.
 
         Returns:
-            float: value of the maximum likelihood estimate obtained
+            float: value of the maximum likelihood estimate obtained.
         """
         self.mean = self.compute_mean(data)
         self.cov = self.compute_covariance(data)
@@ -1067,7 +1100,7 @@ class Gaussian(object):
     fit = mle
     maximum_likelihood = mle
 
-    def map(self, data, mean_prior, covariance_prior):
+    def map(self, data: npt.ArrayLike, mean_prior, covariance_prior) -> float:
         r"""
         Maximum a posteriori estimation (MAP).
 
@@ -1077,16 +1110,16 @@ class Gaussian(object):
         i.e. :math:`\theta = \{ \mu, \Sigma \}`, and :math:`X` represents the data set.
 
         Args:
-            data (np.array[N,D]): data matrix of shape NxD
-            mean_prior:
-            covariance_prior:
+            data (np.float[N,D]): data matrix of shape NxD.
+            mean_prior: prior on the mean.
+            covariance_prior: prior on the covariance matrix.
 
         Returns:
-            float: value of the MAP estimate obtained
+            float: value of the MAP estimate obtained.
         """
         pass
 
-    def bayesian_inference(self, data, mean_prior, covariance_prior):
+    def bayesian_inference(self, data: npt.ArrayLike, mean_prior, covariance_prior):
         r"""
         Perform bayesian inference to estimate the mean and covariance given the data, the conjugate prior of the
         mean (which is also a multivariate normal distribution), and the conjugate prior of the covariance matrix
@@ -1102,7 +1135,7 @@ class Gaussian(object):
         """
         pass
 
-    def ellipsoid_axes(self): # ellipse_confidence # confidence_region
+    def ellipsoid_axes(self) -> Tuple[np.ndarray, np.ndarray]: # ellipse_confidence # confidence_region
         r"""
         Compute the axes of the ellipsoid defined by the covariance matrix. Specifically, it returns the main
         axes of the ellipsoid (i.e. its orientation) as well as their scaling.
@@ -1114,7 +1147,7 @@ class Gaussian(object):
         evals, evecs = np.linalg.eigh(self.cov)
         return np.sqrt(evals[::-1]), evecs[:,::-1]
 
-    def plot2D_ellipse(self, ax=None, data=None):
+    def plot2D_ellipse(self, ax=None, data: Optional[npt.ArrayLike]=None):
         r"""
         Project (linearly) the given data on a 2D surface, and plot the 2D confidence ellipse associated with the
         Gaussian PDF.
@@ -1136,14 +1169,15 @@ class Gaussian(object):
     # Operators #
     #############
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return string representation."""
         return 'Gaussian of dimension {}'.format(self.size)
 
-    def __len__(self):
-        """dimensionality of the Gaussian distribution"""
+    def __len__(self) -> int:
+        """Return the dimensionality of the Gaussian distribution."""
         return len(self.mean)
 
-    def __call__(self, x=None, size=None):
+    def __call__(self, x: Optional[npt.ArrayLike]=None, size: Optional[int]=None) -> Union[float, np.ndarray]:
         """
         If no arguments are given, it returns one sample from the distribution. If a vector is provided, it returns
         the probability associated with this one (i.e. how probable it is that the given sample was generated from
@@ -1151,16 +1185,16 @@ class Gaussian(object):
 
         Args:
             x (np.array, None): vector to evaluate the probability density function.
-            size (int, None): number of samples
+            size (int, None): number of samples.
 
         Returns:
-            float, or np.array: probability density evaluated at `x`, or samples
+            float, or np.array: probability density evaluated at `x`, or samples.
         """
         if x is not None:
             return self.pdf(x)
         return self.sample(size=size)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: Union[int, slice, Tuple]) -> "Gaussian":
         """
         Conditional and marginal distribution.
 
@@ -1196,7 +1230,7 @@ class Gaussian(object):
         else:  # marginal distribution
             return self.marginalize(idx)
 
-    def __add__(self, other):
+    def __add__(self, other: Union[float, npt.ArrayLike, "Gaussian"]) -> "Gaussian":
         """
         The sum of two independent Gaussian random variables (with the same dimension) is also Gaussian. This can
         also be used to sum a Gaussian with a vector (affine transformation).
@@ -1210,31 +1244,86 @@ class Gaussian(object):
         """
         return self.add(other)
 
-    def __radd__(self, other):
+    def __radd__(self, other: Union[float, npt.ArrayLike, "Gaussian"]) -> "Gaussian":
+        """Add a Gaussian distribution by a float, matrix, or another Gaussian."""
         return self.add(other)
 
-    def __mul__(self, other):
+    def __mul__(self, other: Union[float, npt.ArrayLike, "Gaussian"]) -> "Gaussian":
         """
         Multiply two Gaussian distributions, or multiply a gaussian distribution with a matrix (as done during
         an affine transformation).
 
         Args:
-            other (Gaussian, array_like of float[D,D]): Gaussian, or square matrix (to rotate or scale)
+            other (Gaussian, array_like of float[D,D]): Gaussian, or square matrix (to rotate or scale).
 
         Returns:
-            Gaussian: resulting Gaussian distribution
+            Gaussian: resulting Gaussian distribution.
         """
         return self.multiply(other)
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: Union[float, npt.ArrayLike, "Gaussian"]) -> "Gaussian":
+        """Multiply a Gaussian distribution by a float, matrix, or another Gaussian."""
         return self.multiply(other)
 
-    def __pow__(self, exponent):
-        """Apply the power exponent on the Gaussian"""
+    def __pow__(self, exponent: float) -> "Gaussian":
+        """Apply the power exponent on the Gaussian."""
         return self.power(exponent)
 
 
 MVN = Gaussian
+
+##################
+# Util functions #
+##################
+
+def compute_gaussian_product(gaussians: List[Gaussian], priorities: List[float]) -> Gaussian:
+    """Multiply the given Gaussians weighted by their corresponding priority.
+
+    Warning: this does not compute the coefficient.
+
+    Args:
+        gaussians (list[Gaussian]): list of Gaussians to multiply.
+        priorities (list[float]): list of priority floats.
+
+    Returns:
+        Gaussian: the resulting Gaussian.
+    """
+    precisions, means = [], []
+    for gaussian, priority in zip(gaussians, priorities):
+        precision = priority * gaussian.prec
+        mean = precision.dot(gaussian.mean)
+        precisions.append(precision)
+        means.append(mean)
+    covariance = np.linalg.inv(np.sum(precisions, axis=0))
+    mean = covariance.dot(np.sum(means, axis=0))
+    return Gaussian(mean=mean, covariance=covariance)
+
+
+def compute_joint_gaussian(gaussian1: Gaussian, gaussian2: Gaussian, covariance: npt.ArrayLike) -> Gaussian:
+    r"""Compute the joint Gaussian distribution given 2 Gaussians.
+
+    Assume we are given :math:`\mathcal{N}(\mu_1, \Sigma_{11})`, :math:`\mathcal{N}(\mu_2, \Sigma_{22})`,
+    and :math:`\Sigma_{12}`. Then the joint distribution is given by:
+
+    .. math::
+
+        \mathcal{N}(\mu, \Sigma)
+
+    where :math:`\mu = [\mu_1^\top, \mu_2^\top]^\top` and :math:`\Sigma = \left[ \begin{array}{cc}
+    \Sigma_{11} & \Sigma_{12} \\ \Sigma_{12}^\top & \Sigma_{22} \end{array} \right]`.
+
+    Args:
+        gaussian1 (Gaussian): 1st Gaussian distribution.
+        gaussian2 (Gaussian): 2nd Gaussian distribution.
+        covariance (np.ndarray): covariance between the 1st and 2nd distributions.
+
+    Returns:
+        Gaussian: the resulting joint Gaussian distribution.
+    """
+    joint_mean = np.concatenate((gaussian1.mean, gaussian2.mean))
+    joint_cov = np.vstack((np.hstack((gaussian1.cov, covariance)),
+                            np.hstack((covariance.T, gaussian2.cov))))
+    return Gaussian(mean=joint_mean, covariance=joint_cov)
 
 
 ######################

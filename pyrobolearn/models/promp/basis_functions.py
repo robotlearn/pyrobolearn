@@ -11,7 +11,9 @@ References
 """
 
 from abc import ABCMeta, abstractmethod
+from typing import Callable, List, Tuple, Union
 import numpy as np
+import numpy.typing as npt
 from scipy.linalg import block_diag
 
 from pyrobolearn.models.promp.canonical_systems import CS
@@ -27,7 +29,7 @@ __email__ = "briandelhaisse@gmail.com"
 __status__ = "Development"
 
 
-class BasisFunction(object):
+class BasisFunction:
     r"""Basis Function
 
     The choice of basis function depends on the type of movement the user which to model; a discrete (aka stroke-based)
@@ -35,22 +37,22 @@ class BasisFunction(object):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     ###########
     # Methods #
     ###########
 
-    def compute(self, s):
+    def compute(self, phase: Union[float, npt.ArrayLike]) -> Union[float, np.ndarray]:
         """
-        Predict the value of the basis function given the phase variable :math:`s`
+        Predict the value of the basis function given the phase variable :math:`s`.
 
         Args:
-            s (float): phase value
+            phase (float, np.ndarray): phase value(s).
 
         Returns:
-            float: value of the basis function evaluated at the given phase
+            float, np.ndarray: value of the basis function evaluated at the given phase(s).
         """
         raise NotImplementedError
 
@@ -59,16 +61,16 @@ class BasisFunction(object):
     # forward = compute
 
     @abstractmethod
-    def grad(self, s):
+    def grad(self, phase: Union[float, npt.ArrayLike]) -> Union[float, np.ndarray]:
         """
         Compute the gradient of the basis function with respect to the phase variable :math:`s`, evaluated at
         the given phase.
 
         Args:
-            s (float): phase value
+            phase (float, np.ndarray): phase value(s).
 
         Returns:
-            float: gradient evaluated at the given phase
+            float, np.ndarray: gradient evaluated at the given phase(s).
         """
         raise NotImplementedError
 
@@ -79,10 +81,10 @@ class BasisFunction(object):
     #     the given phase :math:`s(t)`.
     #
     #     Args:
-    #         s (float): phase value s(t)
+    #         s (float): phase value s(t).
     #
     #     Returns:
-    #         float: gradient evaluated at the given phase s(t)
+    #         float: gradient evaluated at the given phase s(t).
     #     """
     #     raise NotImplementedError
 
@@ -90,9 +92,9 @@ class BasisFunction(object):
     # Operators #
     #############
 
-    def __call__(self, s):
-        """Predict value of basis function given phase"""
-        return self.compute(s)
+    def __call__(self, phase: Union[float, npt.ArrayLike]) -> Union[float, np.ndarray]:
+        """Predict value of basis function given phase(s)."""
+        return self.compute(phase)
 
 
 # alias
@@ -111,12 +113,12 @@ class GaussianBF(BF):
     This is often used for discrete movement primitives.
     """
 
-    def __init__(self, center=0., width=1.):
-        """Initialize basis function
+    def __init__(self, center: Union[float, npt.ArrayLike] = 0., width: Union[float, npt.ArrayLike] = 1.) -> None:
+        """Initialize basis function.
 
         Args:
-            center (float, np.ndarray): center of the distribution
-            width (float, np.ndarray): width of the distribution
+            center (float, np.ndarray): center of the distribution.
+            width (float, np.ndarray): width of the distribution.
         """
         super(GaussianBF, self).__init__()
 
@@ -127,7 +129,7 @@ class GaussianBF(BF):
             raise ValueError("Invalid `width` argument: the width of the basis has to be strictly positive")
         self.h = width
 
-    def compute(self, s):
+    def compute(self, phase: Union[float, npt.ArrayLike]) -> Union[float, np.ndarray]:
         r"""
         Predict the value of the basis function given the phase variable :math:`s`, given by:
 
@@ -136,16 +138,16 @@ class GaussianBF(BF):
         where :math:`c` is the center, and :math:`h` is the width of the basis.
 
         Args:
-            s (float): phase value
+            phase (float, np.ndarray): phase value(s).
 
         Returns:
-            float: value of the basis function evaluated at the given phase
+            float, np.ndarray: value of the basis function evaluated at the given phase(s).
         """
-        if isinstance(s, np.ndarray):
-            s = s[:, None]
-        return np.exp(- 0.5 / self.h * (s - self.c)**2)
+        if isinstance(phase, np.ndarray):
+            phase = phase[:, None]
+        return np.exp(- 0.5 / self.h * (phase - self.c)**2)
 
-    def grad(self, s):
+    def grad(self, phase: Union[float, npt.ArrayLike]) -> Union[float, np.ndarray]:
         r"""
         Return the gradient of the basis function :math:`b(s)` with respect to the phase variable :math:`s`,
         evaluated at the given phase.
@@ -157,13 +159,13 @@ class GaussianBF(BF):
             \frac{d b(s)}{ds} = - b(s) \frac{(s - c)}{h}
 
         Args:
-            s (float): phase value
+            phase (float, np.ndarray): phase value(s).
 
         Returns:
-            float: gradient evaluated at the given phase
+            float, np.ndarray: gradient evaluated at the given phase(s).
         """
-        s1 = s[:, None] if isinstance(s, np.ndarray) else s
-        return - self(s) * (s1 - self.c) / self.h
+        phase_ = phase[:, None] if isinstance(phase, np.ndarray) else phase
+        return - self(phase) * (phase_ - self.c) / self.h
 
 
 # aliases
@@ -182,12 +184,12 @@ class VonMisesBF(BF):
     This is often used for rhythmic movement primitives.
     """
 
-    def __init__(self, center=0, width=1.):
+    def __init__(self, center: Union[float, npt.ArrayLike] = 0., width: Union[float, npt.ArrayLike] = 1.) -> None:
         """Initialize basis function
 
         Args:
-            center (float, np.ndarray): center of the basis fct
-            width (float, np.ndarray): width of the distribution
+            center (float, np.ndarray): center of the basis fct.
+            width (float, np.ndarray): width of the distribution.
         """
         super(VonMisesBF, self).__init__()
         self.c = center
@@ -195,7 +197,7 @@ class VonMisesBF(BF):
             raise ValueError("Invalid `width` argument: the width of the basis has to be strictly positive")
         self.h = width
 
-    def compute(self, s):
+    def compute(self, phase: Union[float, npt.ArrayLike]) -> Union[float, np.ndarray]:
         r"""
         Predict the value of the basis function given the phase variable :math:`s`, given by:
 
@@ -204,16 +206,16 @@ class VonMisesBF(BF):
         where :math:`c` is the center, and :math:`h` is the width of the basis.
 
         Args:
-            s (float): phase value
+            phase (float, np.ndarray): phase value(s).
 
         Returns:
-            float: value of the basis function evaluated at the given phase
+            float, np.ndarray: value of the basis function evaluated at the given phase(s).
         """
-        if isinstance(s, np.ndarray):
-            s = s[:, None]
-        return np.exp(np.cos(2*np.pi * (s - self.c)) / self.h)
+        if isinstance(phase, np.ndarray):
+            phase = phase[:, None]
+        return np.exp(np.cos(2*np.pi * (phase - self.c)) / self.h)
 
-    def grad(self, s):
+    def grad(self, phase: Union[float, npt.ArrayLike]) -> float:
         r"""
         Return the gradient of the basis function :math:`b(s)` with respect to the phase variable :math:`s`,
         evaluated at the given phase.
@@ -225,22 +227,23 @@ class VonMisesBF(BF):
             \frac{d b(s)}{ds} = - b(s) 2\pi \frac{ \sin(2 \pi (s - c)) }{ h }
 
         Args:
-            s (float): phase value
+            phase (float, np.ndarray): phase value(s).
 
         Returns:
-            float: gradient evaluated at the given phase
+            float, np.ndarray: gradient evaluated at the given phase(s).
         """
-        s1 = s[:, None] if isinstance(s, np.ndarray) else s
-        return - 2 * np.pi * self(s) * np.sin(2 * np.pi * (s1 - self.c)) / self.h
+        phase_ = phase[:, None] if isinstance(phase, np.ndarray) else phase
+        return - 2 * np.pi * self(phase) * np.sin(2 * np.pi * (phase_ - self.c)) / self.h
 
 
 # aliases
 CBF = VonMisesBF    # Circular Basis Function
 
 
-class Matrix(object):
-    """callable matrix"""
-    def __call__(self, s):
+class Matrix:
+    """Callable matrix."""
+
+    def __call__(self, phase: Union[float, npt.ArrayLike]) -> np.ndarray:
         raise NotImplementedError
 
 
@@ -256,12 +259,14 @@ class BasisMatrix(Matrix):
     where :math:`s` is the phase variable, and :math:`M` is the total number of components.
     """
 
-    def __init__(self, matrix):
+    def __init__(self, matrix: npt.ArrayLike) -> None:
         """
         Initialize the basis matrix.
 
         Args:
-            matrix (np.array[M,D]): 2D matrix containing callable functions
+            matrix (np.array[D]): 2D matrix containing callable functions. Each function given the phase
+              returns an M-dimensional array where `M` is the total number of basis functions / weights.
+              Evaluating it will return a matrix of shape (M,D).
         """
         self.matrix = matrix
 
@@ -269,41 +274,53 @@ class BasisMatrix(Matrix):
         self._shape = self(0.).shape
 
     @property
-    def shape(self):
-        """Return the shape of the matrix"""
+    def shape(self) -> Tuple[int]:
+        """Return the shape of the matrix."""
         return self._shape
 
     @property
-    def num_basis(self):
-        """return the number of basis function"""
+    def num_basis(self) -> int:
+        """Return the number of basis function."""
         return self._shape[0]
 
-    def evaluate(self, s):
+    def append(self, fct: Callable) -> None:
+        """Concatenate the given function(s) to the basis matrix."""
+        self.matrix = np.concatenate((self.matrix, [fct]))
+
+    def evaluate(self, phase: Union[float, npt.ArrayLike]) -> np.ndarray:
         """
         Return matrix evaluated at the given phase.
 
         Args:
-            s (float, np.array[T]): phase value(s)
+            phase (float, np.array[T]): phase value(s).
 
         Returns:
-            np.array: array of shape Mx2, or MxTx2
+            np.array: array of shape Mx2, or MxTx2.
         """
         # matrix = np.array([[fct(s) for fct in row]
         #                    for row in self.matrix])
-        matrix = np.array([fct(s) for fct in self.matrix]).T
+        matrix = np.array([fct(phase) for fct in self.matrix]).T
         return matrix
 
-    def __call__(self, s):
+    def __getitem__(self, idx: int) -> Callable:
+        """Return the associated basis function."""
+        return self.matrix[idx]
+
+    def __setitem__(self, idx: int, fct: Callable) -> None:
+        """Set the given basis function."""
+        self.matrix[idx] = fct
+
+    def __call__(self, phase: Union[float, npt.ArrayLike]) -> np.ndarray:
         """
         Return matrix evaluated at the given phase.
 
         Args:
-            s (float): phase value
+            phase (float, np.float[T]): phase value(s).
 
         Returns:
-            np.array: array of shape 2xM, or Tx2xM
+            np.array: array of shape 2xM, or Tx2xM.
         """
-        return self.evaluate(s)
+        return self.evaluate(phase)
 
 
 class GaussianBM(BasisMatrix):
@@ -312,23 +329,19 @@ class GaussianBM(BasisMatrix):
     Matrix containing Gaussian basis functions.
     """
 
-    def __init__(self, cs, num_basis, basis_width=1.):
+    def __init__(self, cs: CS, num_basis: int, basis_width: float = 1., compute_derivative: bool = True) -> None:
         """
         Initialize the Gaussian basis matrix.
 
         Args:
-            cs (CS): canonical system
-            num_basis (int): number of basis functions
-            basis_width (float): width of the basis functions
+            cs (CS): canonical system.
+            num_basis (int): number of basis functions (=M).
+            basis_width (float): width of the basis functions.
+            compute_derivative (bool): if we should compute the derivative basis function wrt time or not.
         """
         if not isinstance(cs, CS):
-            raise TypeError("Expecting the ")
-
-        # create derivative of basis function wrt to time
-        def dphi_t(cs, phi):
-            def step(s):
-                return phi.grad(s) * cs.grad()
-            return step
+            raise TypeError("Expecting the given canonical system to be an instance of `CS`, but instead got:"
+                            f" {type(cs)}")
 
         # distribute centers for the Gaussian basis functions
         # the centers are placed uniformly between [-2*width, 1+2*width]
@@ -337,12 +350,19 @@ class GaussianBM(BasisMatrix):
         else:
             centers = np.linspace(-2*basis_width, 1+2*basis_width, num_basis)
 
-        # create basis function and its derivative
+        # create basis function and its derivative (if necessary)
         phi = GaussianBF(centers, basis_width)
-        dphi = dphi_t(cs, phi)
+        matrix = np.array([phi])  # shape (M, 1)
 
-        # create basis matrix (shape: Mx2)
-        matrix = np.array([phi, dphi])
+        if compute_derivative:
+            def dphi_t(cs: CS, phi: BasisFunction) -> Callable:
+                """Create derivative of basis function wrt time."""
+                def step(phase):
+                    return phi.grad(phase) * cs.grad()
+                return step
+
+            dphi = dphi_t(cs, phi)
+            matrix = np.array([phi, dphi])  # shape (M, 2)
 
         # call superclass constructor
         super(GaussianBM, self).__init__(matrix)
@@ -354,21 +374,16 @@ class VonMisesBM(BasisMatrix):
     Matrix containing Von-Mises basis functions.
     """
 
-    def __init__(self, cs, num_basis, basis_width=1.):
+    def __init__(self, cs: CS, num_basis: int, basis_width: float = 1., compute_derivative: bool = True) -> None:
         """
         Initialize the Von-Mises basis matrix.
 
         Args:
-            cs (CS): canonical system
-            num_basis (int): number of basis functions
-            basis_width (float): width of the basis functions
+            cs (CS): canonical system.
+            num_basis (int): number of basis functions.
+            basis_width (float): width of the basis functions.
+            compute_derivative (bool): if we should compute the derivative basis function wrt time or not.
         """
-        # create derivative of basis function wrt to time
-        def dphi_t(cs, phi):
-            def step(s):
-                return phi.grad(s) * cs.grad()
-            return step
-
         # distribute centers for the Gaussian basis functions
         # the centers are placed uniformly between [-2*width, 1+2*width]
         if num_basis == 1:
@@ -378,23 +393,30 @@ class VonMisesBM(BasisMatrix):
 
         # create basis function and its derivative
         phi = VonMisesBF(centers, basis_width)
-        dphi = dphi_t(cs, phi)
+        matrix = np.array([phi])  # shape (M, 1)
 
-        # create basis matrix
-        matrix = np.array([phi, dphi])
+        if compute_derivative:
+            def dphi_t(cs: CS, phi: BasisFunction) -> Callable:
+                """Create derivative of basis function wrt time."""
+                def step(phase):
+                    return phi.grad(phase) * cs.grad()
+                return step
+
+            dphi = dphi_t(cs, phi)
+            matrix = np.array([phi, dphi])  # shape (M, 2)
+
         super(VonMisesBM, self).__init__(matrix)
 
 
 class BlockDiagonalMatrix(Matrix):
-    r"""Callable Block Diagonal matrix
-    """
+    r"""Callable Block Diagonal matrix."""
 
-    def __init__(self, matrices):
+    def __init__(self, matrices: List[BasisMatrix]) -> None:
         """
         Initialize the block diagonal matrix which contains callable matrices in its diagonal.
 
         Args:
-            matrices (list[BasisMatrix]): list of callable matrices
+            matrices (list[BasisMatrix]): list of callable matrices.
         """
         self.matrices = matrices
 
@@ -403,51 +425,55 @@ class BlockDiagonalMatrix(Matrix):
     ##############
 
     @property
-    def shape(self):
-        """Return the shape of the block diagonal matrix"""
+    def shape(self) -> Tuple[int]:
+        """Return the shape of the block diagonal matrix."""
         shape = 0
         for matrix in self.matrices:
             shape += np.array(matrix.shape)
         return tuple(shape)
 
     @property
-    def num_basis(self):
-        """Return the number of basis per dimensions"""
+    def num_basis(self) -> List[int]:
+        """Return the number of basis per dimension."""
         return [matrix.num_basis for matrix in self.matrices]
 
     ###########
     # Methods #
     ###########
 
-    def evaluate(self, s):
+    def evaluate(self, phase: Union[float, npt.ArrayLike]) -> np.ndarray:
         """
         Evaluate the block diagonal matrix on the given input.
 
         Args:
-            s (float, np.array): input value
+            phase (float, np.array): input phase value(s).
 
         Returns:
-            np.array: block diagonal matrix
+            np.array: block diagonal matrix.
         """
-        return block_diag(*[matrix(s) for matrix in self.matrices])
+        if isinstance(phase, np.ndarray):
+            block = np.dstack([block_diag(*[matrix(phase_) for matrix in self.matrices]) for phase_ in phase])
+            return np.swapaxes(block, 1, 2)  # shape: (DM, T, d)
+        return block_diag(*[matrix(phase) for matrix in self.matrices])
+
 
     #############
     # Operators #
     #############
 
-    def __call__(self, s):
+    def __call__(self, phase: Union[float, npt.ArrayLike]) -> np.ndarray:
         """
         Evaluate the block diagonal matrix on the given input.
 
         Args:
-            s (float, np.array): input value
+            phase (float, np.array): input phase value(s).
 
         Returns:
-            np.array: block diagonal matrix
+            np.array: block diagonal matrix.
         """
-        return self.evaluate(s)
+        return self.evaluate(phase)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: Union[int, slice]) -> "BlockDiagonalMatrix":
         """
         Return a desired chunk of the block diagonal matrix.
 
